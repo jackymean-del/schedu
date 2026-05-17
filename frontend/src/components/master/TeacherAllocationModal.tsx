@@ -11,10 +11,12 @@
  */
 
 import { useMemo, useState, useEffect } from 'react'
-import type { Section } from '@/types'
+import type { Section, Staff } from '@/types'
 import { useTimetableStore } from '@/store/timetableStore'
-import { parseAllocation, formatAllocation } from '@/lib/allocationSyntax'
+import { parseAllocation } from '@/lib/allocationSyntax'
 import { X, Users, BookOpen, Save, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { explainAssignment } from '@/lib/explanationEngine'
+import { ExplanationInfoIcon } from './ExplanationPopover'
 
 interface Props {
   teacher: string
@@ -189,10 +191,26 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                   : proposedTotal > r.target ? 'over'
                   : proposedTotal === r.target ? 'match'
                   : r.thisTeacher > 0 ? 'partial' : 'empty'
+
+                // Build explanation for this (teacher, section, subject) row
+                const teacherObj = (store.staff as Staff[]).find(s => s.name === teacher)
+                const sectionObj = sections.find((s: Section) => s.name === r.section)
+                const explanation = (teacherObj && sectionObj && subjMeta && r.thisTeacher > 0)
+                  ? explainAssignment({
+                      teacher: teacherObj,
+                      section: sectionObj,
+                      subject: subjMeta,
+                      otherTeachersPeriods: r.otherTeachers,
+                    })
+                  : null
+
                 return (
                   <tr key={r.section} style={{ borderBottom: '1px solid #F3F1FF' }}>
                     <td style={{ padding: '8px 6px', fontSize: 12, fontWeight: 700, color: '#13111E' }}>
-                      {r.section}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {r.section}
+                        {explanation && <ExplanationInfoIcon explanation={explanation} anchor="top-left" />}
+                      </span>
                       {r.grade && (
                         <span style={{ fontSize: 9.5, fontWeight: 500, color: '#8B87AD', marginLeft: 6 }}>· {r.grade}</span>
                       )}

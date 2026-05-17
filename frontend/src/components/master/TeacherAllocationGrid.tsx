@@ -23,6 +23,8 @@ import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
 import { parseAllocation } from '@/lib/allocationSyntax'
 import { Users, Sparkles, Layers, Pencil } from 'lucide-react'
 import { TeacherAllocationModal } from './TeacherAllocationModal'
+import { explainAssignment } from '@/lib/explanationEngine'
+import { ExplanationInfoIcon } from './ExplanationPopover'
 
 interface Row {
   teacherName: string
@@ -108,6 +110,35 @@ export function TeacherAllocationGrid() {
         render: (_, r) => {
           const { total, classCount } = subjectsForTeacher(r.teacherName, sub.name)
           const isEmpty = total === 0
+
+          // Build explanation for the FIRST section this teacher handles
+          // for this subject — representative, lets users see the reasoning.
+          let explanation = null
+          if (!isEmpty) {
+            const teacherObj = staff.find((s: Staff) => s.name === r.teacherName)
+            if (teacherObj) {
+              const tMap = teacherAllocations[r.teacherName] ?? {}
+              const sectionsForThis = Object.keys(tMap).filter(
+                sec => (tMap[sec]?.[sub.name] ?? 0) > 0
+              )
+              const repSectionName = sectionsForThis[0]
+              const sectionObj = sections.find((s: Section) => s.name === repSectionName)
+              if (sectionObj) {
+                explanation = explainAssignment({
+                  teacher: teacherObj,
+                  section: sectionObj,
+                  subject: sub,
+                  weeklyLoad: weeklyLoad(r.teacherName),
+                  targetWeeklyLoad: Math.ceil(
+                    staff.reduce((a: number, t: Staff) => a + weeklyLoad(t.name), 0) /
+                    Math.max(1, staff.length)
+                  ),
+                  alsoTeachesIn: sectionsForThis,
+                })
+              }
+            }
+          }
+
           return (
             <div
               onClick={() => setEditTarget({ teacher: r.teacherName, subject: sub.name })}
@@ -123,6 +154,12 @@ export function TeacherAllocationGrid() {
               onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}
               title="Click to edit per-section split"
             >
+              {/* AI explanation info icon — top-right corner */}
+              {explanation && (
+                <span style={{ position: 'absolute' as const, top: 4, right: 4 }}>
+                  <ExplanationInfoIcon explanation={explanation} />
+                </span>
+              )}
               {isEmpty ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, color: '#B8B4D4' }}>
                   <Pencil size={10} />
