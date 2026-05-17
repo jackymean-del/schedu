@@ -96,6 +96,7 @@ function inferOptionalBlocksFromStrengths(
   sections: Section[],
   classPeriods: Period[],
   workDays: string[],
+  subjects: Subject[] = [],
 ): import('@/types').OptionalBlock[] {
   if (!sectionStrengths.length || !classPeriods.length || !workDays.length) return []
 
@@ -121,9 +122,6 @@ function inferOptionalBlocksFromStrengths(
   type ParallelSet = { sectionName: string; subjects: string[]; perSubjectStrength: Record<string, number> }
   const parallelSets: ParallelSet[] = []
   optsBySection.forEach((opts, secName) => {
-    // Naïve grouping: assume all optionals in a section form ONE parallel block.
-    // (More sophisticated bin-packing can come later; this matches the common case
-    //  where a section has 2-4 parallel options like PE/Art/Painting/Music.)
     parallelSets.push({
       sectionName: secName,
       subjects: opts.map(o => o.subject).sort(),
@@ -131,32 +129,102 @@ function inferOptionalBlocksFromStrengths(
     })
   })
 
-  // 3) Pool parallel sets across sections by their subject-set signature.
-  const signatureToBlock = new Map<string, {
+  // 3) Doc Part 3 — Dynamic Cross-Class Same-Period Assignment Engine.
+  //    Pool parallel sets across sections using each subject's
+  //    `groupingBehavior` metadata to decide what may merge:
+  //      NO_GROUPING         → no pooling; one block per section
+  //      SAME_GRADE_ONLY     → pool only sections of the same grade
+  //      CROSS_GRADE_ALLOWED → pool all sections offering this set
+  //      FLEXIBLE_GROUPING   → AI default: pool all (room-capacity
+  //                             splitting can come later)
+  //    The most-restrictive behavior across the subjects in a set governs.
+
+  type PoolEntry = {
     sectionNames: string[]
     subjects: string[]
     capacityBySubject: Record<string, number>
-  }>()
+    behavior: string
+  }
+  const behaviorRank: Record<string, number> = {
+    NO_GROUPING: 0,
+    SAME_GRADE_ONLY: 1,
+    FLEXIBLE_GROUPING: 2,
+    CROSS_GRADE_ALLOWED: 3,
+  }
+  const mostRestrictive = (subjectNames: string[]): string => {
+    let best = 'CROSS_GRADE_ALLOWED'
+    let bestRank = 99
+    subjectNames.forEach(name => {
+      const sub = subjects.find(s => s.name === name) as any
+      const b = (sub?.groupingBehavior ?? 'FLEXIBLE_GROUPING') as string
+      const r = behaviorRank[b] ?? 2
+      if (r < bestRank) { bestRank = r; best = b }
+    })
+    return best
+  }
+  const sectionGrade = new Map<string, string>()
+  sections.forEach(s => sectionGrade.set(s.name, (s as any).grade ?? ''))
+
+  // First bucket parallel sets by subject-set signature (sections that offer
+  // identical optional menus). Then split each bucket per the rule above.
+  const sigToSets = new Map<string, ParallelSet[]>()
   parallelSets.forEach(ps => {
     const sig = ps.subjects.join('|')
-    const entry = signatureToBlock.get(sig) ?? {
-      sectionNames: [],
-      subjects: ps.subjects,
-      capacityBySubject: Object.fromEntries(ps.subjects.map(s => [s, 0])),
-    }
-    entry.sectionNames.push(ps.sectionName)
-    ps.subjects.forEach(s => {
-      entry.capacityBySubject[s] = (entry.capacityBySubject[s] ?? 0) + (ps.perSubjectStrength[s] ?? 0)
-    })
-    signatureToBlock.set(sig, entry)
+    const arr = sigToSets.get(sig) ?? []
+    arr.push(ps)
+    sigToSets.set(sig, arr)
   })
 
-  // 4) Assign each pooled block to a (day, period) — first available across
-  //    every section in the block.
+  const pools: PoolEntry[] = []
+  const mergeSets = (sets: ParallelSet[], subjs: string[]): PoolEntry => {
+    const cap: Record<string, number> = Object.fromEntries(subjs.map(s => [s, 0]))
+    const secs: string[] = []
+    sets.forEach(ps => {
+      secs.push(ps.sectionName)
+      subjs.forEach(s => { cap[s] += (ps.perSubjectStrength[s] ?? 0) })
+    })
+    return { sectionNames: secs, subjects: subjs, capacityBySubject: cap, behavior: '' }
+  }
+
+  sigToSets.forEach(sets => {
+    const subjs = sets[0].subjects
+    const behavior = mostRestrictive(subjs)
+
+    if (behavior === 'NO_GROUPING') {
+      // Each section gets its own block — never merge.
+      sets.forEach(ps => {
+        const p = mergeSets([ps], subjs)
+        p.behavior = behavior
+        pools.push(p)
+      })
+    } else if (behavior === 'SAME_GRADE_ONLY') {
+      // Bucket by grade, then merge within each bucket.
+      const byGrade = new Map<string, ParallelSet[]>()
+      sets.forEach(ps => {
+        const g = sectionGrade.get(ps.sectionName) ?? '?'
+        const arr = byGrade.get(g) ?? []
+        arr.push(ps)
+        byGrade.set(g, arr)
+      })
+      byGrade.forEach(setsInGrade => {
+        const p = mergeSets(setsInGrade, subjs)
+        p.behavior = behavior
+        pools.push(p)
+      })
+    } else {
+      // CROSS_GRADE_ALLOWED or FLEXIBLE_GROUPING — pool all into one.
+      const p = mergeSets(sets, subjs)
+      p.behavior = behavior
+      pools.push(p)
+    }
+  })
+
+  // 4) Assign each pool to a (day, period) — first available across
+  //    every section in the pool.
   const usedSlot = new Set<string>() // "section|day|period"
   const inferred: import('@/types').OptionalBlock[] = []
   let blockIdx = 1
-  signatureToBlock.forEach(entry => {
+  pools.forEach(entry => {
     let placedDay = workDays[0], placedPid = classPeriods[0]?.id ?? ''
     outer: for (const day of workDays) {
       for (const p of classPeriods) {
@@ -221,6 +289,57 @@ export interface SolverOutput {
   penalties: { constraint: string; penalty: number; details: string }[]
   score: number       // lower = better (total penalty)
   iterations: number
+  /** Optional Blocks placed by the solver (manual + AI-inferred). */
+  optionalBlocks?: import('@/types').OptionalBlock[]
+  /** Dynamic Learning Groups produced from grouping_behavior + strengths.
+   *  Each DLG represents a pooled cohort across sections for one subject. */
+  dynamicLearningGroups?: DynamicLearningGroup[]
+  /** Per-teacher final weekly load (for fairness diagnostics). */
+  teacherWeeklyLoad?: Record<string, number>
+  /** Stddev of teacher loads — lower is more balanced. */
+  teacherLoadStddev?: number
+}
+
+/** A Dynamic Learning Group is a pooled cohort across sections for one
+ *  optional subject. Multiple DLGs may share the same (day, period) when
+ *  they belong to the same parallel block. */
+export interface DynamicLearningGroup {
+  id: string
+  subject: string
+  sectionNames: string[]
+  totalStrength: number
+  teacher: string
+  room: string
+  behavior: string    // NO_GROUPING | SAME_GRADE_ONLY | CROSS_GRADE_ALLOWED | FLEXIBLE_GROUPING
+  day: string
+  periodId: string
+}
+
+/** Extract Dynamic Learning Groups from the solver's effective blocks.
+ *  Each option in each block becomes its own DLG entity. */
+export function extractDynamicLearningGroups(
+  blocks: import('@/types').OptionalBlock[],
+  subjects: Subject[],
+): DynamicLearningGroup[] {
+  const out: DynamicLearningGroup[] = []
+  let idx = 1
+  blocks.forEach(b => {
+    b.options.forEach(opt => {
+      const sub = subjects.find(s => s.name === opt.subject) as any
+      out.push({
+        id: `dlg-${idx++}`,
+        subject: opt.subject,
+        sectionNames: b.sectionNames,
+        totalStrength: opt.allocatedStrength ?? opt.capacity ?? 0,
+        teacher: opt.teacher ?? '',
+        room: opt.room ?? '',
+        behavior: sub?.groupingBehavior ?? 'FLEXIBLE_GROUPING',
+        day: b.day,
+        periodId: b.periodId,
+      })
+    })
+  })
+  return out
 }
 
 // ─── Main Solver (JS CSP implementation) ─────────────────
@@ -309,7 +428,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   const effectiveBlocks: import('@/types').OptionalBlock[] = (input.optionalBlocks && input.optionalBlocks.length > 0)
     ? input.optionalBlocks
     : inferOptionalBlocksFromStrengths(
-        input.sectionStrengths ?? [], staff, sections, classPeriods, workDays,
+        input.sectionStrengths ?? [], staff, sections, classPeriods, workDays, subjects,
       )
 
   // ── Pass 0: Place Optional Blocks (schedU Phase 3) ────
@@ -692,11 +811,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // ── Final workload-balance health check ──
   //   Standard deviation of teacher weekly loads vs the target. The lower
   //   the better. Emitted as a soft penalty so the score reflects fairness.
+  let finalStddev = 0
   const loads = Object.values(teacherWeeklyLoad)
   if (loads.length > 0) {
     const mean = loads.reduce((a, b) => a + b, 0) / loads.length
     const variance = loads.reduce((a, l) => a + (l - mean) ** 2, 0) / loads.length
     const stddev = Math.sqrt(variance)
+    finalStddev = stddev
     // Penalty: 1 point per 1 stddev unit. Clamped to keep score readable.
     const balancePenalty = Math.min(50, Math.round(stddev * 4))
     if (balancePenalty > 0) {
@@ -729,6 +850,10 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     penalties,
     score: totalPenalty,
     iterations: sections.length * workDays.length * classPeriods.length,
+    optionalBlocks: effectiveBlocks,
+    dynamicLearningGroups: extractDynamicLearningGroups(effectiveBlocks, subjects),
+    teacherWeeklyLoad,
+    teacherLoadStddev: finalStddev,
   }
 }
 
