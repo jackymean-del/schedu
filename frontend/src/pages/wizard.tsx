@@ -1,20 +1,20 @@
 import { Component, type ReactNode } from "react"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
-import { StepStructure }           from "@/routes/wizard/step-structure"
-import { StepSubjectsTiming }      from "@/routes/wizard/step-subjects-timing"
-import { StepTeachers }            from "@/routes/wizard/step-teachers"
+import { StepResourcesV2 }         from "@/routes/wizard/step-resources-v2"
+import { StepBell }                from "@/routes/wizard/step-bell"
+import { StepSectionStrengths }    from "@/routes/wizard/step-section-strengths"
 import { StepConstraints }         from "@/routes/wizard/step-constraints"
 import { Step6Generate }           from "@/routes/wizard/step6-generate"
 import { CheckCircle2 } from "lucide-react"
 
-// ── 5-step user-facing wizard (matches schedU spec exactly) ──
-//   1. Structure         — School & Board + Classes
-//   2. Subjects & Timing — Subjects catalog + Bell schedule
-//   3. Teachers          — Teachers + Rooms + Allocations matrix
-//   4. Constraints       — Scope rules + compliance preview
-//   5. Generate          — AI builds the timetable
-const STEPS = [StepStructure, StepSubjectsTiming, StepTeachers, StepConstraints, Step6Generate]
+// ── 5-step user-facing wizard (final spec flow) ──
+//   1. Resources       — AI counts: courses/teachers/subjects/rooms
+//   2. Shifts & Timing — Bell schedule (days, periods, breaks)
+//   3. Allocation      — Section × subject strength matrix
+//   4. Constraint      — Scope rules + compliance
+//   5. Generate        — AI builds the timetable
+const STEPS = [StepResourcesV2, StepBell, StepSectionStrengths, StepConstraints, Step6Generate]
 
 // User-facing 5-step model. Internal step implementations unchanged —
 // we just relabel + reorder presentation while the engine consumes the
@@ -26,11 +26,11 @@ const STEPS = [StepStructure, StepSubjectsTiming, StepTeachers, StepConstraints,
 //   Constraints = Scope rules per entity (review existing scope from Resources)
 //   Generate    = AI builds the timetable (Step6Generate)
 const STEP_META = [
-  { label:"Structure",         sub:"School, board, classes & sections", icon:"🏫", color:"#7C6FE0" },
-  { label:"Subjects & Timing", sub:"Subjects catalog + bell schedule",  icon:"📚", color:"#9B8EF5" },
-  { label:"Teachers",          sub:"Roster, rooms & allocations",       icon:"👥", color:"#7C6FE0" },
-  { label:"Constraints",       sub:"Scope rules & compliance",          icon:"🔒", color:"#9B8EF5" },
-  { label:"Generate",          sub:"AI builds your timetable",          icon:"✨", color:"#D4920E" },
+  { label:"Resources",       sub:"Student courses, teachers, subjects & rooms", icon:"📥", color:"#7C6FE0" },
+  { label:"Shifts & Timing", sub:"Days, periods & breaks",                      icon:"🔔", color:"#9B8EF5" },
+  { label:"Allocation",      sub:"Section × subject strength matrix",           icon:"📊", color:"#7C6FE0" },
+  { label:"Constraint",      sub:"Scope rules & compliance",                    icon:"🔒", color:"#9B8EF5" },
+  { label:"Generate",        sub:"AI builds your timetable",                    icon:"✨", color:"#D4920E" },
 ]
 
 // ── Error boundary ────────────────────────────────────────────
@@ -77,7 +77,7 @@ const SB_ACCENT = '#7C6FE0'   // Lavender
 export function WizardPage() {
   const { step, setStep } = useTimetableStore()
   const { isAuthenticated, user } = useAuthStore()
-  const CurrentStep = STEPS[step - 1] ?? StepStructure
+  const CurrentStep = STEPS[step - 1] ?? StepResourcesV2
   const total = STEPS.length
   const pct   = Math.round(((step - 1) / (total - 1)) * 100)
 

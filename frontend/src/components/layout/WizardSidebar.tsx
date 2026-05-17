@@ -1,10 +1,10 @@
 import { useTimetableStore } from "@/store/timetableStore"
 
 export const WIZARD_STEPS = [
-  { n: 1, label: 'Structure' },
-  { n: 2, label: 'Subjects & Timing' },
-  { n: 3, label: 'Teachers' },
-  { n: 4, label: 'Constraints' },
+  { n: 1, label: 'Resources' },
+  { n: 2, label: 'Shifts & Timing' },
+  { n: 3, label: 'Allocation' },
+  { n: 4, label: 'Constraint' },
   { n: 5, label: 'Generate' },
 ]
 
