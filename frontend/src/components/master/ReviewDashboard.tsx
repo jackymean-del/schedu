@@ -12,12 +12,15 @@
  * Consumes the SolverOutput plus raw store data. Pure display component.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { Section, Subject, Staff, Period, OptionalBlock, Conflict, ClassTimetable } from '@/types'
 import { computeCapacity, inferBandFromSection, utilisationStatus } from '@/lib/capacityEngine'
+import { suggestFixes, type FixSuggestion } from '@/lib/fixSuggester'
+import { useTimetableStore } from '@/store/timetableStore'
 import {
   Users2, BookOpen, Building2, Layers, Sparkles,
   AlertTriangle, CheckCircle2, TrendingUp, Gauge, Clock,
+  Wrench, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react'
 
 interface Props {
@@ -361,25 +364,150 @@ function FairnessChip({ status, label }: { status: string; label: string }) {
 function IssueRow({ severity, label, desc, weight }: {
   severity: 'hard' | 'soft'; label: string; desc: string; weight?: number;
 }) {
+  const [expanded, setExpanded] = useState(false)
   const colors = severity === 'hard'
     ? { bg: '#FEE2E2', fg: '#991B1B', border: '#FECACA' }
     : { bg: '#FFFBEB', fg: '#92400E', border: '#FDE68A' }
+
+  const store = useTimetableStore() as any
+  const fixes: FixSuggestion[] = useMemo(() => {
+    try {
+      return suggestFixes(
+        { constraint: label, details: desc, penalty: weight ?? 0 },
+        {
+          staff: store.staff ?? [],
+          sections: store.sections ?? [],
+          subjects: store.subjects ?? [],
+          teacherAllocations: store.teacherAllocations ?? {},
+          subjectAllocations: store.subjectAllocations ?? {},
+          actions: {
+            setTeacherAllocationCell: store.setTeacherAllocationCell ?? (() => {}),
+            setTeacherAllocations: store.setTeacherAllocations ?? (() => {}),
+          },
+        },
+      )
+    } catch { return [] }
+  }, [label, desc, weight, store])
+
+  const hasApplyableFix = fixes.some(f => !!f.apply)
+
   return (
     <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 9,
-      padding: '7px 10px', background: colors.bg,
-      border: `1px solid ${colors.border}`, borderRadius: 7,
+      background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 7,
+      overflow: 'hidden' as const,
     }}>
-      <span style={{
-        fontSize: 9, fontWeight: 800, padding: '2px 6px',
-        background: colors.fg, color: '#fff', borderRadius: 4,
-        flexShrink: 0, marginTop: 1, letterSpacing: '0.04em',
-      }}>{severity.toUpperCase()}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>
-          {label} {weight ? <span style={{ color: '#8B87AD', fontWeight: 500 }}>(+{weight})</span> : null}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 9,
+        padding: '7px 10px',
+      }}>
+        <span style={{
+          fontSize: 9, fontWeight: 800, padding: '2px 6px',
+          background: colors.fg, color: '#fff', borderRadius: 4,
+          flexShrink: 0, marginTop: 1, letterSpacing: '0.04em',
+        }}>{severity.toUpperCase()}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>
+            {label} {weight ? <span style={{ color: '#8B87AD', fontWeight: 500 }}>(+{weight})</span> : null}
+          </div>
+          <div style={{ fontSize: 11, color: colors.fg, marginTop: 1 }}>{desc}</div>
         </div>
-        <div style={{ fontSize: 11, color: colors.fg, marginTop: 1 }}>{desc}</div>
+        {fixes.length > 0 && (
+          <button onClick={() => setExpanded(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 8px', borderRadius: 5,
+              background: '#fff', border: `1px solid ${colors.border}`,
+              color: colors.fg, fontSize: 10, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'inherit', flexShrink: 0,
+            }}>
+            <Wrench size={10} />
+            {fixes.length} fix{fixes.length !== 1 ? 'es' : ''}
+            {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+          </button>
+        )}
+      </div>
+
+      {/* Fix suggestions panel */}
+      {expanded && fixes.length > 0 && (
+        <div style={{
+          padding: '8px 10px', borderTop: `1px dashed ${colors.border}`,
+          background: '#fff',
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#8B87AD', marginBottom: 6 }}>
+            Suggested fixes
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+            {fixes.map(f => <FixCard key={f.id} fix={f} />)}
+          </div>
+          {!hasApplyableFix && (
+            <div style={{ fontSize: 10, color: '#8B87AD', fontStyle: 'italic' as const, marginTop: 6 }}>
+              No auto-fix available — guidance only.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FixCard({ fix }: { fix: FixSuggestion }) {
+  const [applied, setApplied] = useState(false)
+  const categoryStyle: Record<string, { bg: string; fg: string }> = {
+    rebalance: { bg: '#EDE9FF', fg: '#7C6FE0' },
+    reassign:  { bg: '#DBEAFE', fg: '#1D4ED8' },
+    unscope:   { bg: '#FEF3C7', fg: '#92400E' },
+    manual:    { bg: '#F1F5F9', fg: '#475569' },
+  }
+  const s = categoryStyle[fix.category] ?? categoryStyle.manual
+  const handleApply = () => {
+    fix.apply?.()
+    setApplied(true)
+  }
+  return (
+    <div style={{
+      background: '#FAFAFE', border: '1px solid #ECEAFB', borderRadius: 7,
+      padding: '8px 10px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <span style={{
+          padding: '2px 7px', borderRadius: 10,
+          fontSize: 8.5, fontWeight: 800, letterSpacing: '0.06em',
+          background: s.bg, color: s.fg, flexShrink: 0,
+          textTransform: 'uppercase' as const,
+        }}>
+          {fix.category}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#13111E' }}>
+            {fix.title}
+          </div>
+          <div style={{ fontSize: 10.5, color: '#4B5275', marginTop: 2, lineHeight: 1.5 }}>
+            {fix.description}
+          </div>
+          {fix.diff && fix.diff.length > 0 && (
+            <div style={{ marginTop: 6, padding: '5px 8px', background: '#fff', border: '1px solid #ECEAFB', borderRadius: 5 }}>
+              {fix.diff.map((line, i) => (
+                <div key={i} style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: '#13111E', lineHeight: 1.6 }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {fix.apply && (
+          <button onClick={handleApply} disabled={applied}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '5px 10px', borderRadius: 6, border: 'none',
+              background: applied ? '#DCFCE7' : s.fg, color: applied ? '#15803D' : '#fff',
+              fontSize: 10.5, fontWeight: 700, cursor: applied ? 'default' : 'pointer',
+              fontFamily: 'inherit', flexShrink: 0,
+            }}>
+            {applied
+              ? <><CheckCircle2 size={10} /> Applied</>
+              : <><Zap size={10} /> Apply</>}
+          </button>
+        )}
       </div>
     </div>
   )
