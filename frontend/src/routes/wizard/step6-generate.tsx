@@ -339,6 +339,7 @@ export function Step6Generate() {
             rooms={(store as any).rooms ?? []}
             score={solverOutput.score}
             blockedSlots={solverOutput.blockedSlots}
+            dynamicLearningGroups={solverOutput.dynamicLearningGroups}
           />
         </div>
       )}

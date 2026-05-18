@@ -17,8 +17,10 @@ import type { Section, Subject, Staff, Period, OptionalBlock, Conflict, ClassTim
 import { computeCapacity, inferBandFromSection, utilisationStatus } from '@/lib/capacityEngine'
 import { suggestFixes, type FixSuggestion } from '@/lib/fixSuggester'
 import {
-  type BlockedSlot, blockedCategoryLabel, blockedRemedy,
+  type BlockedSlot, type DynamicLearningGroup,
+  blockedCategoryLabel, blockedRemedy,
 } from '@/lib/schedulingEngine'
+import { DLGInspector } from './DLGInspector'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   Users2, BookOpen, Building2, Layers, Sparkles,
@@ -42,12 +44,14 @@ interface Props {
   rooms?: any[]
   score: number
   blockedSlots?: BlockedSlot[]
+  dynamicLearningGroups?: DynamicLearningGroup[]
 }
 
 export function ReviewDashboard({
   classTT, sections, staff, subjects, periods, workDays,
   optionalBlocks = [], teacherWeeklyLoad, teacherLoadStddev,
   conflicts, penalties, rooms = [], score, blockedSlots = [],
+  dynamicLearningGroups = [],
 }: Props) {
 
   // ── Capacity summary per band ──
@@ -277,7 +281,14 @@ export function ReviewDashboard({
         )}
       </Card>
 
-      {/* ─── F. Unplaced Slots (Why-this-was-blocked) ─── */}
+      {/* ─── F. Dynamic Learning Groups inspector ─── */}
+      {dynamicLearningGroups.length > 0 && (
+        <Card title="Dynamic Learning Groups" icon={<Layers size={14} />}>
+          <DLGInspector dlgs={dynamicLearningGroups} periods={periods} rooms={rooms} />
+        </Card>
+      )}
+
+      {/* ─── G. Unplaced Slots (Why-this-was-blocked) ─── */}
       {blockedSlots.length > 0 && (
         <Card
           title="Unplaced Slots"
