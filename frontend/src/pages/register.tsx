@@ -62,23 +62,23 @@ export function RegisterPage() {
   return (
     <div style={{
       minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-      background:'linear-gradient(135deg,#f0fdf4 0%,#eff6ff 50%,#fdf4ff 100%)',
+      background:'linear-gradient(135deg,#F5F2FF 0%,#FAFAFE 100%)',
       padding:'24px',
     }}>
-      <div style={{ width:'100%', maxWidth:440, background:'#fff', borderRadius:16, padding:'40px 40px', boxShadow:'0 4px 24px rgba(0,0,0,0.08)', border:'1px solid #e5e7eb' }}>
+      <div style={{ width:'100%', maxWidth:440, background:'#fff', borderRadius:16, padding:'40px 40px', boxShadow:'0 4px 24px rgba(0,0,0,0.08)', border:'1px solid #E8E4FF' }}>
 
         {/* Logo */}
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:28 }}>
           <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg,#9B8EF5,#7C6FE0)', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <CalendarDays size={16} color="#fff" />
           </div>
-          <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:18, color:'#111827' }}>
+          <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:18, color:'#13111E' }}>
             Sche<span style={{ color:'#7C6FE0' }}>du</span>
           </span>
         </div>
 
-        <h1 style={{ fontSize:22, fontWeight:700, color:'#111827', marginBottom:4 }}>Create your account</h1>
-        <p style={{ color:'#6b7280', fontSize:13, marginBottom:24 }}>
+        <h1 style={{ fontSize:22, fontWeight:700, color:'#13111E', marginBottom:4 }}>Create your account</h1>
+        <p style={{ color:'#4B5275', fontSize:13, marginBottom:24 }}>
           Already have one?{' '}
           <a href="/login" style={{ color:'#7C6FE0', fontWeight:600, textDecoration:'none' }}>Sign in</a>
         </p>
@@ -87,49 +87,49 @@ export function RegisterPage() {
         <button onClick={handleGoogle} disabled={googleLoading || loading}
           style={{
             width:'100%', padding:'11px 16px', borderRadius:8,
-            border:'1.5px solid #e5e7eb', background: googleLoading ? '#f9fafb' : '#fff',
+            border:'1.5px solid #E8E4FF', background: googleLoading ? '#f9fafb' : '#fff',
             display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-            fontSize:14, fontWeight:600, color:'#374151', cursor: googleLoading ? 'default' : 'pointer',
+            fontSize:14, fontWeight:600, color:'#4B5275', cursor: googleLoading ? 'default' : 'pointer',
             boxShadow:'0 1px 3px rgba(0,0,0,0.07)', transition:'box-shadow 0.15s, border-color 0.15s',
             marginBottom:20,
           }}
-          onMouseEnter={e => { if (!googleLoading) { (e.currentTarget as HTMLButtonElement).style.borderColor='#d1d5db'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 2px 6px rgba(0,0,0,0.10)' } }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.07)' }}
+          onMouseEnter={e => { if (!googleLoading) { (e.currentTarget as HTMLButtonElement).style.borderColor='#D8D2FF'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 2px 6px rgba(0,0,0,0.10)' } }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='#E8E4FF'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.07)' }}
         >
           {googleLoading
-            ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite', color:'#6b7280' }} /> Connecting to Google...</>
+            ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite', color:'#4B5275' }} /> Connecting to Google...</>
             : <><GoogleIcon /> Continue with Google</>
           }
         </button>
 
         {/* ── OR divider ── */}
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
-          <div style={{ flex:1, height:1, background:'#e5e7eb' }} />
-          <span style={{ fontSize:11, fontWeight:600, color:'#9ca3af', letterSpacing:'0.06em', textTransform:'uppercase' }}>or</span>
-          <div style={{ flex:1, height:1, background:'#e5e7eb' }} />
+          <div style={{ flex:1, height:1, background:'#E8E4FF' }} />
+          <span style={{ fontSize:11, fontWeight:600, color:'#8B87AD', letterSpacing:'0.06em', textTransform:'uppercase' }}>or</span>
+          <div style={{ flex:1, height:1, background:'#E8E4FF' }} />
         </div>
 
         {/* ── Email/password form ── */}
         <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          <Field label="Full Name" icon={<User size={14} color="#9ca3af" />}>
+          <Field label="Full Name" icon={<User size={14} color="#8B87AD" />}>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="Priya Sharma" style={inp}
               onFocus={e => fi(e.target as HTMLInputElement)} onBlur={e => fo(e.target as HTMLInputElement)} />
           </Field>
 
-          <Field label="School / Institution" icon={<School size={14} color="#9ca3af" />}>
+          <Field label="School / Institution" icon={<School size={14} color="#8B87AD" />}>
             <input value={school} onChange={e => setSchool(e.target.value)}
               placeholder="Delhi Public School (optional)" style={inp}
               onFocus={e => fi(e.target as HTMLInputElement)} onBlur={e => fo(e.target as HTMLInputElement)} />
           </Field>
 
-          <Field label="Email Address" icon={<Mail size={14} color="#9ca3af" />}>
+          <Field label="Email Address" icon={<Mail size={14} color="#8B87AD" />}>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="you@school.edu" style={inp}
               onFocus={e => fi(e.target as HTMLInputElement)} onBlur={e => fo(e.target as HTMLInputElement)} />
           </Field>
 
-          <Field label="Password" icon={<Lock size={14} color="#9ca3af" />}>
+          <Field label="Password" icon={<Lock size={14} color="#8B87AD" />}>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="Min. 6 characters" style={inp}
               onFocus={e => fi(e.target as HTMLInputElement)} onBlur={e => fo(e.target as HTMLInputElement)} />
@@ -144,7 +144,7 @@ export function RegisterPage() {
           <button type="submit" disabled={loading || googleLoading}
             style={{
               padding:'12px', borderRadius:8, border:'none', marginTop:4,
-              background: (loading || googleLoading) ? '#d1d5db' : '#7C6FE0', color:'#fff',
+              background: (loading || googleLoading) ? '#D8D2FF' : '#7C6FE0', color:'#fff',
               fontSize:14, fontWeight:600, cursor: (loading || googleLoading) ? 'default' : 'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', gap:8,
               transition:'background 0.15s',
@@ -155,7 +155,7 @@ export function RegisterPage() {
           </button>
         </form>
 
-        <p style={{ marginTop:20, fontSize:11, color:'#9ca3af', textAlign:'center', lineHeight:1.6 }}>
+        <p style={{ marginTop:20, fontSize:11, color:'#8B87AD', textAlign:'center', lineHeight:1.6 }}>
           By signing up you agree to Schedu's terms. Your data stays on your device in demo mode.
         </p>
       </div>
@@ -167,7 +167,7 @@ export function RegisterPage() {
 function Field({ label, icon, children }: { label:string; icon?:React.ReactNode; children:React.ReactNode }) {
   return (
     <div>
-      <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#374151', marginBottom:5 }}>{label}</label>
+      <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#4B5275', marginBottom:5 }}>{label}</label>
       <div style={{ position:'relative' }}>
         {icon && <span style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>{icon}</span>}
         {children}
@@ -177,8 +177,8 @@ function Field({ label, icon, children }: { label:string; icon?:React.ReactNode;
 }
 
 const inp: React.CSSProperties = {
-  width:'100%', padding:'10px 12px 10px 34px', border:'1.5px solid #e5e7eb',
-  borderRadius:7, fontSize:13, outline:'none', background:'#fff', boxSizing:'border-box', color:'#111827',
+  width:'100%', padding:'10px 12px 10px 34px', border:'1.5px solid #E8E4FF',
+  borderRadius:7, fontSize:13, outline:'none', background:'#fff', boxSizing:'border-box', color:'#13111E',
 }
 const fi = (el: HTMLInputElement) => { el.style.borderColor='#7C6FE0'; el.style.boxShadow='0 0 0 3px rgba(124,111,224,0.08)' }
-const fo = (el: HTMLInputElement) => { el.style.borderColor='#e5e7eb'; el.style.boxShadow='none' }
+const fo = (el: HTMLInputElement) => { el.style.borderColor='#E8E4FF'; el.style.boxShadow='none' }

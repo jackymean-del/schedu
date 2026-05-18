@@ -1,11 +1,1 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "brand-preview",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-s", "brand-preview", "-l", "4200", "--no-clipboard"],
-      "port": 4200
-    }
-  ]
-}
+{"version":"0.0.1","configurations":[{"name":"schedu-frontend","runtimeExecutable":"npm","runtimeArgs":["run","dev"],"cwd":"C:\Latest\Projects\SmartSched\frontend","port":5173}]}

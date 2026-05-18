@@ -3,9 +3,10 @@ import { Topbar } from "@/components/layout/Topbar"
 import { useTimetableStore } from "@/store/timetableStore"
 
 const STEP_LABELS = [
-  'School Setup',
-  'Bell Schedule',
   'Resources',
+  'Shifts & Timing',
+  'Allocation',
+  'Student Groups',
   'Generate',
 ]
 
@@ -20,10 +21,10 @@ export function RootLayout() {
   if (isAuthPage || isDashboard) return <Outlet />
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f9fafb', display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100vh', background:'#F9F8FF', display:'flex', flexDirection:'column' }}>
       <Topbar
         step={isWizard ? step : undefined}
-        totalSteps={isWizard ? 4 : undefined}
+        totalSteps={isWizard ? 5 : undefined}
         stepLabel={isWizard ? STEP_LABELS[step - 1] : undefined}
       />
       <Outlet />

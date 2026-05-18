@@ -36,16 +36,16 @@ function calcTimes(periods: any[], config: any): Map<string,{start:string;end:st
 // ── Period header ──────────────────────────────────────────
 function PeriodCol({ p, times, onShiftLeft, onShiftRight }: { p:Period; times?:{start:string;end:string}; onShiftLeft?:()=>void; onShiftRight?:()=>void }) {
   const isBreak = p.type !== "class"
-  const bg = p.type==="fixed-start"?"#dbeafe":p.type==="lunch"?"#fef3c7":p.type==="break"?"#fef9c3":p.type==="fixed-end"?"#EDE9FF":"#f1f5f9"
-  const color = p.type==="fixed-start"?"#1e40af":p.type==="lunch"?"#92400e":p.type==="break"?"#854d0e":p.type==="fixed-end"?"#065f46":"#64748b"
+  const bg = p.type==="fixed-start"?"#dbeafe":p.type==="lunch"?"#fef3c7":p.type==="break"?"#fef9c3":p.type==="fixed-end"?"#EDE9FF":"#F8F7FF"
+  const color = p.type==="fixed-start"?"#1e40af":p.type==="lunch"?"#92400e":p.type==="break"?"#854d0e":p.type==="fixed-end"?"#065f46":"#4B5275"
   return (
-    <th style={{ background:bg, color, fontSize:10, fontWeight:700, padding:"6px 4px", border:"1px solid #e2e8f0", textAlign:"center", minWidth:isBreak?64:80, whiteSpace:"nowrap", position:"relative" as const }}>
+    <th style={{ background:bg, color, fontSize:10, fontWeight:700, padding:"6px 4px", border:"1px solid #E8E4FF", textAlign:"center", minWidth:isBreak?64:80, whiteSpace:"nowrap", position:"relative" as const }}>
       <div>{p.name}</div>
       {times && <><div style={{ fontSize:8, fontWeight:600, opacity:0.9 }}>{times.start}</div><div style={{ fontSize:8, fontWeight:400, opacity:0.6 }}>→ {times.end}</div></>}
       {onShiftLeft && !isBreak && (
         <div style={{ display:"flex", justifyContent:"center", gap:2, marginTop:3 }}>
-          <button onClick={onShiftLeft} title="Shift left" style={{ fontSize:8, border:"1px solid #e2e8f0", borderRadius:2, background:"#fff", cursor:"pointer", color:"#94a3b8", padding:"0 4px", lineHeight:"14px" }}>◀</button>
-          <button onClick={onShiftRight} title="Shift right" style={{ fontSize:8, border:"1px solid #e2e8f0", borderRadius:2, background:"#fff", cursor:"pointer", color:"#94a3b8", padding:"0 4px", lineHeight:"14px" }}>▶</button>
+          <button onClick={onShiftLeft} title="Shift left" style={{ fontSize:8, border:"1px solid #E8E4FF", borderRadius:2, background:"#fff", cursor:"pointer", color:"#8B87AD", padding:"0 4px", lineHeight:"14px" }}>◀</button>
+          <button onClick={onShiftRight} title="Shift right" style={{ fontSize:8, border:"1px solid #E8E4FF", borderRadius:2, background:"#fff", cursor:"pointer", color:"#8B87AD", padding:"0 4px", lineHeight:"14px" }}>▶</button>
         </div>
       )}
     </th>
@@ -54,10 +54,10 @@ function PeriodCol({ p, times, onShiftLeft, onShiftRight }: { p:Period; times?:{
 
 // ── Break cell ─────────────────────────────────────────────
 function BreakCell({ p }: { p:Period }) {
-  const bg = p.type==="fixed-start"?"#eff6ff":p.type==="lunch"?"#fffbeb":p.type==="break"?"#fefce8":p.type==="fixed-end"?"#f0fdf4":"#f8fafc"
+  const bg = p.type==="fixed-start"?"#eff6ff":p.type==="lunch"?"#fffbeb":p.type==="break"?"#fefce8":p.type==="fixed-end"?"#f0fdf4":"#FAFAFE"
   const color = p.type==="fixed-start"?"#3b82f6":p.type==="lunch"?"#D4920E":p.type==="break"?"#ca8a04":"#7C6FE0"
   return (
-    <td style={{ background:bg, color, fontSize:9, fontWeight:600, textAlign:"center", padding:"4px 2px", border:"1px solid #e2e8f0", fontStyle:"italic", whiteSpace:"nowrap" }}>{p.name}</td>
+    <td style={{ background:bg, color, fontSize:9, fontWeight:600, textAlign:"center", padding:"4px 2px", border:"1px solid #E8E4FF", fontStyle:"italic", whiteSpace:"nowrap" }}>{p.name}</td>
   )
 }
 
@@ -69,18 +69,18 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   absentHighlight?:boolean;
 }) {
   if (!subject) return (
-    <td style={{ border:"1px solid #e2e8f0", padding:2 }}
+    <td style={{ border:"1px solid #E8E4FF", padding:2 }}
       onDragOver={e => { e.preventDefault(); onDragOver?.(e) }}
       onDrop={onDrop}
       onDragLeave={onDragLeave}>
-      <div onClick={onClick} style={{ height:44, background: dragOver?"#EDE9FF":"#f8fafc", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color: dragOver?"#7C6FE0":"#cbd5e1", fontSize:10, cursor: dragOver?"copy":"default", border: dragOver?"2px dashed #7C6FE0":"none", transition:"all 0.12s" }}>
+      <div onClick={onClick} style={{ height:44, background: dragOver?"#EDE9FF":"#FAFAFE", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color: dragOver?"#7C6FE0":"#cbd5e1", fontSize:10, cursor: dragOver?"copy":"default", border: dragOver?"2px dashed #7C6FE0":"none", transition:"all 0.12s" }}>
         {dragOver ? "Drop here" : "—"}
       </div>
     </td>
   )
   const colorClass = getSubjectColor(subject)
   return (
-    <td style={{ border:"1px solid #e2e8f0", padding:2 }}>
+    <td style={{ border:"1px solid #E8E4FF", padding:2 }}>
       <div className={colorClass} onClick={onClick}
         style={{ borderRadius:5, padding:"4px 7px", minHeight:44, cursor:onClick?"pointer":"default", outline:absentHighlight?"3px solid #f59e0b":isSub?"2px dashed #f59e0b":"none", outlineOffset:absentHighlight?"-2px":undefined, position:"relative" as const }}>
         {isSub && <span style={{ position:"absolute" as const, top:2, right:3, width:6, height:6, borderRadius:"50%", background:"#f59e0b" }} title="Substituted" />}
@@ -264,8 +264,8 @@ export function TimetablePage() {
             </tr></thead>
             <tbody>
               {usedDays.map((day, di) => (
-                <tr key={day} style={{ background: di%2===0?"#fff":"#f8fafc" }}>
-                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
+                <tr key={day} style={{ background: di%2===0?"#fff":"#FAFAFE" }}>
+                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
                   {periods.map(p => {
                     if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                     const cell = sd[day]?.[p.id]
@@ -321,19 +321,19 @@ export function TimetablePage() {
                 const isBreak = p.type !== "class"
                 const times = periodTimes.get(p.id)
                 return (
-                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#f8fafc" }}>
-                    <td style={{ padding:"6px 10px", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>
+                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#FAFAFE" }}>
+                    <td style={{ padding:"6px 10px", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
                       <div style={{ fontWeight:700, fontSize:11, color:isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
-                      {times && <div style={{ fontSize:9, color:"#94a3b8" }}>{times.start} → {times.end}</div>}
+                      {times && <div style={{ fontSize:9, color:"#8B87AD" }}>{times.start} → {times.end}</div>}
                     </td>
                     {usedDays.map(day => {
-                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #e2e8f0", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
+                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
                       const cell = sd[day]?.[p.id]
                       const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
-                      if (!cell?.subject) return <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}><div style={{ height:38, background:"#f8fafc", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div></td>
+                      if (!cell?.subject) return <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}><div style={{ height:38, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div></td>
                       const colorClass = getSubjectColor(cell.subject)
                       return (
-                        <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                        <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div className={colorClass} onClick={() => editMode && setEditTarget({section:sn, day, periodId:p.id})} style={{ borderRadius:5, padding:"4px 7px", minHeight:38, cursor:editMode?"pointer":"default", outline:highlight?"3px solid #f59e0b":"none", outlineOffset:"-2px" }}>
                             <div style={{ fontSize:10, fontWeight:700 }}>{cell.subject}</div>
                             {showTeacher && cell.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{cell.teacher}</div>}
@@ -369,18 +369,18 @@ export function TimetablePage() {
 
     return (
       <div>
-        <div style={{ padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0" }}>
+        <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
           <div style={{ display:"grid", gridTemplateColumns:"auto 1fr auto", gap:16, alignItems:"start" }}>
             <div style={{ width:42, height:42, borderRadius:"50%", background:"#7C6FE0", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, fontWeight:700 }}>{tn[0]}</div>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'DM Serif Display',Georgia,serif" }}>{tn}</div>
-              {st?.role && <div style={{ fontSize:11, color:"#64748b" }}>{st.role}</div>}
-              {assignedStr !== "—" && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}><span style={{ fontWeight:600 }}>Teaches: </span>{assignedStr}</div>}
+              {st?.role && <div style={{ fontSize:11, color:"#4B5275" }}>{st.role}</div>}
+              {assignedStr !== "—" && <div style={{ fontSize:11, color:"#4B5275", marginTop:2 }}><span style={{ fontWeight:600 }}>Teaches: </span>{assignedStr}</div>}
             </div>
             <div style={{ textAlign:"right" as const }}>
               <div style={{ fontSize:14, fontWeight:700, fontFamily:"monospace", color:loadColor }}>{total}/{max} periods</div>
               <div style={{ fontSize:10, color:loadColor }}>{pct}% loaded</div>
-              <div style={{ width:90, height:5, background:"#e2e8f0", borderRadius:3, marginTop:5, overflow:"hidden" }}>
+              <div style={{ width:90, height:5, background:"#E8E4FF", borderRadius:3, marginTop:5, overflow:"hidden" }}>
                 <div style={{ height:"100%", width:`${Math.min(100,pct)}%`, background:loadColor, borderRadius:3, transition:"width 0.3s" }} />
               </div>
             </div>
@@ -394,19 +394,19 @@ export function TimetablePage() {
             </tr></thead>
             <tbody>
               {usedDays.map((day, di) => (
-                <tr key={day} style={{ background:di%2===0?"#fff":"#f8fafc" }}>
-                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
+                <tr key={day} style={{ background:di%2===0?"#fff":"#FAFAFE" }}>
+                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
                   {periods.map(p => {
                     if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                     const cell = sch[day]?.[p.id]
                     if (!cell?.subject) return (
-                      <td key={p.id} style={{ border:"1px solid #e2e8f0", padding:2 }}>
-                        <div style={{ height:44, background:"#f8fafc", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
+                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
+                        <div style={{ height:44, background:"#FAFAFE", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
                       </td>
                     )
                     const colorClass = getSubjectColor(cell.subject.split(" (")[0])
                     return (
-                      <td key={p.id} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                         <div className={colorClass} style={{ borderRadius:5, padding:"4px 7px", minHeight:44, border:cell.conflict?"2px solid #fca5a5":"none", position:"relative" as const }}>
                           {cell.conflict && <span style={{ position:"absolute" as const, top:2, right:3, fontSize:8, color:"#dc2626" }}>⚠</span>}
                           <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{cell.subject.replace(/\s*\(.*\)/, "")}</div>
@@ -441,8 +441,8 @@ export function TimetablePage() {
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
     return (
       <div>
-        <div style={{ padding:"10px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{tn} <span style={{ fontSize:11, fontWeight:400, color:"#64748b" }}>— {st?.role}</span></div>
+        <div style={{ padding:"10px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{tn} <span style={{ fontSize:11, fontWeight:400, color:"#4B5275" }}>— {st?.role}</span></div>
           <span style={{ fontSize:12, fontWeight:700, fontFamily:"monospace", color:loadColor }}>{total}/{max} periods · {pct}% loaded</span>
         </div>
         <div style={{ overflowX:"auto" }}>
@@ -458,18 +458,18 @@ export function TimetablePage() {
                 const isBreak = p.type !== "class"
                 const times = periodTimes.get(p.id)
                 return (
-                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#f8fafc" }}>
-                    <td style={{ padding:"6px 10px", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>
+                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#FAFAFE" }}>
+                    <td style={{ padding:"6px 10px", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
                       <div style={{ fontWeight:700, fontSize:11, color:isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
-                      {times && <div style={{ fontSize:9, color:"#94a3b8" }}>{times.start} → {times.end}</div>}
+                      {times && <div style={{ fontSize:9, color:"#8B87AD" }}>{times.start} → {times.end}</div>}
                     </td>
                     {usedDays.map(day => {
-                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #e2e8f0", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
+                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
                       const cell = sch[day]?.[p.id]
-                      if (!cell?.subject) return <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}><div style={{ height:42, background:"#f8fafc", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div></td>
+                      if (!cell?.subject) return <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}><div style={{ height:42, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div></td>
                       const colorClass = getSubjectColor(cell.subject.split(" (")[0])
                       return (
-                        <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                        <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div className={colorClass} style={{ borderRadius:5, padding:"4px 7px", minHeight:42 }}>
                             <div style={{ fontSize:10, fontWeight:700 }}>{cell.subject.replace(/\s*\(.*\)/, "")}</div>
                             <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{cell.sectionName}</div>
@@ -495,12 +495,12 @@ export function TimetablePage() {
     const sub = subjects.find(s => s.name === subName)
     return (
       <div>
-        <div style={{ padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
             <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{subName}</div>
-            <div style={{ fontSize:11, color:"#64748b" }}>{sub?.category ?? "Subject"} · {sub?.periodsPerWeek ?? "?"} periods/week target</div>
+            <div style={{ fontSize:11, color:"#4B5275" }}>{sub?.category ?? "Subject"} · {sub?.periodsPerWeek ?? "?"} periods/week target</div>
           </div>
-          <div style={{ fontSize:11, color:"#94a3b8" }}>Which class has this subject · when</div>
+          <div style={{ fontSize:11, color:"#8B87AD" }}>Which class has this subject · when</div>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
@@ -510,19 +510,19 @@ export function TimetablePage() {
             </tr></thead>
             <tbody>
               {usedDays.map((day, di) => (
-                <tr key={day} style={{ background:di%2===0?"#fff":"#f8fafc" }}>
-                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
+                <tr key={day} style={{ background:di%2===0?"#fff":"#FAFAFE" }}>
+                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
                   {periods.map(p => {
                     if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                     const hits = sections.filter(sec => classTT[sec.name]?.[day]?.[p.id]?.subject === subName)
                     if (!hits.length) return (
-                      <td key={p.id} style={{ border:"1px solid #e2e8f0", padding:2 }}>
-                        <div style={{ height:44, background:"#f8fafc", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div>
+                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
+                        <div style={{ height:44, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div>
                       </td>
                     )
                     const colorClass = getSubjectColor(subName)
                     return (
-                      <td key={p.id} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                         <div className={colorClass} style={{ borderRadius:5, padding:"4px 7px", minHeight:44 }}>
                           {hits.map(sec => {
                             const cell = classTT[sec.name][day][p.id]
@@ -554,12 +554,12 @@ export function TimetablePage() {
     const sub = subjects.find(s => s.name === subName)
     return (
       <div>
-        <div style={{ padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
             <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{subName}</div>
-            <div style={{ fontSize:11, color:"#64748b" }}>{sub?.category ?? "Subject"} · Transposed view</div>
+            <div style={{ fontSize:11, color:"#4B5275" }}>{sub?.category ?? "Subject"} · Transposed view</div>
           </div>
-          <div style={{ fontSize:11, color:"#94a3b8" }}>Rows = periods · Columns = days</div>
+          <div style={{ fontSize:11, color:"#8B87AD" }}>Rows = periods · Columns = days</div>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
@@ -574,22 +574,22 @@ export function TimetablePage() {
                 const isBreak = p.type !== "class"
                 const times = periodTimes.get(p.id)
                 return (
-                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#f8fafc" }}>
-                    <td style={{ padding:"6px 10px", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>
+                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#FAFAFE" }}>
+                    <td style={{ padding:"6px 10px", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
                       <div style={{ fontWeight:700, fontSize:11, color:isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
-                      {times && <div style={{ fontSize:9, color:"#94a3b8" }}>{times.start} → {times.end}</div>}
+                      {times && <div style={{ fontSize:9, color:"#8B87AD" }}>{times.start} → {times.end}</div>}
                     </td>
                     {usedDays.map(day => {
-                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #e2e8f0", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
+                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
                       const hits = sections.filter(sec => classTT[sec.name]?.[day]?.[p.id]?.subject === subName)
                       if (!hits.length) return (
-                        <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}>
-                          <div style={{ height:38, background:"#f8fafc", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div>
+                        <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
+                          <div style={{ height:38, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div>
                         </td>
                       )
                       const colorClass = getSubjectColor(subName)
                       return (
-                        <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                        <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div className={colorClass} style={{ borderRadius:5, padding:"4px 7px", minHeight:38 }}>
                             {hits.map(sec => {
                               const cell = classTT[sec.name][day][p.id]
@@ -621,9 +621,9 @@ export function TimetablePage() {
     const usedDays = config.workDays
     return (
       <div>
-        <div style={{ padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0" }}>
+        <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
           <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>🚪 {roomName}</div>
-          <div style={{ fontSize:11, color:"#64748b" }}>Room occupancy schedule</div>
+          <div style={{ fontSize:11, color:"#4B5275" }}>Room occupancy schedule</div>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
@@ -633,8 +633,8 @@ export function TimetablePage() {
             </tr></thead>
             <tbody>
               {usedDays.map((day, di) => (
-                <tr key={day} style={{ background:di%2===0?"#fff":"#f8fafc" }}>
-                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
+                <tr key={day} style={{ background:di%2===0?"#fff":"#FAFAFE" }}>
+                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
                   {periods.map(p => {
                     if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                     const hit = sections.flatMap(sec => {
@@ -642,13 +642,13 @@ export function TimetablePage() {
                       return cell?.subject && cell.room === roomName ? [{ sec: sec.name, cell }] : []
                     })[0]
                     if (!hit) return (
-                      <td key={p.id} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                         <div style={{ height:44, background:"#f0fdf4", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#D8D2FF", fontSize:10 }}>Free</div>
                       </td>
                     )
                     const colorClass = getSubjectColor(hit.cell.subject)
                     return (
-                      <td key={p.id} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                         <div className={colorClass} style={{ borderRadius:5, padding:"4px 7px", minHeight:44 }}>
                           <div style={{ fontSize:10, fontWeight:700 }}>{hit.cell.subject}</div>
                           <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.sec}</div>
@@ -673,9 +673,9 @@ export function TimetablePage() {
     const usedDays = config.workDays
     return (
       <div>
-        <div style={{ padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0" }}>
+        <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
           <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>🚪 {roomName}</div>
-          <div style={{ fontSize:11, color:"#64748b" }}>Room occupancy schedule · Transposed view</div>
+          <div style={{ fontSize:11, color:"#4B5275" }}>Room occupancy schedule · Transposed view</div>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
@@ -690,25 +690,25 @@ export function TimetablePage() {
                 const isBreak = p.type !== "class"
                 const times = periodTimes.get(p.id)
                 return (
-                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#f8fafc" }}>
-                    <td style={{ padding:"6px 10px", border:"1px solid #e2e8f0", whiteSpace:"nowrap" as const }}>
+                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#FAFAFE" }}>
+                    <td style={{ padding:"6px 10px", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
                       <div style={{ fontWeight:700, fontSize:11, color:isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
-                      {times && <div style={{ fontSize:9, color:"#94a3b8" }}>{times.start} → {times.end}</div>}
+                      {times && <div style={{ fontSize:9, color:"#8B87AD" }}>{times.start} → {times.end}</div>}
                     </td>
                     {usedDays.map(day => {
-                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #e2e8f0", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
+                      if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
                       const hit = sections.flatMap(sec => {
                         const cell = classTT[sec.name]?.[day]?.[p.id]
                         return cell?.subject && cell.room === roomName ? [{ sec: sec.name, cell }] : []
                       })[0]
                       if (!hit) return (
-                        <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                        <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div style={{ height:38, background:"#f0fdf4", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#D8D2FF", fontSize:10 }}>Free</div>
                         </td>
                       )
                       const colorClass = getSubjectColor(hit.cell.subject)
                       return (
-                        <td key={day} style={{ border:"1px solid #e2e8f0", padding:2 }}>
+                        <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div className={colorClass} style={{ borderRadius:5, padding:"4px 7px", minHeight:38 }}>
                             <div style={{ fontSize:10, fontWeight:700 }}>{hit.cell.subject}</div>
                             <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.sec}</div>
@@ -797,7 +797,7 @@ export function TimetablePage() {
     if (total === 0) return null
 
     return (
-      <div style={{ marginTop:16, background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, overflow:"hidden" }}>
+      <div style={{ marginTop:16, background:"#fff", border:"1.5px solid #E8E4FF", borderRadius:10, overflow:"hidden" }}>
         <button onClick={() => setUncoveredOpen(o => !o)}
           style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", border:"none", background: uncoveredOpen?"#fffbeb":"#fff", cursor:"pointer", textAlign:"left" as const }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -852,14 +852,14 @@ export function TimetablePage() {
   if (!periods.length) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"calc(100vh - 52px)", flexDirection:"column" as const, gap:16 }}>
       <div style={{ fontSize:48 }}>📅</div>
-      <div style={{ fontSize:18, color:"#64748b", fontFamily:"'DM Serif Display',Georgia,serif" }}>No timetable generated yet</div>
+      <div style={{ fontSize:18, color:"#4B5275", fontFamily:"'DM Serif Display',Georgia,serif" }}>No timetable generated yet</div>
       <button onClick={() => window.location.href="/wizard"} style={{ padding:"10px 24px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>✨ Go to Wizard</button>
     </div>
   )
 
   // ── Toolbar button helper ────────────────────────────────
   const TBtn = (active: boolean, onClick: ()=>void, label: string, icon?: string) => (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 11px", borderRadius:6, border:`1px solid ${active?"#7C6FE0":"#e2e8f0"}`, background:active?"#EDE9FF":"#fff", color:active?"#7C6FE0":"#64748b", fontSize:11, fontWeight:500, cursor:"pointer", whiteSpace:"nowrap" as const }}>
+    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 11px", borderRadius:6, border:`1px solid ${active?"#7C6FE0":"#E8E4FF"}`, background:active?"#EDE9FF":"#fff", color:active?"#7C6FE0":"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer", whiteSpace:"nowrap" as const }}>
       {icon && <span>{icon}</span>}{label}
     </button>
   )
@@ -878,17 +878,17 @@ export function TimetablePage() {
     : undefined
 
   return (
-    <div style={{ display:"flex", height:"calc(100vh - 52px)", background:"#f1f5f9" }}>
+    <div style={{ display:"flex", height:"calc(100vh - 52px)", background:"#F8F7FF" }}>
 
       {/* ── Left sidebar ─────────────────────────────────── */}
-      <div style={{ width:184, background:"#fff", borderRight:"1px solid #e2e8f0", padding:"12px", overflowY:"auto", flexShrink:0 }}>
-        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#94a3b8", marginBottom:8 }}>Subject Colors</div>
+      <div style={{ width:184, background:"#fff", borderRight:"1px solid #E8E4FF", padding:"12px", overflowY:"auto", flexShrink:0 }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", marginBottom:8 }}>Subject Colors</div>
         {subjects.map(s => {
           const cc = getSubjectColor(s.name)
           return <div key={s.id} className={cc} style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 8px", borderRadius:5, marginBottom:3, fontSize:11 }}><span style={{ fontWeight:600 }}>{s.name}</span></div>
         })}
 
-        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#94a3b8", margin:"14px 0 8px" }}>Legend</div>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", margin:"14px 0 8px" }}>Legend</div>
         {[
           { label:"Assembly/Start",  bg:"#dbeafe", color:"#1e40af" },
           { label:"Break",            bg:"#fef9c3", color:"#854d0e" },
@@ -898,7 +898,7 @@ export function TimetablePage() {
           { label:"★ Class Teacher", bg:"#f0fdf4", color:"#7C6FE0" },
         ].map(s => <div key={s.label} style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 8px", borderRadius:5, marginBottom:3, background:s.bg, color:s.color, fontSize:10, border:(s as any).border }}>{s.label}</div>)}
 
-        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#94a3b8", margin:"14px 0 8px" }}>Staff Workload</div>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", margin:"14px 0 8px" }}>Staff Workload</div>
         {staff.slice(0,10).map(st => {
           const total = Object.values(teacherTT[st.name]?.schedule ?? {}).reduce((a,d) => a + Object.values(d).filter(x=>x?.subject).length, 0)
           const max = st.maxPeriodsPerWeek ?? country.maxPeriodsWeek
@@ -910,7 +910,7 @@ export function TimetablePage() {
                 <span style={{ color:"#475569", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const, maxWidth:110 }}>{st.name}</span>
                 <span style={{ color, fontFamily:"monospace", fontWeight:600, flexShrink:0 }}>{total}/{max}</span>
               </div>
-              <div style={{ height:3, background:"#e2e8f0", borderRadius:2 }}>
+              <div style={{ height:3, background:"#E8E4FF", borderRadius:2 }}>
                 <div style={{ height:"100%", width:`${pct}%`, background:color, borderRadius:2 }} />
               </div>
             </div>
@@ -919,7 +919,7 @@ export function TimetablePage() {
 
         {uncoveredPeriods.length > 0 && (
           <>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#94a3b8", margin:"14px 0 8px" }}>Uncovered</div>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", margin:"14px 0 8px" }}>Uncovered</div>
             <div style={{ padding:"6px 8px", background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:7, fontSize:11, color:"#c2410c", fontWeight:600, textAlign:"center" as const }}>
               {uncoveredPeriods.length} empty slots
               <div style={{ fontSize:9, fontWeight:400, color:"#D4920E", marginTop:2 }}>scroll down → Fill</div>
@@ -938,7 +938,7 @@ export function TimetablePage() {
               {config.timetableName || "Timetable"}
             </span>
             {config.timetableStartDate && config.timetableEndDate && (
-              <span style={{ fontSize:11, color:"#64748b" }}>
+              <span style={{ fontSize:11, color:"#4B5275" }}>
                 {new Date(config.timetableStartDate).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                 {" – "}
                 {new Date(config.timetableEndDate).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
@@ -951,23 +951,23 @@ export function TimetablePage() {
         )}
 
         {/* Toolbar row 1 — view mode + entity selector */}
-        <div style={{ background:"#fff", borderBottom:"1px solid #e2e8f0", padding:"8px 16px", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" as const }}>
+        <div style={{ background:"#fff", borderBottom:"1px solid #E8E4FF", padding:"8px 16px", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" as const }}>
 
           {/* Transpose — hidden for calendar */}
           {viewMode !== "calendar" && (
-            <div style={{ display:"flex", border:"1px solid #e2e8f0", borderRadius:7, overflow:"hidden" }}>
-              <button onClick={() => setTransposed(false)} style={{ padding:"5px 12px", border:"none", background:!transposed?"#7C6FE0":"#fff", color:!transposed?"#fff":"#64748b", fontSize:11, fontWeight:500, cursor:"pointer" }}>☰ Normal</button>
-              <button onClick={() => setTransposed(true)}  style={{ padding:"5px 12px", border:"none", background:transposed?"#7C6FE0":"#fff",  color:transposed?"#fff":"#64748b",  fontSize:11, fontWeight:500, cursor:"pointer" }}>⊞ Transposed</button>
+            <div style={{ display:"flex", border:"1px solid #E8E4FF", borderRadius:7, overflow:"hidden" }}>
+              <button onClick={() => setTransposed(false)} style={{ padding:"5px 12px", border:"none", background:!transposed?"#7C6FE0":"#fff", color:!transposed?"#fff":"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>☰ Normal</button>
+              <button onClick={() => setTransposed(true)}  style={{ padding:"5px 12px", border:"none", background:transposed?"#7C6FE0":"#fff",  color:transposed?"#fff":"#4B5275",  fontSize:11, fontWeight:500, cursor:"pointer" }}>⊞ Transposed</button>
             </div>
           )}
 
-          <div style={{ width:1, height:20, background:"#e2e8f0" }} />
+          <div style={{ width:1, height:20, background:"#E8E4FF" }} />
 
           {/* View mode tabs */}
-          <div style={{ display:"flex", border:"1px solid #e2e8f0", borderRadius:7, overflow:"hidden" }}>
+          <div style={{ display:"flex", border:"1px solid #E8E4FF", borderRadius:7, overflow:"hidden" }}>
             {VIEW_TABS.map(v => (
               <button key={v.key} onClick={() => { setViewMode(v.key); setSelectedEntity("ALL"); setTransposed(false) }}
-                style={{ padding:"5px 12px", border:"none", background:viewMode===v.key?"#7C6FE0":"#fff", color:viewMode===v.key?"#fff":"#64748b", fontSize:11, fontWeight:500, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+                style={{ padding:"5px 12px", border:"none", background:viewMode===v.key?"#7C6FE0":"#fff", color:viewMode===v.key?"#fff":"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
                 {v.icon} {v.label}
               </button>
             ))}
@@ -975,17 +975,17 @@ export function TimetablePage() {
 
           {/* Entity selector */}
           <select value={selectedEntity} onChange={e => setSelectedEntity(e.target.value)}
-            style={{ padding:"5px 10px", border:"1px solid #e2e8f0", borderRadius:6, fontSize:11, background:"#fff", cursor:"pointer", outline:"none", maxWidth:160 }}>
+            style={{ padding:"5px 10px", border:"1px solid #E8E4FF", borderRadius:6, fontSize:11, background:"#fff", cursor:"pointer", outline:"none", maxWidth:160 }}>
             {entities.map(e => <option key={e} value={e}>{e === "ALL" ? `All ${VIEW_TABS.find(v=>v.key===viewMode)?.label ?? ""}s` : e}</option>)}
           </select>
 
-          <div style={{ width:1, height:20, background:"#e2e8f0" }} />
+          <div style={{ width:1, height:20, background:"#E8E4FF" }} />
 
           {/* Visibility toggles */}
           {TBtn(showTeacher, () => setShowTeacher(!showTeacher), "Teacher", "👤")}
           {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Room",    "🚪")}
 
-          <div style={{ width:1, height:20, background:"#e2e8f0" }} />
+          <div style={{ width:1, height:20, background:"#E8E4FF" }} />
 
           {/* Edit + Substitution */}
           {TBtn(editMode, () => setEditMode(!editMode), editMode ? "✏️ Editing" : "✏️ Edit")}
@@ -1009,9 +1009,9 @@ export function TimetablePage() {
           )}
 
           {/* Export */}
-          <button onClick={exportXLSX} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", borderRadius:6, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontSize:11, cursor:"pointer" }}>📊 Excel</button>
-          <button onClick={() => window.print()} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", borderRadius:6, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontSize:11, cursor:"pointer" }}>🖨️ Print/PDF</button>
-          <button onClick={() => window.location.href="/wizard"} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", borderRadius:6, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontSize:11, cursor:"pointer" }}>← Wizard</button>
+          <button onClick={exportXLSX} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", borderRadius:6, border:"1px solid #E8E4FF", background:"#fff", color:"#4B5275", fontSize:11, cursor:"pointer" }}>📊 Excel</button>
+          <button onClick={() => window.print()} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", borderRadius:6, border:"1px solid #E8E4FF", background:"#fff", color:"#4B5275", fontSize:11, cursor:"pointer" }}>🖨️ Print/PDF</button>
+          <button onClick={() => window.location.href="/wizard"} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", borderRadius:6, border:"1px solid #E8E4FF", background:"#fff", color:"#4B5275", fontSize:11, cursor:"pointer" }}>← Wizard</button>
 
           {/* Conflicts badge */}
           <span style={{ padding:"4px 10px", borderRadius:20, fontSize:10, fontWeight:600, background:conflicts.length===0?"#f0fdf4":"#fff7ed", color:conflicts.length===0?"#7C6FE0":"#c2410c", border:`1px solid ${conflicts.length===0?"#D8D2FF":"#fed7aa"}` }}>
@@ -1051,7 +1051,7 @@ export function TimetablePage() {
 
       {/* ── Inline Substitution Panel ────────────────────── */}
       {subPanelOpen && (
-        <div style={{ width:380, background:"#fff", borderLeft:"1px solid #e2e8f0", display:"flex", flexDirection:"column" as const, flexShrink:0, overflow:"hidden" }}>
+        <div style={{ width:380, background:"#fff", borderLeft:"1px solid #E8E4FF", display:"flex", flexDirection:"column" as const, flexShrink:0, overflow:"hidden" }}>
           {/* Panel header */}
           <div style={{ padding:"12px 16px", background:"#fffbeb", borderBottom:"1px solid #fde68a", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{ fontSize:14, fontWeight:700, color:"#92400e" }}>🔄 Substitution</div>
@@ -1059,13 +1059,13 @@ export function TimetablePage() {
           </div>
 
           {/* Tab bar */}
-          <div style={{ display:"flex", borderBottom:"1px solid #e2e8f0", background:"#f8fafc" }}>
+          <div style={{ display:"flex", borderBottom:"1px solid #E8E4FF", background:"#FAFAFE" }}>
             <button onClick={() => setSubActiveTab("assign")}
-              style={{ flex:1, padding:"8px", border:"none", background:subActiveTab==="assign"?"#fff":"transparent", color:subActiveTab==="assign"?"#92400e":"#64748b", fontSize:11, fontWeight:600, cursor:"pointer", borderBottom:subActiveTab==="assign"?"2px solid #f59e0b":"2px solid transparent" }}>
+              style={{ flex:1, padding:"8px", border:"none", background:subActiveTab==="assign"?"#fff":"transparent", color:subActiveTab==="assign"?"#92400e":"#4B5275", fontSize:11, fontWeight:600, cursor:"pointer", borderBottom:subActiveTab==="assign"?"2px solid #f59e0b":"2px solid transparent" }}>
               📋 Assign Cover
             </button>
             <button onClick={() => setSubActiveTab("active")}
-              style={{ flex:1, padding:"8px", border:"none", background:subActiveTab==="active"?"#fff":"transparent", color:subActiveTab==="active"?"#92400e":"#64748b", fontSize:11, fontWeight:600, cursor:"pointer", borderBottom:subActiveTab==="active"?"2px solid #f59e0b":"2px solid transparent" }}>
+              style={{ flex:1, padding:"8px", border:"none", background:subActiveTab==="active"?"#fff":"transparent", color:subActiveTab==="active"?"#92400e":"#4B5275", fontSize:11, fontWeight:600, cursor:"pointer", borderBottom:subActiveTab==="active"?"2px solid #f59e0b":"2px solid transparent" }}>
               📂 Active ({activeSubCount})
             </button>
           </div>
@@ -1074,31 +1074,31 @@ export function TimetablePage() {
             {subActiveTab === "assign" && (
               <div style={{ padding:12 }}>
                 {/* Day chips */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Day</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#8B87AD", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Day</div>
                 <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginBottom:12 }}>
                   {config.workDays.map(day => (
                     <button key={day} onClick={() => setSubAbsentDay(day)}
-                      style={{ padding:"4px 10px", borderRadius:20, border:`1px solid ${subAbsentDay===day?"#f59e0b":"#e2e8f0"}`, background:subAbsentDay===day?"#fff7ed":"#fff", color:subAbsentDay===day?"#92400e":"#64748b", fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                      style={{ padding:"4px 10px", borderRadius:20, border:`1px solid ${subAbsentDay===day?"#f59e0b":"#E8E4FF"}`, background:subAbsentDay===day?"#fff7ed":"#fff", color:subAbsentDay===day?"#92400e":"#4B5275", fontSize:10, fontWeight:600, cursor:"pointer" }}>
                       {DAY_SHORT[day]??day.slice(0,3)}
                     </button>
                   ))}
                 </div>
 
                 {/* Absent teacher selector */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Teacher</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#8B87AD", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Teacher</div>
                 <div style={{ display:"flex", flexWrap:"wrap" as const, gap:4, marginBottom:12 }}>
                   {staff.map(st => (
                     <button key={st.id} onClick={() => setSubAbsentTeacher(st.name)}
-                      style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${subAbsentTeacher===st.name?"#ef4444":"#e2e8f0"}`, background:subAbsentTeacher===st.name?"#fef2f2":"#fff", color:subAbsentTeacher===st.name?"#dc2626":"#374151", fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                      style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${subAbsentTeacher===st.name?"#ef4444":"#E8E4FF"}`, background:subAbsentTeacher===st.name?"#fef2f2":"#fff", color:subAbsentTeacher===st.name?"#dc2626":"#374151", fontSize:10, fontWeight:600, cursor:"pointer" }}>
                       {st.name}
                     </button>
                   ))}
                 </div>
 
                 {/* Reason input */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:4 }}>Reason (optional)</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#8B87AD", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:4 }}>Reason (optional)</div>
                 <input value={subReason} onChange={e => setSubReason(e.target.value)} placeholder="e.g. Sick leave, Personal"
-                  style={{ width:"100%", padding:"6px 10px", border:"1px solid #e2e8f0", borderRadius:6, fontSize:11, marginBottom:14, boxSizing:"border-box" as const, outline:"none" }} />
+                  style={{ width:"100%", padding:"6px 10px", border:"1px solid #E8E4FF", borderRadius:6, fontSize:11, marginBottom:14, boxSizing:"border-box" as const, outline:"none" }} />
 
                 {/* Absent teacher's slots on selected day */}
                 {subAbsentTeacher && (
@@ -1114,18 +1114,18 @@ export function TimetablePage() {
                     </div>
 
                     {absentSlots.length === 0 && (
-                      <div style={{ padding:16, textAlign:"center" as const, color:"#94a3b8", fontSize:12 }}>No periods for this teacher on {DAY_SHORT[subAbsentDay]??subAbsentDay}</div>
+                      <div style={{ padding:16, textAlign:"center" as const, color:"#8B87AD", fontSize:12 }}>No periods for this teacher on {DAY_SHORT[subAbsentDay]??subAbsentDay}</div>
                     )}
 
                     {absentSlots.map(slot => {
                       const candidates = scoreCandidates(slot)
                       const selected = subAssignments[slot.periodId]
                       return (
-                        <div key={slot.periodId} style={{ marginBottom:14, padding:10, background:"#f8fafc", borderRadius:8, border:"1px solid #e2e8f0" }}>
+                        <div key={slot.periodId} style={{ marginBottom:14, padding:10, background:"#FAFAFE", borderRadius:8, border:"1px solid #E8E4FF" }}>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
                             <span style={{ padding:"2px 8px", background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:6, fontSize:9, color:"#c2410c", fontWeight:700 }}>{slot.periodName}</span>
                             <span style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{slot.subject}</span>
-                            <span style={{ fontSize:10, color:"#64748b" }}>· {slot.sectionName}</span>
+                            <span style={{ fontSize:10, color:"#4B5275" }}>· {slot.sectionName}</span>
                           </div>
 
                           {/* Candidate cards */}
@@ -1134,23 +1134,23 @@ export function TimetablePage() {
                               const isSelected = selected === cand.st.name
                               return (
                                 <div key={cand.st.id}
-                                  style={{ padding:"7px 10px", borderRadius:7, border:`1.5px solid ${isSelected?"#7C6FE0":cand.isBusy?"#fca5a5":"#e2e8f0"}`, background:isSelected?"#EDE9FF":cand.isBusy?"#fff5f5":"#fff", display:"flex", alignItems:"center", gap:8 }}>
+                                  style={{ padding:"7px 10px", borderRadius:7, border:`1.5px solid ${isSelected?"#7C6FE0":cand.isBusy?"#fca5a5":"#E8E4FF"}`, background:isSelected?"#EDE9FF":cand.isBusy?"#fff5f5":"#fff", display:"flex", alignItems:"center", gap:8 }}>
                                   {/* Avatar */}
-                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#7C6FE0":"#94a3b8", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
+                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#7C6FE0":"#8B87AD", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
                                     {cand.st.name[0]}
                                   </div>
                                   {/* Info */}
                                   <div style={{ flex:1, minWidth:0 }}>
                                     <div style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{cand.st.name}</div>
-                                    {cand.st.role && <div style={{ fontSize:9, color:"#64748b" }}>{cand.st.role}</div>}
+                                    {cand.st.role && <div style={{ fontSize:9, color:"#4B5275" }}>{cand.st.role}</div>}
                                     <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginTop:2 }}>
                                       {cand.subjectMatch && <span style={{ padding:"1px 5px", borderRadius:4, background:"#f0fdf4", color:"#7C6FE0", fontSize:8, fontWeight:600 }}>★ Subject match</span>}
                                       {cand.isBusy && <span style={{ padding:"1px 5px", borderRadius:4, background:"#fff7ed", color:"#D4920E", fontSize:8, fontWeight:600 }}>⚠️ Busy</span>}
                                     </div>
                                     {/* Workload bar */}
                                     <div style={{ marginTop:3 }}>
-                                      <div style={{ fontSize:8, color:"#94a3b8", marginBottom:1 }}>{cand.workloadToday} today · {cand.workloadWeek}/{cand.maxW} week · Subbed {cand.subFreq}× term</div>
-                                      <div style={{ height:3, background:"#e2e8f0", borderRadius:2, overflow:"hidden" }}>
+                                      <div style={{ fontSize:8, color:"#8B87AD", marginBottom:1 }}>{cand.workloadToday} today · {cand.workloadWeek}/{cand.maxW} week · Subbed {cand.subFreq}× term</div>
+                                      <div style={{ height:3, background:"#E8E4FF", borderRadius:2, overflow:"hidden" }}>
                                         <div style={{ height:"100%", width:`${Math.min(100, Math.round(cand.workloadWeek/cand.maxW*100))}%`, background: cand.workloadWeek/cand.maxW > 0.9 ? "#dc2626" : "#7C6FE0", borderRadius:2 }} />
                                       </div>
                                     </div>
@@ -1158,7 +1158,7 @@ export function TimetablePage() {
                                   {/* Select button */}
                                   <button
                                     onClick={() => setSubAssignments(prev => isSelected ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== slot.periodId)) : { ...prev, [slot.periodId]: cand.st.name })}
-                                    style={{ padding:"4px 8px", borderRadius:5, border:"none", background:isSelected?"#7C6FE0":"#e2e8f0", color:isSelected?"#fff":"#374151", fontSize:10, fontWeight:600, cursor:"pointer", flexShrink:0 }}>
+                                    style={{ padding:"4px 8px", borderRadius:5, border:"none", background:isSelected?"#7C6FE0":"#E8E4FF", color:isSelected?"#fff":"#374151", fontSize:10, fontWeight:600, cursor:"pointer", flexShrink:0 }}>
                                     {isSelected ? "✓" : "Select"}
                                   </button>
                                 </div>
@@ -1172,7 +1172,7 @@ export function TimetablePage() {
                 )}
 
                 {!subAbsentTeacher && (
-                  <div style={{ padding:24, textAlign:"center" as const, color:"#94a3b8", fontSize:12 }}>Select an absent teacher above to see their slots and assign cover</div>
+                  <div style={{ padding:24, textAlign:"center" as const, color:"#8B87AD", fontSize:12 }}>Select an absent teacher above to see their slots and assign cover</div>
                 )}
               </div>
             )}
@@ -1180,16 +1180,16 @@ export function TimetablePage() {
             {subActiveTab === "active" && (
               <div style={{ padding:12 }}>
                 {activeSubCount === 0 && (
-                  <div style={{ padding:24, textAlign:"center" as const, color:"#94a3b8", fontSize:12 }}>No active substitutions</div>
+                  <div style={{ padding:24, textAlign:"center" as const, color:"#8B87AD", fontSize:12 }}>No active substitutions</div>
                 )}
                 {Object.entries(substitutions).map(([key, staffName]) => {
                   const [sec, day, periodId] = key.split("|")
                   const p = periods.find(pp => pp.id === periodId)
                   return (
-                    <div key={key} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, border:"1px solid #e2e8f0", marginBottom:6, background:"#f8fafc" }}>
+                    <div key={key} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, border:"1px solid #E8E4FF", marginBottom:6, background:"#FAFAFE" }}>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{sec} · {DAY_SHORT[day]??day.slice(0,3)} · {p?.name ?? periodId}</div>
-                        <div style={{ fontSize:10, color:"#64748b" }}>Cover: <strong>{staffName}</strong></div>
+                        <div style={{ fontSize:10, color:"#4B5275" }}>Cover: <strong>{staffName}</strong></div>
                       </div>
                       <button
                         onClick={() => {
@@ -1209,9 +1209,9 @@ export function TimetablePage() {
 
           {/* Footer: Apply */}
           {subActiveTab === "assign" && (
-            <div style={{ padding:12, borderTop:"1px solid #e2e8f0", background:"#f8fafc" }}>
+            <div style={{ padding:12, borderTop:"1px solid #E8E4FF", background:"#FAFAFE" }}>
               <button onClick={applySubstitutions} disabled={Object.keys(subAssignments).length === 0}
-                style={{ width:"100%", padding:"9px", borderRadius:7, border:"none", background:Object.keys(subAssignments).length>0?"#f59e0b":"#e2e8f0", color:Object.keys(subAssignments).length>0?"#fff":"#94a3b8", fontSize:12, fontWeight:700, cursor:Object.keys(subAssignments).length>0?"pointer":"not-allowed", transition:"background 0.15s" }}>
+                style={{ width:"100%", padding:"9px", borderRadius:7, border:"none", background:Object.keys(subAssignments).length>0?"#f59e0b":"#E8E4FF", color:Object.keys(subAssignments).length>0?"#fff":"#8B87AD", fontSize:12, fontWeight:700, cursor:Object.keys(subAssignments).length>0?"pointer":"not-allowed", transition:"background 0.15s" }}>
                 Apply {Object.keys(subAssignments).length > 0 ? `(${Object.keys(subAssignments).length} assignment${Object.keys(subAssignments).length>1?"s":""})` : "Substitutions"}
               </button>
             </div>
@@ -1230,16 +1230,16 @@ export function TimetablePage() {
             <div style={{ fontSize:17, fontWeight:700, color:"#1e293b", marginBottom:6 }}>Publish Timetable?</div>
 
             {/* Timetable summary */}
-            <div style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:"12px 14px", marginBottom:16, fontSize:12 }}>
+            <div style={{ background:"#FAFAFE", border:"1px solid #E8E4FF", borderRadius:8, padding:"12px 14px", marginBottom:16, fontSize:12 }}>
               <div style={{ fontWeight:700, color:"#1e293b", marginBottom:4 }}>{config.timetableName || "Timetable"}</div>
               {config.timetableStartDate && config.timetableEndDate && (
-                <div style={{ color:"#64748b" }}>
+                <div style={{ color:"#4B5275" }}>
                   {new Date(config.timetableStartDate).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                   {" – "}
                   {new Date(config.timetableEndDate).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                 </div>
               )}
-              <div style={{ color:"#64748b", marginTop:4 }}>
+              <div style={{ color:"#4B5275", marginTop:4 }}>
                 {sections.length} classes · {staff.length} teachers · {subjects.length} subjects
               </div>
               {conflicts.length > 0 && (
@@ -1247,12 +1247,12 @@ export function TimetablePage() {
               )}
             </div>
 
-            <div style={{ fontSize:12, color:"#64748b", marginBottom:20, lineHeight:1.5 }}>
+            <div style={{ fontSize:12, color:"#4B5275", marginBottom:20, lineHeight:1.5 }}>
               Publishing makes this timetable the active schedule. You can still edit individual cells after publishing. This action can be reversed by regenerating.
             </div>
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
               <button onClick={() => setPublishConfirm(false)}
-                style={{ padding:"9px 20px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", fontSize:13, color:"#64748b", cursor:"pointer" }}>
+                style={{ padding:"9px 20px", borderRadius:8, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
                 Cancel
               </button>
               <button onClick={() => { setTimetableStatus("published"); setPublishConfirm(false) }}
@@ -1270,16 +1270,16 @@ export function TimetablePage() {
 // ── Small helpers ──────────────────────────────────────────
 function SectionHeader({ name, classTeacher, meta }: { name:string; classTeacher?:string; meta?:string }) {
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:16, padding:"10px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:16, padding:"10px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
       <div>
         <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'DM Serif Display',Georgia,serif" }}>{name}</div>
-        {classTeacher && <div style={{ fontSize:11, color:"#64748b", marginTop:1 }}>Class Teacher: <strong>{classTeacher}</strong></div>}
+        {classTeacher && <div style={{ fontSize:11, color:"#4B5275", marginTop:1 }}>Class Teacher: <strong>{classTeacher}</strong></div>}
       </div>
-      {meta && <div style={{ marginLeft:"auto", fontSize:11, color:"#94a3b8" }}>{meta}</div>}
+      {meta && <div style={{ marginLeft:"auto", fontSize:11, color:"#8B87AD" }}>{meta}</div>}
     </div>
   )
 }
 
 function EmptyState({ label }: { label:string }) {
-  return <div style={{ padding:40, textAlign:"center" as const, color:"#94a3b8", fontSize:13 }}>No timetable data for <strong>{label}</strong></div>
+  return <div style={{ padding:40, textAlign:"center" as const, color:"#8B87AD", fontSize:13 }}>No timetable data for <strong>{label}</strong></div>
 }

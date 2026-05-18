@@ -57,11 +57,11 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex',
-      background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 50%, #fdf4ff 100%)',
+      background: 'linear-gradient(135deg, #F5F2FF 0%, #FAFAFE 100%)',
     }}>
       {/* Left branding panel */}
       <div style={{
-        width: 420, flexShrink: 0, background: '#111827',
+        width: 420, flexShrink: 0, background: '#13111E',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '60px 52px', position: 'relative', overflow: 'hidden',
       }}>
@@ -82,7 +82,7 @@ export function LoginPage() {
           <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:32, color:'#fff', lineHeight:1.25, marginBottom:16 }}>
             India's smartest<br />timetable engine
           </h2>
-          <p style={{ color:'#9ca3af', fontSize:14, lineHeight:1.75, marginBottom:40 }}>
+          <p style={{ color:'#8B87AD', fontSize:14, lineHeight:1.75, marginBottom:40 }}>
             CBSE · ICSE · State Boards · IB<br />
             AI-generated, conflict-free schedules<br />
             in under 60 seconds.
@@ -92,7 +92,7 @@ export function LoginPage() {
             {['Zero double-bookings, guaranteed', 'XI–XII optional subjects handled automatically', 'Export to Excel & PDF in one click'].map(f => (
               <div key={f} style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <div style={{ width:18, height:18, borderRadius:'50%', background:'#9B8EF5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:10, color:'#fff', fontWeight:700 }}>✓</div>
-                <span style={{ color:'#d1d5db', fontSize:13 }}>{f}</span>
+                <span style={{ color:'#D8D2FF', fontSize:13 }}>{f}</span>
               </div>
             ))}
           </div>
@@ -102,8 +102,8 @@ export function LoginPage() {
       {/* Right form panel */}
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 24px' }}>
         <div style={{ width:'100%', maxWidth:400 }}>
-          <h1 style={{ fontSize:26, fontWeight:700, color:'#111827', marginBottom:6 }}>Welcome back</h1>
-          <p style={{ color:'#6b7280', fontSize:14, marginBottom:32 }}>
+          <h1 style={{ fontSize:26, fontWeight:700, color:'#13111E', marginBottom:6 }}>Welcome back</h1>
+          <p style={{ color:'#4B5275', fontSize:14, marginBottom:32 }}>
             Sign in to continue to your timetables.{' '}
             <a href="/register" style={{ color:'#7C6FE0', fontWeight:600, textDecoration:'none' }}>Create account</a>
           </p>
@@ -112,29 +112,29 @@ export function LoginPage() {
           <button onClick={handleGoogle} disabled={googleLoading || loading} type="button"
             style={{
               width:'100%', padding:'11px 16px', borderRadius:9,
-              border:'1.5px solid #e5e7eb', background: googleLoading ? '#f9fafb' : '#fff',
+              border:'1.5px solid #E8E4FF', background: googleLoading ? '#F8F7FF' : '#fff',
               display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-              fontSize:14, fontWeight:600, color:'#374151', cursor: googleLoading ? 'default' : 'pointer',
+              fontSize:14, fontWeight:600, color:'#4B5275', cursor: googleLoading ? 'default' : 'pointer',
               boxShadow:'0 1px 3px rgba(0,0,0,0.07)', marginBottom:20, transition:'box-shadow 0.15s, border-color 0.15s',
             }}
-            onMouseEnter={e => { if (!googleLoading) { (e.currentTarget as HTMLButtonElement).style.borderColor='#d1d5db'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 2px 6px rgba(0,0,0,0.10)' } }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.07)' }}
+            onMouseEnter={e => { if (!googleLoading) { (e.currentTarget as HTMLButtonElement).style.borderColor='#D8D2FF'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 2px 6px rgba(0,0,0,0.10)' } }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='#E8E4FF'; (e.currentTarget as HTMLButtonElement).style.boxShadow='0 1px 3px rgba(0,0,0,0.07)' }}
           >
             {googleLoading
-              ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite', color:'#6b7280' }} /> Connecting to Google...</>
+              ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite', color:'#4B5275' }} /> Connecting to Google...</>
               : <><GoogleIcon /> Continue with Google</>
             }
           </button>
 
           {/* OR divider */}
           <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:4 }}>
-            <div style={{ flex:1, height:1, background:'#e5e7eb' }} />
-            <span style={{ fontSize:11, fontWeight:600, color:'#9ca3af', letterSpacing:'0.06em', textTransform:'uppercase' as const }}>or</span>
-            <div style={{ flex:1, height:1, background:'#e5e7eb' }} />
+            <div style={{ flex:1, height:1, background:'#E8E4FF' }} />
+            <span style={{ fontSize:11, fontWeight:600, color:'#8B87AD', letterSpacing:'0.06em', textTransform:'uppercase' as const }}>or</span>
+            <div style={{ flex:1, height:1, background:'#E8E4FF' }} />
           </div>
 
           <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            <Field label="Email address" icon={<Mail size={15} color="#9ca3af" />}>
+            <Field label="Email address" icon={<Mail size={15} color="#8B87AD" />}>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="you@school.edu"
                 style={inputStyle} autoFocus
@@ -142,10 +142,10 @@ export function LoginPage() {
                 onBlur={e => focusOut(e.target as HTMLInputElement)} />
             </Field>
 
-            <Field label="Password" icon={<Lock size={15} color="#9ca3af" />}
+            <Field label="Password" icon={<Lock size={15} color="#8B87AD" />}
               right={
                 <button type="button" onClick={() => setShowPw(v => !v)}
-                  style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', color:'#9ca3af' }}>
+                  style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', color:'#8B87AD' }}>
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               }>
@@ -166,7 +166,7 @@ export function LoginPage() {
             <button type="submit" disabled={loading || googleLoading}
               style={{
                 padding:'12px', borderRadius:9, border:'none',
-                background: (loading || googleLoading) ? '#d1d5db' : '#7C6FE0',
+                background: (loading || googleLoading) ? '#D8D2FF' : '#7C6FE0',
                 color:'#fff', fontSize:14, fontWeight:600, cursor: (loading || googleLoading) ? 'default' : 'pointer',
                 display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:4,
                 transition:'background 0.15s',
@@ -175,7 +175,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <div style={{ marginTop:24, padding:'14px 16px', background:'#f9fafb', borderRadius:8, border:'1px solid #e5e7eb', fontSize:12, color:'#6b7280' }}>
+          <div style={{ marginTop:24, padding:'14px 16px', background:'#F8F7FF', borderRadius:8, border:'1px solid #E8E4FF', fontSize:12, color:'#4B5275' }}>
             <strong>Demo:</strong> Enter any email + any password to get started instantly.
           </div>
         </div>
@@ -188,7 +188,7 @@ export function LoginPage() {
 function Field({ label, icon, right, children }: { label:string; icon?:React.ReactNode; right?:React.ReactNode; children:React.ReactNode }) {
   return (
     <div>
-      <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#374151', marginBottom:6 }}>{label}</label>
+      <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#4B5275', marginBottom:6 }}>{label}</label>
       <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
         {icon && <span style={{ position:'absolute', left:12, pointerEvents:'none' }}>{icon}</span>}
         <div style={{ flex:1 }}>{children}</div>
@@ -200,8 +200,8 @@ function Field({ label, icon, right, children }: { label:string; icon?:React.Rea
 
 const inputStyle: React.CSSProperties = {
   width:'100%', padding:'10px 12px 10px 36px',
-  border:'1.5px solid #e5e7eb', borderRadius:8, fontSize:14,
-  outline:'none', background:'#fff', boxSizing:'border-box', color:'#111827',
+  border:'1.5px solid #E8E4FF', borderRadius:8, fontSize:14,
+  outline:'none', background:'#fff', boxSizing:'border-box', color:'#13111E',
 }
 const focusIn  = (el: HTMLInputElement) => { el.style.borderColor = '#7C6FE0'; el.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.08)' }
-const focusOut = (el: HTMLInputElement) => { el.style.borderColor = '#e5e7eb'; el.style.boxShadow = 'none' }
+const focusOut = (el: HTMLInputElement) => { el.style.borderColor = '#E8E4FF'; el.style.boxShadow = 'none' }
