@@ -17,6 +17,7 @@ import type { Section, Subject, Staff, Period, OptionalBlock, Conflict, ClassTim
 import { computeCapacity, inferBandFromSection, utilisationStatus } from '@/lib/capacityEngine'
 import { suggestFixes, type FixSuggestion } from '@/lib/fixSuggester'
 import { previewFix, type FixPreview } from '@/lib/fixPreview'
+import { recomputeWorkloadPenalties, mergeLivePenalties } from '@/lib/penaltyRecompute'
 import {
   type BlockedSlot, type DynamicLearningGroup,
   blockedCategoryLabel, blockedRemedy,
@@ -123,7 +124,30 @@ export function ReviewDashboard({
 
   // ── Issue categorisation ──
   const hardConflicts = conflicts.length
-  const softPenalties = penalties.filter(p => p.penalty > 0)
+  // Live workload penalties — recompute from current store state so the
+  // Conflicts card stays fresh after Apply Fix / Auto-fix safe actions
+  // without requiring a full solver re-run.
+  const liveStore = useTimetableStore() as any
+  const liveWorkloadPenalties = useMemo(
+    () => recomputeWorkloadPenalties({
+      staff: liveStore.staff ?? staff,
+      teacherAllocations: liveStore.teacherAllocations ?? {},
+      subjectAllocations: liveStore.subjectAllocations ?? {},
+    }),
+    [liveStore.staff, liveStore.teacherAllocations, liveStore.subjectAllocations, staff]
+  )
+  // Merge: solver-emitted penalties for scope/placement, live ones for workload
+  const livePenalties = useMemo(
+    () => mergeLivePenalties(penalties, liveWorkloadPenalties),
+    [penalties, liveWorkloadPenalties]
+  )
+  // Live score = sum of live penalty weights (so card score updates after fixes)
+  const liveScore = useMemo(
+    () => livePenalties.reduce((a, p) => a + p.penalty, 0),
+    [livePenalties]
+  )
+
+  const softPenalties = livePenalties.filter(p => p.penalty > 0)
   const overloadedTeachers = teacherLoads.filter(t => t.load > t.max)
 
   // ── Auto-fix safe — applies every green-delta fix in one pass ──
@@ -288,7 +312,7 @@ export function ReviewDashboard({
         <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' as const, alignItems: 'center' }}>
           <Pill color="#DC2626" bg="#FEE2E2" label={`${hardConflicts} hard`} />
           <Pill color="#D4920E" bg="#FEF3C7" label={`${softPenalties.length} soft`} />
-          <Pill color="#7C6FE0" bg="#EDE9FF" label={`Score: ${score}`} />
+          <Pill color="#7C6FE0" bg="#EDE9FF" label={`Score: ${liveScore}${liveScore !== score ? ` (was ${score})` : ''}`} />
           {overloadedTeachers.length > 0 && (
             <Pill color="#DC2626" bg="#FEE2E2" label={`${overloadedTeachers.length} overloaded`} />
           )}
