@@ -126,6 +126,44 @@ export function ReviewDashboard({
   const softPenalties = penalties.filter(p => p.penalty > 0)
   const overloadedTeachers = teacherLoads.filter(t => t.load > t.max)
 
+  // ── Auto-fix safe — applies every green-delta fix in one pass ──
+  const [autoFixResult, setAutoFixResult] = useState<{ applied: number; skipped: number; delta: number } | null>(null)
+  const handleAutoFix = () => {
+    let applied = 0, skipped = 0, totalDelta = 0
+
+    softPenalties.forEach(p => {
+      // Pull latest store state on every iteration so previously-applied
+      // fixes are reflected in subsequent previews.
+      const live = useTimetableStore.getState() as any
+      const ctx = {
+        staff: live.staff ?? [],
+        sections: live.sections ?? [],
+        subjects: live.subjects ?? [],
+        teacherAllocations: live.teacherAllocations ?? {},
+        subjectAllocations: live.subjectAllocations ?? {},
+        actions: {
+          setTeacherAllocationCell: live.setTeacherAllocationCell,
+          setTeacherAllocations: live.setTeacherAllocations,
+        },
+      }
+      const fixes = suggestFixes(p, ctx)
+      const fix = fixes.find(f => f.changes && f.changes.length > 0)
+      if (!fix) { skipped++; return }
+
+      const preview = previewFix(fix, { staff: ctx.staff, teacherAllocations: ctx.teacherAllocations })
+      // SAFE = strictly improves score AND introduces no new overload
+      if (!preview || preview.scoreDelta >= 0 || preview.summary.introduces.length > 0) {
+        skipped++; return
+      }
+
+      fix.apply?.()
+      applied++
+      totalDelta += preview.scoreDelta
+    })
+
+    setAutoFixResult({ applied, skipped, delta: totalDelta })
+  }
+
   const fairness = score === 0 ? 'perfect' : loadStats.stddev < 2 ? 'good' : loadStats.stddev < 4 ? 'ok' : 'poor'
   const fairnessLabel = fairness === 'perfect' ? 'Perfect'
     : fairness === 'good' ? 'Good balance'
@@ -247,14 +285,61 @@ export function ReviewDashboard({
         icon={hardConflicts > 0 ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
         accent={hardConflicts > 0 ? '#DC2626' : softPenalties.length > 0 ? '#D4920E' : '#16A34A'}
       >
-        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' as const }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' as const, alignItems: 'center' }}>
           <Pill color="#DC2626" bg="#FEE2E2" label={`${hardConflicts} hard`} />
           <Pill color="#D4920E" bg="#FEF3C7" label={`${softPenalties.length} soft`} />
           <Pill color="#7C6FE0" bg="#EDE9FF" label={`Score: ${score}`} />
           {overloadedTeachers.length > 0 && (
             <Pill color="#DC2626" bg="#FEE2E2" label={`${overloadedTeachers.length} overloaded`} />
           )}
+          <div style={{ flex: 1 }} />
+          {softPenalties.length > 0 && (
+            <button onClick={handleAutoFix}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '5px 11px', borderRadius: 6,
+                background: '#7C6FE0', color: '#fff', border: 'none',
+                fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'inherit', letterSpacing: '0.02em',
+              }}
+              title="Walks every soft penalty, applies only fixes that strictly improve the score"
+            >
+              <Wrench size={10} /> Auto-fix safe
+            </button>
+          )}
         </div>
+
+        {/* Auto-fix result banner */}
+        {autoFixResult && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 12px', marginBottom: 10,
+            background: autoFixResult.applied > 0 ? '#DCFCE7' : '#FEF3C7',
+            border: `1px solid ${autoFixResult.applied > 0 ? '#BBF7D0' : '#FDE68A'}`,
+            borderRadius: 7,
+          }}>
+            {autoFixResult.applied > 0
+              ? <CheckCircle2 size={14} color="#15803D" />
+              : <AlertTriangle size={14} color="#92400E" />}
+            <div style={{ fontSize: 11.5, flex: 1, color: autoFixResult.applied > 0 ? '#15803D' : '#92400E' }}>
+              <strong>{autoFixResult.applied}</strong> fix{autoFixResult.applied !== 1 ? 'es' : ''} applied
+              {autoFixResult.applied > 0 && (
+                <> · projected improvement <strong style={{ fontFamily: "'DM Mono', monospace" }}>{autoFixResult.delta}</strong> points</>
+              )}
+              {autoFixResult.skipped > 0 && (
+                <> · {autoFixResult.skipped} skipped (no safe fix or would worsen score)</>
+              )}
+            </div>
+            <button onClick={() => setAutoFixResult(null)}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: autoFixResult.applied > 0 ? '#15803D' : '#92400E',
+                fontSize: 14, fontWeight: 800, padding: 0,
+              }}
+              title="Dismiss"
+            >×</button>
+          </div>
+        )}
         {(hardConflicts === 0 && softPenalties.length === 0) ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
