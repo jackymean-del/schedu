@@ -1,134 +1,349 @@
-import {
-  Brain, Globe, RefreshCcw, ArrowLeftRight,
-  FileOutput, Settings2, Sparkles, Eye,
-  GraduationCap, Building2, Briefcase, Stethoscope, HeartHandshake, Factory,
-} from 'lucide-react'
-
-const ORG_PILLS = [
-  { icon: GraduationCap, label: 'School' },
-  { icon: Building2,     label: 'College' },
-  { icon: Briefcase,     label: 'Corporate' },
-  { icon: Stethoscope,   label: 'Healthcare' },
-  { icon: HeartHandshake,label: 'NGO' },
-  { icon: Factory,       label: 'Factory' },
-]
-
-const FEATURES = [
-  { icon: Brain,          color: '#7C6FE0', title: 'AI Constraint Solver',   desc: 'Zero-conflict timetables via genetic optimization in seconds.' },
-  { icon: Globe,          color: '#9B8EF5', title: '8+ Country Standards',   desc: 'Auto-loads national labour laws, workload norms for India, US, UK, UAE and more.' },
-  { icon: RefreshCcw,     color: '#D4920E', title: 'Smart Substitution',     desc: 'AI instantly finds the best available substitute by subject match.' },
-  { icon: ArrowLeftRight, color: '#7C6FE0', title: 'All Periods Shiftable',  desc: 'Assembly, Dispersal, breaks — any slot swappable. Cascades to teacher timetable.' },
-  { icon: FileOutput,     color: '#D4920E', title: 'Export Anywhere',        desc: 'PDF auto-fit (any paper/orientation), multi-sheet Excel with teacher headers.' },
-  { icon: Settings2,      color: '#9B8EF5', title: 'Fully Editable',         desc: 'Edit any cell live. Lock/unlock any period. Toggle teacher names and rooms.' },
-]
+/**
+ * Landing page — schedU marketing home
+ * Matches the product screenshot: nav, hero, demo card, features,
+ * stats, 4-step flow, bottom CTA, footer.
+ */
 
 export function HomePage() {
   return (
-    <main style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', minHeight: 'calc(100vh - 56px)',
-      padding: '56px 24px', textAlign: 'center',
-      fontFamily: "'Inter', sans-serif",
-      background: 'linear-gradient(to bottom, #F5F2FF, #FFFFFF)',
-    }}>
-      {/* Brand b mark — bigger, hero scale */}
-      <div style={{
-        width: 84, height: 84, borderRadius: 22,
-        background: '#7C6FE0',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fff', marginBottom: 28,
-        boxShadow: '0 14px 30px rgba(124,111,224,0.32)',
+    <div style={{ fontFamily: "'Inter', sans-serif", background: '#fff', color: '#13111E', minHeight: '100vh' }}>
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes floatCard { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+        .lp-nav-link { font-size:14px; color:#4B5275; text-decoration:none; font-weight:500; transition:color 0.15s; }
+        .lp-nav-link:hover { color:#7C6FE0; }
+        .lp-btn-ghost:hover { border-color:#7C6FE0 !important; color:#7C6FE0 !important; }
+        .lp-step:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(124,111,224,0.1); }
+        .lp-step { transition: transform 0.18s, box-shadow 0.18s; }
+        .lp-feat:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(124,111,224,0.09); }
+        .lp-feat { transition: transform 0.18s, box-shadow 0.18s; }
+      `}</style>
+
+      {/* ══════════════════════════════════════════
+          NAV
+      ══════════════════════════════════════════ */}
+      <nav style={{
+        height: 58, background: '#fff', borderBottom: '1px solid #F0EDFF',
+        display: 'flex', alignItems: 'center', padding: '0 40px', gap: 32,
+        position: 'sticky', top: 0, zIndex: 100,
       }}>
-        <svg width="50" height="50" viewBox="0 0 52 52" fill="none">
-          <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
-          <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
-          <circle cx="39" cy="10" r="5" fill="#D4920E"/>
-        </svg>
-      </div>
-
-      {/* "by bhusku" eyebrow */}
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase', color: '#8B87AD', marginBottom: 10 }}>
-        by <span style={{ color: '#D4920E' }}>bhusku</span>
-      </div>
-
-      {/* Title */}
-      <h1 style={{
-        fontFamily: "'DM Serif Display', Georgia, serif",
-        fontSize: 52, lineHeight: 1.12, marginBottom: 16, maxWidth: 720,
-        color: '#13111E', fontWeight: 400, letterSpacing: '-1.5px',
-      }}>
-        AI-Powered <span style={{ color: '#7C6FE0', fontStyle: 'italic' }}>Timetable</span><br />Generator
-      </h1>
-      <p style={{ color: '#4B5275', fontSize: 15, maxWidth: 540, lineHeight: 1.7, marginBottom: 36, fontWeight: 400 }}>
-        Generate conflict-free, regulation-compliant timetables for any organization in seconds.
-        AI handles the complexity — you just review and approve.
-      </p>
-
-      {/* Org pills */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
-        {ORG_PILLS.map(({ icon: Icon, label }) => (
-          <span key={label} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px', background: '#fff',
-            border: '1px solid #E8E4FF', borderRadius: 20,
-            fontSize: 11, fontWeight: 500, color: '#4B5275',
-          }}>
-            <Icon size={14} /> {label}
-          </span>
-        ))}
-      </div>
-
-      {/* CTA Buttons */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 56, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <button
-          onClick={() => window.location.href = '/wizard'}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '14px 30px', borderRadius: 10, fontSize: 15, fontWeight: 600,
-            background: '#7C6FE0', color: '#fff', border: 'none',
-            cursor: 'pointer', transition: 'all 0.18s',
-            boxShadow: '0 6px 18px rgba(124,111,224,0.38)',
-            fontFamily: "'Inter', sans-serif",
-          }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.transform = 'translateY(-2px)'; (e.target as HTMLElement).style.boxShadow = '0 10px 26px rgba(124,111,224,0.5)'; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.transform = 'translateY(0)'; (e.target as HTMLElement).style.boxShadow = '0 6px 18px rgba(124,111,224,0.38)'; }}
-        >
-          <Sparkles size={18} /> Create Timetable — Free
-        </button>
-        <button
-          onClick={() => window.location.href = '/demo'}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '14px 30px', borderRadius: 10, fontSize: 15, fontWeight: 600,
-            background: '#fff', color: '#13111E',
-            border: '1.5px solid #D8D2FF', cursor: 'pointer', transition: 'all 0.18s',
-            fontFamily: "'Inter', sans-serif",
-          }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = '#7C6FE0'; (e.target as HTMLElement).style.color = '#7C6FE0'; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = '#D8D2FF'; (e.target as HTMLElement).style.color = '#13111E'; }}
-        >
-          <Eye size={18} /> View Live Demo
-        </button>
-      </div>
-
-      {/* Feature cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, maxWidth: 800, width: '100%' }}>
-        {FEATURES.map(({ icon: Icon, color, title, desc }) => (
-          <div key={title} style={{
-            background: '#fff', borderRadius: 12, padding: '22px 20px',
-            border: '1px solid #E8E4FF', textAlign: 'left', transition: 'all 0.18s',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 28px rgba(124,111,224,0.12)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.borderColor = '#D8D2FF'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.borderColor = '#E8E4FF'; }}
-          >
-            <div style={{ width: 38, height: 38, borderRadius: 9, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <Icon size={20} color={color} />
-            </div>
-            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, color: '#13111E', fontFamily: "'Inter', sans-serif" }}>{title}</h3>
-            <p style={{ fontSize: 11.5, color: '#4B5275', lineHeight: 1.6 }}>{desc}</p>
+        {/* Logo */}
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#7C6FE0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 52 52" fill="none">
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
           </div>
-        ))}
-      </div>
-    </main>
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 900, color: '#13111E', letterSpacing: '-0.4px' }}>
+            sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic' }}>U</span>
+          </span>
+        </a>
+
+        {/* Links */}
+        <div style={{ display: 'flex', gap: 24, flex: 1 }}>
+          {['Features', 'Pricing', 'Docs', 'Blog'].map(l => (
+            <a key={l} href="#" className="lp-nav-link">{l}</a>
+          ))}
+        </div>
+
+        {/* Auth */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <a href="/login" style={{ textDecoration: 'none' }}>
+            <button className="lp-btn-ghost" style={{
+              padding: '7px 16px', borderRadius: 7,
+              border: '1px solid #E8E4FF', background: '#fff',
+              fontSize: 13, fontWeight: 600, color: '#4B5275', cursor: 'pointer',
+            }}>Sign in</button>
+          </a>
+          <a href="/wizard" style={{ textDecoration: 'none' }}>
+            <button style={{
+              padding: '7px 18px', borderRadius: 7,
+              background: '#13111E', color: '#fff', border: 'none',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>Get started</button>
+          </a>
+        </div>
+      </nav>
+
+      {/* ══════════════════════════════════════════
+          HERO
+      ══════════════════════════════════════════ */}
+      <section style={{
+        background: 'linear-gradient(180deg, #F8F7FF 0%, #fff 100%)',
+        padding: '64px 24px 48px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+      }}>
+        {/* Badge */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '5px 14px', borderRadius: 20,
+          background: '#F0FDF4', border: '1px solid #86EFAC',
+          fontSize: 12, fontWeight: 600, color: '#15803D', marginBottom: 24,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+          AI-native timetable engine
+        </div>
+
+        {/* Headline */}
+        <h1 style={{
+          fontFamily: "'DM Serif Display', Georgia, serif",
+          fontSize: 'clamp(32px, 6vw, 54px)',
+          lineHeight: 1.1, fontWeight: 400, letterSpacing: '-1px',
+          color: '#13111E', maxWidth: 700, marginBottom: 16,
+        }}>
+          Your school timetable,<br />
+          <span style={{ color: '#7C6FE0', fontStyle: 'italic' }}>generated by AI.</span>
+        </h1>
+
+        {/* Sub */}
+        <p style={{ fontSize: 16, color: '#4B5275', maxWidth: 520, lineHeight: 1.7, marginBottom: 32, fontWeight: 400 }}>
+          schedU intelligently allocates periods, teachers, and rooms — and builds conflict-free timetables in minutes, not days.
+        </p>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 48 }}>
+          <a href="/wizard" style={{ textDecoration: 'none' }}>
+            <button style={{
+              padding: '13px 28px', borderRadius: 9, border: 'none',
+              background: '#7C6FE0', color: '#fff',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(124,111,224,0.35)',
+            }}>
+              Start free — no credit card
+            </button>
+          </a>
+          <a href="/demo" style={{ textDecoration: 'none' }}>
+            <button className="lp-btn-ghost" style={{
+              padding: '13px 28px', borderRadius: 9,
+              border: '1.5px solid #E8E4FF', background: '#fff',
+              fontSize: 14, fontWeight: 600, color: '#4B5275', cursor: 'pointer',
+            }}>
+              See a demo
+            </button>
+          </a>
+        </div>
+
+        {/* ── Demo card ── */}
+        <div style={{
+          width: '100%', maxWidth: 540,
+          background: '#fff', borderRadius: 14,
+          border: '1px solid #E8E4FF',
+          boxShadow: '0 12px 40px rgba(124,111,224,0.13)',
+          overflow: 'hidden',
+          animation: 'floatCard 5s ease-in-out infinite',
+        }}>
+          {/* Card chrome */}
+          <div style={{
+            background: '#F8F7FF', padding: '10px 14px',
+            borderBottom: '1px solid #E8E4FF',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {['#FC6058','#FDBC2C','#34C749'].map(c => (
+                <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 11, color: '#8B87AD', fontWeight: 500, fontFamily: "'DM Mono',monospace" }}>
+              schedU — AI Period Allocation — Class VI-A
+            </span>
+          </div>
+
+          {/* Grid */}
+          <div style={{ padding: '16px 18px' }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 8,
+            }}>
+              {[
+                { label: 'English',   value: '6',   hi: false },
+                { label: 'Maths',     value: '7',   hi: false },
+                { label: 'Science',   value: '5+1', hi: false },
+                { label: 'Hindi',     value: '5',   hi: false },
+                { label: 'Social St.',value: '4',   hi: false },
+                { label: 'PE',        value: '2',   hi: false },
+                { label: 'Computer',  value: '2',   hi: false },
+                { label: 'Capacity',  value: '51',  hi: true  },
+              ].map(({ label, value, hi }) => (
+                <div key={label} style={{
+                  padding: '10px 12px', borderRadius: 9,
+                  background: hi ? '#EDE9FF' : '#FAFAFE',
+                  border: `1px solid ${hi ? '#C4B5FD' : '#E8E4FF'}`,
+                  textAlign: 'center',
+                }}>
+                  <div style={{
+                    fontSize: 11, color: hi ? '#7C3AED' : '#8B87AD',
+                    fontWeight: 600, marginBottom: 4, whiteSpace: 'nowrap',
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>{label}</div>
+                  <div style={{
+                    fontSize: 20, fontWeight: 800,
+                    color: hi ? '#7C3AED' : '#13111E',
+                    fontFamily: "'DM Mono',monospace", lineHeight: 1,
+                  }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          3 FEATURE BULLETS
+      ══════════════════════════════════════════ */}
+      <section style={{
+        background: '#fff', padding: '56px 24px',
+        display: 'flex', justifyContent: 'center',
+      }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: 20, maxWidth: 900, width: '100%',
+        }}>
+          {[
+            {
+              icon: '🧠',
+              title: 'AI period allocation',
+              desc: 'AI suggests balanced period distributions per class and board — no manual tables needed.',
+            },
+            {
+              icon: '👨‍🏫',
+              title: 'Smart teacher allocation',
+              desc: 'Workload-balanced, expertise-matched teacher assignments with vertical continuity rules.',
+            },
+            {
+              icon: '👥',
+              title: 'Dynamic cross-class groups',
+              desc: 'Elective and activity groups auto-created across sections — no manual group setup.',
+            },
+          ].map(f => (
+            <div key={f.title} className="lp-feat" style={{
+              padding: '24px 22px', borderRadius: 12,
+              border: '1px solid #E8E4FF', background: '#FAFAFE',
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', marginBottom: 8 }}>{f.title}</h3>
+              <p style={{ fontSize: 13, color: '#4B5275', lineHeight: 1.65 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          STATS
+      ══════════════════════════════════════════ */}
+      <section style={{
+        background: '#F8F7FF', borderTop: '1px solid #F0EDFF', borderBottom: '1px solid #F0EDFF',
+        padding: '40px 24px',
+        display: 'flex', justifyContent: 'center',
+      }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: 0, maxWidth: 840, width: '100%',
+        }}>
+          {[
+            { value: '1,200+',     label: 'Schools using schedU' },
+            { value: '4.8 min',    label: 'Avg. timetable generation time' },
+            { value: '98%',        label: 'Conflict-free first generation' },
+            { value: 'CBSE / ICSE / IB', label: 'Board support' },
+          ].map((s, i) => (
+            <div key={s.label} style={{
+              textAlign: 'center', padding: '16px 12px',
+              borderRight: i < 3 ? '1px solid #E8E4FF' : 'none',
+            }}>
+              <div style={{
+                fontFamily: "'DM Serif Display', Georgia, serif",
+                fontSize: s.value.includes('/') ? 18 : 28,
+                fontWeight: 400, color: '#13111E', lineHeight: 1, marginBottom: 6,
+              }}>{s.value}</div>
+              <div style={{ fontSize: 12, color: '#8B87AD', lineHeight: 1.4 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          4-STEP HOW IT WORKS
+      ══════════════════════════════════════════ */}
+      <section style={{ padding: '64px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 16, maxWidth: 900, width: '100%',
+        }}>
+          {[
+            { n: 1, title: 'Enter basics',      desc: 'Name, board, class range, teachers, rooms.' },
+            { n: 2, title: 'AI generates',      desc: 'Allocations, groups, and constraints auto-built.' },
+            { n: 3, title: 'Review & refine',   desc: 'AI inlines like a spreadsheet. AI explains every choice.' },
+            { n: 4, title: 'Export & publish',  desc: 'PDF, Excel, print — class-wise, teacher-wise, room-wise.' },
+          ].map(s => (
+            <div key={s.n} className="lp-step" style={{
+              padding: '20px 18px', borderRadius: 12,
+              border: '1px solid #E8E4FF', background: '#fff',
+            }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 26, height: 26, borderRadius: '50%',
+                background: '#EDE9FF', color: '#7C6FE0',
+                fontSize: 11, fontWeight: 800, marginBottom: 12,
+              }}>
+                Step {s.n}
+              </div>
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: '#13111E', marginBottom: 6 }}>{s.title}</h4>
+              <p style={{ fontSize: 12, color: '#4B5275', lineHeight: 1.6 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          BOTTOM CTA
+      ══════════════════════════════════════════ */}
+      <section style={{
+        background: '#F8F7FF', borderTop: '1px solid #F0EDFF',
+        padding: '64px 24px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+      }}>
+        <h2 style={{
+          fontFamily: "'DM Serif Display', Georgia, serif",
+          fontSize: 30, fontWeight: 400, color: '#13111E', marginBottom: 8,
+        }}>
+          Ready to build your timetable?
+        </h2>
+        <p style={{ fontSize: 14, color: '#8B87AD', marginBottom: 28 }}>
+          Start free. No setup. No training required.
+        </p>
+        <a href="/wizard" style={{ textDecoration: 'none' }}>
+          <button style={{
+            padding: '14px 32px', borderRadius: 9, border: 'none',
+            background: '#7C6FE0', color: '#fff',
+            fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(124,111,224,0.35)',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            Create your first timetable →
+          </button>
+        </a>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          FOOTER
+      ══════════════════════════════════════════ */}
+      <footer style={{
+        borderTop: '1px solid #F0EDFF', padding: '18px 40px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 10,
+        fontSize: 12, color: '#8B87AD',
+      }}>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {['Privacy', 'Terms', 'Support', 'Status'].map(l => (
+            <a key={l} href="#" style={{ color: '#8B87AD', textDecoration: 'none', fontSize: 12, fontWeight: 500 }}
+              onMouseOver={e => (e.currentTarget.style.color = '#7C6FE0')}
+              onMouseOut={e => (e.currentTarget.style.color = '#8B87AD')}
+            >{l}</a>
+          ))}
+        </div>
+        <span>© 2025 schedU</span>
+      </footer>
+    </div>
   )
 }
