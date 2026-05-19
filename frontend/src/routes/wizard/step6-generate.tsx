@@ -355,9 +355,9 @@ export function Step6Generate() {
               style={{ display:"flex", alignItems:"center", gap:8, padding:"13px 36px", borderRadius:10, border:"none", background:"#7C6FE0", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(79,70,229,0.35)" }}>
               ✨ Generate {T.schedule}
             </button>
-            <button onClick={() => setStep(3)}
+            <button onClick={() => setStep(4)}
               style={{ padding:"13px 20px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
-              ← Back
+              ← Student Groups
             </button>
           </>
         )}

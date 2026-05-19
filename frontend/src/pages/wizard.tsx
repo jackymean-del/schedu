@@ -184,23 +184,23 @@ export function WizardPage() {
 
         {/* ── Sticky sub-header bar ── */}
         <div style={{
-          height: 48, background: "#fff", borderBottom: "1px solid #e5e7eb",
+          height: 48, background: "#fff", borderBottom: "1px solid #E8E4FF",
           display: "flex", alignItems: "center", padding: "0 28px",
           position: "sticky", top: 0, zIndex: 10, gap: 12,
           flexShrink: 0,
         }}>
           <span style={{ fontSize: 20, flexShrink: 0 }}>{STEP_META[step - 1]?.icon}</span>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#13111E" }}>
               {STEP_META[step - 1]?.label}
             </span>
-            <span style={{ fontSize: 12, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 12, color: "#8B87AD", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               — {STEP_META[step - 1]?.sub}
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-            <span style={{ fontSize: 11, color: "#6b7280" }}>Auto-saved</span>
+            <span style={{ fontSize: 11, color: "#4B5275" }}>Auto-saved</span>
           </div>
         </div>
 
