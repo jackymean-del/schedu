@@ -1,27 +1,42 @@
-import { Component, type ReactNode } from "react"
-import { useTimetableStore } from "@/store/timetableStore"
-import { useAuthStore } from "@/store/authStore"
-import { StepResourcesV2 }         from "@/routes/wizard/step-resources-v2"
-import { StepBell }                from "@/routes/wizard/step-bell"
-import { StepAllocation }          from "@/routes/wizard/step-allocation"
-import { StepStudentGroups }       from "@/routes/wizard/step-student-groups"
-import { Step6Generate }           from "@/routes/wizard/step6-generate"
-import { CheckCircle2 } from "lucide-react"
+/**
+ * Wizard shell — Page 6+ redesign
+ *
+ * Layout (no left sidebar):
+ *   ┌─ [Top bar from __root.tsx WizardTopbar] ────────────────────┐
+ *   ├─ Horizontal 5-step progress bar ───────────────────────────┤
+ *   │  ①─────②─────③─────④─────⑤                                │
+ *   │  Shift  Res   Alloc  Grps  Review                           │
+ *   ├─ Content area (F5F4F0 cream) ─────────────────────────────┤
+ *   │  <CurrentStep />                                            │
+ *   └─────────────────────────────────────────────────────────────┘
+ *
+ * Step order:
+ *   1. Shift & timing   (StepBell)
+ *   2. Resources        (StepResourcesV2)
+ *   3. Allocation       (StepAllocation)
+ *   4. Student groups   (StepStudentGroups)
+ *   5. Review & generate (Step6Generate)
+ */
 
-// ── 5-step user-facing wizard ──────────────────────────────────
-//   1. Resources       — Courses / teachers / subjects / rooms
-//   2. Shifts & Timing — Bell schedule (days, periods, breaks)
-//   3. Allocation      — Period × Subject + Teacher Allocation (2 tabs)
-//   4. Student Groups  — Preference matrix + grouping rules + AI groups
-//   5. Generate        — AI builds the timetable
-const STEPS = [StepResourcesV2, StepBell, StepAllocation, StepStudentGroups, Step6Generate]
+import { Component, Fragment, type ReactNode } from 'react'
+import { useTimetableStore } from '@/store/timetableStore'
+import { useAuthStore } from '@/store/authStore'
+import { StepBell }          from '@/routes/wizard/step-bell'
+import { StepResourcesV2 }   from '@/routes/wizard/step-resources-v2'
+import { StepAllocation }    from '@/routes/wizard/step-allocation'
+import { StepStudentGroups } from '@/routes/wizard/step-student-groups'
+import { Step6Generate }     from '@/routes/wizard/step6-generate'
+import { CheckCircle2 }      from 'lucide-react'
+
+// ── Step registry ─────────────────────────────────────────────
+const STEPS = [StepBell, StepResourcesV2, StepAllocation, StepStudentGroups, Step6Generate]
 
 const STEP_META = [
-  { label:"Resources",       sub:"Courses, teachers, subjects & rooms",         icon:"📥", color:"#7C6FE0" },
-  { label:"Shifts & Timing", sub:"Days, periods & breaks",                      icon:"🔔", color:"#9B8EF5" },
-  { label:"Allocation",      sub:"Period × subject + teacher assignment",       icon:"📊", color:"#7C6FE0" },
-  { label:"Student Groups",  sub:"Preferences, grouping rules & AI groups",     icon:"👥", color:"#9B8EF5" },
-  { label:"Generate",        sub:"AI builds your timetable",                    icon:"✨", color:"#D4920E" },
+  { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
+  { label: 'Resources',         sub: 'Courses, teachers, subjects & rooms'  },
+  { label: 'Allocation',        sub: 'Period × subject + teacher assignment' },
+  { label: 'Student groups',    sub: 'Preferences, grouping rules & AI'     },
+  { label: 'Review & generate', sub: 'AI builds your timetable'             },
 ]
 
 // ── Error boundary ────────────────────────────────────────────
@@ -33,16 +48,27 @@ class StepErrorBoundary extends Component<
   static getDerivedStateFromError(e: Error) { return { error: e.message } }
   render() {
     if (this.state.error) return (
-      <div style={{ padding:28, background:"#fef2f2", border:"1px solid #fecaca", borderRadius:12, margin:24 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:"#dc2626", marginBottom:8 }}>⚠️ Step {this.props.step} error</div>
-        <div style={{ fontSize:11, color:"#7f1d1d", fontFamily:"monospace", marginBottom:16, whiteSpace:"pre-wrap", maxHeight:120, overflow:'auto' }}>{this.state.error}</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={() => { this.setState({ error:null }); useTimetableStore.getState().resetWizard() }}
-            style={{ padding:"7px 14px", borderRadius:7, border:"none", background:"#dc2626", color:"#fff", cursor:"pointer", fontSize:12 }}>
+      <div style={{ padding: 28, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, margin: 24 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#dc2626', marginBottom: 8 }}>
+          ⚠️ Step {this.props.step} error
+        </div>
+        <div style={{
+          fontSize: 11, color: '#7f1d1d', fontFamily: 'monospace',
+          marginBottom: 16, whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto',
+        }}>
+          {this.state.error}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => { this.setState({ error: null }); useTimetableStore.getState().resetWizard() }}
+            style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: '#dc2626', color: '#fff', cursor: 'pointer', fontSize: 12 }}
+          >
             Reset Wizard
           </button>
-          <button onClick={() => this.setState({ error:null })}
-            style={{ padding:"7px 14px", borderRadius:7, border:"1px solid #fecaca", background:"#fff", color:"#dc2626", cursor:"pointer", fontSize:12 }}>
+          <button
+            onClick={() => this.setState({ error: null })}
+            style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', cursor: 'pointer', fontSize: 12 }}
+          >
             Try Again
           </button>
         </div>
@@ -52,165 +78,128 @@ class StepErrorBoundary extends Component<
   }
 }
 
-// ── Sidebar palette — Bhusku / SchedU White Lavender ──────────
-const SB_BG     = '#FFFFFF'   // Pure white sidebar
-const SB_BORDER = '#E8E4FF'   // Lavender border (divisions)
-const SB_HOVER  = '#F5F2FF'   // Light lavender hover
-const SB_ACTIVE = '#EDE9FF'   // Lavender mist (active step)
-const SB_DIM    = '#9CA3AF'   // Cool grey
-const SB_MID    = '#4B5275'   // Mid purple-grey
-const SB_ON     = '#13111E'   // Deep ink (active text)
-const SB_WHITE  = '#13111E'   // (renamed: now deep ink, kept name for compat)
-const SB_LABEL  = '#8B87AD'   // Group label
-const SB_ACCENT = '#7C6FE0'   // Lavender
-
-// ── Main ─────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────
 export function WizardPage() {
-  const { step, setStep } = useTimetableStore()
+  const { step, setStep, config } = useTimetableStore()
   const { isAuthenticated, user } = useAuthStore()
-  const CurrentStep = STEPS[step - 1] ?? StepResourcesV2
+
+  const CurrentStep = STEPS[step - 1] ?? StepBell
   const total = STEPS.length
-  const pct   = Math.round(((step - 1) / (total - 1)) * 100)
+
+  const ttName = (config as any).timetableName
+    || (user?.schoolName ? `${user.schoolName} · Timetable` : 'AY 2025–26 · Main Timetable')
 
   return (
-    <div style={{ display:"flex", height:"calc(100vh - 52px)", overflow:"hidden" }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      height: 'calc(100vh - 52px)',
+      overflow: 'hidden',
+      fontFamily: "'Inter', -apple-system, sans-serif",
+    }}>
 
-      {/* ═══════════════════════════════════
-          DARK SIDEBAR
-      ═══════════════════════════════════ */}
-      <aside style={{
-        width: 240, flexShrink: 0,
-        background: SB_BG, borderRight: `1px solid ${SB_BORDER}`,
-        display: "flex", flexDirection: "column",
+      {/* ══ Timetable name sub-bar ══════════════════════ */}
+      <div style={{
+        height: 38,
+        background: '#fff',
+        borderBottom: '1px solid #E5E7EB',
+        display: 'flex', alignItems: 'center',
+        padding: '0 28px',
+        flexShrink: 0,
+        gap: 10,
       }}>
-
-        {/* School / user info */}
-        <div style={{ padding: "14px 16px", borderBottom: `1px solid ${SB_BORDER}` }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: SB_DIM, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
-            Setup Wizard
-          </div>
-          <div style={{ fontSize: 13, color: SB_WHITE, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {isAuthenticated && user ? (user.schoolName || user.name) : "New School"}
-          </div>
-          <div style={{ fontSize: 10, color: SB_DIM, marginTop: 3 }}>
-            Step {step} of {total}
-          </div>
+        <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
+          sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic' }}>U</span>
+        </span>
+        <span style={{ color: '#D1D5DB' }}>|</span>
+        <span style={{ fontSize: 13, color: '#6B7280' }}>{ttName}</span>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+          <span style={{ fontSize: 11, color: '#6B7280' }}>Auto-saved</span>
         </div>
+      </div>
 
-        {/* Steps list */}
-        <nav style={{ flex: 1, padding: "10px 0" }}>
+      {/* ══ Horizontal step bar ════════════════════════ */}
+      <div style={{
+        background: '#fff',
+        borderBottom: '1px solid #E5E7EB',
+        padding: '14px 40px',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          maxWidth: 760, margin: '0 auto',
+        }}>
           {STEP_META.map((s, i) => {
             const n      = i + 1
             const active = step === n
             const done   = step > n
-            const future = step < n
 
             return (
-              <div key={n}>
-                <button
+              <Fragment key={n}>
+                {/* Step item */}
+                <div
                   onClick={() => done && setStep(n)}
                   style={{
-                    width: "100%", display: "flex", alignItems: "center", gap: 12,
-                    padding: "10px 16px", border: "none", textAlign: "left",
-                    borderLeft: active ? `3px solid ${s.color}` : "3px solid transparent",
-                    background: active ? SB_ACTIVE : "transparent",
-                    cursor: done ? "pointer" : "default",
-                    transition: "background 0.12s",
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 5, cursor: done ? 'pointer' : 'default', flexShrink: 0,
                   }}
-                  onMouseEnter={e => { if (done) (e.currentTarget as HTMLButtonElement).style.background = SB_HOVER }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = active ? SB_ACTIVE : "transparent" }}
                 >
-                  {/* Circle indicator */}
+                  {/* Circle */}
                   <div style={{
-                    width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: done ? SB_ACCENT : active ? s.color : "#F0EDFF",
-                    border: future ? `1.5px solid ${SB_BORDER}` : "none",
-                    transition: "background 0.2s",
+                    width: 30, height: 30, borderRadius: '50%',
+                    background: active ? '#7C6FE0' : done ? '#7C6FE0' : '#fff',
+                    border: active || done ? 'none' : '1.5px solid #D1D5DB',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: active ? '0 0 0 4px rgba(124,111,224,0.15)' : 'none',
+                    transition: 'all 0.2s',
                   }}>
                     {done
-                      ? <CheckCircle2 size={13} color="#fff" />
-                      : <span style={{ fontSize: 11, fontWeight: 700, color: active ? "#fff" : SB_DIM }}>{n}</span>}
+                      ? <CheckCircle2 size={14} color="#fff" />
+                      : <span style={{ fontSize: 12, fontWeight: 700, color: active ? '#fff' : '#9CA3AF' }}>{n}</span>
+                    }
                   </div>
 
-                  {/* Text */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 12, fontWeight: active ? 600 : 400,
-                      color: active ? SB_WHITE : done ? SB_ON : SB_DIM,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
-                      {s.label}
-                    </div>
-                    <div style={{ fontSize: 10, color: active ? SB_MID : SB_DIM, marginTop: 2 }}>
-                      {s.sub}
-                    </div>
-                  </div>
-                </button>
-
-                {/* Connector */}
-                {i < total - 1 && (
+                  {/* Label */}
                   <div style={{
-                    width: 1.5, height: 8, marginLeft: 27, marginTop: 1, marginBottom: 1,
-                    background: done ? SB_ACCENT : SB_BORDER,
-                    transition: "background 0.3s",
+                    fontSize: 11,
+                    fontWeight: active ? 600 : 400,
+                    color: active ? '#13111E' : done ? '#7C6FE0' : '#9CA3AF',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                  }}>
+                    {s.label}
+                  </div>
+                </div>
+
+                {/* Connector line */}
+                {i < STEP_META.length - 1 && (
+                  <div style={{
+                    flex: 1,
+                    height: 1.5,
+                    background: done ? '#7C6FE0' : '#E5E7EB',
+                    margin: '0 6px',
+                    marginBottom: 20,   // vertically aligned with circle centers
+                    transition: 'background 0.3s',
                   }} />
                 )}
-              </div>
+              </Fragment>
             )
           })}
-        </nav>
-
-        {/* Progress bar */}
-        <div style={{ padding: "14px 16px", borderTop: `1px solid ${SB_BORDER}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 10, color: SB_DIM }}>Progress</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: pct === 100 ? "#9B8EF5" : SB_MID }}>{pct}% complete</span>
-          </div>
-          <div style={{ height: 4, background: SB_BORDER, borderRadius: 2, overflow: "hidden" }}>
-            <div style={{
-              height: "100%", borderRadius: 2, transition: "width 0.35s ease",
-              background: pct === 100 ? SB_ACCENT : "linear-gradient(90deg, #7C6FE0, #9B8EF5)",
-              width: `${pct}%`,
-            }} />
-          </div>
-        </div>
-      </aside>
-
-      {/* ═══════════════════════════════════
-          CONTENT AREA
-      ═══════════════════════════════════ */}
-      <div style={{ flex: 1, overflowY: "auto", background: "#F9F8FF", display: "flex", flexDirection: "column" }}>
-
-        {/* ── Sticky sub-header bar ── */}
-        <div style={{
-          height: 48, background: "#fff", borderBottom: "1px solid #E8E4FF",
-          display: "flex", alignItems: "center", padding: "0 28px",
-          position: "sticky", top: 0, zIndex: 10, gap: 12,
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 20, flexShrink: 0 }}>{STEP_META[step - 1]?.icon}</span>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#13111E" }}>
-              {STEP_META[step - 1]?.label}
-            </span>
-            <span style={{ fontSize: 12, color: "#8B87AD", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              — {STEP_META[step - 1]?.sub}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-            <span style={{ fontSize: 11, color: "#4B5275" }}>Auto-saved</span>
-          </div>
-        </div>
-
-        {/* ── Step content ── */}
-        <div style={{ padding: "24px 28px", flex: 1 }}>
-          <StepErrorBoundary step={step}>
-            <CurrentStep />
-          </StepErrorBoundary>
         </div>
       </div>
+
+      {/* ══ Content area ══════════════════════════════ */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        background: '#F5F4F0',
+      }}>
+        <StepErrorBoundary step={step}>
+          <CurrentStep />
+        </StepErrorBoundary>
+      </div>
+
     </div>
   )
 }

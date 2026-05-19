@@ -26,7 +26,7 @@ import {
 import type { Section, Subject, Staff } from '@/types'
 import {
   Sparkles, Users, BookOpen, Building2, GraduationCap, CheckCircle2,
-  RefreshCw, AlertCircle, Layers, ChevronRight, Pencil, Trash2, Plus,
+  RefreshCw, AlertCircle, Layers, ChevronLeft, ChevronRight, Pencil, Trash2, Plus,
 } from 'lucide-react'
 
 const BANDS: { key: string; label: string; sub: string; defaultStrength: number; sectionSize: number }[] = [
@@ -437,11 +437,28 @@ export function StepResourcesV2() {
 
       {/* ── Navigation footer ─────────────────────────── */}
       <div style={{
-        display: 'flex', justifyContent: 'flex-end', marginTop: 16,
-        paddingTop: 16, borderTop: '1px solid #F0EDFF',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginTop: 16, paddingTop: 16, borderTop: '1px solid #F0EDFF',
       }}>
+        {/* Back → Shift & timing (step 1) */}
         <button
-          onClick={() => setStep(2)}
+          onClick={() => setStep(1)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            padding: '9px 18px', borderRadius: 8,
+            border: '1px solid #E8E4FF', background: '#fff',
+            color: '#4B5275', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+          <ChevronLeft size={14} /> Back
+        </button>
+
+        <span style={{ fontSize: 13, color: '#9CA3AF' }}>Step 2 of 5</span>
+
+        {/* Next → Allocation (step 3) */}
+        <button
+          onClick={() => setStep(3)}
+          disabled={sections.length === 0}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
             padding: '9px 20px', borderRadius: 8, border: 'none',
@@ -453,7 +470,7 @@ export function StepResourcesV2() {
             fontFamily: 'inherit',
             boxShadow: sections.length > 0 ? '0 2px 8px rgba(124,111,224,0.35)' : 'none',
           }}>
-          Next: Shifts & Timing <ChevronRight size={14} />
+          Next: Allocation <ChevronRight size={14} />
         </button>
       </div>
     </div>
