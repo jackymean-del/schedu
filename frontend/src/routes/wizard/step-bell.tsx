@@ -803,6 +803,33 @@ export function StepBell() {
       r.classes.length > 0 && r.classes.length < ALL_CLASS_KEYS.length,
     ), [rows])
 
+  /**
+   * Per-row display start times for the bell grid.
+   *
+   * Problem with the naive master-clock (computeStarts): when a break applies
+   * to only some classes (e.g. Lunch for Nur-UKG), the master clock still
+   * advances by the break duration for ALL subsequent rows — so Period 4 for
+   * I-XII would wrongly show 11:45 instead of 11:15.
+   *
+   * Fix: for each row use computeStartsFiltered with that row's own first class
+   * as the representative key.  The filtered clock only advances for rows that
+   * include that class, so concurrent split-periods each show their own correct
+   * start time independent of breaks they're not part of.
+   */
+  const rowStartTimes = useMemo((): string[] => {
+    if (!hasPartialBreaks) return startTimes
+    // Cache filtered timelines by class key to avoid redundant passes
+    const cache = new Map<string, string[]>()
+    const getFiltered = (key: string) => {
+      if (!cache.has(key)) cache.set(key, computeStartsFiltered(startTime, rows, key))
+      return cache.get(key)!
+    }
+    return rows.map((row, i) => {
+      const repKey = row.classes[0] ?? ALL_CLASS_KEYS[0]
+      return getFiltered(repKey)[i]
+    })
+  }, [hasPartialBreaks, rows, startTime, startTimes])
+
   // ── Timeline data: per-group filtered if partial breaks exist ─
   const groupTimelineData = useMemo(() => {
     return CLASS_GROUPS.map(gm => {
@@ -1167,7 +1194,7 @@ export function StepBell() {
               <div>
                 {rows.map((row, i) => {
                   const tm    = TYPE_META[row.type]
-                  const start = startTimes[i] ?? '—'
+                  const start = rowStartTimes[i] ?? '—'
                   const end   = addMins(start, row.duration)
                   return (
                     <div key={row.id}>
