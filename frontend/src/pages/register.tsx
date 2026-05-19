@@ -96,6 +96,7 @@ export function RegisterPage() {
   const [school,      setSchool]      = useState('')
   const [state,       setState]       = useState('')
   const [country,     setCountry]     = useState('')
+  const [phone,       setPhone]       = useState('')
   const [board,       setBoard]       = useState('')
   const [schoolType,  setSchoolType]  = useState('')
   const [password,    setPassword]    = useState('')
@@ -289,6 +290,14 @@ export function RegisterPage() {
                   onChange={e => setCountry(e.target.value)}
                   placeholder="e.g. United States" />
               </div>
+            </div>
+
+            {/* Contact number */}
+            <div>
+              <label style={lbl}>Contact number</label>
+              <input className="reg-input" type="tel" value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="e.g. +1 415 555 0123" />
             </div>
 
             {/* Board / Institution type */}
