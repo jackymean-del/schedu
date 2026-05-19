@@ -37,7 +37,7 @@ import {
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   Plus, Sparkles, ChevronLeft, ChevronRight,
-  Trash2, Coffee, X,
+  Trash2, Coffee, X, Calendar, Clock, AlertTriangle, SlidersHorizontal,
 } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -105,6 +105,16 @@ const ROW_BG: Record<RowType, string> = {
   lunch:        '#FFFBEB',
   dispersal:    '#FFF1F2',
 }
+
+// ── Schedule type options ──────────────────────────────────────
+const SCHEDULE_TYPES = [
+  { key: 'weekly',       label: 'Weekly',       sub: 'Same schedule every week' },
+  { key: 'fortnightly',  label: 'Fortnightly',  sub: '2-week alternating schedule' },
+  { key: 'custom-cycle', label: 'Custom Cycle', sub: '3+ week schedule' },
+  { key: 'day-rotation', label: 'Day Rotation', sub: 'Custom named days (A/B, 8-day…)' },
+] as const
+type ScheduleType    = typeof SCHEDULE_TYPES[number]['key']
+type PeriodCfgStyle  = 'uniform' | 'custom-day'
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_TO_FULL: Record<string, string> = {
@@ -291,6 +301,7 @@ const BELL_KEY = 'schedu-bell-v2'
 interface SavedBell {
   shiftName: string; startTime: string; use12h: boolean
   periodDur: number; maxPeriods: number; workDays: string[]; rows: BellRow[]
+  scheduleType?: ScheduleType; periodCfgStyle?: PeriodCfgStyle
 }
 function loadSaved(): SavedBell | null {
   try { const s = localStorage.getItem(BELL_KEY); return s ? JSON.parse(s) as SavedBell : null }
@@ -821,6 +832,10 @@ export function StepBell() {
     return buildRows(cnt, dur)
   })
 
+  const [scheduleType,    setScheduleType]    = useState<ScheduleType>(   () => _saved?.scheduleType   ?? 'weekly')
+  const [pendingSchedType, setPendingSchedType] = useState<ScheduleType | null>(null)
+  const [periodCfgStyle,  setPeriodCfgStyle]  = useState<PeriodCfgStyle>(() => _saved?.periodCfgStyle ?? 'uniform')
+
   const [openPicker,    setOpenPicker]    = useState<string | null>(null)
   const [editingEnd,    setEditingEnd]    = useState(false)
   const [showCwPanel,   setShowCwPanel]   = useState(false)
@@ -830,8 +845,9 @@ export function StepBell() {
   useEffect(() => {
     localStorage.setItem(BELL_KEY, JSON.stringify({
       shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
+      scheduleType, periodCfgStyle,
     } satisfies SavedBell))
-  }, [shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows])
+  }, [shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows, scheduleType, periodCfgStyle])
 
   // ── Derived: start-time cascades ──────────────────────────────
   const startTimes = useMemo(() => computeStarts(startTime, rows), [startTime, rows])
@@ -1080,6 +1096,21 @@ export function StepBell() {
     })
   }, [rows, workDays.length])
 
+  // ── Schedule type ─────────────────────────────────────────────
+  const handleScheduleTypeClick = (key: ScheduleType) => {
+    if (key === scheduleType) return
+    setPendingSchedType(key)
+  }
+  const handleConfirmScheduleType = () => {
+    if (!pendingSchedType) return
+    setScheduleType(pendingSchedType)
+    setPendingSchedType(null)
+    // Reset bell rows and class-wise breaks
+    setRows(buildRows(maxPeriods, periodDur))
+    setCwRows([])
+    setShowCwPanel(false)
+  }
+
   const handleNext = () => {
     setConfig({
       workDays: workDays.map(d => DAY_TO_FULL[d] ?? d.toUpperCase()),
@@ -1121,6 +1152,114 @@ export function StepBell() {
 
         {/* ══════════ LEFT ══════════ */}
         <div>
+
+          {/* ─── SCHEDULE TYPE ─── */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
+              <Calendar size={15} color="#7C6FE0" />
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#13111E', letterSpacing: '-0.2px' }}>Schedule Type</span>
+            </div>
+
+            {/* 4-option grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {SCHEDULE_TYPES.map(st => {
+                const active = scheduleType === st.key
+                return (
+                  <button key={st.key} onClick={() => handleScheduleTypeClick(st.key)} style={{
+                    padding: '14px 10px', borderRadius: 10, textAlign: 'center',
+                    border: active ? '2px solid #7C6FE0' : '1.5px solid #E5E7EB',
+                    background: active ? '#F5F2FF' : '#fff',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'border-color .15s, background .15s',
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: active ? '#7C6FE0' : '#13111E', marginBottom: 4 }}>
+                      {st.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF', lineHeight: 1.4 }}>{st.sub}</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Warning banner (shown when user clicks a different type) */}
+            {pendingSchedType && (
+              <div style={{
+                marginTop: 12, padding: '12px 14px',
+                background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: '#92400E' }}>
+                    Changing schedule type will clear all existing configurations.
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={handleConfirmScheduleType} style={{
+                    padding: '5px 16px', borderRadius: 6, border: 'none',
+                    background: '#D97706', color: '#fff',
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>Confirm</button>
+                  <button onClick={() => setPendingSchedType(null)} style={{
+                    padding: '5px 14px', borderRadius: 6,
+                    border: '1px solid #E5E7EB', background: '#fff', color: '#374151',
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── DEFAULT SCHEDULE ─── */}
+          <div style={{ marginBottom: 20 }}>
+            {/* Section header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 12 }}>
+              <Clock size={15} color="#7C6FE0" style={{ marginTop: 1 }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E', letterSpacing: '-0.2px' }}>Default Schedule</div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 1 }}>Configure periods and breaks for your timetable</div>
+              </div>
+            </div>
+
+            {/* Period Configuration Style */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                <SlidersHorizontal size={12} color="#7C6FE0" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Period Configuration Style
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {([
+                  { key: 'uniform',    label: 'Uniform Schedule',    desc: 'Same periods every working day. Simple and straightforward.' },
+                  { key: 'custom-day', label: 'Custom Day Schedule', desc: 'Different periods for different days. E.g., shorter Fridays.' },
+                ] as const).map(opt => {
+                  const active = periodCfgStyle === opt.key
+                  return (
+                    <button key={opt.key} onClick={() => setPeriodCfgStyle(opt.key)} style={{
+                      padding: '12px 14px', borderRadius: 10, textAlign: 'left',
+                      border: active ? '2px solid #7C6FE0' : '1.5px solid #E5E7EB',
+                      background: active ? '#F5F2FF' : '#fff',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'flex-start', gap: 10,
+                      transition: 'border-color .15s, background .15s',
+                    }}>
+                      {/* Radio dot */}
+                      <div style={{
+                        width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                        border: active ? '5px solid #7C6FE0' : '2px solid #D1D5DB',
+                        transition: 'border .15s',
+                      }} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: active ? '#7C6FE0' : '#374151', marginBottom: 3 }}>
+                          {opt.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.45 }}>{opt.desc}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
           {/* ─── SHIFT CONFIGURATION ─── */}
           <div style={{ marginBottom: 20 }}>
@@ -1341,6 +1480,7 @@ export function StepBell() {
               </div>
             </div>
           </div>
+          </div>{/* end Default Schedule outer div */}
         </div>
 
         {/* ══════════ RIGHT (sticky) ══════════ */}
