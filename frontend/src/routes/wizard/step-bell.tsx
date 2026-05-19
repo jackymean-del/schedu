@@ -675,37 +675,80 @@ function GapRow({
   }
   if (mode === 'break') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px', height: 30, background: '#FFFBEB', borderTop: '1px dashed #FDE68A', borderBottom: '1px dashed #FDE68A' }}>
-        <span style={{ fontSize: 10, color: '#D97706', fontWeight: 600, flexShrink: 0 }}>Break name:</span>
-        <input ref={inputRef} value={breakName} onChange={e => setBreakName(e.target.value)}
-          placeholder="e.g. Morning Break, Lunch…"
-          onKeyDown={e => { if (e.key === 'Enter') confirmBreak(); if (e.key === 'Escape') { setMode('idle'); setBreakName('') } }}
-          style={{ flex: 1, padding: '2px 8px', borderRadius: 5, border: '1px solid #FDE68A', fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff' }}
-        />
-        <button onClick={confirmBreak} style={{ padding: '2px 10px', borderRadius: 5, border: 'none', background: '#D97706', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Add</button>
-        <button onClick={() => { setMode('idle'); setBreakName('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 2, display: 'flex' }}><X size={10} /></button>
+      <div style={{
+        position: 'relative', height: 34,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {/* hairline */}
+        <div style={{ position: 'absolute', left: 0, right: 0, height: 1, background: '#FDE68A' }} />
+        <div style={{
+          position: 'relative', zIndex: 1,
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: '#FFFBEB', padding: '4px 10px', borderRadius: 8,
+          border: '1px solid #FDE68A', boxShadow: '0 1px 4px rgba(217,119,6,0.10)',
+        }}>
+          <Coffee size={10} color="#D97706" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: '#D97706', fontWeight: 600, flexShrink: 0 }}>Name:</span>
+          <input ref={inputRef} value={breakName} onChange={e => setBreakName(e.target.value)}
+            placeholder="e.g. Morning Break, Lunch…"
+            onKeyDown={e => { if (e.key === 'Enter') confirmBreak(); if (e.key === 'Escape') { setMode('idle'); setBreakName('') } }}
+            style={{ width: 160, padding: '2px 7px', borderRadius: 5, border: '1px solid #FDE68A', fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff' }}
+          />
+          <button onClick={confirmBreak} style={{ padding: '2px 10px', borderRadius: 5, border: 'none', background: '#D97706', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Add</button>
+          <button onClick={() => { setMode('idle'); setBreakName('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 2, display: 'flex' }}><X size={10} /></button>
+        </div>
       </div>
     )
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px', height: 26, background: '#FAFAFA', borderTop: '1px dashed #EBEBEB', borderBottom: '1px dashed #EBEBEB' }}>
-      <button className="gap-btn" onClick={() => onInsertPeriod(afterIndex)} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 9px', borderRadius: 12, border: '1px solid #BFDBFE', background: 'transparent', color: '#1D4ED8', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-        <Plus size={8} /> Period
-      </button>
-      <span style={{ width: 1, height: 12, background: '#E5E7EB', flexShrink: 0 }} />
-      <button className="gap-btn" onClick={() => setMode('break')} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 9px', borderRadius: 12, border: '1px solid #FDE68A', background: 'transparent', color: '#D97706', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-        <Coffee size={8} /> Break
-      </button>
-      {isPartialBreak && (
-        <>
-          <span style={{ width: 1, height: 12, background: '#E5E7EB', flexShrink: 0 }} />
-          <button className="gap-btn" onClick={() => onInsertSplit(afterIndex)}
-            title={`Auto-create two periods: one for classes NOT in "${aboveRow.name}", one for classes IN it`}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 9px', borderRadius: 12, border: '1px solid #C4B5FD', background: '#F5F3FF', color: '#7C3AED', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <Sparkles size={8} /> Split periods
-          </button>
-        </>
-      )}
+    <div style={{
+      position: 'relative', height: 26,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {/* hairline divider behind the buttons */}
+      <div style={{ position: 'absolute', left: 14, right: 14, height: 1, background: '#E9E9E9' }} />
+      {/* centered pill cluster */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        background: '#F5F4F0', padding: '0 6px',
+      }}>
+        <button className="gap-btn" onClick={() => onInsertPeriod(afterIndex)} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          padding: '2px 9px', borderRadius: 12,
+          border: '1px solid #BFDBFE', background: 'transparent',
+          color: '#1D4ED8', fontSize: 10, fontWeight: 600,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <Plus size={8} /> Period
+        </button>
+        <span style={{ width: 1, height: 10, background: '#D1D5DB', flexShrink: 0 }} />
+        <button className="gap-btn" onClick={() => setMode('break')} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          padding: '2px 9px', borderRadius: 12,
+          border: '1px solid #FDE68A', background: 'transparent',
+          color: '#D97706', fontSize: 10, fontWeight: 600,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <Coffee size={8} /> Break
+        </button>
+        {isPartialBreak && (
+          <>
+            <span style={{ width: 1, height: 10, background: '#D1D5DB', flexShrink: 0 }} />
+            <button className="gap-btn" onClick={() => onInsertSplit(afterIndex)}
+              title={`Auto-create two periods: one for classes NOT in "${aboveRow.name}", one for classes IN it`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+                padding: '2px 9px', borderRadius: 12,
+                border: '1px solid #C4B5FD', background: '#F5F3FF',
+                color: '#7C3AED', fontSize: 10, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+              <Sparkles size={8} /> Split periods
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -1193,29 +1236,54 @@ export function StepBell() {
               {/* Rows */}
               <div>
                 {rows.map((row, i) => {
-                  const tm    = TYPE_META[row.type]
-                  const start = rowStartTimes[i] ?? '—'
-                  const end   = addMins(start, row.duration)
+                  const tm      = TYPE_META[row.type]
+                  const start   = rowStartTimes[i] ?? '—'
+                  const end     = addMins(start, row.duration)
+                  const isBreak = row.type === 'short-break' || row.type === 'lunch'
+                  const isEdge  = row.type === 'assembly' || row.type === 'dispersal'
                   return (
                     <div key={row.id}>
                       <div className="b-row" style={{
                         display: 'grid',
                         gridTemplateColumns: '88px 88px 88px 56px 100px 1fr 28px',
-                        padding: '6px 14px', alignItems: 'center', background: ROW_BG[row.type],
+                        alignItems: 'center',
+                        background: ROW_BG[row.type],
+                        // Break rows: strong left accent bar + extra vertical breathing room
+                        boxShadow: isBreak ? `inset 4px 0 0 ${tm.line}` : 'none',
+                        padding: isBreak ? '10px 14px 10px 10px' : isEdge ? '5px 14px' : '6px 14px',
+                        borderBottom: isBreak ? `1px solid ${tm.border}` : undefined,
+                        borderTop:    isBreak ? `1px solid ${tm.border}` : undefined,
                       }}>
-                        <input className="b-cell" value={row.name} onChange={e => updateRow(row.id, { name: e.target.value })} />
-                        <div style={{ fontSize: 12, fontFamily: "'DM Mono',monospace", color: '#374151', fontWeight: 600, padding: '4px 7px' }}>
+                        <input className="b-cell" value={row.name}
+                          onChange={e => updateRow(row.id, { name: e.target.value })}
+                          style={{ fontWeight: isBreak ? 700 : undefined }}
+                        />
+                        <div style={{
+                          fontSize: isBreak ? 13 : 12,
+                          fontFamily: "'DM Mono',monospace",
+                          color: isBreak ? tm.fg : '#374151',
+                          fontWeight: 700, padding: '4px 7px',
+                        }}>
                           {fmt12(start, use12h)}
                         </div>
-                        <div style={{ fontSize: 12, fontFamily: "'DM Mono',monospace", color: '#374151', fontWeight: 600, padding: '4px 7px' }}>
+                        <div style={{
+                          fontSize: isBreak ? 13 : 12,
+                          fontFamily: "'DM Mono',monospace",
+                          color: isBreak ? tm.fg : '#374151',
+                          fontWeight: 700, padding: '4px 7px',
+                        }}>
                           {fmt12(end, use12h)}
                         </div>
                         <NumInput className="b-dur" value={row.duration} min={5} max={240}
                           onChange={d => updateRow(row.id, { duration: d })} />
                         <div style={{
-                          padding: '3px 10px', borderRadius: 20, display: 'inline-block',
-                          background: tm.bg, color: tm.fg, border: `1px solid ${tm.border}`,
-                          fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                          padding: isBreak ? '4px 10px' : '3px 10px',
+                          borderRadius: 20, display: 'inline-block',
+                          background: tm.bg, color: tm.fg,
+                          border: `1.5px solid ${tm.border}`,
+                          fontSize: isBreak ? 12 : 11,
+                          fontWeight: 700, whiteSpace: 'nowrap',
+                          boxShadow: isBreak ? `0 0 0 2px ${tm.bg}` : 'none',
                         }}>
                           {tm.label}
                         </div>
