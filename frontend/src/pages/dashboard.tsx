@@ -1,307 +1,455 @@
 /**
- * Dashboard — calm landing page (mockup-aligned).
+ * Dashboard — Page 4 (Home)
  *
- * Structure (matches reference):
- *   - Top bar: greeting + "Take me home"
- *   - Main panel:
- *       * School-name card with 4 stat chips (timetables / published /
- *         in progress / drafts)
- *       * Schedule state (empty CTA OR thumbnail summary)
- *       * 3 quick-action cards (Guide / Master Data / Configure)
- *   - Footer
- *
- * White-first, lightweight, properly aligned. No dense ERP feel.
- *
- * The previous complex dashboard (substitutions drawer, calendar etc)
- * lives on /timetable — link to it from the schedule card when present.
+ * Layout:
+ *   ┌─ Top nav ─────────────────────────────────────────────────┐
+ *   │ schedU │ Dashboard  Timetables  Resources  Reports │ school │
+ *   ├─ Icon sidebar ──┬─ Content area ────────────────────────────┤
+ *   │  🏠              │  Greeting + "+ New timetable"            │
+ *   │  📅              │  Stats row (4 cards)                     │
+ *   │  👤              │  AI insight banner                       │
+ *   │  📄              │  Your timetables list                    │
+ *   │  📊              │  Quick actions (3 cards)                 │
+ *   │                 │                                           │
+ *   │  ⚙️  (bottom)    │                                           │
+ *   └─────────────────┴───────────────────────────────────────────┘
  */
 
+import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useTimetableStore } from '@/store/timetableStore'
-import { BhuskuFooter } from '@/components/branding/Logos'
 import {
-  Sparkles, ArrowRight, BookOpen, Database, Settings,
-  Home, Calendar, CheckCircle2, Clock, FileText,
+  Home, Calendar, Users, FileText, BarChart2, Settings,
+  Bell, Plus, Sparkles, MoreHorizontal, ChevronRight,
+  ArrowRight,
 } from 'lucide-react'
 
-const GREETING = () => {
+// ── helpers ────────────────────────────────────────────────────
+function greeting() {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
   if (h < 17) return 'Good afternoon'
   return 'Good evening'
 }
 
+// ── types ──────────────────────────────────────────────────────
+type NavTab = 'dashboard' | 'timetables' | 'resources' | 'reports'
+
+// ── Demo timetable rows (supplement store data) ────────────────
+const DEMO_TT = [
+  {
+    id: 'tt1', name: 'AY 2025–26 · Main',
+    meta: '52 classes · 84 teachers · Generated 3 days ago',
+    status: 'active' as const,
+  },
+  {
+    id: 'tt2', name: 'AY 2025–26 · Revised (Post-annual)',
+    meta: '52 classes · 84 teachers · In wizard · Step 3',
+    status: 'draft' as const,
+  },
+  {
+    id: 'tt3', name: 'AY 2024–25 · Archive',
+    meta: '49 classes · 80 teachers · Archived',
+    status: 'archived' as const,
+  },
+]
+
+const STATUS_META = {
+  active:   { label: 'Active',   bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0' },
+  draft:    { label: 'Draft',    bg: '#FEF3C7', fg: '#92400E', border: '#FDE68A' },
+  archived: { label: 'Archived', bg: '#F3F4F6', fg: '#6B7280', border: '#E5E7EB' },
+}
+
+// ── Component ──────────────────────────────────────────────────
 export function DashboardPage() {
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const store = useTimetableStore() as any
-  const { classTT, sections, staff, subjects, config } = store
-  const timetableStatus: string = (store as any).timetableStatus ?? 'draft'
-  const optionalBlocks = (store as any).optionalBlocks ?? []
+  const { sections, staff, subjects, classTT } = store
+
+  const [activeTab, setActiveTab] = useState<NavTab>('dashboard')
 
   if (!user) { window.location.href = '/login'; return null }
 
-  const hasTimetable = Object.keys(classTT ?? {}).length > 0
-  const firstName = user.name?.split(' ')[0] ?? 'there'
-  const schoolName = user.schoolName ?? 'Your school'
-  const ttCount = hasTimetable ? 1 : 0
-  const pubCount = hasTimetable && timetableStatus === 'published' ? 1 : 0
-  const inProgressCount = hasTimetable && timetableStatus === 'generating' ? 1 : 0
-  const draftCount = hasTimetable && timetableStatus !== 'published' && timetableStatus !== 'generating' ? 1 : 0
+  const firstName  = user.name?.split(' ')[0] ?? 'there'
+  const schoolName = user.schoolName ?? 'Your School'
+  const hasTT      = Object.keys(classTT ?? {}).length > 0
+  const conflicts  = (store.conflicts ?? []).length
+
+  // Stats (use store counts; fall back to demo values for new accounts)
+  const stats = [
+    {
+      label: 'Timetables',
+      value: hasTT ? 1 : 3,
+      sub: hasTT ? '1 active' : '2 active · 1 draft',
+      red: false,
+    },
+    {
+      label: 'Total classes',
+      value: sections.length || 52,
+      sub: sections.length ? `${sections.length} sections` : 'Across I–XII',
+      red: false,
+    },
+    {
+      label: 'Teachers',
+      value: staff.length || 84,
+      sub: staff.length ? `${staff.length} staff` : '78 allocated',
+      red: false,
+    },
+    {
+      label: 'Conflicts',
+      value: conflicts || 2,
+      sub: 'Needs attention',
+      red: true,
+    },
+  ]
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#FAFAFE',
-      display: 'flex', flexDirection: 'column',
-      fontFamily: "'Inter', sans-serif",
+      display: 'flex', flexDirection: 'column', minHeight: '100vh',
+      fontFamily: "'Inter', -apple-system, sans-serif",
+      background: '#F5F4F0', color: '#13111E',
     }}>
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        .db-tab { transition: background 0.13s, color 0.13s; }
+        .db-tab:hover { background: #F5F4F0 !important; }
+        .db-icon-btn { transition: background 0.13s; border-radius: 9px; }
+        .db-icon-btn:hover { background: #EDE9FF !important; }
+        .db-tt-row { transition: box-shadow 0.14s, border-color 0.14s; }
+        .db-tt-row:hover { border-color: #D1D5DB !important; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .db-qa-card { transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+        .db-qa-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.07); border-color: #D1D5DB !important; }
+        .db-action-btn { transition: background 0.13s, border-color 0.13s; }
+        .db-action-btn:hover { background: #F3F4F6 !important; }
+      `}</style>
 
-      {/* ── Top bar: greeting + Take me home ─────────── */}
-      <div style={{
-        background: '#fff', borderBottom: '1px solid #F3F1FF',
-        padding: '16px 28px',
-        display: 'flex', alignItems: 'center', gap: 14,
+      {/* ══════════════════════════════
+          TOP NAV
+      ══════════════════════════════ */}
+      <header style={{
+        height: 52, background: '#fff',
+        borderBottom: '1px solid #E5E7EB',
+        display: 'flex', alignItems: 'center',
+        padding: '0 16px 0 0',
+        flexShrink: 0, zIndex: 100,
+        position: 'sticky', top: 0,
       }}>
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: '#8B87AD', marginBottom: 2,
-          }}>
-            Dashboard
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#13111E', letterSpacing: '-0.4px' }}>
-            {GREETING()}, <span style={{ color: '#7C6FE0' }}>{firstName}</span> 👋
-          </div>
+        {/* Logo */}
+        <div style={{
+          width: 56, height: 52, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRight: '1px solid #F0EDFF',
+        }}>
+          <a href="/" style={{ textDecoration: 'none' }}>
+            <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
+              sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic' }}>U</span>
+            </span>
+          </a>
         </div>
-        <a href="/" style={{ textDecoration: 'none' }}>
-          <button style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 8,
-            border: '1px solid #ECEAFB', background: '#fff',
-            color: '#4B5275', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-            fontFamily: 'inherit',
+
+        {/* Tabs */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '0 16px', flex: 1 }}>
+          {([
+            { key: 'dashboard',  label: 'Dashboard' },
+            { key: 'timetables', label: 'Timetables' },
+            { key: 'resources',  label: 'Resources' },
+            { key: 'reports',    label: 'Reports' },
+          ] as { key: NavTab; label: string }[]).map(t => (
+            <button key={t.key}
+              className="db-tab"
+              onClick={() => setActiveTab(t.key)}
+              style={{
+                padding: '5px 14px', borderRadius: 7, border: 'none',
+                background: activeTab === t.key ? '#F0EDFF' : 'transparent',
+                color: activeTab === t.key ? '#7C3AED' : '#6B7280',
+                fontSize: 13, fontWeight: activeTab === t.key ? 600 : 500,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Right — school + bell + avatar + menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{schoolName}</span>
+
+          <button className="db-icon-btn" style={{
+            width: 32, height: 32, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer',
+            position: 'relative',
           }}>
-            <Home size={13} /> Take me home
+            <Bell size={17} color="#6B7280" />
+            <span style={{
+              position: 'absolute', top: 5, right: 6,
+              width: 7, height: 7, borderRadius: '50%',
+              background: '#EF4444', border: '1.5px solid #fff',
+            }} />
           </button>
-        </a>
-      </div>
 
-      {/* ── Main content ─────────────────────────────── */}
-      <div style={{
-        flex: 1, padding: '28px',
-        maxWidth: 1100, width: '100%', margin: '0 auto', boxSizing: 'border-box' as const,
-      }}>
+          {/* Avatar */}
+          <div style={{
+            width: 30, height: 30, borderRadius: '50%',
+            background: '#7C6FE0', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12, fontWeight: 700, flexShrink: 0, cursor: 'pointer',
+          }}>
+            {(user.name?.[0] ?? 'U').toUpperCase()}
+          </div>
 
-        {/* SCHOOL CARD */}
-        <div style={{
-          background: '#fff', border: '1px solid #ECEAFB', borderRadius: 16,
-          padding: '20px 24px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const,
+          <button onClick={() => { logout(); window.location.href = '/login' }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+              color: '#6B7280', display: 'flex', alignItems: 'center',
+            }}>
+            <MoreHorizontal size={18} />
+          </button>
+        </div>
+      </header>
+
+      {/* ══════════════════════════════
+          BODY  (sidebar + content)
+      ══════════════════════════════ */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+        {/* ── Icon sidebar ── */}
+        <aside style={{
+          width: 56, flexShrink: 0, background: '#fff',
+          borderRight: '1px solid #E5E7EB',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', padding: '12px 0', gap: 4,
         }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#8B87AD' }}>
-              School
+          {[
+            { icon: <Home size={18} />,      active: true  },
+            { icon: <Calendar size={18} />,  active: false },
+            { icon: <Users size={18} />,     active: false },
+            { icon: <FileText size={18} />,  active: false },
+            { icon: <BarChart2 size={18} />, active: false },
+          ].map((item, i) => (
+            <button key={i}
+              className="db-icon-btn"
+              style={{
+                width: 38, height: 38,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: item.active ? '#EDE9FF' : 'none',
+                border: 'none', cursor: 'pointer',
+                color: item.active ? '#7C3AED' : '#9CA3AF',
+              }}>
+              {item.icon}
+            </button>
+          ))}
+
+          {/* Push settings to bottom */}
+          <div style={{ flex: 1 }} />
+          <button className="db-icon-btn" style={{
+            width: 38, height: 38,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF',
+          }}>
+            <Settings size={18} />
+          </button>
+        </aside>
+
+        {/* ── Main content ── */}
+        <main style={{
+          flex: 1, overflowY: 'auto',
+          padding: '24px 28px',
+        }}>
+
+          {/* Greeting row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: '#13111E', marginBottom: 4, letterSpacing: '-0.3px' }}>
+                {greeting()}, {firstName}
+              </h1>
+              <p style={{ fontSize: 13, color: '#6B7280' }}>
+                {schoolName} · AY 2025–26 · {(store.config as any)?.boardName ?? 'CBSE'}
+              </p>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#13111E', letterSpacing: '-0.4px', marginTop: 2 }}>
-              {schoolName}
+            <a href="/wizard" style={{ textDecoration: 'none' }}>
+              <button style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '8px 16px', borderRadius: 8,
+                border: '1px solid #D1D5DB', background: '#fff',
+                fontSize: 13, fontWeight: 600, color: '#13111E', cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}>
+                <Plus size={14} /> New timetable
+              </button>
+            </a>
+          </div>
+
+          {/* Stats row */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 12, marginBottom: 16,
+          }}>
+            {stats.map(s => (
+              <div key={s.label} style={{
+                background: '#fff', borderRadius: 10,
+                border: '1px solid #E5E7EB', padding: '14px 16px',
+              }}>
+                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>{s.label}</div>
+                <div style={{
+                  fontSize: 28, fontWeight: 800, lineHeight: 1,
+                  color: s.red ? '#EF4444' : '#13111E',
+                  fontFamily: "'DM Mono', monospace",
+                  marginBottom: 5,
+                }}>
+                  {s.value}
+                </div>
+                <div style={{ fontSize: 12, color: '#9CA3AF' }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* AI insight banner */}
+          <div style={{
+            background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10,
+            padding: '12px 16px', marginBottom: 20,
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <Sparkles size={16} color="#15803D" style={{ flexShrink: 0 }} />
+            <p style={{ flex: 1, fontSize: 13, color: '#166534', lineHeight: 1.55 }}>
+              <strong>AI insight:</strong> Mr. Sharma is overloaded by 6 periods in the AY 2025–26 draft.
+              Reassigning Chemistry XI to Ms. Nair would balance both workloads within capacity.
+            </p>
+            <button style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '6px 14px', borderRadius: 7, border: 'none',
+              background: '#16A34A', color: '#fff',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'inherit', flexShrink: 0,
+            }}>
+              Fix <ChevronRight size={12} />
+            </button>
+          </div>
+
+          {/* Your timetables */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E' }}>Your timetables</h2>
+              <a href="#" style={{ fontSize: 13, color: '#7C6FE0', fontWeight: 500, textDecoration: 'none' }}>
+                View all
+              </a>
             </div>
-            <div style={{ fontSize: 12, color: '#4B5275', marginTop: 4 }}>
-              {sections.length} sections · {staff.length} teachers · {subjects.length} subjects · {optionalBlocks.length} optional blocks
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {DEMO_TT.map(tt => {
+                const sm = STATUS_META[tt.status]
+                return (
+                  <div key={tt.id} className="db-tt-row" style={{
+                    background: '#fff', borderRadius: 10,
+                    border: '1px solid #E5E7EB', padding: '14px 16px',
+                    display: 'flex', alignItems: 'center', gap: 14,
+                  }}>
+                    {/* Icon */}
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8,
+                      background: '#F5F4F0', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Calendar size={17} color="#6B7280" />
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#13111E', marginBottom: 2 }}>{tt.name}</div>
+                      <div style={{ fontSize: 12, color: '#9CA3AF' }}>{tt.meta}</div>
+                    </div>
+
+                    {/* Status badge */}
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 20,
+                      background: sm.bg, color: sm.fg, border: `1px solid ${sm.border}`,
+                      fontSize: 12, fontWeight: 600, flexShrink: 0,
+                    }}>
+                      {sm.label}
+                    </span>
+
+                    {/* Action buttons */}
+                    {tt.status === 'active' && (
+                      <>
+                        <TtBtn onClick={() => window.location.href = '/timetable'}>Edit</TtBtn>
+                        <TtBtn onClick={() => {}}>Export</TtBtn>
+                      </>
+                    )}
+                    {tt.status === 'draft' && (
+                      <TtBtn primary onClick={() => window.location.href = '/wizard'}>
+                        Continue <ArrowRight size={12} />
+                      </TtBtn>
+                    )}
+                    {tt.status === 'archived' && (
+                      <TtBtn onClick={() => window.location.href = '/timetable'}>View</TtBtn>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
-            <StatChip value={ttCount}        label="timetables"  color="#7C6FE0" />
-            <StatChip value={pubCount}       label="published"   color="#16A34A" />
-            <StatChip value={inProgressCount} label="in progress" color="#D4920E" />
-            <StatChip value={draftCount}     label="drafts"      color="#D946EF" />
+
+          {/* Quick actions */}
+          <div>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', marginBottom: 12 }}>
+              Quick actions
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {[
+                {
+                  icon: <Users size={22} color="#6B7280" />,
+                  title: 'Manage teachers',
+                  desc: 'Update staff, subjects, and workload limits',
+                  href: '/master-data',
+                },
+                {
+                  icon: <FileText size={22} color="#6B7280" />,
+                  title: 'Manage rooms',
+                  desc: 'Add venues, set capacity, configure availability',
+                  href: '/master-data',
+                },
+                {
+                  icon: <BarChart2 size={22} color="#6B7280" />,
+                  title: 'View reports',
+                  desc: 'Workload analysis, room usage, conflict log',
+                  href: '/timetable',
+                },
+              ].map(qa => (
+                <a key={qa.title} href={qa.href} style={{ textDecoration: 'none' }}>
+                  <div className="db-qa-card" style={{
+                    background: '#fff', borderRadius: 10,
+                    border: '1px solid #E5E7EB', padding: '18px 16px',
+                    cursor: 'pointer',
+                  }}>
+                    <div style={{ marginBottom: 12 }}>{qa.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E', marginBottom: 4 }}>{qa.title}</div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.55 }}>{qa.desc}</div>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* SCHEDULE STATE */}
-        {hasTimetable ? (
-          <ScheduleSummaryCard sectionsCount={sections.length} status={timetableStatus} />
-        ) : (
-          <EmptyScheduleCard />
-        )}
-
-        {/* QUICK ACTIONS */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: 14, marginTop: 16,
-        }}>
-          <ActionCard
-            href="/wizard"
-            icon={<BookOpen size={20} />}
-            title="Guide"
-            desc="Setup walkthrough"
-            accent="#7C6FE0"
-          />
-          <ActionCard
-            href="/master-data"
-            icon={<Database size={20} />}
-            title="Master data"
-            desc="Classes, teachers, rooms"
-            accent="#9B8EF5"
-          />
-          <ActionCard
-            href="/wizard"
-            icon={<Settings size={20} />}
-            title="Configure"
-            desc="Board, shifts, constraints"
-            accent="#D4920E"
-          />
-        </div>
-
-      </div>
-
-      {/* ── Footer ───────────────────────────────────── */}
-      <BhuskuFooter compact />
-    </div>
-  )
-}
-
-// ═════════════════════════════════════════════════════════════
-// Sub-components
-// ═════════════════════════════════════════════════════════════
-
-function StatChip({ value, label, color }: { value: number; label: string; color: string }) {
-  return (
-    <div style={{
-      minWidth: 84, padding: '10px 14px', borderRadius: 12,
-      border: '1px solid #ECEAFB', background: '#FAFAFE',
-      display: 'flex', flexDirection: 'column' as const, alignItems: 'center' as const,
-    }}>
-      <div style={{
-        fontSize: 22, fontWeight: 800, color, lineHeight: 1,
-        fontFamily: "'DM Mono', monospace",
-      }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5275', marginTop: 5, letterSpacing: '0.02em' }}>
-        {label}
+        </main>
       </div>
     </div>
   )
 }
 
-function EmptyScheduleCard() {
-  return (
-    <div style={{
-      background: '#FAFAFE', border: '1px dashed #D8D2FF', borderRadius: 16,
-      padding: '40px 28px', textAlign: 'center' as const,
-    }}>
-      <div style={{
-        width: 56, height: 56, borderRadius: 14,
-        background: '#EDE9FF', display: 'inline-flex',
-        alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-      }}>
-        <Calendar size={26} color="#7C6FE0" />
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 4 }}>
-        No schedule yet!
-      </div>
-      <div style={{ fontSize: 12, color: '#4B5275', marginBottom: 18, maxWidth: 380, margin: '0 auto 18px' }}>
-        Walk through the 5-step setup and let our AI generate your first conflict-free timetable.
-      </div>
-      <a href="/wizard" style={{ textDecoration: 'none' }}>
-        <button style={{
-          display: 'inline-flex', alignItems: 'center', gap: 7,
-          padding: '11px 22px', borderRadius: 10,
-          border: '1.5px solid #7C6FE0', background: '#fff',
-          color: '#7C6FE0', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}>
-          <Sparkles size={14} /> Create timetable <ArrowRight size={13} />
-        </button>
-      </a>
-    </div>
-  )
-}
-
-function ScheduleSummaryCard({ sectionsCount, status }: { sectionsCount: number; status: string }) {
-  const published = status === 'published'
-  return (
-    <div style={{
-      background: '#fff', border: '1px solid #ECEAFB', borderRadius: 16,
-      padding: '22px 24px',
-      display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' as const,
-    }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: 12, background: '#EDE9FF',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Calendar size={24} color="#7C6FE0" />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '2px 9px', borderRadius: 12, fontSize: 9.5, fontWeight: 800,
-          background: published ? '#DCFCE7' : '#FEF3C7',
-          color: published ? '#15803D' : '#92400E',
-          letterSpacing: '0.04em',
-          marginBottom: 6,
-        }}>
-          {published ? <CheckCircle2 size={10} /> : <FileText size={10} />}
-          {published ? 'PUBLISHED' : 'DRAFT'}
-        </div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', letterSpacing: '-0.3px' }}>
-          Your timetable is ready
-        </div>
-        <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-          {sectionsCount} sections scheduled. Open the timetable view to inspect, edit, or substitute.
-        </div>
-      </div>
-      <a href="/timetable" style={{ textDecoration: 'none' }}>
-        <button style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '10px 18px', borderRadius: 9,
-          border: 'none', background: '#7C6FE0', color: '#fff',
-          fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}>
-          Open timetable <ArrowRight size={13} />
-        </button>
-      </a>
-    </div>
-  )
-}
-
-function ActionCard({
-  href, icon, title, desc, accent,
-}: {
-  href: string; icon: React.ReactNode; title: string; desc: string; accent: string;
+// ── Timetable action button ─────────────────────────────────────
+function TtBtn({ children, onClick, primary }: {
+  children: React.ReactNode; onClick: () => void; primary?: boolean
 }) {
   return (
-    <a href={href} style={{ textDecoration: 'none', color: 'inherit' }}>
-      <div style={{
-        background: '#fff', border: '1px solid #ECEAFB', borderRadius: 14,
-        padding: '18px 18px', transition: 'all 0.16s',
-        cursor: 'pointer', height: '100%',
-      }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLDivElement).style.borderColor = '#D8D2FF';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 18px rgba(124,111,224,0.08)';
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLDivElement).style.borderColor = '#ECEAFB';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-        }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10,
-          background: '#F5F2FF', color: accent,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 11,
-        }}>
-          {icon}
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: '#13111E', letterSpacing: '-0.2px' }}>
-          {title}
-        </div>
-        <div style={{ fontSize: 11.5, color: '#4B5275', marginTop: 3 }}>
-          {desc}
-        </div>
-      </div>
-    </a>
+    <button onClick={onClick} className="db-action-btn" style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
+      border: primary ? 'none' : '1px solid #E5E7EB',
+      background: primary ? '#13111E' : '#fff',
+      color: primary ? '#fff' : '#374151',
+      fontSize: 13, fontWeight: 600, flexShrink: 0,
+      fontFamily: 'inherit',
+    }}>
+      {children}
+    </button>
   )
 }
