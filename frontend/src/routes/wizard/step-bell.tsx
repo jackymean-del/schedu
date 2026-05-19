@@ -318,6 +318,7 @@ interface SavedBell {
   // Rhythm
   cycleWeeks?: number; useDayNames?: boolean; cycleStartDate?: string
   fixedDuration?: boolean; rotationDays?: RotDay[]
+  weekWorkDays?: Record<number, string[]>   // per-week custom working days (multi-week cycles)
   // Per-day bell config
   varyByDay?: boolean; dayRows?: Record<string, BellRow[]>
 }
@@ -856,6 +857,7 @@ export function StepBell() {
   const [cycleStartDate, setCycleStartDate] = useState<string>(  () => _saved?.cycleStartDate ?? '')
   const [fixedDuration,  setFixedDuration]  = useState<boolean>( () => _saved?.fixedDuration  ?? false)
   const [rotationDays,   setRotationDays]   = useState<RotDay[]>(() => _saved?.rotationDays   ?? DEFAULT_ROT_DAYS)
+  const [weekWorkDays,   setWeekWorkDays]   = useState<Record<number, string[]>>(() => _saved?.weekWorkDays ?? {})
   // ── Per-day bell variation ────────────────────────────────────
   const [varyByDay,    setVaryByDay]    = useState<boolean>(                  () => _saved?.varyByDay ?? false)
   const [activeDayTab, setActiveDayTab] = useState<string>('')
@@ -871,17 +873,30 @@ export function StepBell() {
     localStorage.setItem(BELL_KEY, JSON.stringify({
       shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
-      varyByDay, dayRows,
+      weekWorkDays, varyByDay, dayRows,
     } satisfies SavedBell))
   }, [shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
-      varyByDay, dayRows])
+      weekWorkDays, varyByDay, dayRows])
 
-  // ── Day keys (either working days or named rotation days) ─────
-  const dayKeys = useMemo(() =>
-    useDayNames ? rotationDays.map(d => d.short) : workDays,
-    [useDayNames, rotationDays, workDays],
-  )
+  // ── Day keys ─────────────────────────────────────────────────
+  // • day-names mode  → rotation day shorts (D1, D2, …)
+  // • single week     → working days (Mon, Tue, …)
+  // • multi-week      → "w1-Mon", "w1-Tue", …, "w2-Mon", … (per-week working days)
+  const dayKeys = useMemo(() => {
+    if (useDayNames) return rotationDays.map(d => d.short)
+    if (cycleWeeks <= 1) return workDays
+    const keys: string[] = []
+    for (let w = 1; w <= cycleWeeks; w++) {
+      const wdays = weekWorkDays[w] ?? workDays
+      // Preserve calendar order
+      ALL_DAYS.filter(d => wdays.includes(d)).forEach(d => keys.push(`w${w}-${d}`))
+    }
+    return keys
+  }, [useDayNames, rotationDays, workDays, cycleWeeks, weekWorkDays])
+
+  // Stable string to use as effect dependency for dayKeys identity
+  const dayKeysStr = useMemo(() => dayKeys.join(','), [dayKeys])
 
   /** Rows currently active in the bell grid (uniform or per-day tab). */
   const displayRows: BellRow[] = useMemo(() =>
@@ -901,6 +916,44 @@ export function StepBell() {
       if (typeof updater === 'function') setRows(updater)
       else setRows(updater)
     }
+  }
+
+  // ── Sync dayRows when dayKeys changes (e.g. cycleWeeks or weekWorkDays updated) ──
+  useEffect(() => {
+    if (!varyByDay || dayKeys.length === 0) return
+    setDayRows(prev => {
+      const next: Record<string, BellRow[]> = {}
+      let changed = false
+      for (const k of dayKeys) {
+        if (prev[k]) { next[k] = prev[k] }
+        else { next[k] = rows.map(r => ({ ...r, id: makeId() })); changed = true }
+      }
+      // Prune keys no longer in dayKeys
+      const pruned = Object.keys(prev).some(k => !dayKeys.includes(k))
+      return (changed || pruned) ? next : prev
+    })
+    setActiveDayTab(t => dayKeys.includes(t) ? t : (dayKeys[0] ?? ''))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayKeysStr, varyByDay])
+
+  // ── "Attending today" — which class groups are present on this day ──
+  const todayAttendance = useMemo(() => {
+    if (!varyByDay || !activeDayTab) return null
+    return CLASS_GROUPS.map(gm => {
+      const gkeys = CLASSES.filter(c => c.group === gm.group).map(c => c.key)
+      const attending = displayRows.some(r => r.classes.some(k => gkeys.includes(k)))
+      return { ...gm, attending, gkeys }
+    })
+  }, [varyByDay, activeDayTab, displayRows])
+
+  /** Toggle a whole class group on/off for the currently active day. */
+  const toggleDayGroup = (gkeys: string[], on: boolean) => {
+    setDisplayRows(prev => prev.map(r => ({
+      ...r,
+      classes: on
+        ? [...new Set([...r.classes, ...gkeys])]          // restore group
+        : r.classes.filter(k => !gkeys.includes(k)),      // remove group
+    })))
   }
 
   // ── Derived: start-time cascades ──────────────────────────────
@@ -1286,6 +1339,62 @@ export function StepBell() {
                       This {cycleWeeks}-week program will run once without repeating.
                     </div>
                   )}
+
+                  {/* Per-week working days — each week can differ */}
+                  {!useDayNames && cycleWeeks > 1 && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Days per week</span>
+                        <span style={{ fontSize: 11, color: '#9CA3AF' }}>— each week can have different working days</span>
+                      </div>
+                      {Array.from({ length: cycleWeeks }, (_, i) => {
+                        const w = i + 1
+                        const wdays = weekWorkDays[w] ?? workDays
+                        const isCustom = !!weekWorkDays[w]
+                        return (
+                          <div key={w} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 800, color: isCustom ? '#7C3AED' : '#9CA3AF',
+                              fontFamily: "'DM Mono',monospace", width: 24, flexShrink: 0,
+                            }}>W{w}</span>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {ALL_DAYS.map(d => {
+                                const on = wdays.includes(d)
+                                return (
+                                  <button key={d} onClick={() => {
+                                    const newDays = on
+                                      ? wdays.filter(x => x !== d)
+                                      : [...wdays, d]
+                                    // Store in calendar order
+                                    const ordered = ALL_DAYS.filter(x => newDays.includes(x))
+                                    setWeekWorkDays(prev => ({ ...prev, [w]: ordered }))
+                                  }} style={{
+                                    padding: '3px 9px', borderRadius: 14, fontSize: 11, fontWeight: 600,
+                                    border: on ? '1px solid #7C6FE0' : '1px solid #E5E7EB',
+                                    background: on ? '#EDE9FF' : '#fff',
+                                    color: on ? '#7C3AED' : '#D1D5DB',
+                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
+                                  }}>{d}</button>
+                                )
+                              })}
+                            </div>
+                            {isCustom && (
+                              <button onClick={() => setWeekWorkDays(prev => {
+                                const next = { ...prev }; delete next[w]; return next
+                              })} style={{
+                                fontSize: 10, color: '#9CA3AF', background: 'none', border: 'none',
+                                cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+                              }}>Reset</button>
+                            )}
+                          </div>
+                        )
+                      })}
+                      <div style={{ marginTop: 4, padding: '7px 11px', borderRadius: 7, background: '#F0F9FF', border: '1px solid #BAE6FD', fontSize: 11, color: '#0369A1', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                        <span style={{ flexShrink: 0 }}>💡</span>
+                        <span>To mark specific <em>classes</em> as off on certain days (e.g. Pre-Primary off on Saturdays), use the <strong>Resource Availability</strong> panel in Step 2, or enable <strong>Vary by day</strong> in the bell grid and toggle their attendance per day.</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1457,31 +1566,108 @@ export function StepBell() {
               />
             )}
 
-            {/* Day tabs — shown when "Vary by day" is on */}
+            {/* ─── Day selector ─── */}
             {varyByDay && dayKeys.length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 2,
-                  background: '#F3F4F6', borderRadius: 9, padding: '3px 4px',
-                  border: '1px solid #E5E7EB',
-                }}>
-                  {dayKeys.map(k => (
-                    <button key={k} onClick={() => setActiveDayTab(k)} style={{
-                      padding: '4px 16px', borderRadius: 6,
-                      fontSize: 12, fontWeight: activeDayTab === k ? 700 : 500,
-                      background: activeDayTab === k ? '#fff' : 'transparent',
-                      color: activeDayTab === k ? '#7C6FE0' : '#6B7280',
-                      border: activeDayTab === k ? '1px solid #DDD6FE' : '1px solid transparent',
-                      boxShadow: activeDayTab === k ? '0 1px 4px rgba(124,111,224,.13)' : 'none',
-                      cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
-                    }}>{k}</button>
-                  ))}
-                </div>
-                {/* hint when a day has been customised */}
-                {Object.keys(dayRows).length > 0 && (
-                  <span style={{ marginLeft: 10, fontSize: 11, color: '#9CA3AF' }}>
-                    {Object.keys(dayRows).filter(k => dayRows[k] !== undefined).length} of {dayKeys.length} days configured
-                  </span>
+                {cycleWeeks > 1 && !useDayNames ? (
+                  /* ── Week × Day matrix (multi-week cycle) ── */
+                  <div>
+                    <div style={{
+                      display: 'inline-grid',
+                      gridTemplateColumns: `28px repeat(7, 40px)`,
+                      gap: '4px 3px', padding: '8px 10px',
+                      background: '#F9FAFB', borderRadius: 10,
+                      border: '1px solid #E5E7EB',
+                    }}>
+                      {/* Column headers */}
+                      <div />
+                      {ALL_DAYS.map(d => (
+                        <div key={d} style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textAlign: 'center' }}>{d}</div>
+                      ))}
+                      {/* Week rows */}
+                      {Array.from({ length: cycleWeeks }, (_, i) => {
+                        const w = i + 1
+                        const wdays = weekWorkDays[w] ?? workDays
+                        return ALL_DAYS.reduce<React.ReactNode[]>((nodes, d, di) => {
+                          if (di === 0) {
+                            nodes.push(
+                              <div key={`lbl-w${w}`} style={{
+                                fontSize: 10, fontWeight: 800, color: '#7C6FE0',
+                                fontFamily: "'DM Mono',monospace",
+                                display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 2,
+                              }}>W{w}</div>
+                            )
+                          }
+                          const k = `w${w}-${d}`
+                          const isWorking = wdays.includes(d)
+                          const isActive  = activeDayTab === k
+                          const isCustom  = !!dayRows[k]
+                          nodes.push(
+                            <button key={k} onClick={() => isWorking && setActiveDayTab(k)}
+                              title={isWorking ? `Week ${w} · ${d}${isCustom ? ' — custom schedule' : ''}` : 'Not a working day this week'}
+                              style={{
+                                padding: '5px 0', borderRadius: 7, fontSize: 11, fontWeight: isActive ? 700 : 500,
+                                background: isActive ? '#7C6FE0' : isWorking ? (isCustom ? '#EDE9FF' : '#fff') : 'transparent',
+                                color: isActive ? '#fff' : isWorking ? (isCustom ? '#7C3AED' : '#374151') : '#D1D5DB',
+                                border: isActive ? '1.5px solid #7C6FE0' : isWorking ? (isCustom ? '1px solid #C4B5FD' : '1px solid #E5E7EB') : '1px solid transparent',
+                                cursor: isWorking ? 'pointer' : 'default',
+                                fontFamily: 'inherit', transition: 'all .12s', textAlign: 'center',
+                                position: 'relative', lineHeight: 1,
+                              }}>
+                              {isWorking ? d.slice(0, 2) : '—'}
+                              {isCustom && isWorking && !isActive && (
+                                <div style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#7C3AED' }} />
+                              )}
+                            </button>
+                          )
+                          return nodes
+                        }, [])}
+                      )}
+                    </div>
+                    {activeDayTab && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: '#7C6FE0', fontWeight: 600 }}>
+                        ✎ Editing: <span style={{ fontFamily: "'DM Mono',monospace" }}>
+                          {activeDayTab.replace(/^w(\d+)-(.+)$/, 'Week $1 · $2')}
+                        </span>
+                        <span style={{ fontWeight: 400, color: '#9CA3AF', marginLeft: 6 }}>
+                          {dayRows[activeDayTab] ? '(custom)' : '(using default — edit to customise)'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* ── Flat pill tabs (single week or day-names mode) ── */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 2,
+                      background: '#F3F4F6', borderRadius: 9, padding: '3px 4px',
+                      border: '1px solid #E5E7EB',
+                    }}>
+                      {dayKeys.map(k => {
+                        const isCustom = !!dayRows[k]
+                        return (
+                          <button key={k} onClick={() => setActiveDayTab(k)} style={{
+                            padding: '4px 14px', borderRadius: 6,
+                            fontSize: 12, fontWeight: activeDayTab === k ? 700 : 500,
+                            background: activeDayTab === k ? '#fff' : 'transparent',
+                            color: activeDayTab === k ? '#7C6FE0' : isCustom ? '#7C3AED' : '#6B7280',
+                            border: activeDayTab === k ? '1px solid #DDD6FE' : '1px solid transparent',
+                            boxShadow: activeDayTab === k ? '0 1px 4px rgba(124,111,224,.13)' : 'none',
+                            cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
+                            position: 'relative',
+                          }}>
+                            {k}
+                            {isCustom && activeDayTab !== k && (
+                              <span style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: '#7C3AED' }} />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+                      {Object.keys(dayRows).filter(k => dayKeys.includes(k)).length} of {dayKeys.length} customised
+                    </span>
+                  </div>
                 )}
               </div>
             )}
@@ -1498,6 +1684,37 @@ export function StepBell() {
                   <div key={i} style={{ fontSize: 11, fontWeight: 600, color: '#6B7280' }}>{h}</div>
                 ))}
               </div>
+
+              {/* ── Attending today bar — shown when Vary by day is active ── */}
+              {todayAttendance && (
+                <div style={{
+                  padding: '8px 14px', borderBottom: '1px solid #F0EDFF',
+                  background: '#FDFCFF', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.05em', flexShrink: 0 }}>
+                    ATTENDING TODAY
+                  </span>
+                  {todayAttendance.map(({ group, color, bg, attending, gkeys }) => (
+                    <button key={group} onClick={() => toggleDayGroup(gkeys, !attending)}
+                      title={attending ? `Click to mark ${group} as off today` : `Click to restore ${group} for today`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '3px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
+                        background: attending ? bg : '#F9FAFB',
+                        color: attending ? color : '#D1D5DB',
+                        border: attending ? `1px solid ${color}40` : '1px solid #E5E7EB',
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
+                        textDecoration: attending ? 'none' : 'line-through',
+                      }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: attending ? color : '#D1D5DB', flexShrink: 0 }} />
+                      {group}
+                    </button>
+                  ))}
+                  <span style={{ marginLeft: 'auto', fontSize: 10, color: '#C4B5FD', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    tap to toggle off/on
+                  </span>
+                </div>
+              )}
 
               {/* Rows */}
               <div>
