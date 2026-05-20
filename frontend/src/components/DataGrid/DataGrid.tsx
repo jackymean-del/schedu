@@ -294,8 +294,19 @@ export function DataGrid<T>({
   const [filterPopover, setFilterPopover] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const xlsxRef = useRef<HTMLInputElement>(null)
-  const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null)
+  const editInputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Callback ref — fires synchronously when the input/select node is
+  // inserted into the DOM (before useLayoutEffect, before any setTimeout).
+  // This is the ONLY reliable way to focus in React 18 concurrent mode.
+  const setEditInputNode = useCallback((node: HTMLInputElement | HTMLSelectElement | null) => {
+    editInputRef.current = node
+    if (node) {
+      node.focus()
+      if (node instanceof HTMLInputElement) node.select()
+    }
+  }, [])
 
   // Refs that mirror state — always up-to-date even inside stale closures /
   // React 18 concurrent batching. Used for reliable single-click edit detection.
@@ -525,9 +536,8 @@ export function DataGrid<T>({
     return () => window.removeEventListener('keydown', onKey)
   }, [selection, selectionEnd, editing, moveSelection, columns, rows, filteredRows, originalIndex, getCell, setCell, onChange])
 
-  // Backup focus — autoFocus on the input handles the primary case.
-  // This runs after DOM commit and ensures select-all even if autoFocus
-  // fires without the synthetic onFocus (e.g. some React 18 edge cases).
+  // Safety-net: if callback ref somehow didn't fire (e.g. re-render of same
+  // editing cell), ensure the input is still focused after DOM commit.
   useLayoutEffect(() => {
     if (editing && editInputRef.current) {
       editInputRef.current.focus()
@@ -1405,11 +1415,9 @@ export function DataGrid<T>({
                             updateCellInRows(ri, ci, v)
                             setEditing(null)
                             setSelection({ r: ri, c: ci })
-                            // No setTimeout needed — useLayoutEffect handles focus on next render
                           }, () => {
                             setEditing(null)
-                            // No setTimeout needed — useLayoutEffect handles focus on next render
-                          }, editInputRef as any)
+                          }, setEditInputNode)
                         : col.type === 'toggle'
                           ? renderToggle(value, () => {
                               const cur = getCell(row, col)
@@ -1581,8 +1589,7 @@ export function DataGrid<T>({
                             const origR = originalIndex(colIdx)
                             if (origR >= 0) onChange(rows.map((row, i) => i === origR ? setCell(row, srcCol, newV) : row))
                             setEditing(null)
-                            setTimeout(() => containerRef.current?.focus({ preventScroll: true }), 0)
-                          }, () => { setEditing(null); setTimeout(() => containerRef.current?.focus({ preventScroll: true }), 0) }, editInputRef as any)
+                          }, () => { setEditing(null) }, setEditInputNode)
                         : <div style={{ padding: '0 8px', lineHeight: `${TOK.cellRowH}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                             {v == null || v === '' ? <span style={{ color: '#BBBBBB' }}>{srcCol.placeholder ?? ''}</span> : String(v)}
                           </div>
@@ -2027,7 +2034,8 @@ function renderEditor<T>(
   col: DataGridColumn<T>,
   onCommit: (v: any) => void,
   onCancel: () => void,
-  ref: React.RefObject<HTMLInputElement | HTMLSelectElement>,
+  // Accept both RefObject and RefCallback (useCallback callback ref)
+  ref: React.Ref<HTMLInputElement | HTMLSelectElement>,
 ) {
   // Fill the entire cell so there are no dead zones the user can click
   // without hitting the input.
@@ -2043,8 +2051,7 @@ function renderEditor<T>(
   if (col.type === 'select' && col.options) {
     return (
       <select defaultValue={value ?? ''}
-        ref={ref as any}
-        autoFocus
+        ref={ref as React.Ref<HTMLSelectElement>}
         onChange={e => onCommit(e.target.value)}
         onBlur={e => onCommit(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') onCancel(); if (e.key === 'Enter') onCommit((e.target as HTMLSelectElement).value) }}
@@ -2055,14 +2062,10 @@ function renderEditor<T>(
   }
   return (
     <input
-      ref={ref as any}
-      autoFocus
+      ref={ref as React.Ref<HTMLInputElement>}
       type={col.type === 'number' ? 'number' : 'text'}
       defaultValue={value == null ? '' : String(value)}
       placeholder={col.placeholder ?? ''}
-      // Select-all when this input gets focus (first click = select all;
-      // second click on same cell = cursor position via native click handling)
-      onFocus={e => e.currentTarget.select()}
       onBlur={e => {
         const raw = (e.target as HTMLInputElement).value
         const v = col.type === 'number' ? (raw === '' ? 0 : parseFloat(raw) || 0) : raw
