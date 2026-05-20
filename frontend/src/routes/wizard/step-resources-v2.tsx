@@ -415,6 +415,7 @@ export function StepResourcesV2() {
                   setSections={setSections}
                   staff={staff}
                   onScope={(s, rect) => setScopeTarget({ kind: 'Section', entity: s, rect })}
+                  onBulkScope={rect => setScopeTarget({ kind: 'BulkSection', entity: { id: '__bulk__', name: 'All Classes' }, rect })}
                 />
               )}
               {activeTab === 'subjects' && (
@@ -422,6 +423,7 @@ export function StepResourcesV2() {
                   subjects={subjects}
                   setSubjects={setSubjects}
                   onScope={(s, rect) => setScopeTarget({ kind: 'Subject', entity: s, rect })}
+                  onBulkScope={rect => setScopeTarget({ kind: 'BulkSubject', entity: { id: '__bulk__', name: 'All Subjects' }, rect })}
                 />
               )}
               {activeTab === 'teachers' && (
@@ -430,6 +432,7 @@ export function StepResourcesV2() {
                   setStaff={setStaff}
                   sections={sections}
                   onScope={(t, rect) => setScopeTarget({ kind: 'Teacher', entity: t, rect })}
+                  onBulkScope={rect => setScopeTarget({ kind: 'BulkTeacher', entity: { id: '__bulk__', name: 'All Teachers' }, rect })}
                 />
               )}
               {activeTab === 'rooms' && (
@@ -437,6 +440,7 @@ export function StepResourcesV2() {
                   rooms={rooms}
                   setRooms={setRooms}
                   onScope={(r, rect) => setScopeTarget({ kind: 'Room', entity: r, rect })}
+                  onBulkScope={rect => setScopeTarget({ kind: 'BulkRoom', entity: { id: '__bulk__', name: 'All Rooms' }, rect })}
                 />
               )}
             </div>
@@ -455,6 +459,7 @@ export function StepResourcesV2() {
             anchorRect={scopeTarget.rect}
             onSave={(nextScope) => {
               const k = scopeTarget.kind
+              // Single-entity scope
               if (k === 'Section')
                 setSections(sections.map((s: Section) =>
                   s.id === scopeTarget.entity.id ? { ...s, scope: nextScope } : s))
@@ -467,6 +472,15 @@ export function StepResourcesV2() {
               else if (k === 'Room')
                 setRooms(rooms.map(r =>
                   r.id === scopeTarget.entity.id ? { ...r, scope: nextScope } : r))
+              // Bulk scope — applies the same matrix to every entity in the tab
+              else if (k === 'BulkSection')
+                setSections(sections.map((s: Section) => ({ ...s, scope: nextScope })))
+              else if (k === 'BulkSubject')
+                setSubjects(subjects.map((s: Subject) => ({ ...s, scope: nextScope })))
+              else if (k === 'BulkTeacher')
+                setStaff(staff.map((t: Staff) => ({ ...t, scope: nextScope })))
+              else if (k === 'BulkRoom')
+                setRooms(rooms.map(r => ({ ...r, scope: nextScope })))
             }}
             onClose={() => setScopeTarget(null)}
           />

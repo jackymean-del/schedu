@@ -37,12 +37,13 @@ export function makeId() {
 // CLASSES GRID
 // ═════════════════════════════════════════════════════════════
 export function ClassesGrid({
-  sections, setSections, staff, onScope,
+  sections, setSections, staff, onScope, onBulkScope,
 }: {
   sections: Section[]
   setSections: (s: Section[]) => void
   staff: Staff[]
   onScope: (s: Section, rect?: DOMRect) => void
+  onBulkScope?: (rect?: DOMRect) => void
 }) {
   const staffOptions = useMemo(() => ['', ...staff.map((s: any) => s.name)], [staff])
   const columns: DataGridColumn<Section>[] = [
@@ -66,6 +67,7 @@ export function ClassesGrid({
       rowKey={(r) => r.id}
       onChange={setSections}
       onScope={onScope}
+      onBulkScope={onBulkScope}
       newRow={() => ({
         id: makeId(), name: `Section ${sections.length + 1}`,
         room: `Room ${101 + sections.length}`, grade: '', classTeacher: '',
@@ -79,11 +81,12 @@ export function ClassesGrid({
 // SUBJECTS GRID
 // ═════════════════════════════════════════════════════════════
 export function SubjectsGrid({
-  subjects, setSubjects, onScope,
+  subjects, setSubjects, onScope, onBulkScope,
 }: {
   subjects: Subject[]
   setSubjects: (s: Subject[]) => void
   onScope: (s: Subject, rect?: DOMRect) => void
+  onBulkScope?: (rect?: DOMRect) => void
 }) {
   const columns: DataGridColumn<Subject>[] = [
     { key: 'name',     label: 'Subject',       type: 'text',   sticky: true, width: 160 },
@@ -113,6 +116,7 @@ export function SubjectsGrid({
       rowKey={(r) => r.id}
       onChange={setSubjects}
       onScope={onScope}
+      onBulkScope={onBulkScope}
       newRow={() => ({
         id: makeId(), name: `Subject ${subjects.length + 1}`,
         shortName: `S${subjects.length + 1}`, category: 'Core',
@@ -129,12 +133,13 @@ export function SubjectsGrid({
 // TEACHERS GRID
 // ═════════════════════════════════════════════════════════════
 export function TeachersGrid({
-  staff, setStaff, sections, onScope,
+  staff, setStaff, sections, onScope, onBulkScope,
 }: {
   staff: Staff[]
   setStaff: (s: Staff[]) => void
   sections: Section[]
   onScope: (t: Staff, rect?: DOMRect) => void
+  onBulkScope?: (rect?: DOMRect) => void
 }) {
   const sectionOptions = useMemo(() => ['', ...sections.map((s: any) => s.name)], [sections])
   const columns: DataGridColumn<Staff>[] = [
@@ -167,6 +172,7 @@ export function TeachersGrid({
       rowKey={(r) => r.id}
       onChange={setStaff}
       onScope={onScope}
+      onBulkScope={onBulkScope}
       newRow={() => ({
         id: makeId(), name: `Teacher ${staff.length + 1}`,
         role: 'Teacher', subjects: [], classes: [],
@@ -181,11 +187,12 @@ export function TeachersGrid({
 // ROOMS GRID
 // ═════════════════════════════════════════════════════════════
 export function RoomsGrid({
-  rooms, setRooms, onScope,
+  rooms, setRooms, onScope, onBulkScope,
 }: {
   rooms: RoomRow[]
   setRooms: (r: RoomRow[]) => void
   onScope: (r: RoomRow, rect?: DOMRect) => void
+  onBulkScope?: (rect?: DOMRect) => void
 }) {
   const columns: DataGridColumn<RoomRow>[] = [
     { key: 'name',     label: 'Room',     type: 'text',   sticky: true, width: 140 },
@@ -204,6 +211,7 @@ export function RoomsGrid({
       rowKey={(r) => r.id}
       onChange={setRooms}
       onScope={onScope}
+      onBulkScope={onBulkScope}
       newRow={() => ({
         id: makeId(), name: `Room ${100 + rooms.length + 1}`,
         type: 'Classroom', capacity: 40, building: 'Main Block', floor: 'Ground',

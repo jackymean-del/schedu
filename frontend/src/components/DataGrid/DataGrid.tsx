@@ -80,6 +80,16 @@ export interface DataGridProps<T> {
   /** Per-row Scope button — rect is the button's bounding rect for popover anchoring. */
   onScope?: (row: T, rect?: DOMRect) => void
 
+  /** Bulk-scope button in toolbar — sets scope for ALL rows at once. */
+  onBulkScope?: (rect?: DOMRect) => void
+
+  /**
+   * Pixels from the top of the nearest scroll ancestor where the sticky header
+   * should stop. Pass the height of any fixed navbar sitting above the grid
+   * (e.g. 64 for a 64 px app bar). Defaults to 0.
+   */
+  stickyHeaderTop?: number
+
   /** Custom AI suggestions hook — clicked from toolbar. */
   onAISuggestions?: () => void
 
@@ -236,7 +246,7 @@ function extrapolateStringSeries(series: StringSeries, srcLen: number, offset: n
 export function DataGrid<T>({
   columns, rows, rowKey, onChange,
   title, description, icon,
-  newRow, onScope, onAISuggestions,
+  newRow, onScope, onBulkScope, stickyHeaderTop = 0, onAISuggestions,
   toolbar = {}, emptyState, maxHeight,
 }: DataGridProps<T>) {
   const tb = {
@@ -878,6 +888,23 @@ export function DataGrid<T>({
     onChange([...rows, ...dup])
   }
 
+  /** Direct delete/dup helpers — don't depend on `selection` state (avoids stale closures). */
+  const deleteRowByIndex = useCallback((filteredRi: number) => {
+    const origR = originalIndex(filteredRi)
+    if (origR < 0) return
+    onChange(rows.filter((_, i) => i !== origR))
+    setSelection(null); setSelectionEnd(null)
+  }, [rows, originalIndex, onChange])
+
+  const duplicateRowByIndex = useCallback((filteredRi: number) => {
+    const origR = originalIndex(filteredRi)
+    if (origR < 0) return
+    const dup: any = { ...(rows[origR] as any) }
+    if ('id' in dup) dup.id = Math.random().toString(36).slice(2, 8)
+    const next = [...rows.slice(0, origR + 1), dup as T, ...rows.slice(origR + 1)]
+    onChange(next)
+  }, [rows, originalIndex, onChange])
+
   const insertRowAbove = useCallback((filteredRi: number) => {
     if (!newRow) return
     const origR = originalIndex(filteredRi)
@@ -1140,6 +1167,7 @@ export function DataGrid<T>({
         selectionInfo={selection ? `${(Math.abs((selectionEnd?.r ?? selection.r) - selection.r) + 1)}r × ${(Math.abs((selectionEnd?.c ?? selection.c) - selection.c) + 1)}c selected` : undefined}
         onDeleteRows={selection ? deleteSelectedRows : undefined}
         onDuplicateRows={selection ? duplicateSelectedRows : undefined}
+        onBulkScope={onBulkScope}
         canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
         activeFilterCount={activeFilterCount}
         onClearFilters={activeFilterCount > 0 ? () => setFilters({}) : undefined}
@@ -1149,7 +1177,14 @@ export function DataGrid<T>({
       <input type="file" ref={xlsxRef} accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) importXLSX(f); e.target.value = '' }} />
 
-      <div style={{ overflow: 'auto', maxHeight: maxHeight ?? '70vh' }}>
+      {/* overflow-y:clip lets the table grow naturally and lets sticky <th> anchor to
+          the nearest REAL scroll ancestor (the page or a parent overflow:auto container).
+          overflow-x:auto is still needed for wide tables. When maxHeight is passed
+          explicitly, switch to the classic inner-scroll mode. */}
+      <div style={maxHeight
+        ? { overflow: 'auto', maxHeight }
+        : { overflowX: 'auto', overflowY: 'clip' as any }
+      }>
         <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
 
           {/* ── colgroup: explicit pixel widths for every column ── */}
@@ -1172,7 +1207,7 @@ export function DataGrid<T>({
               {!transposed && (
                 <>
                   {/* Row-number corner cell */}
-                  <th style={thRowNum} />
+                  <th style={{ ...thRowNum, top: stickyHeaderTop }} />
 
                   {columns.map((col, ci) => {
                     const colFilter = filters[col.key]
@@ -1182,7 +1217,7 @@ export function DataGrid<T>({
                         ...thBase,
                         textAlign: (col.align ?? 'left') as any,
                         position: 'sticky' as const,
-                        top: 0,
+                        top: stickyHeaderTop,
                         left: col.sticky ? stickyOffsets[ci] : undefined,
                         zIndex: col.sticky ? 4 : 2,
                         whiteSpace: 'nowrap' as const,
@@ -1215,21 +1250,23 @@ export function DataGrid<T>({
                   })}
 
                   {onScope && (
-                    <th style={{ ...thBase, textAlign: 'center' as const, position: 'sticky' as const, top: 0, zIndex: 2, width: 72 }}>
+                    <th style={{ ...thBase, textAlign: 'center' as const, position: 'sticky' as const, top: stickyHeaderTop, zIndex: 2, width: 72 }}>
                       Scope
                     </th>
                   )}
                   {/* Actions column header — always blank */}
-                  <th style={{ ...thBase, position: 'sticky' as const, top: 0, zIndex: 2, width: ACTIONS_COL_W, borderRight: 'none' }} />
+                  <th style={{ ...thBase, position: 'sticky' as const, top: stickyHeaderTop, zIndex: 2, width: ACTIONS_COL_W, borderRight: 'none' }} />
                 </>
               )}
 
               {/* ── Transposed header: Field | Row1 | Row2 | … ── */}
               {transposed && (
                 <>
-                  <th style={{ ...thBase, position: 'sticky' as const, top: 0, left: 0, zIndex: 4, width: 160, minWidth: 160 }}>Field</th>
+                  <th style={{ ...thBase, position: 'sticky' as const, top: stickyHeaderTop, left: 0, zIndex: 4, width: 160, minWidth: 160 }}>
+                    {String(getCell(filteredRows[0] ?? ({} as T), columns[0]) ?? 'Row')}
+                  </th>
                   {filteredRows.map((r, i) => (
-                    <th key={i} style={{ ...thBase, position: 'sticky' as const, top: 0, zIndex: 2, width: 140, minWidth: 140 }}
+                    <th key={i} style={{ ...thBase, position: 'sticky' as const, top: stickyHeaderTop, zIndex: 2, width: 140, minWidth: 140 }}
                       title={String(getCell(r, columns[0]) ?? `Row ${i + 1}`)}>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', whiteSpace: 'nowrap' as const }}>
                         {String(getCell(r, columns[0]) ?? `Row ${i + 1}`)}
@@ -1360,65 +1397,70 @@ export function DataGrid<T>({
                   </td>
                 )}
 
-                {/* ── Row hover-actions: + ⧉ ✕ ── */}
+                {/* ── Row hover-actions: Insert · Duplicate · Delete ── */}
                 <td style={{
                   ...tdBase,
                   width: ACTIONS_COL_W, minWidth: ACTIONS_COL_W,
                   borderRight: 'none',
-                  background: hoveredRow === ri ? '#F8F8FB' : 'transparent',
-                  transition: 'background 0.1s',
+                  background: hoveredRow === ri ? '#F5F2FF' : 'transparent',
+                  transition: 'background 0.12s',
                 }}>
                   {hoveredRow === ri && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, height: '100%', padding: '0 4px' }}>
-                      {/* Insert above/below */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: '100%', padding: '0 6px' }}>
+                      {/* Insert above / below */}
                       {newRow && (
                         <div style={{ position: 'relative' as const }}>
                           <button
-                            title="Insert row"
+                            title="Insert row above or below"
                             onClick={e => { e.stopPropagation(); setInsertMenuRow(insertMenuRow === ri ? null : ri) }}
-                            style={rowActBtn}>+</button>
+                            style={rowActIconBtn}>
+                            <Plus size={12} />
+                          </button>
                           {insertMenuRow === ri && (
                             <>
                               <div style={{ position: 'fixed', inset: 0, zIndex: 3000 }} onClick={() => setInsertMenuRow(null)} />
                               <div style={{
                                 position: 'absolute' as const, top: '100%', right: 0, marginTop: 3,
                                 background: '#fff', border: `1px solid ${TOK.containerBorder}`,
-                                borderRadius: 7, boxShadow: '0 6px 20px rgba(19,17,30,0.13)',
-                                zIndex: 3001, minWidth: 130, padding: '3px 0', overflow: 'hidden',
+                                borderRadius: 8, boxShadow: '0 8px 24px rgba(19,17,30,0.15)',
+                                zIndex: 3001, minWidth: 140, padding: '4px 0', overflow: 'hidden',
                               }}>
                                 <div role="menuitem" style={rowMenuItemStyle}
                                   onClick={() => { insertRowAbove(ri); setInsertMenuRow(null) }}
                                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = TOK.accentSoft}
                                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                                  Insert above
+                                  ↑ Insert above
                                 </div>
                                 <div role="menuitem" style={rowMenuItemStyle}
                                   onClick={() => { insertRowBelow(ri); setInsertMenuRow(null) }}
                                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = TOK.accentSoft}
                                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                                  Insert below
+                                  ↓ Insert below
                                 </div>
                               </div>
                             </>
                           )}
                         </div>
                       )}
-                      {/* Duplicate */}
-                      <button title="Duplicate row"
-                        onClick={() => { setSelection({ r: ri, c: 0 }); setSelectionEnd(null); duplicateSelectedRows() }}
-                        style={rowActBtn}>⧉</button>
-                      {/* Delete */}
-                      <button title="Delete row"
-                        onClick={() => { setSelection({ r: ri, c: 0 }); setSelectionEnd(null); deleteSelectedRows() }}
-                        style={{ ...rowActBtn, color: '#DC2626' }}>✕</button>
+                      {/* Duplicate — direct action, no stale-closure bug */}
+                      <button title="Duplicate row" onClick={() => duplicateRowByIndex(ri)} style={rowActIconBtn}>
+                        <Copy size={12} />
+                      </button>
+                      {/* Delete — direct action */}
+                      <button title="Delete row" onClick={() => deleteRowByIndex(ri)}
+                        style={{ ...rowActIconBtn, color: '#DC2626', borderColor: '#FEE2E2' }}>
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   )}
                 </td>
               </tr>
             ))}
 
-            {/* ── Transposed rows: one row per original column ── */}
-            {transposed && columns.map((srcCol, fieldIdx) => (
+            {/* ── Transposed rows: one row per FIELD (skip col[0] — it's already the header) ── */}
+            {transposed && columns.slice(1).map((srcCol, i) => {
+              const fieldIdx = i + 1  // offset to keep selection coords aligned with original column indexes
+              return (
               <tr key={srcCol.key}>
                 {/* Field label — sticky left */}
                 <td style={{
@@ -1473,7 +1515,7 @@ export function DataGrid<T>({
                   )
                 })}
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
@@ -1544,7 +1586,7 @@ export function DataGrid<T>({
             {newRow && <CtxMenuItem icon={<Plus size={12}/>} label="Insert row above" onClick={() => { insertRowAbove(ctxMenu.ri); setCtxMenu(null) }} />}
             {newRow && <CtxMenuItem icon={<Plus size={12}/>} label="Insert row below" onClick={() => { insertRowBelow(ctxMenu.ri); setCtxMenu(null) }} />}
             {newRow && <CtxDivider />}
-            <CtxMenuItem icon={<Copy size={12}/>} label="Duplicate row" onClick={() => { setSelection({ r: ctxMenu.ri, c: 0 }); setSelectionEnd(null); duplicateSelectedRows(); setCtxMenu(null) }} />
+            <CtxMenuItem icon={<Copy size={12}/>} label="Duplicate row" onClick={() => { duplicateRowByIndex(ctxMenu.ri); setCtxMenu(null) }} />
             <CtxDivider />
             <CtxMenuItem icon={<Copy size={12}/>} label="Copy" onClick={() => {
               const r = ctxMenu.ri
@@ -1608,13 +1650,14 @@ const btnGhost: React.CSSProperties = {
   padding: '6px 11px', borderRadius: 7, border: `1px solid ${TOK.containerBorder}`,
   background: '#fff', color: TOK.textMid, fontSize: 11, fontWeight: 600, cursor: 'pointer',
 }
-// Row-level hover action buttons (+ ⧉ ✕)
-const rowActBtn: React.CSSProperties = {
-  width: 22, height: 22, padding: 0, border: `1px solid ${TOK.containerBorder}`,
-  borderRadius: 5, background: '#fff', color: TOK.textMid,
-  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+// Row-level hover action icon buttons
+const rowActIconBtn: React.CSSProperties = {
+  width: 26, height: 26, padding: 0,
+  border: `1px solid ${TOK.containerBorder}`,
+  borderRadius: 6, background: '#fff', color: TOK.textMid,
+  cursor: 'pointer', flexShrink: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  lineHeight: 1, flexShrink: 0,
+  boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
 }
 const rowMenuItemStyle: React.CSSProperties = {
   padding: '6px 12px', fontSize: 12, cursor: 'pointer',
@@ -1642,6 +1685,7 @@ interface ToolbarProps {
   onAI?: () => void
   onDeleteRows?: () => void
   onDuplicateRows?: () => void
+  onBulkScope?: (rect?: DOMRect) => void
   selectionInfo?: string
   // v2 — undo/redo + filters
   canUndo?: boolean
@@ -1655,7 +1699,7 @@ interface ToolbarProps {
 function Toolbar({
   title, description, icon, tb, search, setSearch,
   onAdd, onImport, onExport, onImportXLSX, onExportXLSX, onPaste, onDirectPaste, onTranspose,
-  onBulk, onFillDown, onAI, onDeleteRows, onDuplicateRows, selectionInfo,
+  onBulk, onFillDown, onAI, onDeleteRows, onDuplicateRows, onBulkScope, selectionInfo,
   canUndo, canRedo, onUndo, onRedo, activeFilterCount, onClearFilters,
 }: ToolbarProps) {
   const [importDrop, setImportDrop] = useState(false)
@@ -1686,6 +1730,16 @@ function Toolbar({
         {onAdd && tb.add && (
           <button onClick={onAdd} style={btnPri} title="Add a new blank row">
             <Plus size={13} /> Add Row
+          </button>
+        )}
+
+        {/* Global scope setter — sets scope for ALL rows at once */}
+        {onBulkScope && (
+          <button
+            onClick={e => onBulkScope((e.currentTarget as HTMLElement).getBoundingClientRect())}
+            style={{ ...btnGhost, color: TOK.accent, borderColor: '#DDDAFF', background: TOK.accentSoft }}
+            title="Set availability scope for all rows in this table at once">
+            ◉ Set Scope for All
           </button>
         )}
 
