@@ -89,19 +89,16 @@ export function SubjectsGrid({
   onBulkScope?: (rect?: DOMRect) => void
 }) {
   const columns: DataGridColumn<Subject>[] = [
-    { key: 'name',     label: 'Subject',       type: 'text',   sticky: true, width: 160 },
-    { key: 'shortName',label: 'Short',         type: 'text',   width: 80 },
-    { key: 'category', label: 'Category',      type: 'select', options: SUBJECT_CATS, width: 130 },
-    { key: 'periodsPerWeek',  label: 'Per/Wk', type: 'number', width: 90, align: 'right' },
-    { key: 'sessionDuration', label: 'Duration', type: 'number', width: 90, align: 'right' },
-    { key: 'maxPeriodsPerDay',label: 'Max/Day', type: 'number', width: 90, align: 'right' },
+    { key: 'name',     label: 'Subject',  type: 'text',   sticky: true, width: 200 },
+    { key: 'shortName',label: 'Short',    type: 'text',   width: 90 },
+    { key: 'category', label: 'Category', type: 'select', options: SUBJECT_CATS, width: 140 },
     {
-      key: 'isOptional', label: 'Optional', type: 'toggle', width: 80, align: 'center',
+      key: 'isOptional', label: 'Optional', type: 'toggle', width: 90, align: 'center',
       getValue: (r) => (r as any).isOptional ?? false,
       setValue: (r, v) => ({ ...r, isOptional: Boolean(v) } as any),
     },
     {
-      key: 'requiresLab', label: 'Lab', type: 'toggle', width: 70, align: 'center',
+      key: 'requiresLab', label: 'Lab Room', type: 'toggle', width: 90, align: 'center',
       getValue: (r) => (r as any).requiresLab ?? false,
       setValue: (r, v) => ({ ...r, requiresLab: Boolean(v) } as any),
     },
@@ -143,21 +140,11 @@ export function TeachersGrid({
 }) {
   const sectionOptions = useMemo(() => ['', ...sections.map((s: any) => s.name)], [sections])
   const columns: DataGridColumn<Staff>[] = [
-    { key: 'name', label: 'Teacher', type: 'text', sticky: true, width: 160 },
-    { key: 'role', label: 'Role',    type: 'select', options: ROLES, width: 140 },
+    { key: 'name',   label: 'Teacher', type: 'text',   sticky: true, width: 180 },
+    { key: 'role',   label: 'Role',    type: 'select', options: ROLES, width: 160 },
+    { key: 'gender', label: 'Gender',  type: 'select', options: GENDERS, width: 110 },
     {
-      key: 'subjects', label: 'Subjects', type: 'text', width: 240,
-      getValue: (r) => (r.subjects ?? []).join(', '),
-      setValue: (r, v) => ({
-        ...r,
-        subjects: String(v ?? '').split(',').map(s => s.trim()).filter(Boolean),
-      }),
-      placeholder: 'Math, English, ...',
-    },
-    { key: 'maxPeriodsPerWeek', label: 'Max/Wk', type: 'number', width: 90, align: 'right' },
-    { key: 'gender', label: 'Gender', type: 'select', options: GENDERS, width: 100 },
-    {
-      key: 'isClassTeacher', label: 'CT of', type: 'select', options: sectionOptions, width: 120,
+      key: 'isClassTeacher', label: 'Class Teacher of', type: 'select', options: sectionOptions, width: 160,
       getValue: (r) => r.isClassTeacher ?? '',
       setValue: (r, v) => ({ ...r, isClassTeacher: v ?? '' }),
     },

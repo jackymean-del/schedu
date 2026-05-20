@@ -279,7 +279,8 @@ export function DataGrid<T>({
   const [insertMenuRow, setInsertMenuRow] = useState<number | null>(null)
 
   // Width of the always-present row-actions gutter column
-  const ACTIONS_COL_W = 80
+  // 3 buttons × 26px + 2 gaps × 3px + 2 sides × 4px padding = 96px → use 96
+  const ACTIONS_COL_W = 96
 
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
@@ -1310,8 +1311,16 @@ export function DataGrid<T>({
                     <td key={col.key}
                       onMouseDown={e => {
                         containerRef.current?.focus({ preventScroll: true })
-                        if (e.shiftKey && selection) setSelectionEnd({ r: ri, c: ci })
-                        else { setSelection({ r: ri, c: ci }); setSelectionEnd(null) }
+                        if (e.shiftKey && selection) {
+                          setSelectionEnd({ r: ri, c: ci })
+                        } else {
+                          // If cell is already selected and not yet editing → enter edit mode
+                          const alreadySelected = selection?.r === ri && selection?.c === ci && !editing
+                          setSelection({ r: ri, c: ci }); setSelectionEnd(null)
+                          if (alreadySelected && !col.readonly && col.type !== 'computed' && col.type !== 'toggle') {
+                            setEditing({ r: ri, c: ci })
+                          }
+                        }
                       }}
                       onMouseEnter={e => {
                         if (fillFrom && e.buttons === 1) {
@@ -1326,7 +1335,6 @@ export function DataGrid<T>({
                           } else setFillTo({ r: ri, c: ci })
                         } else if (e.buttons === 1 && selection) setSelectionEnd({ r: ri, c: ci })
                       }}
-                      onDoubleClick={() => { if (!col.readonly && col.type !== 'computed' && col.type !== 'toggle') setEditing({ r: ri, c: ci }) }}
                       style={{
                         ...tdBase,
                         background: isInFillRange && !isFillSource ? '#DBEAFE'
@@ -1400,18 +1408,20 @@ export function DataGrid<T>({
                 {/* ── Row hover-actions: Insert · Duplicate · Delete ── */}
                 <td style={{
                   ...tdBase,
+                  overflow: 'visible',  // override hidden so buttons aren't clipped
                   width: ACTIONS_COL_W, minWidth: ACTIONS_COL_W,
                   borderRight: 'none',
                   background: hoveredRow === ri ? '#F5F2FF' : 'transparent',
                   transition: 'background 0.12s',
                 }}>
                   {hoveredRow === ri && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: '100%', padding: '0 6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: '100%', padding: '0 4px' }}>
                       {/* Insert above / below */}
                       {newRow && (
                         <div style={{ position: 'relative' as const }}>
                           <button
                             title="Insert row above or below"
+                            onMouseDown={e => e.stopPropagation()}
                             onClick={e => { e.stopPropagation(); setInsertMenuRow(insertMenuRow === ri ? null : ri) }}
                             style={rowActIconBtn}>
                             <Plus size={12} />
@@ -1443,11 +1453,16 @@ export function DataGrid<T>({
                         </div>
                       )}
                       {/* Duplicate — direct action, no stale-closure bug */}
-                      <button title="Duplicate row" onClick={() => duplicateRowByIndex(ri)} style={rowActIconBtn}>
+                      <button title="Duplicate row"
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => { e.stopPropagation(); duplicateRowByIndex(ri) }}
+                        style={rowActIconBtn}>
                         <Copy size={12} />
                       </button>
                       {/* Delete — direct action */}
-                      <button title="Delete row" onClick={() => deleteRowByIndex(ri)}
+                      <button title="Delete row"
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => { e.stopPropagation(); deleteRowByIndex(ri) }}
                         style={{ ...rowActIconBtn, color: '#DC2626', borderColor: '#FEE2E2' }}>
                         <Trash2 size={12} />
                       </button>
@@ -1488,9 +1503,12 @@ export function DataGrid<T>({
                     <td key={colIdx}
                       onMouseDown={() => {
                         containerRef.current?.focus({ preventScroll: true })
+                        const alreadySelected = selection?.r === colIdx && selection?.c === fieldIdx && !editing
                         setSelection({ r: colIdx, c: fieldIdx }); setSelectionEnd(null)
+                        if (alreadySelected && !srcCol.readonly && srcCol.type !== 'computed' && srcCol.type !== 'toggle') {
+                          setEditing({ r: colIdx, c: fieldIdx })
+                        }
                       }}
-                      onDoubleClick={() => { if (!srcCol.readonly && srcCol.type !== 'computed') setEditing({ r: colIdx, c: fieldIdx }) }}
                       style={{
                         ...tdBase,
                         background: tIsSelected ? TOK.selectedBg : tIsRange ? '#EAF1FB' : undefined,
@@ -1724,7 +1742,8 @@ function Toolbar({
           )}
         </div>
       )}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      {/* ── Main toolbar row — always a single line (no wrapping) ── */}
+      <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, alignItems: 'center' }}>
 
         {/* Primary: Add Row */}
         {onAdd && tb.add && (
@@ -1850,10 +1869,6 @@ function Toolbar({
         )}
 
         {onTranspose && tb.transpose && <button onClick={onTranspose} style={btnGhost}><ArrowUpDown size={12} /> Transpose</button>}
-        {onBulk && tb.bulkActions && selectionInfo && <button onClick={onBulk} style={btnGhost}><RefreshCw size={12} /> Bulk fill</button>}
-        {onFillDown && tb.fillDown && selectionInfo && <button onClick={onFillDown} style={btnGhost} title="Fill Down (Ctrl+D)"><ArrowDownToLine size={12} /> Fill ↓</button>}
-        {onDuplicateRows && selectionInfo && <button onClick={onDuplicateRows} style={btnGhost}><Copy size={12} /> Duplicate</button>}
-        {onDeleteRows && selectionInfo && <button onClick={onDeleteRows} style={{ ...btnGhost, color: '#DC2626', borderColor: '#FEE2E2' }}><Trash2 size={12} /> Delete</button>}
         {(activeFilterCount ?? 0) > 0 && onClearFilters && (
           <button onClick={onClearFilters} style={{ ...btnGhost, color: TOK.accent, borderColor: TOK.accentBg, background: TOK.accentSoft }}>
             <Filter size={12} /> {activeFilterCount} filter{activeFilterCount! > 1 ? 's' : ''} · clear
@@ -1861,10 +1876,11 @@ function Toolbar({
         )}
         {onAI && tb.aiSuggestions && <button onClick={onAI} style={{ ...btnGhost, color: TOK.accent, borderColor: TOK.containerBorder }}><Sparkles size={12} /> AI Suggestions</button>}
 
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1, minWidth: 0 }} />
 
+        {/* Search — always rightmost, always visible */}
         {tb.search && (
-          <div style={{ position: 'relative' as const, minWidth: 200 }}>
+          <div style={{ position: 'relative' as const, flexShrink: 0, width: 200 }}>
             <Search size={12} style={{ position: 'absolute' as const, left: 10, top: '50%', transform: 'translateY(-50%)', color: TOK.textDim }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search..."
@@ -1877,6 +1893,19 @@ function Toolbar({
           </div>
         )}
       </div>
+
+      {/* ── Selection action row — only visible when a cell/range is selected ── */}
+      {selectionInfo && (
+        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 5, alignItems: 'center', marginTop: 7, paddingTop: 7, borderTop: `1px solid ${TOK.divider}` }}>
+          <span style={{ fontSize: 11, color: TOK.accent, fontWeight: 700, background: TOK.accentSoft, padding: '3px 9px', borderRadius: 10, border: `1px solid ${TOK.containerBorder}`, flexShrink: 0 }}>
+            {selectionInfo}
+          </span>
+          {onBulk && tb.bulkActions && <button onClick={onBulk} style={btnGhost}><RefreshCw size={12} /> Bulk fill</button>}
+          {onFillDown && tb.fillDown && <button onClick={onFillDown} style={btnGhost} title="Fill Down (Ctrl+D)"><ArrowDownToLine size={12} /> Fill ↓</button>}
+          {onDuplicateRows && <button onClick={onDuplicateRows} style={btnGhost}><Copy size={12} /> Duplicate</button>}
+          {onDeleteRows && <button onClick={onDeleteRows} style={{ ...btnGhost, color: '#DC2626', borderColor: '#FEE2E2' }}><Trash2 size={12} /> Delete</button>}
+        </div>
+      )}
     </div>
   )
 }
