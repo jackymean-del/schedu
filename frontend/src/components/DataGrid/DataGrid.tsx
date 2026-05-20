@@ -1936,16 +1936,19 @@ function Toolbar({
           </button>
         )}
 
-        {/* Delete selected rows — always visible, disabled when nothing selected */}
-        {onDeleteRows !== undefined && (
-          <button
-            onClick={onDeleteRows ?? undefined}
-            disabled={!onDeleteRows}
-            style={{ ...btnGhost, color: onDeleteRows ? '#DC2626' : '#CCCCCC', borderColor: onDeleteRows ? '#FEE2E2' : TOK.containerBorder, opacity: onDeleteRows ? 1 : 0.5 }}
-            title="Delete selected rows">
-            <Trash2 size={12} /> Delete
-          </button>
-        )}
+        {/* Delete selected rows — always visible in toolbar, active when rows are selected */}
+        <button
+          onClick={onDeleteRows}
+          disabled={!onDeleteRows}
+          style={{
+            ...btnGhost,
+            color: '#DC2626', borderColor: '#FEE2E2',
+            opacity: onDeleteRows ? 1 : 0.35,
+            cursor: onDeleteRows ? 'pointer' : 'default',
+          }}
+          title="Delete selected rows">
+          <Trash2 size={12} /> Delete
+        </button>
 
         {onTranspose && tb.transpose && <button onClick={onTranspose} style={btnGhost}><ArrowUpDown size={12} /> Transpose</button>}
         {(activeFilterCount ?? 0) > 0 && onClearFilters && (
