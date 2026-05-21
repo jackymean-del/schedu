@@ -10,7 +10,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
-import { AllocationGrid } from '@/components/master/AllocationGrid'
+import { AllocationGridAG } from '@/components/master/AllocationGridAG'
 import { TeacherAllocationSummary } from '@/components/master/TeacherAllocationSummary'
 import { TeacherAvailabilityEditor } from '@/components/master/TeacherAvailabilityEditor'
 import { AllocationReportModal } from '@/components/master/AllocationReportModal'
@@ -48,7 +48,6 @@ export function StepAllocation() {
   const [sub, setSub] = useState<Sub>('periods')
   const [displayMode, setDisplayMode] = useState<'periods' | 'hours'>('periods')
   const [showReport, setShowReport] = useState<'periods' | 'teachers' | null>(null)
-  const [density, setDensity] = useState<'compact' | 'comfortable'>('compact')
 
   // Derive bell-schedule periods for TeacherAvailabilityEditor
   const derivedPeriods = useMemo(() => {
@@ -220,24 +219,6 @@ export function StepAllocation() {
         title="View class-wise and subject-wise reports">
         <FileText size={10} /> Reports
       </button>
-
-      {/* Density toggle: Compact | Comfortable */}
-      <div style={{ display: 'flex', background: '#EFEFEF', borderRadius: 5, padding: 1, gap: 0 }}>
-        {(['compact', 'comfortable'] as const).map(d => (
-          <button key={d} onClick={() => setDensity(d)} style={{
-            padding: '3px 8px', borderRadius: 4, border: 'none', cursor: 'pointer',
-            background: density === d ? '#fff' : 'transparent',
-            color: density === d ? '#13111E' : '#9CA3AF',
-            fontSize: 10, fontWeight: density === d ? 700 : 500, fontFamily: 'inherit',
-            boxShadow: density === d ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-          }}>
-            {d === 'compact' ? '⊟ Compact' : '⊞ Comfy'}
-          </button>
-        ))}
-      </div>
-
-      {/* Separator before Import/Export */}
-      <div style={{ width: 1, height: 16, background: '#E5E5EA' }} />
     </>
   )
 
@@ -363,7 +344,7 @@ export function StepAllocation() {
           )}
 
           {/* Tab content */}
-          {sub === 'periods'    && <AllocationGrid displayMode={displayMode} periodMinutes={periodMinutes} density={density} toolbarExtra={periodsToolbarExtra} />}
+          {sub === 'periods'    && <AllocationGridAG displayMode={displayMode} periodMinutes={periodMinutes} toolbarExtra={periodsToolbarExtra} />}
           {sub === 'teachers'   && <TeacherAllocationSummary displayMode={displayMode} periodMinutes={periodMinutes}
             toolbarExtra={
               <button onClick={() => setShowReport('teachers')} style={{
