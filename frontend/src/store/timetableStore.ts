@@ -210,6 +210,11 @@ interface ScheduState {
   //    Named `subjectAllocations` to avoid colliding with engine output `periodAllocations`.
   subjectAllocations: Record<string, Record<string, string>>
 
+  // ── Per-section capacity overrides (editable denominator in Allocation grid) ──
+  //    Shape: { [sectionName]: maxPeriodsPerWeek }
+  //    When set, overrides the band-level capacity computed from the bell schedule.
+  sectionCapacityOverrides: Record<string, number>
+
   // ── Doc 2 Step 3 — Teacher Allocation matrix ──
   //    Shape: { [teacherName]: { [sectionName]: { [subjectName]: periods } } }
   //    Bidirectionally synced with subjectAllocations:
@@ -349,6 +354,7 @@ interface ScheduState {
   // ── Doc Part 1 — Subject Period Allocations (cell-syntax matrix) ──
   setSubjectAllocations: (a: Record<string, Record<string, string>>) => void
   setSubjectAllocationCell: (section: string, subject: string, value: string) => void
+  setSectionCapacityOverrides: (o: Record<string, number>) => void
 
   // ── Doc 2 Step 3 — Teacher Allocation (bidirectional sync) ──
   setTeacherAllocations: (t: Record<string, Record<string, Record<string, number>>>) => void
@@ -404,7 +410,7 @@ const initialState: Omit<ScheduState,
   | 'setOptionalBlocks' | 'upsertOptionalBlock' | 'removeOptionalBlock'
   | 'setSubjectCombinations' | 'upsertSubjectCombination' | 'removeSubjectCombination'
   | 'setSectionStrengths' | 'upsertSectionStrength'
-  | 'setSubjectAllocations' | 'setSubjectAllocationCell'
+  | 'setSubjectAllocations' | 'setSubjectAllocationCell' | 'setSectionCapacityOverrides'
   | 'setTeacherAllocations' | 'setTeacherAllocationCell'
   | 'setBlockedSlots'
   | 'setDynamicLearningGroups'
@@ -468,6 +474,7 @@ const initialState: Omit<ScheduState,
   subjectCombinations: [],
   sectionStrengths: [],
   subjectAllocations: {},
+  sectionCapacityOverrides: {},
   teacherAllocations: {},
   blockedSlots: [],
   dynamicLearningGroups: [],
@@ -662,6 +669,7 @@ export const useTimetableStore = create<ScheduState>()(
 
         // ── Doc Part 1 — Subject Period Allocation actions ──
         setSubjectAllocations: (subjectAllocations) => set({ subjectAllocations }),
+        setSectionCapacityOverrides: (sectionCapacityOverrides) => set({ sectionCapacityOverrides }),
         setSubjectAllocationCell: (section, subject, value) => set(st => {
           const sectionRow = { ...(st.subjectAllocations[section] ?? {}) }
           const v = (value ?? '').trim()
