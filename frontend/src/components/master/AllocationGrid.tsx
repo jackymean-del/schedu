@@ -46,6 +46,48 @@ function gradeOf(name: string): string {
   return parts.length > 1 ? parts.slice(0, -1).join('-') : name
 }
 
+/** Convert periods → compact "1h30m" string (display only) */
+function toHourMin(periods: number, periodMinutes: number): string {
+  const totalMins = Math.round(periods * periodMinutes)
+  const h = Math.floor(totalMins / 60)
+  const m = totalMins % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h${m}m`
+}
+
+/**
+ * Parse user-typed hours string back to number of periods.
+ * Accepts: "1h30m", "1h30", "1.5h", "90m", "1.5" (decimal hours)
+ * Returns period count as string, or '' if invalid.
+ */
+function parseHoursInput(val: string, periodMinutes: number): string {
+  val = val.trim()
+  // "1h30m" or "1h30" format
+  const hm = val.match(/^(\d+)h\s*(\d+)m?$/i)
+  if (hm) {
+    const mins = parseInt(hm[1]) * 60 + parseInt(hm[2])
+    return String(Math.max(0, Math.round(mins / periodMinutes)))
+  }
+  // "1h" or "1.5h"
+  const h = val.match(/^(\d+(?:\.\d+)?)h$/i)
+  if (h) {
+    const mins = parseFloat(h[1]) * 60
+    return String(Math.max(0, Math.round(mins / periodMinutes)))
+  }
+  // "30m" or "45.5m"
+  const m = val.match(/^(\d+(?:\.\d+)?)m$/i)
+  if (m) {
+    return String(Math.max(0, Math.round(parseFloat(m[1]) / periodMinutes)))
+  }
+  // Plain decimal "1.5" (hours)
+  const n = parseFloat(val)
+  if (!isNaN(n) && n >= 0) {
+    return String(Math.max(0, Math.round(n * 60 / periodMinutes)))
+  }
+  return ''
+}
+
 export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, toolbarExtra }: Props) {
   const store = useTimetableStore() as any
   const { sections, subjects, subjectAllocations, config } = store
@@ -154,7 +196,7 @@ export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, to
           const c = capacityForSection(cap, band)
           const u = rowTotals[row.sectionName] ?? 0
           return displayMode === 'hours'
-            ? `${Math.round(u * periodMinutes / 60 * 10) / 10}h / ${Math.round(c * periodMinutes / 60 * 10) / 10}h`
+            ? `${toHourMin(u, periodMinutes)} / ${toHourMin(c, periodMinutes)}`
             : `${u} / ${c}`
         },
         render: (_, row) => {
@@ -165,8 +207,8 @@ export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, to
           const s = STATUS_STYLE[status]
           const pct = c > 0 ? Math.min(100, Math.round((u / c) * 100)) : 0
           const barColor = status === 'over' ? '#DC2626' : status === 'tight' ? '#D97706' : status === 'ok' ? '#16A34A' : '#7C6FE0'
-          const uLabel = displayMode === 'hours' ? `${Math.round(u * periodMinutes / 60 * 10) / 10}h` : String(u)
-          const cLabel = displayMode === 'hours' ? `${Math.round(c * periodMinutes / 60 * 10) / 10}h` : String(c)
+          const uLabel = displayMode === 'hours' ? toHourMin(u, periodMinutes) : String(u)
+          const cLabel = displayMode === 'hours' ? toHourMin(c, periodMinutes) : String(c)
           return (
             <div style={{ padding: '4px 8px', minWidth: 90, pointerEvents: 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 2 }}>
@@ -197,7 +239,7 @@ export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, to
         align: 'right',
         placeholder: sub.periodsPerWeek ? (
           displayMode === 'hours'
-            ? `${Math.round(sub.periodsPerWeek * periodMinutes / 60 * 10) / 10}`
+            ? toHourMin(sub.periodsPerWeek, periodMinutes)
             : String(sub.periodsPerWeek)
         ) : '—',
 
@@ -210,7 +252,7 @@ export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, to
           if (displayMode === 'hours') {
             const parsed = parseAllocation(v)
             if (parsed.valid && parsed.weeklyTotal > 0) {
-              return String(Math.round(parsed.weeklyTotal * periodMinutes / 60 * 10) / 10)
+              return toHourMin(parsed.weeklyTotal, periodMinutes)
             }
             return '' // invalid stored value — show empty in hours mode
           }
@@ -221,13 +263,11 @@ export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, to
         // Hours mode: converts typed number (or "Nh") back to periods before storing.
         // Same-grade auto-fill: propagates to all sibling sections atomically.
         setValue: (r, v) => {
-          let val = String(v ?? '').trim().replace(/h$/i, '')
+          let val = String(v ?? '').trim()
 
           if (displayMode === 'hours') {
-            const n = parseFloat(val)
-            if (!isNaN(n) && /^\d+(\.\d+)?$/.test(val)) {
-              val = String(Math.max(0, Math.round(n * 60 / periodMinutes)))
-            }
+            const parsed = parseHoursInput(val, periodMinutes)
+            val = parsed
           }
 
           // Collect this section + all same-grade siblings for atomic update
@@ -294,7 +334,7 @@ export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40, to
         <Grid3x3 size={12} color="#7C6FE0" />
         <span style={{ fontWeight: 700, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>
           {displayMode === 'hours'
-            ? `${Math.round(cap.weeklyCapacity * periodMinutes / 60 * 10) / 10}h/week`
+            ? `${toHourMin(cap.weeklyCapacity, periodMinutes)}/week`
             : `${cap.weeklyCapacity} periods/week`}
         </span>
         <span>{cap.workingDays} days × {cap.teachingPeriodsPerDay} periods

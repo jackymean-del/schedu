@@ -297,6 +297,9 @@ export function DataGrid<T>({
   type FilterSpec = { text?: string; min?: number; max?: number; selected?: string[] }
   const [filters, setFilters] = useState<Record<string, FilterSpec>>({})
   const [filterPopover, setFilterPopover] = useState<string | null>(null)
+  // Column sort — key of the column being sorted, and direction
+  const [sortCol, setSortCol] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const fileRef = useRef<HTMLInputElement>(null)
   const xlsxRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null)
@@ -410,8 +413,25 @@ export function DataGrid<T>({
         })
       )
     }
+    // Apply sort
+    if (sortCol) {
+      const col = columns.find(c => c.key === sortCol)
+      if (col) {
+        out = [...out].sort((a, b) => {
+          const av = getCell(a, col)
+          const bv = getCell(b, col)
+          const an = parseFloat(String(av ?? ''))
+          const bn = parseFloat(String(bv ?? ''))
+          const isNum = !isNaN(an) && !isNaN(bn)
+          const cmp = isNum
+            ? an - bn
+            : String(av ?? '').localeCompare(String(bv ?? ''), undefined, { numeric: true, sensitivity: 'base' })
+          return sortDir === 'asc' ? cmp : -cmp
+        })
+      }
+    }
     return out
-  }, [rows, search, filters, columns, getCell])
+  }, [rows, search, filters, columns, getCell, sortCol, sortDir])
   const activeFilterCount = Object.values(filters).filter(f =>
     f && (f.text || f.min != null || f.max != null || (f.selected && f.selected.length > 0))
   ).length
@@ -1291,11 +1311,23 @@ export function DataGrid<T>({
                         left: col.sticky ? stickyOffsets[ci] : undefined,
                         zIndex: col.sticky ? 4 : 2,
                         whiteSpace: 'nowrap' as const,
-                      }}>
+                        cursor: 'pointer',
+                        userSelect: 'none' as const,
+                      }}
+                        onClick={() => {
+                          if (sortCol === col.key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+                          else { setSortCol(col.key); setSortDir('asc') }
+                        }}
+                        title={`Sort by ${col.label}`}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4,
                           justifyContent: (col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start') as any,
                         }}>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</span>
+                          {sortCol === col.key
+                            ? <span style={{ fontSize: 9, color: TOK.accent, flexShrink: 0 }}>{sortDir === 'asc' ? '▲' : '▼'}</span>
+                            : <span style={{ fontSize: 9, color: '#CCCCCC', flexShrink: 0, opacity: 0 }} className="sort-hint">↕</span>
+                          }
                           {tb.filters && !col.readonly && col.type !== 'computed' && (
                             <button
                               onClick={e => { e.stopPropagation(); setFilterPopover(filterPopover === col.key ? null : col.key) }}

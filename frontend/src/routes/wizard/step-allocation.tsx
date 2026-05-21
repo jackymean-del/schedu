@@ -13,6 +13,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { AllocationGrid } from '@/components/master/AllocationGrid'
 import { TeacherAllocationSummary } from '@/components/master/TeacherAllocationSummary'
 import { TeacherAvailabilityEditor } from '@/components/master/TeacherAvailabilityEditor'
+import { AllocationReportModal } from '@/components/master/AllocationReportModal'
 import { buildPeriodSequence } from '@/lib/aiEngine'
 import {
   computeCapacity, capacityForSection, inferBandFromSection, utilisationStatus,
@@ -22,7 +23,7 @@ import type { Section, Subject, Staff } from '@/types'
 import {
   Grid3x3, Users, ChevronLeft, ChevronRight,
   Sparkles, AlertTriangle, CheckCircle2, Info, BookOpen,
-  FlaskConical, BarChart3, Clock, ShieldCheck, XCircle,
+  BarChart3, ShieldCheck, XCircle, FileText,
 } from 'lucide-react'
 
 type Sub = 'periods' | 'teachers' | 'validation'
@@ -46,6 +47,7 @@ export function StepAllocation() {
   } = store
   const [sub, setSub] = useState<Sub>('periods')
   const [displayMode, setDisplayMode] = useState<'periods' | 'hours'>('periods')
+  const [showReport, setShowReport] = useState<'periods' | 'teachers' | null>(null)
 
   // Derive bell-schedule periods for TeacherAvailabilityEditor
   const derivedPeriods = useMemo(() => {
@@ -202,6 +204,15 @@ export function StepAllocation() {
         <Sparkles size={11} /> AI suggest all
       </button>
       <div style={{ width: 1, height: 20, background: '#E8E4FF', margin: '0 2px' }} />
+      <button onClick={() => setShowReport('periods')} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        padding: '5px 11px', borderRadius: 7,
+        border: '1px solid #D8D2FF',
+        background: '#F8F7FF', color: '#5B4EC0',
+        fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+      }}>
+        <FileText size={11} /> Reports
+      </button>
     </>
   )
 
@@ -339,7 +350,18 @@ export function StepAllocation() {
 
           {/* Tab content */}
           {sub === 'periods'    && <AllocationGrid displayMode={displayMode} periodMinutes={periodMinutes} toolbarExtra={periodsToolbarExtra} />}
-          {sub === 'teachers'   && <TeacherAllocationSummary displayMode={displayMode} periodMinutes={periodMinutes} />}
+          {sub === 'teachers'   && <TeacherAllocationSummary displayMode={displayMode} periodMinutes={periodMinutes}
+            toolbarExtra={
+              <button onClick={() => setShowReport('teachers')} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '5px 11px', borderRadius: 7,
+                border: '1px solid #D8D2FF', background: '#F8F7FF', color: '#5B4EC0',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                <FileText size={11} /> Reports
+              </button>
+            }
+          />}
           {sub === 'validation' && (
             <ValidationView
               hardConflicts={hardConflicts}
@@ -382,6 +404,16 @@ export function StepAllocation() {
           )}
         </div>
       </div>
+
+      {/* ── Report modal ── */}
+      {showReport && (
+        <AllocationReportModal
+          mode={showReport}
+          displayMode={displayMode}
+          periodMinutes={periodMinutes}
+          onClose={() => setShowReport(null)}
+        />
+      )}
 
       {/* ── Navigation footer ── */}
       <div style={{
