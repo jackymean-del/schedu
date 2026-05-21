@@ -1,28 +1,47 @@
 /**
  * AllocationGridAG — AG Grid Enterprise spreadsheet for Period Allocation.
  *
- * Critical interaction parity with Excel/Sheets:
- *  - Row number column: click to select row, Shift+click multi-select
- *  - Column header click: select entire column
- *  - Double-click / F2 / Enter → edit  |  Esc → cancel
- *  - Single click = select only; arrow keys navigate
- *  - Delete / Backspace → clear selected cells
- *  - Ctrl+C/V/X: multi-cell copy/paste/cut (no black-cell glitch)
- *  - Ctrl+Z / Ctrl+Shift+Z: 500-step undo/redo
- *  - Fill handle: drag bottom-right to fill xy
- *  - Range select: Shift+click, drag, column/row click
- *  - Context menu: Copy/Paste/Cut/Clear/Row-Clear/Export
- *  - Same-grade propagation in valueSetter
- *  - Live status bar: "N cells · Sum: Np · Avg: Np"
+ * ── ARCHITECTURE ────────────────────────────────────────────────────────────
+ * AG Grid fully owns the interaction layer.  React/store is the persistence
+ * layer.  The boundary is the valueSetter / valueGetter contract.
  *
- * Paste glitch fix:
- *   AG Grid's clipboard fires multiple valueSetter calls in rapid succession.
- *   We batch all store writes via onPasteStart/onPasteEnd and skip
- *   refreshCells during paste to prevent mid-paste DOM corruption.
+ *  DURING editing      → AG Grid owns focus, edit state, undo stack, clipboard
+ *  AFTER commit        → valueSetter writes to store; React owns validation/calc
  *
- * Undo safety:
- *   External store updates (AI fill) use requestAnimationFrame-delayed
- *   refreshCells({ force: false }) so they never interrupt an active edit.
+ * CRITICAL: we NEVER call refreshCells() from a useEffect watching the store.
+ * That pattern fires on every grid-originated change, tells AG Grid "this is
+ * the confirmed external value", and silently corrupts the undo stack.
+ * Instead, refreshes are surgical:
+ *   • onCellValueChanged  → refresh __usage col + sibling cells for that edit
+ *   • onPasteEnd          → full refresh once per paste operation
+ *   • handleAISuggest     → full refresh after external fill
+ *
+ * ── KEYBOARD CONTRACT ───────────────────────────────────────────────────────
+ *  Single click     select cell
+ *  Double-click     open editor
+ *  Enter            open editor  (enterNavigatesVertically: false)
+ *  Type char        replace-type (AG Grid handles natively)
+ *  Esc              cancel edit / clear selection  (AG Grid native)
+ *  Delete/Bksp      clear selected range           (AG Grid + cellSelection native)
+ *  Ctrl+C           silent copy with march-ant border  (AG Grid clipboard native)
+ *  Ctrl+V           paste range                    (AG Grid clipboard native)
+ *  Ctrl+X           cut range                      (AG Grid clipboard native)
+ *  Ctrl+Z           undo (AG Grid undoRedoCellEditing)
+ *  Ctrl+Shift+Z     redo
+ *  Arrows           navigate (or confirm edit if editing)
+ *  Tab              confirm + move right
+ *
+ * NO custom keyboard intercept.  AG Grid handles all of the above natively.
+ *
+ * ── PASTE BATCHING ──────────────────────────────────────────────────────────
+ * AG Grid fires valueSetter for every pasted cell individually. Accumulating
+ * into pendingBatchRef and flushing once in onPasteEnd gives one atomic store
+ * update and one refreshCells call, eliminating mid-paste render races.
+ *
+ * ── SAME-GRADE SYNC ─────────────────────────────────────────────────────────
+ * valueSetter propagates to all same-grade siblings in one merged store write.
+ * onCellValueChanged then refreshes sibling cells in the grid display.
+ * During paste, sibling sync is skipped (explicit paste range takes priority).
  */
 
 import 'ag-grid-community/styles/ag-grid.css'
@@ -42,6 +61,7 @@ import {
   type DefaultMenuItem,
   type GridReadyEvent,
   type CellSelectionChangedEvent,
+  type CellValueChangedEvent,
 } from 'ag-grid-community'
 import { AllEnterpriseModule } from 'ag-grid-enterprise'
 
@@ -87,10 +107,7 @@ function parseHoursInput(val: string, periodMinutes: number): string {
   return ''
 }
 
-/**
- * Smart 3–4 char column abbreviation.
- * "English" → "ENG"  "Physical Education" → "PE"  "Computer Science" → "CS"
- */
+/** Smart 3–4 char header abbreviation. */
 function abbrev(name: string, shortName?: string | null): string {
   if (shortName) {
     const s = shortName.trim()
@@ -115,7 +132,9 @@ interface GridContext {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Usage cell renderer — pinned, read-only
+// Usage cell renderer — pinned read-only column
+// Reads from context refs so it always has the latest store state
+// without triggering React rerenders on every cell change.
 // ─────────────────────────────────────────────────────────────────
 
 function UsageCellRenderer(params: ICellRendererParams<RowData>) {
@@ -168,15 +187,23 @@ function ExportDropdown({ onCsv, onExcel }: { onCsv: () => void; onExcel: () => 
   }, [open])
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(o => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA', background: 'transparent', color: '#8B87AD', fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA', background: 'transparent', color: '#8B87AD', fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+      >
         Export <ChevronDown size={9} />
       </button>
       {open && (
         <div style={{ position: 'absolute', top: 'calc(100% + 3px)', right: 0, background: '#fff', border: '1px solid #E8E4FF', borderRadius: 7, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 200, minWidth: 110, padding: '3px 0' }}>
-          {[{ label: 'CSV (.csv)', fn: () => { onCsv(); setOpen(false) } }, { label: 'Excel (.xlsx)', fn: () => { onExcel(); setOpen(false) } }].map(({ label, fn }) => (
-            <button key={label} onClick={fn} style={{ display: 'block', width: '100%', padding: '6px 14px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: 11, color: '#13111E', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}
+          {[
+            { label: 'CSV (.csv)',   fn: () => { onCsv();   setOpen(false) } },
+            { label: 'Excel (.xlsx)', fn: () => { onExcel(); setOpen(false) } },
+          ].map(({ label, fn }) => (
+            <button key={label} onClick={fn}
+              style={{ display: 'block', width: '100%', padding: '6px 14px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: 11, color: '#13111E', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}
               onMouseEnter={e => (e.currentTarget.style.background = '#F5F2FF')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
               {label}
             </button>
           ))}
@@ -248,7 +275,7 @@ const GRID_STYLES = `
 .ag-alloc-wrap .ag-cell-focus:not(.ag-cell-range-selected):not(.ag-cell-inline-editing) {
   border: 1px solid #A99FF5 !important; outline: none;
 }
-/* Editing */
+/* Editing cell */
 .ag-alloc-wrap .ag-cell-inline-editing {
   border: 1.5px solid #7C6FE0 !important;
   box-shadow: 0 0 0 2px rgba(124,111,224,0.15) !important; border-radius: 2px;
@@ -257,7 +284,7 @@ const GRID_STYLES = `
   font-family: 'DM Mono', monospace !important; font-size: 12px !important;
   font-weight: 600; color: #13111E !important; text-align: right;
 }
-/* Pinned shadow */
+/* Pinned left shadow */
 .ag-alloc-wrap .ag-pinned-left-header {
   border-right: 1px solid #E4E1F5 !important;
   box-shadow: 3px 0 8px -3px rgba(80,60,160,0.08);
@@ -268,7 +295,7 @@ const GRID_STYLES = `
 }
 .ag-alloc-wrap .ag-pinned-left-header .ag-header-cell,
 .ag-alloc-wrap .ag-pinned-left-cols-container .ag-cell { background: #FAFAFA !important; }
-/* Hover */
+/* Row hover */
 .ag-alloc-wrap .ag-row-hover .ag-cell { background: #FAFAFD !important; }
 .ag-alloc-wrap .ag-pinned-left-cols-container .ag-row-hover .ag-cell { background: #F6F4FE !important; }
 /* Range selection */
@@ -302,7 +329,7 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])
 
-  // ── Stable refs ───────────────────────────────────────────────
+  // ── Stable refs — read by valueGetter / cellRenderer without closing over stale state ──
   const allocationsRef = useRef<Record<string, Record<string, string>>>(subjectAllocations)
   allocationsRef.current = subjectAllocations
   const capRef = useRef(cap); capRef.current = cap
@@ -311,34 +338,21 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
   const periodMinutesRef = useRef(periodMinutes); periodMinutesRef.current = periodMinutes
   const gridRef = useRef<AgGridReact<RowData>>(null)
 
-  // Paste batching — prevents mid-paste DOM corruption
+  // ── Paste batching — prevents mid-paste render races ──
   const isPastingRef = useRef(false)
   const pendingBatchRef = useRef<Record<string, Record<string, string>> | null>(null)
 
-  // ── Quick filter ──────────────────────────────────────────────
+  // ── UI state ──────────────────────────────────────────────────
   const [quickFilter, setQuickFilter] = useState('')
-
-  // ── Status bar ────────────────────────────────────────────────
   const [statusBar, setStatusBar] = useState<{ cells: number; periods: number; avg: number } | null>(null)
 
-  // ── Refresh cells (external updates only, never during paste/edit) ──
-  useEffect(() => {
-    if (isPastingRef.current) return
-    const raf = requestAnimationFrame(() => {
-      const api = gridRef.current?.api
-      if (!api) return
-      api.refreshCells({ force: false })
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [subjectAllocations, cap])
-
-  // ── Row data — section metadata only ─────────────────────────
+  // ── Row data ──────────────────────────────────────────────────
   const rowData = useMemo<RowData[]>(() =>
     (sections as Section[]).map((sec: any) => ({
       __sectionId: sec.id, sectionName: sec.name,
     })), [sections])
 
-  // ── Grid context ──────────────────────────────────────────────
+  // ── Grid context — stable refs so cellRenderers don't go stale ──
   const gridContext = useMemo<GridContext>(() => ({
     getAllocations: () => allocationsRef.current,
     getCap: () => capRef.current,
@@ -346,10 +360,12 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
     getPeriodMinutes: () => periodMinutesRef.current,
   }), [])
 
-  // ── Column definitions ────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Column definitions
+  // ─────────────────────────────────────────────────────────────
   const columnDefs = useMemo<ColDef<RowData>[]>(() => {
     const cols: ColDef<RowData>[] = [
-      // Class column
+      // ── Class column (pinned, read-only) ──────────────────────
       {
         headerName: 'Class', colId: 'sectionName', field: 'sectionName',
         pinned: 'left', width: 120, minWidth: 90,
@@ -357,7 +373,7 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
         sortable: true,
         cellStyle: { fontWeight: 600, fontSize: 11.5, color: '#13111E', fontFamily: "'DM Sans', sans-serif", paddingLeft: 10 },
       },
-      // Used / capacity column
+      // ── Used/Cap column (pinned, read-only) ───────────────────
       {
         headerName: 'Used', colId: '__usage',
         pinned: 'left', width: 72, minWidth: 64,
@@ -376,6 +392,7 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
           if (s === 'tight') return { background: '#FFFBEB' }
           return null
         },
+        // valueGetter drives AG Grid's change-detection for this column
         valueGetter: (params) => {
           const sn = params.data?.sectionName ?? ''
           const c = capacityForSection(capRef.current, inferBandFromSection(sn))
@@ -389,7 +406,7 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
       },
     ]
 
-    // Subject columns
+    // ── Subject columns ─────────────────────────────────────────
     ;(subjects as Subject[]).forEach((sub: Subject) => {
       const hdr = abbrev(sub.name, sub.shortName)
       cols.push({
@@ -402,6 +419,7 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
         sortable: true,
         headerTooltip: sub.name,
 
+        // ── valueGetter — display only, reads from store via ref ──
         valueGetter: (params: ValueGetterParams<RowData>) => {
           const sn = params.data?.sectionName ?? ''
           const v = allocationsRef.current[sn]?.[sub.name]
@@ -415,6 +433,10 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
           return v
         },
 
+        // ── valueSetter — commit to store after AG Grid confirms ──
+        // During paste: accumulate into pendingBatchRef (flushed in onPasteEnd).
+        // Normal edit / undo / redo: write atomically to store now.
+        // Same-grade siblings: always synced in the same store write.
         valueSetter: (params: ValueSetterParams<RowData>) => {
           let val = String(params.newValue ?? '').trim()
           if (displayModeRef.current === 'hours') val = parseHoursInput(val, periodMinutesRef.current)
@@ -425,46 +447,33 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
             (s: Section) => gradeOf(s.name) === grade && s.name !== sn
           )
 
-          // ── Paste batching: accumulate into pendingBatchRef ──
+          const applyTo = (
+            secName: string,
+            target: Record<string, Record<string, string>>
+          ) => {
+            const existing = { ...(target[secName] ?? {}) }
+            if (val === '') delete existing[sub.name]
+            else existing[sub.name] = val
+            if (Object.keys(existing).length === 0) delete target[secName]
+            else target[secName] = existing
+          }
+
+          // ── Paste batching: accumulate, don't write store yet ──
           if (isPastingRef.current && pendingBatchRef.current !== null) {
-            const applyTo = (secName: string, batch: Record<string, Record<string, string>>) => {
-              const existing = { ...(batch[secName] ?? {}) }
-              if (val === '') delete existing[sub.name]
-              else existing[sub.name] = val
-              if (Object.keys(existing).length === 0) delete batch[secName]
-              else batch[secName] = existing
-            }
             applyTo(sn, pendingBatchRef.current)
-            // During paste: no same-grade sync (explicit paste range takes precedence)
+            // No sibling sync during paste — explicit paste range has priority
             return true
           }
 
-          // ── Normal path: write to store ──
+          // ── Normal path: atomic store write ──
           const merged: Record<string, Record<string, string>> = { ...allocationsRef.current }
-          const applyTo = (secName: string) => {
-            const existing = { ...(allocationsRef.current[secName] ?? {}) }
-            if (val === '') delete existing[sub.name]
-            else existing[sub.name] = val
-            if (Object.keys(existing).length === 0) delete merged[secName]
-            else merged[secName] = existing
-          }
-          applyTo(sn)
-          siblings.forEach((s: Section) => applyTo(s.name))
+          applyTo(sn, merged)
+          siblings.forEach((s: Section) => applyTo(s.name, merged))
           store.setSubjectAllocations?.(merged)
-
-          // Refresh sibling rows only (the edited cell is handled by AG Grid)
-          if (siblings.length > 0) {
-            const siblingIds = new Set(siblings.map((s: Section) => s.id))
-            requestAnimationFrame(() => {
-              const api = gridRef.current?.api
-              if (!api) return
-              const siblingNodes = siblings.map((s: Section) => api.getRowNode(s.id)).filter(Boolean)
-              if (siblingNodes.length) api.refreshCells({ rowNodes: siblingNodes as any, force: false })
-            })
-          }
           return true
         },
 
+        // ── cellStyle — validation background ──
         cellStyle: (params) => {
           const sn = params.data?.sectionName ?? ''
           const rawV = allocationsRef.current[sn]?.[sub.name]
@@ -479,9 +488,60 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
     })
 
     return cols
-  }, [subjects])
+  }, [subjects]) // intentionally omit store deps — all reads go through refs
 
-  // ── Paste event handlers (batch writes into one store update) ──
+  // ─────────────────────────────────────────────────────────────
+  // onCellValueChanged — ONLY source of surgical refreshes.
+  //
+  // Fires after every valueSetter returns true (direct edit, undo,
+  // redo, fill, cut).  We skip paste — onPasteEnd handles that.
+  //
+  // Refreshes:
+  //   - __usage column for this row + same-grade siblings
+  //   - sibling cells for the edited subject column
+  // ─────────────────────────────────────────────────────────────
+  const onCellValueChanged = useCallback((e: CellValueChangedEvent<RowData>) => {
+    // Paste is handled in onPasteEnd; avoid redundant refreshes
+    if (isPastingRef.current) return
+
+    const colId = e.column.getColId()
+    if (!colId.startsWith('subj:')) return
+
+    const sn = e.data?.sectionName
+    if (!sn) return
+
+    const grade = gradeOf(sn)
+    const siblings = (sectionsRef.current as Section[]).filter(
+      (s: Section) => gradeOf(s.name) === grade && s.name !== sn
+    )
+
+    requestAnimationFrame(() => {
+      const api = gridRef.current?.api
+      if (!api) return
+
+      const findNode = (name: string) => {
+        const sec = (sectionsRef.current as Section[]).find((s: any) => s.name === name)
+        return sec ? api.getRowNode((sec as any).id) : null
+      }
+
+      const thisNode   = findNode(sn)
+      const siblingNodes = siblings.map(s => findNode(s.name)).filter(Boolean)
+      const allNodes   = [thisNode, ...siblingNodes].filter(Boolean) as any[]
+
+      if (!allNodes.length) return
+
+      // Refresh sibling cells on the edited column (store already has new value)
+      if (siblingNodes.length) {
+        api.refreshCells({ rowNodes: siblingNodes as any, columns: [colId], force: false })
+      }
+      // Refresh __usage for all affected rows
+      api.refreshCells({ rowNodes: allNodes, columns: ['__usage'], force: false })
+    })
+  }, [])
+
+  // ─────────────────────────────────────────────────────────────
+  // Paste batching — one atomic store write per paste operation
+  // ─────────────────────────────────────────────────────────────
   const onPasteStart = useCallback(() => {
     isPastingRef.current = true
     pendingBatchRef.current = { ...allocationsRef.current }
@@ -493,13 +553,15 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
       store.setSubjectAllocations?.(pendingBatchRef.current)
       pendingBatchRef.current = null
     }
-    // Refresh after store settles
+    // Full refresh after paste: all values and __usage columns need updating
     requestAnimationFrame(() => {
       gridRef.current?.api?.refreshCells({ force: false })
     })
   }, [store])
 
-  // ── Context menu ──────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Context menu
+  // ─────────────────────────────────────────────────────────────
   const getContextMenuItems = useCallback((
     params: GetContextMenuItemsParams<RowData>
   ): (DefaultMenuItem | MenuItemDef<RowData>)[] => {
@@ -522,13 +584,16 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
         ranges.forEach(range => {
           const r0 = Math.min(range.startRow!.rowIndex, range.endRow!.rowIndex)
           const r1 = Math.max(range.startRow!.rowIndex, range.endRow!.rowIndex)
-          range.columns.forEach(col => { for (let i = r0; i <= r1; i++) clearCell(i, col.getColId()) })
+          range.columns.forEach(col => {
+            for (let i = r0; i <= r1; i++) clearCell(i, col.getColId())
+          })
         })
       } else {
         const f = params.api.getFocusedCell()
         if (f) clearCell(f.rowIndex, f.column.getColId())
       }
       store.setSubjectAllocations?.(merged)
+      requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
     }
 
     const clearRow = () => {
@@ -538,23 +603,29 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
       const merged = { ...allocationsRef.current }
       delete merged[sn]
       store.setSubjectAllocations?.(merged)
+      requestAnimationFrame(() => {
+        const api = gridRef.current?.api
+        if (!api || !node) return
+        api.refreshCells({ rowNodes: [node], force: false })
+      })
     }
 
     return [
       'copy',
       'copyWithHeaders',
       'paste',
-      'cut',
       'separator',
-      { name: 'Clear cell(s)',   shortcut: 'Del', action: clearRanges },
-      { name: 'Clear entire row',              action: clearRow },
+      { name: 'Clear cell(s)',    shortcut: 'Del', action: clearRanges },
+      { name: 'Clear entire row',               action: clearRow },
       'separator',
       'csvExport',
       'excelExport',
     ]
   }, [store])
 
-  // ── Selection → status bar ────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Selection → status bar
+  // ─────────────────────────────────────────────────────────────
   const onCellSelectionChanged = useCallback((e: CellSelectionChangedEvent<RowData>) => {
     const ranges = e.api.getCellRanges()
     if (!ranges?.length) { setStatusBar(null); return }
@@ -578,15 +649,22 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
       })
     })
     if (cells <= 1) { setStatusBar(null); return }
-    setStatusBar({ cells, periods: totalPeriods, avg: cells > 0 ? Math.round((totalPeriods / cells) * 10) / 10 : 0 })
+    setStatusBar({
+      cells,
+      periods: totalPeriods,
+      avg: cells > 0 ? Math.round((totalPeriods / cells) * 10) / 10 : 0,
+    })
   }, [])
 
-  // ── AI fill ───────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // AI fill — capacity-aware proportional allocation
+  // ─────────────────────────────────────────────────────────────
   const handleAISuggest = useCallback(() => {
     const secs = sectionsRef.current
     const subjs = subjects as Subject[]
     const cap = capRef.current
     const next: Record<string, Record<string, string>> = {}
+
     secs.forEach((sec: Section) => {
       const band = inferBandFromSection(sec.name)
       const capacity = capacityForSection(cap, band)
@@ -610,30 +688,31 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
       }
       if (Object.keys(row).length) next[sec.name] = row
     })
+
     store.setSubjectAllocations?.(next)
+
+    // Explicit full refresh — this is an external operation, not a grid edit
+    requestAnimationFrame(() => {
+      gridRef.current?.api?.refreshCells({ force: false })
+    })
   }, [store, subjects])
 
-  // Auto-fill on mount when empty or conflicted
+  // Auto-fill on mount when grid is empty or has capacity conflicts
   useEffect(() => {
     const secs = sectionsRef.current
     const alloc = allocationsRef.current
     const subjs = subjects as Subject[]
     const cap = capRef.current
-    const rowTotals: Record<string, number> = {}
-    secs.forEach((sec: Section) => {
-      const row = alloc[sec.name] ?? {}
-      let t = 0
-      subjs.forEach((sub: Subject) => {
-        const raw = row[sub.name]
-        if (!raw || raw === '0') return
-        const p = parseAllocation(raw); if (p.valid) t += p.weeklyTotal
-      })
-      rowTotals[sec.name] = t
-    })
+
     const hasConflicts = secs.some((sec: Section) => {
-      const band = inferBandFromSection(sec.name)
-      const c = capacityForSection(cap, band)
-      return c > 0 && (rowTotals[sec.name] ?? 0) > c
+      let u = 0
+      subjs.forEach(sub => {
+        const raw = alloc[sec.name]?.[sub.name]
+        if (!raw || raw === '0') return
+        const p = parseAllocation(raw); if (p.valid) u += p.weeklyTotal
+      })
+      const c = capacityForSection(cap, inferBandFromSection(sec.name))
+      return c > 0 && u > c
     })
     const hasAny = Object.values(alloc ?? {}).some(
       (row: any) => Object.values(row ?? {}).some((v: any) => v && String(v).trim() !== '' && v !== '0')
@@ -648,8 +727,13 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
     <div className="ag-alloc-wrap" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <style>{GRID_STYLES}</style>
 
-      {/* ── Toolbar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '5px 10px', background: '#F8F7FC', border: '1px solid #EFEFF3', borderBottom: 'none', borderRadius: '8px 8px 0 0', minHeight: 34 }}>
+      {/* ── Toolbar ─────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+        padding: '5px 10px', background: '#F8F7FC',
+        border: '1px solid #EFEFF3', borderBottom: 'none',
+        borderRadius: '8px 8px 0 0', minHeight: 34,
+      }}>
         {toolbarExtra}
         <div style={{ flex: 1 }} />
         <ExportDropdown
@@ -658,66 +742,96 @@ export function AllocationGridAG({ displayMode = 'periods', periodMinutes = 40, 
         />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <Search size={10} style={{ position: 'absolute', left: 7, color: '#C0BDDA', pointerEvents: 'none' }} />
-          <input type="text" placeholder="Search…" value={quickFilter}
-            onChange={e => { setQuickFilter(e.target.value); gridRef.current?.api?.setGridOption('quickFilterText', e.target.value) }}
+          <input
+            type="text" placeholder="Search…" value={quickFilter}
+            onChange={e => {
+              setQuickFilter(e.target.value)
+              gridRef.current?.api?.setGridOption('quickFilterText', e.target.value)
+            }}
             style={{ paddingLeft: 22, paddingRight: 8, paddingTop: 3, paddingBottom: 3, borderRadius: 5, border: '1px solid #ECECF2', background: '#fff', color: '#13111E', fontSize: 10.5, fontFamily: 'inherit', outline: 'none', width: 100 }}
           />
         </div>
       </div>
 
-      {/* ── AG Grid ── */}
+      {/* ── AG Grid ──────────────────────────────────────────────── */}
       <div className="ag-theme-quartz" style={{ height: gridHeight, width: '100%', border: '1px solid #EFEFF3', borderTop: 'none', overflow: 'hidden' }}>
         <AgGridReact<RowData>
           ref={gridRef}
           rowData={rowData}
           columnDefs={columnDefs}
-          defaultColDef={{ sortable: true, resizable: true, suppressMovable: false, suppressHeaderMenuButton: true }}
+          defaultColDef={{
+            sortable: true,
+            resizable: true,
+            suppressMovable: false,
+            suppressHeaderMenuButton: true,
+          }}
           getRowId={(p) => p.data.__sectionId}
           context={gridContext}
 
-          // ── Row numbers (Issue 1) ──
+          // ── Row numbers (click = select row) ────────────────────
           rowNumbers={{ width: 40, minWidth: 36 }}
 
-          // ── Editing ──
-          singleClickEdit={false}
+          // ── Editing — AG Grid owns the edit lifecycle completely ──
+          singleClickEdit={false}           // single = select, double/Enter/type = edit
           stopEditingWhenCellsLoseFocus={true}
-          enterNavigatesVertically={true}
-          enterNavigatesVerticallyAfterEdit={true}
-          undoRedoCellEditing={true}
-          undoRedoCellEditingLimit={500}
+          enterNavigatesVertically={false}   // Enter opens editor (not navigate)
+          enterNavigatesVerticallyAfterEdit={true} // after edit confirm, move down
+          undoRedoCellEditing={true}        // Ctrl+Z / Ctrl+Shift+Z native undo
+          undoRedoCellEditingLimit={1000}
 
-          // ── Range selection + column selection + fill handle (Issues 2, 7) ──
+          // ── Clipboard — fully native, no custom intercept ────────
+          suppressLastEmptyLineOnPaste={true} // don't paste the trailing newline
+          // suppressClipboardPaste is false by default — leave it that way
+
+          // ── Range / column selection + fill handle ───────────────
           cellSelection={{
             enableColumnSelection: true,
             handle: { mode: 'fill', direction: 'xy' },
           }}
 
-          // ── Layout ──
+          // ── Stable DOM order — required for clipboard + selection ─
+          ensureDomOrder={true}
+
+          // ── Layout ───────────────────────────────────────────────
           rowHeight={32}
           headerHeight={32}
           animateRows={false}
           domLayout="normal"
 
-          // ── Context menu ──
+          // ── Context menu ─────────────────────────────────────────
           getContextMenuItems={getContextMenuItems}
 
-          // ── Paste batching (Issues 4, 5) ──
+          // ── Value lifecycle ───────────────────────────────────────
+          onCellValueChanged={onCellValueChanged}
+
+          // ── Paste batching ────────────────────────────────────────
           onPasteStart={onPasteStart}
           onPasteEnd={onPasteEnd}
 
-          // ── Status bar ──
+          // ── Status bar ────────────────────────────────────────────
           onCellSelectionChanged={onCellSelectionChanged}
 
-          // ── Tooltip ──
+          // ── Tooltip ───────────────────────────────────────────────
           tooltipShowDelay={500}
           tooltipHideDelay={3000}
         />
       </div>
 
-      {/* ── Status / hint bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 10px', background: '#F8F7FC', border: '1px solid #EFEFF3', borderTop: 'none', borderRadius: '0 0 8px 8px', minHeight: 22 }}>
+      {/* ── Hint bar + status bar ────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '3px 10px', background: '#F8F7FC',
+        border: '1px solid #EFEFF3', borderTop: 'none',
+        borderRadius: '0 0 8px 8px', minHeight: 22,
+      }}>
         <div style={{ display: 'flex', gap: 12 }}>
-          {[['↵/F2', 'Edit'], ['Esc', 'Cancel'], ['Del', 'Clear'], ['Ctrl+C/V', 'Copy/Paste'], ['Ctrl+Z', 'Undo']].map(([k, v]) => (
+          {[
+            ['↵/F2', 'Edit'],
+            ['Esc',  'Cancel'],
+            ['Del',  'Clear'],
+            ['⌃C/V', 'Copy/Paste'],
+            ['⌃Z',   'Undo'],
+          ].map(([k, v]) => (
             <span key={k} style={{ fontSize: 9.5, color: '#C0BDDA', fontFamily: "'DM Mono', monospace" }}>
               <span style={{ fontWeight: 700, color: '#ADA8D0' }}>{k}</span> {v}
             </span>
