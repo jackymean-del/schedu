@@ -425,13 +425,55 @@ export function AllocationGridAG({
   const columnDefs = useMemo<ColDef<RowData>[]>(() => {
     const cols: ColDef<RowData>[] = [
 
-      // ── Class ────────────────────────────────────────────────
+      // ── Class (editable — rename cascades to all related store keys) ──
       {
         headerName: 'Class', colId: 'sectionName', field: 'sectionName',
         pinned: 'left', width: 120, minWidth: 90,
-        editable: false, lockPinned: true, suppressMovable: true, suppressNavigable: true,
+        editable: true, lockPinned: true, suppressMovable: true,
         sortable: true,
         cellStyle: { fontWeight: 600, fontSize: 11.5, color: '#13111E', fontFamily: "'DM Sans', sans-serif", paddingLeft: 10 },
+
+        valueSetter: (params: ValueSetterParams<RowData>) => {
+          const oldName = params.data?.sectionName ?? ''
+          const newName = String(params.newValue ?? '').trim()
+          if (!newName || newName === oldName) return false
+
+          pushUndo()
+
+          // 1. Rename in sections array
+          const newSections = (sectionsRef.current as Section[]).map(s =>
+            s.name === oldName ? { ...s, name: newName } : s
+          )
+          store.setSections?.(newSections)
+
+          // 2. Migrate subjectAllocations keys
+          const newAlloc = { ...allocationsRef.current }
+          if (newAlloc[oldName]) { newAlloc[newName] = newAlloc[oldName]; delete newAlloc[oldName] }
+          allocationsRef.current = newAlloc
+          store.setSubjectAllocations?.(newAlloc)
+
+          // 3. Migrate sectionCapacityOverrides keys
+          const newOverrides = { ...capOverrideRef.current }
+          if (newOverrides[oldName] !== undefined) { newOverrides[newName] = newOverrides[oldName]; delete newOverrides[oldName] }
+          capOverrideRef.current = newOverrides
+          store.setSectionCapacityOverrides?.(newOverrides)
+
+          // 4. Migrate teacherAllocations inner keys
+          const tAlloc = store.teacherAllocations ?? {}
+          const newTeacher: Record<string, Record<string, Record<string, number>>> = {}
+          Object.entries(tAlloc).forEach(([teacher, secMap]: [string, any]) => {
+            const newSecMap: Record<string, Record<string, number>> = {}
+            Object.entries(secMap ?? {}).forEach(([sec, subMap]: [string, any]) => {
+              newSecMap[sec === oldName ? newName : sec] = subMap
+            })
+            newTeacher[teacher] = newSecMap
+          })
+          store.setTeacherAllocations?.(newTeacher)
+
+          // Mutate row data for immediate AG Grid display (re-render will confirm)
+          params.data.sectionName = newName
+          return true
+        },
       },
 
       // ── Used / Capacity (editable denominator) ───────────────
@@ -559,7 +601,7 @@ export function AllocationGridAG({
     })
 
     return cols
-  }, [subjects, pushUndo, gridContext])
+  }, [subjects, pushUndo, gridContext, store])
 
   // ─────────────────────────────────────────────────────────────
   // Keyboard handler — owns Esc / Ctrl+Z / Ctrl+Y / Ctrl+C
@@ -570,25 +612,28 @@ export function AllocationGridAG({
     const api = e.api
     const isEditing = api.getEditingCells().length > 0
     const ctrl = evt.ctrlKey || evt.metaKey
+    const key  = evt.key.toLowerCase()   // normalize: 'Z' → 'z' regardless of Shift
 
     // ── In edit mode: only block Ctrl+Z / Ctrl+Y to prevent browser undo ──
     // Leave everything else to AG Grid's native editor handling (Esc, Enter, Tab).
     if (isEditing) {
-      if (ctrl && (evt.key === 'z' || evt.key === 'y')) {
+      if (ctrl && (key === 'z' || key === 'y')) {
         evt.preventDefault()  // don't let browser undo native text input
       }
       return
     }
 
-    // ── Esc: clear cell selection ──
+    // ── Esc: clear copy/marching-ants state only.
+    // AG Grid handles edit-cancel and selection-clear natively — calling
+    // clearCellSelection() here would fire AFTER AG Grid already cancelled
+    // the edit, stripping the cell focus and making Esc feel broken.
     if (evt.key === 'Escape') {
-      api.clearCellSelection()
       clearCopy()
       return
     }
 
     // ── Ctrl+C: activate marching ants ──
-    if (ctrl && evt.key === 'c') {
+    if (ctrl && key === 'c') {
       setCopyActive(true)
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
       // Auto-clear marching ants after 6 seconds (like Excel dismisses if no paste)
@@ -598,13 +643,13 @@ export function AllocationGridAG({
     }
 
     // ── Ctrl+V / Ctrl+X: clear copy indicator, let AG Grid handle ──
-    if (ctrl && (evt.key === 'v' || evt.key === 'x')) {
+    if (ctrl && (key === 'v' || key === 'x')) {
       clearCopy()
       return
     }
 
     // ── Ctrl+Z: undo ──
-    if (ctrl && evt.key === 'z' && !evt.shiftKey) {
+    if (ctrl && key === 'z' && !evt.shiftKey) {
       evt.preventDefault()
       const prev = undoStack.current.pop()
       if (prev) {
@@ -613,13 +658,13 @@ export function AllocationGridAG({
         capOverrideRef.current = prev.capOverrides
         store.setSubjectAllocations?.(prev.alloc)
         store.setSectionCapacityOverrides?.(prev.capOverrides)
-        requestAnimationFrame(() => api.refreshCells({ force: false }))
+        api.refreshCells({ force: true })   // synchronous — instant visual update
       }
       return
     }
 
     // ── Ctrl+Shift+Z / Ctrl+Y: redo ──
-    if (ctrl && (evt.key === 'y' || (evt.key === 'z' && evt.shiftKey))) {
+    if (ctrl && (key === 'y' || (key === 'z' && evt.shiftKey))) {
       evt.preventDefault()
       const next = redoStack.current.pop()
       if (next) {
@@ -628,7 +673,7 @@ export function AllocationGridAG({
         capOverrideRef.current = next.capOverrides
         store.setSubjectAllocations?.(next.alloc)
         store.setSectionCapacityOverrides?.(next.capOverrides)
-        requestAnimationFrame(() => api.refreshCells({ force: false }))
+        api.refreshCells({ force: true })   // synchronous — instant visual update
       }
       return
     }
@@ -862,7 +907,7 @@ export function AllocationGridAG({
           rowNumbers={{ width: 40, minWidth: 36 }}
 
           // ── Editing ──────────────────────────────────────────────
-          singleClickEdit={false}
+          singleClickEdit={true}
           stopEditingWhenCellsLoseFocus={true}
           enterNavigatesVertically={true}
           enterNavigatesVerticallyAfterEdit={true}
