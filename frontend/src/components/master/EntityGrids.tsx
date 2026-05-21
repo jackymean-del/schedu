@@ -13,6 +13,30 @@ import type { Subject, Section, Staff, ScopeMatrix } from '@/types'
 import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
 import { GraduationCap, BookOpen, Users, Building2 } from 'lucide-react'
 
+// ── Auto-fill helpers ────────────────────────────────────────────────────────
+
+/** "10-A" → "10",  "XI-B" → "XI",  "Class 7-C" → "Class 7",  "10" → "" */
+function extractGradeFromSection(name: string): string {
+  const trimmed = name.trim()
+  const idx = trimmed.lastIndexOf('-')
+  if (idx <= 0) return ''
+  const suffix = trimmed.slice(idx + 1).trim()
+  // Only treat it as a section suffix if it's 1-2 chars (e.g. A, B, 1, 2A)
+  if (suffix.length === 0 || suffix.length > 2) return ''
+  return trimmed.slice(0, idx).trim()
+}
+
+/** "Mathematics" → "Math" (first 4 chars),  "Physical Education" → "PE",  "English" → "Eng" */
+function autoShortName(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return ''
+  if (words.length === 1) {
+    const w = words[0]
+    return w.length <= 5 ? w : w.slice(0, 4)
+  }
+  return words.map(w => w[0].toUpperCase()).join('')
+}
+
 export const SUBJECT_CATS = ['Core', 'Language', 'Elective', 'Optional', 'Lab', 'CCA', 'Activity', 'Other']
 export const ROOM_TYPES   = ['Classroom', 'Lab', 'Computer Lab', 'Library', 'Hall', 'Gym', 'Staff Room', 'Other']
 export const ROLES        = ['Teacher', 'HoD', 'Coordinator', 'Principal', 'Vice Principal', 'Counsellor', 'Lab Incharge', 'Librarian']
@@ -47,9 +71,15 @@ export function ClassesGrid({
 }) {
   const staffOptions = useMemo(() => ['', ...staff.map((s: any) => s.name)], [staff])
   const columns: DataGridColumn<Section>[] = [
-    { key: 'name',  label: 'Section',       type: 'text',   sticky: true, width: 120, placeholder: 'e.g. 10-A' },
-    { key: 'grade', label: 'Grade',         type: 'text',   width: 100,   placeholder: 'e.g. 10' },
-    { key: 'room',  label: 'Home Room',     type: 'text',   width: 110,   placeholder: 'e.g. Room 101' },
+    {
+      key: 'name', label: 'Section', type: 'text', sticky: true, width: 120, placeholder: 'e.g. 10-A',
+      setValue: (row, v) => {
+        const grade = extractGradeFromSection(String(v))
+        return { ...row, name: v, grade: grade || (row as any).grade } as any
+      },
+    },
+    { key: 'grade', label: 'Grade', type: 'text', width: 100, placeholder: 'e.g. 10' },
+    { key: 'room',  label: 'Home Room', type: 'text', width: 110, placeholder: 'e.g. Room 101' },
     {
       key: 'stream', label: 'Stream', type: 'select', options: STREAMS, width: 130,
       getValue: (r) => (r as any).stream ?? '',
@@ -89,9 +119,17 @@ export function SubjectsGrid({
   onBulkScope?: (rect?: DOMRect) => void
 }) {
   const columns: DataGridColumn<Subject>[] = [
-    { key: 'name',     label: 'Subject',  type: 'text',   sticky: true, width: 200, placeholder: 'e.g. Mathematics' },
-    { key: 'shortName',label: 'Short',    type: 'text',   width: 90,    placeholder: 'e.g. Math' },
-    { key: 'category', label: 'Category', type: 'select', options: SUBJECT_CATS, width: 140 },
+    {
+      key: 'name', label: 'Subject', type: 'text', sticky: true, width: 200, placeholder: 'e.g. Mathematics',
+      setValue: (row, v) => {
+        const short = autoShortName(String(v))
+        const current = (row as any).shortName ?? ''
+        // Only auto-fill Short if user hasn't already typed something custom
+        return { ...row, name: v, shortName: current || short } as any
+      },
+    },
+    { key: 'shortName', label: 'Short', type: 'text', width: 90, placeholder: 'e.g. Math' },
+    { key: 'category',  label: 'Category', type: 'select', options: SUBJECT_CATS, width: 140 },
     {
       key: 'isOptional', label: 'Optional', type: 'toggle', width: 90, align: 'center',
       getValue: (r) => (r as any).isOptional ?? false,
@@ -184,7 +222,7 @@ export function RoomsGrid({
   const columns: DataGridColumn<RoomRow>[] = [
     { key: 'name',     label: 'Room',     type: 'text',   sticky: true, width: 140, placeholder: 'e.g. Room 101' },
     { key: 'type',     label: 'Type',     type: 'select', options: ROOM_TYPES, width: 140 },
-    { key: 'capacity', label: 'Capacity', type: 'number', width: 100, align: 'right' },
+    { key: 'capacity', label: 'Capacity', type: 'number', width: 100, align: 'right', placeholder: '40' },
     { key: 'building', label: 'Building', type: 'text',   width: 140, placeholder: 'e.g. Main Block' },
     { key: 'floor',    label: 'Floor',    type: 'text',   width: 100, placeholder: 'e.g. Ground' },
   ]

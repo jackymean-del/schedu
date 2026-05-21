@@ -276,6 +276,8 @@ export function DataGrid<T>({
 
   // Row hover — only set when hovering the ACTIONS column cell (not the whole row)
   const [hoveredRow, setHoveredRow] = useState<number | null>(null)
+  // Individual data-cell hover — shows subtle tint on the hovered cell
+  const [hoveredCell, setHoveredCell] = useState<{ r: number; c: number } | null>(null)
   const [insertMenuRow, setInsertMenuRow] = useState<number | null>(null)
   // Per-button hover — key: `${ri}-plus` | `${ri}-copy` | `${ri}-delete`
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null)
@@ -1001,7 +1003,7 @@ export function DataGrid<T>({
             </div>
           )}
         </div>
-        {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
+        {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} onApplyFromStart={() => { applyPaste(pasteText, { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
       </div>
     )
   }
@@ -1354,11 +1356,19 @@ export function DataGrid<T>({
                   return (
                     <td key={col.key}
                       onMouseDown={e => {
-                        // Already editing THIS cell — let the native input handle the click
-                        // so the cursor can be repositioned by the browser normally.
+                        // Already editing THIS cell:
+                        // first click selected-all; this (second+) click → cursor at end.
                         const alreadyEditingThisCell =
                           editingRef.current?.r === ri && editingRef.current?.c === ci
-                        if (alreadyEditingThisCell) return
+                        if (alreadyEditingThisCell) {
+                          if (!e.shiftKey && editInputRef.current instanceof HTMLInputElement) {
+                            requestAnimationFrame(() => {
+                              const inp = editInputRef.current as HTMLInputElement | null
+                              if (inp) { const n = inp.value.length; inp.setSelectionRange(n, n) }
+                            })
+                          }
+                          return
+                        }
 
                         // Explicitly blur the active input BEFORE issuing any setState.
                         // This fires onBlur → onCommit synchronously, inside the same
@@ -1385,6 +1395,7 @@ export function DataGrid<T>({
                         }
                       }}
                       onMouseEnter={e => {
+                        setHoveredCell({ r: ri, c: ci })
                         if (fillFrom && e.buttons === 1) {
                           if (fillSourceRange) {
                             const sR0 = Math.min(fillSourceRange.startR, fillSourceRange.endR)
@@ -1397,12 +1408,15 @@ export function DataGrid<T>({
                           } else setFillTo({ r: ri, c: ci })
                         } else if (e.buttons === 1 && selection) setSelectionEnd({ r: ri, c: ci })
                       }}
+                      onMouseLeave={() => setHoveredCell(null)}
                       style={{
                         ...tdBase,
+                        transition: 'background 0.12s ease',
                         background: isInFillRange && !isFillSource ? '#DBEAFE'
                           : isSelected ? TOK.selectedBg
                           : isInRange ? '#EAF1FB'
-                          : hoveredRow === ri ? (col.sticky ? '#F5F3FF' : '#F8F7FF')
+                          : hoveredRow === ri ? (col.sticky ? '#F0EEFF' : '#F5F3FF')
+                          : hoveredCell?.r === ri && hoveredCell?.c === ci ? (col.sticky ? '#F5F4FF' : '#F8F7FF')
                           : col.sticky ? '#FFFFFF' : undefined,
                         textAlign: (col.align ?? (col.type === 'number' ? 'right' : 'left')) as any,
                         position: col.sticky ? 'sticky' : 'relative',
@@ -1614,7 +1628,7 @@ export function DataGrid<T>({
       </div>
 
       {/* Paste modal */}
-      {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: filteredRows.length, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
+      {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} onApplyFromStart={() => { applyPaste(pasteText, { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
 
       {/* v3.2: drag-fill preview tooltip — floats near cursor during drag */}
       {fillCursor && fillPreview && (
@@ -2016,7 +2030,10 @@ function DropMenuItem({ icon, label, sub, onClick }: { icon: React.ReactNode; la
   )
 }
 
-function PasteModal({ text, setText, onCancel, onApply }: { text: string; setText: (v: string) => void; onCancel: () => void; onApply: () => void }) {
+function PasteModal({ text, setText, onCancel, onApply, onApplyFromStart }: {
+  text: string; setText: (v: string) => void
+  onCancel: () => void; onApply: () => void; onApplyFromStart: () => void
+}) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(19,17,30,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20, backdropFilter: 'blur(4px)' }} onClick={onCancel}>
       <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 720, padding: 18, boxShadow: '0 24px 60px rgba(19,17,30,0.35)' }}>
@@ -2024,15 +2041,26 @@ function PasteModal({ text, setText, onCancel, onApply }: { text: string; setTex
           <ClipboardPaste size={18} color={TOK.accent} />
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: TOK.textOn }}>Paste tabular data</div>
-            <div style={{ fontSize: 11, color: TOK.textDim }}>Paste from Excel / Sheets / Notion (TSV) or CSV. Pasting fills cells starting from your selected position.</div>
+            <div style={{ fontSize: 11, color: TOK.textDim }}>
+              Paste from Excel / Sheets / Notion (TSV) or CSV.
+              Use <strong>Paste here</strong> to fill from the selected cell,
+              or <strong>Paste all (from row 1)</strong> to overwrite the entire grid starting from the first row.
+            </div>
           </div>
         </div>
         <textarea value={text} onChange={e => setText(e.target.value)} autoFocus
-          placeholder="Paste rows here (Tab-separated or comma-separated)..."
+          placeholder="Paste your data here (Tab-separated or comma-separated)..."
           style={{ width: '100%', minHeight: 200, fontFamily: "'DM Mono', monospace", fontSize: 12, padding: 10, border: `1px solid ${TOK.containerBorder}`, borderRadius: 8, background: TOK.accentSoft, color: TOK.textOn, outline: 'none', resize: 'vertical' as const }} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onCancel} style={btnGhost}>Cancel</button>
-          <button onClick={onApply} style={btnPri}>Apply</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <button onClick={onApplyFromStart}
+            style={{ ...btnGhost, color: TOK.accent, borderColor: '#DDDAFF', fontWeight: 700 }}>
+            <ArrowDownToLine size={13} style={{ marginRight: 5 }} />
+            Paste all (from row 1)
+          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onCancel} style={btnGhost}>Cancel</button>
+            <button onClick={onApply} style={btnPri}>Paste here</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2078,6 +2106,7 @@ function renderEditor<T>(
       type={col.type === 'number' ? 'number' : 'text'}
       defaultValue={value == null ? '' : String(value)}
       placeholder={col.placeholder ?? ''}
+      onFocus={e => e.currentTarget.select()}
       onBlur={e => {
         const raw = (e.target as HTMLInputElement).value
         const v = col.type === 'number' ? (raw === '' ? 0 : parseFloat(raw) || 0) : raw
