@@ -1337,8 +1337,20 @@ export function DataGrid<T>({
                   setCtxMenu({ x: e.clientX, rowTop: rect.top, rowBottom: rect.bottom, ri })
                 }}>
 
-                {/* Row number */}
-                <td style={tdRowNum(ri)}>{ri + 1}</td>
+                {/* Row number — click to select entire row */}
+                <td
+                  style={{
+                    ...tdRowNum(ri),
+                    cursor: 'pointer',
+                    background: selection?.r === ri && selectionEnd?.c === columns.length - 1
+                      ? '#DDD9FF' : undefined,
+                  }}
+                  title="Click to select entire row"
+                  onClick={() => {
+                    setSelection({ r: ri, c: 0 })
+                    setSelectionEnd({ r: ri, c: columns.length - 1 })
+                  }}
+                >{ri + 1}</td>
 
                 {columns.map((col, ci) => {
                   const value = getCell(row, col)

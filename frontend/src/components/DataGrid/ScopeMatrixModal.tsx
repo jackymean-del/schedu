@@ -20,7 +20,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import type { ScopeMatrix, ScopeState, Period } from '@/types'
-import { X, Check, Lock, Ban, RotateCcw, Info, ChevronDown } from 'lucide-react'
+import { X, Check, Lock, Ban, RotateCcw, Info } from 'lucide-react'
 
 const DAY_LABEL: Record<string, string> = {
   MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed',
@@ -118,7 +118,6 @@ export function ScopeMatrixModal({
   // Multi-resource picker state (bulk mode only)
   const allIds = entities?.map(e => e.id) ?? []
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(allIds))
-  const [pickerOpen, setPickerOpen] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -130,17 +129,6 @@ export function ScopeMatrixModal({
   useEffect(() => {
     setSelectedIds(new Set(allIds))
   }, [entities?.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Close picker on outside click
-  useEffect(() => {
-    if (!pickerOpen) return
-    const handle = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node))
-        setPickerOpen(false)
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [pickerOpen])
 
   // Helpers
   const getState = (day: string, periodId: string): ScopeState =>
@@ -294,75 +282,63 @@ export function ScopeMatrixModal({
 
           {/* ── Resource picker (bulk mode only) ─────────────────────── */}
           {entities && entities.length > 0 && (
-            <div ref={pickerRef} style={{ marginBottom: 14, position: 'relative' as const }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#8B87AD', marginBottom: 5 }}>
-                Apply to
-              </div>
-              <button
-                onClick={() => setPickerOpen(v => !v)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  width: '100%', padding: '8px 12px', borderRadius: 8,
-                  border: '1px solid #ECEAFB', background: '#FAFAFE',
-                  cursor: 'pointer', fontSize: 12, color: '#13111E', fontWeight: 500,
-                  textAlign: 'left' as const,
-                }}>
-                <span style={{ flex: 1 }}>
-                  {selectedIds.size === 0
-                    ? <span style={{ color: '#DC2626' }}>None selected</span>
-                    : selectedIds.size === entities.length
-                      ? <span style={{ color: '#15803D' }}>All {entities.length} {entityKind.toLowerCase()}s</span>
-                      : <>{selectedIds.size} of {entities.length} selected</>
-                  }
-                </span>
-                <ChevronDown size={13} style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', color: '#8B87AD', flexShrink: 0 }} />
-              </button>
-
-              {pickerOpen && (
-                <div style={{
-                  position: 'absolute' as const, top: '100%', left: 0, right: 0, zIndex: 100,
-                  background: '#fff', border: '1px solid #ECEAFB', borderRadius: 10,
-                  boxShadow: '0 8px 24px rgba(19,17,30,0.12)', marginTop: 4,
-                  maxHeight: 220, overflowY: 'auto' as const,
-                }}>
-                  {/* Select all / none */}
-                  <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #F0EEF8', padding: '6px 10px' }}>
-                    <button onClick={() => setSelectedIds(new Set(allIds))}
-                      style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', border: 'none', background: 'none', cursor: 'pointer', padding: '2px 6px' }}>
-                      Select all
-                    </button>
-                    <span style={{ color: '#D0CDE8', alignSelf: 'center' }}>·</span>
-                    <button onClick={() => setSelectedIds(new Set())}
-                      style={{ fontSize: 11, fontWeight: 700, color: '#8B87AD', border: 'none', background: 'none', cursor: 'pointer', padding: '2px 6px' }}>
-                      Deselect all
-                    </button>
-                  </div>
-                  {/* Entity checkboxes */}
-                  {entities.map(ent => (
-                    <label key={ent.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '7px 12px', cursor: 'pointer', fontSize: 12.5,
-                      color: '#13111E', borderBottom: '1px solid #F8F7FF',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#F8F7FF')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(ent.id)}
-                        onChange={e => {
-                          setSelectedIds(prev => {
-                            const next = new Set(prev)
-                            e.target.checked ? next.add(ent.id) : next.delete(ent.id)
-                            return next
-                          })
-                        }}
-                        style={{ accentColor: '#7C6FE0', width: 14, height: 14 }}
-                      />
-                      {ent.name}
-                    </label>
-                  ))}
+            <div ref={pickerRef} style={{ marginBottom: 14 }}>
+              {/* Header row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#8B87AD' }}>
+                  Apply to &nbsp;
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 700,
+                    padding: '1px 7px', borderRadius: 9, background: '#EDE9FF', color: '#7C6FE0',
+                  }}>
+                    {selectedIds.size === entities.length ? `All ${entities.length}` : `${selectedIds.size} / ${entities.length}`}
+                  </span>
                 </div>
-              )}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => setSelectedIds(new Set(allIds))}
+                    style={{ fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', border: '1px solid #DDDAFF', background: '#F5F2FF', borderRadius: 5, cursor: 'pointer', padding: '2px 8px' }}>
+                    All
+                  </button>
+                  <button onClick={() => setSelectedIds(new Set())}
+                    style={{ fontSize: 10.5, fontWeight: 700, color: '#8B87AD', border: '1px solid #ECEAFB', background: '#fff', borderRadius: 5, cursor: 'pointer', padding: '2px 8px' }}>
+                    None
+                  </button>
+                </div>
+              </div>
+              {/* Scrollable checkbox grid */}
+              <div style={{
+                border: '1px solid #ECEAFB', borderRadius: 10,
+                maxHeight: 160, overflowY: 'auto' as const,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${Math.min(3, Math.ceil(entities.length / 4))}, 1fr)`,
+              }}>
+                {entities.map((ent, i) => (
+                  <label key={ent.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '6px 10px', cursor: 'pointer', fontSize: 12,
+                    color: selectedIds.has(ent.id) ? '#13111E' : '#8B87AD',
+                    background: selectedIds.has(ent.id) ? '#F5F2FF' : 'transparent',
+                    borderBottom: i < entities.length - 1 ? '1px solid #F5F2FF' : 'none',
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => { if (!selectedIds.has(ent.id)) (e.currentTarget as HTMLElement).style.background = '#FAFAFE' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = selectedIds.has(ent.id) ? '#F5F2FF' : 'transparent' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(ent.id)}
+                      onChange={e => {
+                        setSelectedIds(prev => {
+                          const next = new Set(prev)
+                          e.target.checked ? next.add(ent.id) : next.delete(ent.id)
+                          return next
+                        })
+                      }}
+                      style={{ accentColor: '#7C6FE0', width: 13, height: 13, flexShrink: 0 }}
+                    />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{ent.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 

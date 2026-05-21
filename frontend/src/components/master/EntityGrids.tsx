@@ -16,7 +16,7 @@ import { useNamingMemory } from '@/hooks/useNamingMemory'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
 
-/** "10-A" → "10",  "XI-B" → "XI",  "Class 7-C" → "Class 7",  "10" → "" */
+/** "10-A" → "10",  "XI-B" → "XI",  "XI-Sci-A" → "XI",  "10" → "" */
 function extractGradeFromSection(name: string): string {
   const trimmed = name.trim()
   const idx = trimmed.lastIndexOf('-')
@@ -24,7 +24,32 @@ function extractGradeFromSection(name: string): string {
   const suffix = trimmed.slice(idx + 1).trim()
   // Only treat it as a section suffix if it's 1-2 chars (e.g. A, B, 1, 2A)
   if (suffix.length === 0 || suffix.length > 2) return ''
-  return trimmed.slice(0, idx).trim()
+  // Everything before the last "-suffix" — may still contain stream token (e.g. "XI-Sci")
+  const middle = trimmed.slice(0, idx).trim()
+  // If the middle part also ends in a stream token, strip it to get just the grade
+  const streamTokens = /-(sci|com|arts?|hum|gen|pcm|pcb|mpc|mec|cec|biz|law|med)$/i
+  return middle.replace(streamTokens, '').trim()
+}
+
+// Stream keywords → STREAMS values
+// Keys are lowercase tokens that may appear anywhere in the section name
+const STREAM_KEYWORDS: Array<{ re: RegExp; stream: string }> = [
+  { re: /\b(sci|science|pcm|pcb|mpc|physics|bio|chem)\b/i,           stream: 'Science'    },
+  { re: /\b(com|commerce|acc|accountancy|bst|biz|mec|cec)\b/i,       stream: 'Commerce'   },
+  { re: /\b(arts?|hum|humanities|hist|history|lit|geo|pol|law)\b/i,  stream: 'Humanities' },
+  { re: /\b(gen|general|voc|vocational)\b/i,                          stream: 'General'    },
+]
+
+/**
+ * Infer stream from section name.
+ * "XI-Sci-A" → "Science",  "XII-Com-B" → "Commerce",  "11-Arts" → "Humanities"
+ * Returns '' if no stream keyword found.
+ */
+function inferStreamFromSection(name: string): string {
+  for (const { re, stream } of STREAM_KEYWORDS) {
+    if (re.test(name)) return stream
+  }
+  return ''
 }
 
 // ── Subject abbreviation lookup (Indian K-12 curriculum) ────────────────────
@@ -185,8 +210,14 @@ export function ClassesGrid({
     {
       key: 'name', label: 'Section', type: 'text', sticky: true, width: 120, placeholder: 'e.g. 10-A',
       setValue: (row, v) => {
-        const grade = extractGradeFromSection(String(v))
-        return { ...row, name: v, grade: grade || (row as any).grade } as any
+        const s = String(v)
+        const grade  = extractGradeFromSection(s)
+        const stream = inferStreamFromSection(s)
+        return {
+          ...row, name: v,
+          grade:  grade  || (row as any).grade  || '',
+          stream: stream || (row as any).stream || '',
+        } as any
       },
     },
     { key: 'grade', label: 'Grade', type: 'text', width: 100, placeholder: 'e.g. 10' },
