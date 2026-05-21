@@ -26,15 +26,125 @@ function extractGradeFromSection(name: string): string {
   return trimmed.slice(0, idx).trim()
 }
 
-/** "Mathematics" → "Math" (first 4 chars),  "Physical Education" → "PE",  "English" → "Eng" */
+// ── Subject abbreviation lookup (Indian K-12 curriculum) ────────────────────
+// Key = lowercase subject name (or common alias).  Value = standard short form.
+const SUBJECT_ABBR: Record<string, string> = {
+  // Languages
+  'english': 'ENG',
+  'english language': 'ENG',
+  'english literature': 'ENG LIT',
+  'hindi': 'HIN',
+  'hindi language': 'HIN',
+  'hindi literature': 'HIN LIT',
+  'sanskrit': 'SANS',
+  'urdu': 'URD',
+  'punjabi': 'PUN',
+  'gujarati': 'GUJ',
+  'marathi': 'MAR',
+  'tamil': 'TAM',
+  'telugu': 'TEL',
+  'kannada': 'KAN',
+  'bengali': 'BEN',
+  'malayalam': 'MAL',
+  'odia': 'ODI',
+  'french': 'FRE',
+  'german': 'GER',
+  'spanish': 'SPA',
+  'japanese': 'JAP',
+  'arabic': 'ARB',
+  // Mathematics
+  'mathematics': 'MATH',
+  'maths': 'MATH',
+  'math': 'MATH',
+  'applied mathematics': 'APP MATH',
+  'statistics': 'STAT',
+  'arithmetic': 'ARITH',
+  // Sciences
+  'science': 'SCI',
+  'general science': 'GEN SCI',
+  'physics': 'PHY',
+  'chemistry': 'CHEM',
+  'biology': 'BIO',
+  'botany': 'BOT',
+  'zoology': 'ZOO',
+  'microbiology': 'MICRO',
+  'biochemistry': 'BIOCHEM',
+  'biotechnology': 'BT',
+  'environmental science': 'EVS',
+  'environmental studies': 'EVS',
+  // Social Sciences
+  'social science': 'SSC',
+  'social sciences': 'SSC',
+  'social studies': 'SOC ST',
+  'history': 'HIST',
+  'geography': 'GEO',
+  'civics': 'CIV',
+  'political science': 'POL SC',
+  'economics': 'ECO',
+  'psychology': 'PSY',
+  'sociology': 'SOC',
+  'philosophy': 'PHIL',
+  'legal studies': 'LEG',
+  // Commerce
+  'accountancy': 'ACC',
+  'accounts': 'ACC',
+  'accounting': 'ACC',
+  'business studies': 'BST',
+  'business mathematics': 'BUS MATH',
+  'entrepreneurship': 'ENT',
+  'economics and commerce': 'ECO COM',
+  // Computer / IT
+  'computer science': 'CS',
+  'computer applications': 'CA',
+  'information technology': 'IT',
+  'information practices': 'IP',
+  'artificial intelligence': 'AI',
+  'data science': 'DS',
+  // Arts / Vocational
+  'art': 'ART',
+  'arts': 'ART',
+  'fine arts': 'FA',
+  'drawing': 'DRAW',
+  'music': 'MUS',
+  'dance': 'DAN',
+  'theatre': 'THE',
+  'drama': 'DRA',
+  'home science': 'HOME SC',
+  'physical education': 'PHY ED',
+  'physical training': 'PT',
+  'yoga': 'YOGA',
+  'sports': 'SPO',
+  // General / Misc
+  'moral science': 'MOR SC',
+  'value education': 'VAL ED',
+  'general knowledge': 'GK',
+  'general studies': 'GS',
+  'library': 'LIB',
+  'work experience': 'WE',
+  'vocational': 'VOC',
+}
+
+/**
+ * Returns a standardised short form for a subject name.
+ * 1. Exact lookup in SUBJECT_ABBR (case-insensitive).
+ * 2. Partial match — if user types "Pol Sc" it matches "political science" prefix — skipped
+ *    for now; exact is safer.
+ * 3. Fallback: ≤5 char word → as-is uppercase; single long word → first 4 chars;
+ *    multi-word → first letter of each word (e.g. "Life Skills" → "LS").
+ */
 function autoShortName(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return ''
+  const trimmed = name.trim()
+  if (!trimmed) return ''
+  const key = trimmed.toLowerCase()
+  if (SUBJECT_ABBR[key]) return SUBJECT_ABBR[key]
+  // Fallback
+  const words = trimmed.split(/\s+/).filter(Boolean)
   if (words.length === 1) {
-    const w = words[0]
-    return w.length <= 5 ? w : w.slice(0, 4)
+    const w = words[0].toUpperCase()
+    return w.length <= 4 ? w : w.slice(0, 4)
   }
-  return words.map(w => w[0].toUpperCase()).join('')
+  // Multi-word: initials, max 6 chars
+  return words.map(w => w[0].toUpperCase()).join('').slice(0, 6)
 }
 
 export const SUBJECT_CATS = ['Core', 'Language', 'Elective', 'Optional', 'Lab', 'CCA', 'Activity', 'Other']
