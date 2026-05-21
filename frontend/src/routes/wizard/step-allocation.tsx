@@ -180,44 +180,47 @@ export function StepAllocation() {
   // Toolbar extra for the periods tab — thin spreadsheet ribbon
   const periodsToolbarExtra = (
     <>
-      {/* Mode toggle: Periods | Hours */}
-      <div style={{ display: 'flex', background: '#EFEFEF', borderRadius: 5, padding: 1, gap: 0 }}>
+      {/* Mode toggle: Periods | Hours — flat underline tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1.5px solid #EEECF8' }}>
         {(['periods', 'hours'] as const).map(m => (
           <button key={m} onClick={() => setDisplayMode(m)} style={{
-            padding: '3px 9px', borderRadius: 4, border: 'none', cursor: 'pointer',
-            background: displayMode === m ? '#7C6FE0' : 'transparent',
-            color: displayMode === m ? '#fff' : '#6B7280',
-            fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', lineHeight: 1.2,
+            padding: '2px 10px 3px', border: 'none', cursor: 'pointer',
+            background: 'transparent',
+            color: displayMode === m ? '#7C6FE0' : '#A8A4C0',
+            borderBottom: displayMode === m ? '1.5px solid #7C6FE0' : '1.5px solid transparent',
+            marginBottom: -1.5,
+            fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit',
+            transition: 'color 0.12s',
           }}>{m === 'periods' ? 'Periods' : 'Hours'}</button>
         ))}
       </div>
 
       {/* 1p=Xm hint */}
-      <span style={{ fontSize: 10, color: '#B0ADCA', whiteSpace: 'nowrap' as const, fontFamily: "'DM Mono', monospace" }}>
+      <span style={{ fontSize: 9.5, color: '#C4C0D8', whiteSpace: 'nowrap' as const, fontFamily: "'DM Mono', monospace" }}>
         1p={periodMinutes}m
       </span>
 
-      {/* AI Fill — subtle, not dominant */}
+      {/* AI Suggest — invisible intelligence */}
       <button onClick={handleAIPeriodSuggest} style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: '3px 9px', borderRadius: 5,
-        border: '1px solid #D8D2FF', background: '#F5F2FF',
-        color: '#6D5FC4', fontSize: 10.5, fontWeight: 700,
+        display: 'inline-flex', alignItems: 'center', gap: 3,
+        padding: '2px 7px', borderRadius: 4,
+        border: '1px solid #EAE8FF', background: 'transparent',
+        color: '#A99FF5', fontSize: 10, fontWeight: 600,
         cursor: 'pointer', fontFamily: 'inherit',
       }}
         title="AI-fill all sections with conflict-free allocations">
-        <Sparkles size={10} /> AI Fill
+        <Sparkles size={9} /> Suggest
       </button>
 
-      {/* Reports — text link style */}
+      {/* Reports */}
       <button onClick={() => setShowReport('periods')} style={{
         display: 'inline-flex', alignItems: 'center', gap: 3,
-        padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA',
-        background: 'transparent', color: '#8B87AD',
-        fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+        padding: '2px 7px', borderRadius: 4, border: '1px solid #EEECF2',
+        background: 'transparent', color: '#A8A4C0',
+        fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
       }}
         title="View class-wise and subject-wise reports">
-        <FileText size={10} /> Reports
+        <FileText size={9} /> Reports
       </button>
     </>
   )
@@ -225,20 +228,14 @@ export function StepAllocation() {
   return (
     <div style={{ padding: '12px 20px 20px', maxWidth: 1400, margin: '0 auto' }}>
 
-      {/* ── Header — minimal, inline ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <Grid3x3 size={15} color="#7C6FE0" />
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#13111E', margin: 0 }}>Allocation</h2>
-        <span style={{ fontSize: 11, color: '#9B97B8', marginLeft: 4 }}>
-          Periods matrix · Teacher assignments · Validation
-        </span>
-      </div>
-
-      {/* ── Sub-tabs ── */}
+      {/* ── Sub-tabs (single navigation — no redundant subtitle) ── */}
       <div style={{
-        display: 'flex', gap: 0, marginBottom: 10,
-        borderBottom: '1px solid #E8E4FF',
+        display: 'flex', alignItems: 'center', gap: 0, marginBottom: 10,
+        borderBottom: '1px solid #EEECF8',
       }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#13111E', padding: '0 14px 0 0', marginRight: 4, borderRight: '1px solid #EEECF8' }}>
+          Allocation
+        </span>
         <SubTab active={sub === 'periods'}    onClick={() => setSub('periods')}    icon={<Grid3x3 size={11} />}      label="Period allocation" />
         <SubTab active={sub === 'teachers'}   onClick={() => setSub('teachers')}   icon={<Users size={11} />}         label="Teacher allocation" />
         <SubTab active={sub === 'validation'} onClick={() => setSub('validation')} icon={<ShieldCheck size={11} />}   label="Validation" />
