@@ -259,7 +259,7 @@ const GRID_STYLES = `
 }
 .ag-alloc-wrap .ag-cell-edit-wrapper input {
   font-family: 'DM Mono', monospace !important; font-size: 12px !important;
-  font-weight: 600; color: #13111E !important; text-align: right;
+  font-weight: 600; color: #13111E !important; text-align: left;
 }
 
 /* ── Pinned columns ── */
@@ -403,6 +403,13 @@ export function AllocationGridAG({
     resizable: true,
     suppressMovable: false,
     suppressHeaderMenuButton: true,
+    // Suppress Esc from jumping focus to the column header when not editing.
+    // AG Grid's default: Esc on a non-editing cell focuses the column header.
+    // We want Esc to simply clear selection/copy state and stay on the cell (or blur).
+    suppressKeyboardEvent: (params: any) => {
+      if (params.event.key === 'Escape' && !params.editing) return true
+      return false
+    },
     cellClassRules: {
       'ag-cell-copy-march': (p: any) =>
         copyRangeRef.current.size > 0 &&
@@ -639,9 +646,18 @@ export function AllocationGridAG({
     }
 
     if (key === 'escape') {
+      const api = gridRef.current?.api
+      if (!api) return
+      // Clear copy ants
       if (copyRangeRef.current.size > 0) {
         copyRangeRef.current = new Set()
-        gridRef.current?.api?.refreshCells({ force: true })
+        api.refreshCells({ force: true })
+      }
+      // Clear cell selection range + focused cell indicator
+      const isEditing = api.getEditingCells?.().length > 0
+      if (!isEditing) {
+        ;(api as any).clearCellSelection?.()
+        ;(api as any).clearFocusedCell?.()
       }
     }
   }, [])
@@ -652,8 +668,9 @@ export function AllocationGridAG({
       if (wrapperRef.current?.contains(e.target as Node)) return
       const api = gridRef.current?.api
       if (!api) return
-      // Clear cell selection (blue range highlight)
+      // Clear range selection AND focused-cell indicator (both needed to fully remove all highlights)
       ;(api as any).clearCellSelection?.()
+      ;(api as any).clearFocusedCell?.()
       // Clear copy state + marching ants
       if (copyRangeRef.current.size > 0) {
         copyRangeRef.current = new Set()
