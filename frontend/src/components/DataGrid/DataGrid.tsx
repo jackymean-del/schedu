@@ -1145,6 +1145,7 @@ export function DataGrid<T>({
     position: 'relative' as const,
     overflow: 'hidden',
     verticalAlign: 'middle' as const,
+    userSelect: 'none' as const,   // prevent browser text-selection from swallowing mousedown
   }
   const thRowNum: React.CSSProperties = {
     background: TOK.rowNumBg,
@@ -1437,6 +1438,9 @@ export function DataGrid<T>({
                                 padding: '0 8px', lineHeight: `${TOK.cellRowH}px`,
                                 fontFamily: col.type === 'number' ? "'DM Mono', monospace" : 'inherit',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+                                // Transparent to pointer events — all clicks fall through to the <td>
+                                // so text content never intercepts onMouseDown on any browser.
+                                pointerEvents: 'none' as const,
                               }}>
                                 {value == null || value === ''
                                   ? <span style={{ color: '#BBBBBB' }}>{col.placeholder ?? ''}</span>
@@ -2058,6 +2062,7 @@ function renderEditor<T>(
     return (
       <select defaultValue={value ?? ''}
         ref={ref as React.Ref<HTMLSelectElement>}
+        autoFocus
         onChange={e => onCommit(e.target.value)}
         onBlur={e => onCommit(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') onCancel(); if (e.key === 'Enter') onCommit((e.target as HTMLSelectElement).value) }}
@@ -2069,6 +2074,7 @@ function renderEditor<T>(
   return (
     <input
       ref={ref as React.Ref<HTMLInputElement>}
+      autoFocus
       type={col.type === 'number' ? 'number' : 'text'}
       defaultValue={value == null ? '' : String(value)}
       placeholder={col.placeholder ?? ''}
