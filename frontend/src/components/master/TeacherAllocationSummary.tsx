@@ -9,9 +9,14 @@
 
 import { useMemo, useState } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
-import type { Staff, Subject, Section } from '@/types'
-import { Sparkles, AlertTriangle, ChevronRight, BarChart3, ExternalLink } from 'lucide-react'
+import type { Staff } from '@/types'
+import { AlertTriangle, ChevronRight, BarChart3, ExternalLink } from 'lucide-react'
 import { TeacherAllocationModal } from './TeacherAllocationModal'
+
+interface SummaryProps {
+  displayMode?: 'periods' | 'hours'
+  periodMinutes?: number
+}
 
 // ── helpers ──────────────────────────────────────────────────
 
@@ -74,9 +79,9 @@ function statusBadge(load: number, max: number): { label: string; bg: string; fg
 
 // ── component ─────────────────────────────────────────────────
 
-export function TeacherAllocationSummary() {
+export function TeacherAllocationSummary({ displayMode = 'periods', periodMinutes = 40 }: SummaryProps) {
   const store = useTimetableStore() as any
-  const { staff, subjects, sections, teacherAllocations } = store
+  const { staff, teacherAllocations } = store
   const [editTarget, setEditTarget] = useState<{ teacher: string; subject: string } | null>(null)
   const [filter, setFilter] = useState<TeacherType | 'All'>('All')
 
@@ -97,64 +102,25 @@ export function TeacherAllocationSummary() {
   // Filtered rows
   const visible = filter === 'All' ? rows : rows.filter((r: any) => r.type === filter)
 
-  // Auto-assign (reuse logic from TeacherAllocationGrid)
-  const handleAutoAssign = () => {
-    const next: Record<string, Record<string, Record<string, number>>> = {}
-    const teacherLoad: Record<string, number> = {}
-    staff.forEach((t: Staff) => { teacherLoad[t.name] = 0; next[t.name] = {} })
-
-    sections.forEach((sec: Section) => {
-      subjects.forEach((sub: Subject) => {
-        const alloc = store.subjectAllocations?.[sec.name]?.[sub.name]
-        const target = alloc ? (store.parseAllocation?.(alloc)?.weeklyTotal ?? sub.periodsPerWeek ?? 0) : (sub.periodsPerWeek ?? 0)
-        if (target <= 0) return
-        const pool: Staff[] = staff.filter((t: Staff) => {
-          const ts = (t.subjects ?? []) as string[]
-          return ts.some((s: string) => s === sub.name || s === `${(sec as any).grade}::${sub.name}`)
-        })
-        const eligible = pool.length > 0 ? pool : staff
-        if (!eligible.length) return
-        const chosen = [...eligible].sort((a: Staff, b: Staff) =>
-          (teacherLoad[a.name] ?? 0) - (teacherLoad[b.name] ?? 0)
-        )[0]
-        if (!next[chosen.name]) next[chosen.name] = {}
-        if (!next[chosen.name][sec.name]) next[chosen.name][sec.name] = {}
-        next[chosen.name][sec.name][sub.name] = (next[chosen.name][sec.name][sub.name] ?? 0) + target
-        teacherLoad[chosen.name] = (teacherLoad[chosen.name] ?? 0) + target
-      })
-    })
-    Object.keys(next).forEach(k => { if (!Object.keys(next[k]).length) delete next[k] })
-    store.setTeacherAllocations?.(next)
-  }
-
   return (
     <div>
-
       {/* ── Type filter chips ── */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const, alignItems: 'center' }}>
         {(['All', 'Class Teacher', 'Specialist', 'Activity'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{
-              padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+              padding: '4px 11px', borderRadius: 20, border: 'none', cursor: 'pointer',
               fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
               background: filter === f ? '#7C6FE0' : '#F0EDFF',
               color: filter === f ? '#fff' : '#4B5275',
-              transition: 'all 0.12s',
             }}>
             {f}
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <button onClick={handleAutoAssign}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 8, border: 'none',
-            background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff',
-            fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-            boxShadow: '0 2px 8px rgba(124,111,224,0.3)',
-          }}>
-          <Sparkles size={12} /> ✦ Auto-assign teachers
-        </button>
+        <span style={{ fontSize: 10, color: '#8B87AD' }}>
+          {displayMode === 'hours' ? `1 period = ${periodMinutes} min` : `Max load in periods`}
+        </span>
       </div>
 
       {/* ── AI overload warning ── */}
@@ -224,6 +190,8 @@ export function TeacherAllocationSummary() {
             key={row.t.id ?? row.t.name}
             row={row}
             borderTop={i > 0}
+            displayMode={displayMode}
+            periodMinutes={periodMinutes}
             onEditSubject={(sub) => setEditTarget({ teacher: row.t.name, subject: sub })}
           />
         ))}
@@ -261,16 +229,22 @@ export function TeacherAllocationSummary() {
 // ── TeacherRow ────────────────────────────────────────────────
 
 function TeacherRow({
-  row, borderTop, onEditSubject,
+  row, borderTop, displayMode, periodMinutes, onEditSubject,
 }: {
   row: { t: Staff; load: number; max: number; subs: string[]; secs: string[]; type: TeacherType; status: ReturnType<typeof statusBadge> }
   borderTop: boolean
+  displayMode: 'periods' | 'hours'
+  periodMinutes: number
   onEditSubject: (sub: string) => void
 }) {
   const { t, load, max, subs, secs, type, status } = row
   const pct = max > 0 ? Math.min(100, (load / max) * 100) : 0
   const barColor = load > max ? '#DC2626' : load >= max * 0.9 ? '#D4920E' : load > 0 ? '#16A34A' : '#B8B4D4'
   const typeStyle = TYPE_STYLE[type]
+
+  const fmtLoad = (p: number) => displayMode === 'hours'
+    ? `${Math.round(p * periodMinutes / 60 * 10) / 10}h`
+    : `${p}p`
 
   return (
     <div style={{
@@ -340,9 +314,9 @@ function TeacherRow({
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: barColor, fontFamily: "'DM Mono', monospace" }}>
-            {load}
+            {fmtLoad(load)}
           </span>
-          <span style={{ fontSize: 9, color: '#B8B4D4', fontFamily: "'DM Mono', monospace" }}>/ {max}</span>
+          <span style={{ fontSize: 9, color: '#B8B4D4', fontFamily: "'DM Mono', monospace" }}>/ {fmtLoad(max)}</span>
         </div>
         <div style={{ height: 6, background: '#F0EDFF', borderRadius: 3, overflow: 'hidden' }}>
           <div style={{

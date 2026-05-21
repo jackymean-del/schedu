@@ -243,23 +243,37 @@ export function StepAllocation() {
                   const next: Record<string, Record<string, Record<string, number>>> = {}
                   const load: Record<string, number> = {}
                   ;(staff as Staff[]).forEach((t: Staff) => { load[t.name] = 0; next[t.name] = {} })
+
                   ;(sections as Section[]).forEach((sec: Section) => {
                     ;(subjects as Subject[]).forEach((s: Subject) => {
                       const raw = subjectAllocations?.[sec.name]?.[s.name]
-                      const target = raw ? (parseAllocation(raw).weeklyTotal || s.periodsPerWeek || 0) : (s.periodsPerWeek ?? 0)
+                      const target = raw
+                        ? (parseAllocation(raw).weeklyTotal || s.periodsPerWeek || 0)
+                        : (s.periodsPerWeek ?? 0)
                       if (target <= 0) return
+
+                      // Eligible teachers: qualified for this subject
                       const pool: Staff[] = (staff as Staff[]).filter((t: Staff) => {
                         const ts = (t.subjects ?? []) as string[]
                         return ts.some((x: string) => x === s.name || x === `${(sec as any).grade}::${s.name}`)
                       })
                       const eligible = pool.length > 0 ? pool : (staff as Staff[])
                       if (!eligible.length) return
-                      const chosen = [...eligible].sort((a: Staff, b: Staff) =>
+
+                      // Pick teacher with most remaining headroom, avoid breaching max
+                      const maxFn = (t: Staff) => (t as any).maxPeriodsPerWeek ?? 40
+                      const withRoom = eligible
+                        .filter(t => (load[t.name] ?? 0) + target <= maxFn(t))
+                        .sort((a, b) => (load[a.name] ?? 0) - (load[b.name] ?? 0))
+                      // Fall back to least-loaded if all are at capacity
+                      const chosen = withRoom[0] ?? [...eligible].sort((a, b) =>
                         (load[a.name] ?? 0) - (load[b.name] ?? 0)
                       )[0]
+
                       if (!next[chosen.name]) next[chosen.name] = {}
                       if (!next[chosen.name][sec.name]) next[chosen.name][sec.name] = {}
-                      next[chosen.name][sec.name][s.name] = (next[chosen.name][sec.name][s.name] ?? 0) + target
+                      next[chosen.name][sec.name][s.name] =
+                        (next[chosen.name][sec.name][s.name] ?? 0) + target
                       load[chosen.name] = (load[chosen.name] ?? 0) + target
                     })
                   })
@@ -311,8 +325,8 @@ export function StepAllocation() {
           </div>
 
           {/* Tab content */}
-          {sub === 'periods'    && <AllocationGrid />}
-          {sub === 'teachers'   && <TeacherAllocationSummary />}
+          {sub === 'periods'    && <AllocationGrid displayMode={displayMode} periodMinutes={periodMinutes} />}
+          {sub === 'teachers'   && <TeacherAllocationSummary displayMode={displayMode} periodMinutes={periodMinutes} />}
           {sub === 'validation' && (
             <ValidationView
               hardConflicts={hardConflicts}

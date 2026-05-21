@@ -7,11 +7,10 @@
  *   "5"   "5+1"   "3(2X)"   "2L"   "6T"
  *
  * Live features:
- *   - Per-cell parse + validation (red badge for invalid syntax)
- *   - Per-row "Used / Capacity" badge with utilisation status
- *     (light / ok / tight / over)
- *   - AI Suggest button that fills sensible defaults from
- *     Subject.periodsPerWeek and CBSE_PW heuristics
+ *   - Compact cells (minimal padding, monospace value)
+ *   - Per-row "Used / Cap" badge with utilisation bar
+ *   - AI Suggest fills conflict-free defaults (scales to capacity)
+ *   - Period / Hours display toggle via displayMode prop
  *   - All DataGrid features (paste, transpose, CSV, undo, etc.)
  */
 
@@ -20,7 +19,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import type { Subject, Section, Period } from '@/types'
 import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
 import {
-  parseAllocation, formatAllocation, validateAllocationCapacity,
+  parseAllocation, validateAllocationCapacity,
 } from '@/lib/allocationSyntax'
 import {
   computeCapacity, capacityForSection, inferBandFromSection,
@@ -28,6 +27,11 @@ import {
 } from '@/lib/capacityEngine'
 import { Sparkles, Grid3x3, Trophy } from 'lucide-react'
 import { CandidateComparisonModal } from './CandidateComparisonModal'
+
+interface Props {
+  displayMode?: 'periods' | 'hours'
+  periodMinutes?: number
+}
 
 interface Row {
   sectionName: string
@@ -37,25 +41,24 @@ interface Row {
 }
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string; border: string; label: string }> = {
-  empty:  { bg: '#F8F7FF', fg: '#B0B0C0', border: '#ECEAFB', label: 'empty' },
-  light:  { bg: '#EFF6FF', fg: '#1D4ED8', border: '#DBEAFE', label: 'light' },
-  ok:     { bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0', label: 'ok' },
-  tight:  { bg: '#FEF3C7', fg: '#92400E', border: '#FDE68A', label: 'tight' },
-  over:   { bg: '#FEE2E2', fg: '#991B1B', border: '#FECACA', label: 'OVER' },
+  empty:  { bg: '#F8F7FF', fg: '#B0B0C0', border: '#ECEAFB', label: 'Empty' },
+  light:  { bg: '#EFF6FF', fg: '#1D4ED8', border: '#DBEAFE', label: 'Light' },
+  ok:     { bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0', label: 'OK'    },
+  tight:  { bg: '#FEF3C7', fg: '#92400E', border: '#FDE68A', label: 'Tight' },
+  over:   { bg: '#FEE2E2', fg: '#991B1B', border: '#FECACA', label: 'Over'  },
 }
 
-export function AllocationGrid() {
+export function AllocationGrid({ displayMode = 'periods', periodMinutes = 40 }: Props) {
   const store = useTimetableStore() as any
   const { sections, subjects, subjectAllocations, config } = store
   const periods: Period[] = store.periods ?? []
   const workDays: string[] = config?.workDays ?? ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']
 
-  // Compare-candidates trigger — opens CandidateComparisonModal for one (section, subject)
   const [compareTarget, setCompareTarget] = useState<{ section: Section; subject: Subject } | null>(null)
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])
 
-  // Per-section row total (sum of weeklyTotal across all subject cells)
+  // Per-section row total
   const rowTotals = useMemo(() => {
     const m: Record<string, number> = {}
     sections.forEach((sec: Section) => {
@@ -80,17 +83,28 @@ export function AllocationGrid() {
     __sectionId: sec.id,
   })), [sections])
 
-  // Build columns: Section (sticky) + Used/Capacity (computed) + one per subject
+  // Helpers for display mode conversion
+  const toDisplay = (periods: number) =>
+    displayMode === 'hours'
+      ? `${Math.round(periods * periodMinutes / 60 * 10) / 10}h`
+      : String(periods)
+
+  // Build columns
   const columns: DataGridColumn<Row>[] = useMemo(() => {
     const base: DataGridColumn<Row>[] = [
-      { key: 'sectionName', label: 'Section', type: 'text', sticky: true, width: 120, readonly: true },
       {
-        key: '__usage', label: 'Used / Cap', type: 'computed', width: 130, readonly: true,
+        key: 'sectionName', label: 'Section', type: 'text',
+        sticky: true, width: 110, readonly: true,
+      },
+      {
+        key: '__usage', label: 'Used / Cap', type: 'computed', width: 120, readonly: true,
         format: (row) => {
           const band = inferBandFromSection(row.sectionName)
           const c = capacityForSection(cap, band)
           const u = rowTotals[row.sectionName] ?? 0
-          return `${u} / ${c}`
+          return displayMode === 'hours'
+            ? `${Math.round(u * periodMinutes / 60 * 10) / 10}h / ${Math.round(c * periodMinutes / 60 * 10) / 10}h`
+            : `${u} / ${c}`
         },
         render: (_, row) => {
           const band = inferBandFromSection(row.sectionName)
@@ -99,30 +113,25 @@ export function AllocationGrid() {
           const status = utilisationStatus(u, c)
           const s = STATUS_STYLE[status]
           const pct = c > 0 ? Math.min(100, Math.round((u / c) * 100)) : 0
+          const barColor = status === 'over' ? '#DC2626' : status === 'tight' ? '#D97706' : status === 'ok' ? '#16A34A' : '#7C6FE0'
+          const uLabel = displayMode === 'hours' ? `${Math.round(u * periodMinutes / 60 * 10) / 10}h` : String(u)
+          const cLabel = displayMode === 'hours' ? `${Math.round(c * periodMinutes / 60 * 10) / 10}h` : String(c)
           return (
-            <div style={{ padding: '8px 12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>
-                  {u} / {c}
+            <div style={{ padding: '4px 10px', minWidth: 100 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#13111E', fontFamily: "'DM Mono', monospace", letterSpacing: '-0.3px' }}>
+                  {uLabel} / {cLabel}
                 </span>
                 <span style={{
-                  fontSize: 8, fontWeight: 800, letterSpacing: '0.05em',
-                  padding: '1px 6px', borderRadius: 8,
+                  fontSize: 8, fontWeight: 800, letterSpacing: '0.03em',
+                  padding: '1px 5px', borderRadius: 4, whiteSpace: 'nowrap' as const,
                   background: s.bg, color: s.fg, border: `1px solid ${s.border}`,
-                  textTransform: 'uppercase',
                 }}>
-                  {s.label}
+                  {s.label.toUpperCase()}
                 </span>
               </div>
-              <div style={{ height: 3, background: '#F5F2FF', borderRadius: 2, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${pct}%`,
-                  background: status === 'over' ? '#DC2626'
-                    : status === 'tight' ? '#D4920E'
-                    : status === 'ok'    ? '#16A34A'
-                    : '#7C6FE0',
-                  transition: 'width 0.2s',
-                }} />
+              <div style={{ height: 2, background: '#F0EDFF', borderRadius: 1, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: barColor, transition: 'width 0.2s' }} />
               </div>
             </div>
           )
@@ -133,14 +142,13 @@ export function AllocationGrid() {
     subjects.forEach((sub: Subject) => {
       base.push({
         key: `subj:${sub.name}`,
-        label: sub.name,
+        label: sub.shortName ?? sub.name,
         type: 'text',
-        minWidth: 88,
+        minWidth: 72,
         align: 'right',
         placeholder: sub.periodsPerWeek ? String(sub.periodsPerWeek) : '—',
         getValue: (r) => subjectAllocations[r.sectionName]?.[sub.name] ?? '',
         setValue: (r, v) => {
-          // Persist via store action; return row unchanged so DataGrid prop stays stable
           store.setSubjectAllocationCell?.(r.sectionName, sub.name, String(v ?? ''))
           return r
         },
@@ -157,25 +165,39 @@ export function AllocationGrid() {
             : { ok: false, reason: parsed?.error ?? 'empty' }
           const invalid = !!display && parsed && !parsed.valid
           const overCap = !!display && parsed && parsed.valid && !validation.ok
+
+          // Convert to display unit
+          const displayVal = (() => {
+            if (!display) return ''
+            if (displayMode === 'hours' && parsed?.valid && parsed.weeklyTotal > 0) {
+              return `${Math.round(parsed.weeklyTotal * periodMinutes / 60 * 10) / 10}h`
+            }
+            return display
+          })()
+
           return (
             <div style={{
-              padding: '8px 12px', position: 'relative' as const,
+              padding: '3px 8px',
               textAlign: 'right' as const,
-              background: invalid ? '#FEE2E2' : overCap ? '#FEF3C7' : 'transparent',
+              position: 'relative' as const,
+              background: invalid ? '#FEF2F2' : overCap ? '#FFFBEB' : 'transparent',
             }}>
               <span style={{
                 fontFamily: "'DM Mono', monospace",
-                fontSize: 13, fontWeight: 700,
-                color: invalid ? '#991B1B' : overCap ? '#92400E' : '#13111E',
-                opacity: !isStored && display ? 0.5 : 1,
+                fontSize: 12, fontWeight: 700,
+                color: invalid ? '#DC2626' : overCap ? '#D97706' : isStored ? '#13111E' : '#C0BBEE',
               }}>
-                {display || <span style={{ color: '#B8B4D4' }}>—</span>}
+                {displayVal
+                  ? displayVal
+                  : <span style={{ color: '#E0DCF5', fontWeight: 400, fontSize: 10 }}>—</span>
+                }
               </span>
-              {parsed?.valid && !overCap && display && (
+              {/* tiny weekly-total indicator top-right, periods mode only */}
+              {displayMode === 'periods' && parsed?.valid && isStored && (
                 <span style={{
-                  position: 'absolute' as const, top: 3, right: 5,
-                  fontSize: 7, fontWeight: 800, letterSpacing: '0.05em',
-                  color: parsed.weeklyTotal > 5 ? '#7C6FE0' : '#16A34A',
+                  position: 'absolute' as const, top: 1, right: 3,
+                  fontSize: 7, fontWeight: 800,
+                  color: parsed.weeklyTotal > 6 ? '#7C6FE0' : '#16A34A',
                   pointerEvents: 'none' as const,
                 }}>
                   {parsed.weeklyTotal}
@@ -183,38 +205,32 @@ export function AllocationGrid() {
               )}
               {invalid && (
                 <span style={{
-                  position: 'absolute' as const, top: 3, right: 5,
-                  fontSize: 8, fontWeight: 800, color: '#DC2626',
+                  position: 'absolute' as const, top: 2, right: 4,
+                  fontSize: 9, fontWeight: 800, color: '#DC2626',
                   pointerEvents: 'none' as const,
                 }}>!</span>
               )}
-              {/* Compare-candidates trigger — bottom-left of cell */}
+              {/* Compare-candidates trophy icon */}
               {parsed?.valid && parsed.weeklyTotal > 0 && (
                 <button
                   onClick={e => {
                     e.stopPropagation()
-                    const sec = (sections as Section[]).find(s => s.name === row.sectionName)
+                    const sec = (sections as Section[]).find((s: Section) => s.name === row.sectionName)
                     if (sec) setCompareTarget({ section: sec, subject: sub })
                   }}
-                  title="Compare candidate teachers for this slot"
+                  title="Compare candidate teachers"
                   style={{
-                    position: 'absolute' as const, bottom: 2, left: 4,
+                    position: 'absolute' as const, top: '50%', left: 3,
+                    transform: 'translateY(-50%)',
                     background: 'transparent', border: 'none', padding: 1,
-                    cursor: 'pointer', color: '#7C6FE0',
+                    cursor: 'pointer', color: '#C4BAF5',
                     display: 'inline-flex', alignItems: 'center',
-                    opacity: 0.55,
-                    transition: 'opacity 0.12s, transform 0.12s',
+                    opacity: 0, transition: 'opacity 0.1s',
                   }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.opacity = '1'
-                    ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.2)'
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.opacity = '0.55'
-                    ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
-                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = '#7C6FE0' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0' }}
                 >
-                  <Trophy size={10} />
+                  <Trophy size={9} />
                 </button>
               )}
             </div>
@@ -224,78 +240,101 @@ export function AllocationGrid() {
     })
 
     return base
-  }, [subjects, sections, cap, rowTotals, subjectAllocations, store])
+  }, [subjects, sections, cap, rowTotals, subjectAllocations, store, displayMode, periodMinutes])
 
-  // AI Suggest — fill in defaults from Subject.periodsPerWeek
+  // ── AI Suggest — conflict-free defaults ──────────────────────
+  // Scales periods proportionally so the section total never exceeds its capacity.
   const handleAISuggest = () => {
     const next: Record<string, Record<string, string>> = {}
+
     sections.forEach((sec: Section) => {
+      const band = inferBandFromSection(sec.name)
+      const capacity = capacityForSection(cap, band)
+
+      // Subjects that have a default periodsPerWeek
+      interface IdealItem { name: string; pw: number; isLab: boolean }
+      const ideal: IdealItem[] = (subjects as Subject[])
+        .filter((sub: Subject) => sub.periodsPerWeek && sub.periodsPerWeek > 0)
+        .map((sub: Subject) => ({
+          name: sub.name,
+          pw: sub.periodsPerWeek!,
+          isLab: !!(sub as any).requiresLab,
+        }))
+
+      const totalIdeal = ideal.reduce((a, s) => a + s.pw, 0)
       const row: Record<string, string> = {}
-      subjects.forEach((sub: Subject) => {
-        if (sub.periodsPerWeek && sub.periodsPerWeek > 0) {
-          // Labs get "n+1L" pattern, theory subjects stay plain
-          if ((sub as any).requiresLab) {
-            const theory = Math.max(1, sub.periodsPerWeek - 1)
-            row[sub.name] = `${theory}+1L`
-          } else {
-            row[sub.name] = String(sub.periodsPerWeek)
-          }
-        }
-      })
-      if (Object.keys(row).length > 0) next[sec.name] = row
+
+      if (ideal.length === 0) return
+
+      if (capacity <= 0 || totalIdeal <= capacity) {
+        // Everything fits — use as-is
+        ideal.forEach(s => {
+          row[s.name] = s.isLab
+            ? `${Math.max(1, s.pw - 1)}+1L`
+            : String(s.pw)
+        })
+      } else {
+        // Scale proportionally so total === capacity (no conflicts)
+        const scale = capacity / totalIdeal
+        let allocated = 0
+        ideal.forEach((s, i) => {
+          const isLast = i === ideal.length - 1
+          const raw = isLast
+            ? Math.max(0, capacity - allocated)
+            : Math.max(1, Math.round(s.pw * scale))
+          if (raw > 0) row[s.name] = String(raw)
+          allocated += raw
+        })
+      }
+
+      if (Object.keys(row).length) next[sec.name] = row
     })
+
     store.setSubjectAllocations?.(next)
   }
 
-  // DataGrid expects an onChange but we mutate via setValue → store.setSubjectAllocationCell.
-  // Provide a no-op to satisfy the signature.
-  const handleChange = (_newRows: Row[]) => { /* writes are per-cell */ }
+  const handleChange = (_newRows: Row[]) => { /* writes are per-cell via setValue */ }
 
   return (
     <div>
       {/* Capacity banner */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' as const,
-        padding: '10px 14px', marginBottom: 12,
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const,
+        padding: '8px 12px', marginBottom: 10,
         background: 'linear-gradient(135deg, #EDE9FF 0%, #FAFAFE 100%)',
-        border: '1px solid #D8D2FF', borderRadius: 10,
+        border: '1px solid #D8D2FF', borderRadius: 8,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Grid3x3 size={14} color="#7C6FE0" />
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#7C6FE0' }}>
-            Weekly Capacity
-          </span>
-        </div>
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 800, color: '#13111E' }}>
-          {cap.weeklyCapacity} periods/week
+        <Grid3x3 size={13} color="#7C6FE0" />
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>
+          {displayMode === 'hours'
+            ? `${Math.round(cap.weeklyCapacity * periodMinutes / 60 * 10) / 10}h/week`
+            : `${cap.weeklyCapacity} periods/week`
+          }
         </span>
-        <span style={{ fontSize: 11, color: '#4B5275' }}>
-          {cap.workingDays} working days × {cap.teachingPeriodsPerDay} teaching periods
-          {cap.breakPeriodsPerDay > 0 && ` (− ${cap.breakPeriodsPerDay} break${cap.breakPeriodsPerDay !== 1 ? 's' : ''}/day)`}
+        <span style={{ fontSize: 10, color: '#4B5275' }}>
+          {cap.workingDays} days × {cap.teachingPeriodsPerDay} periods
+          {cap.breakPeriodsPerDay > 0 && ` − ${cap.breakPeriodsPerDay} break/day`}
         </span>
         <div style={{ flex: 1 }} />
         <button onClick={handleAISuggest}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 8, border: 'none',
-            background: '#7C6FE0', color: '#fff', fontSize: 11.5, fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 12px', borderRadius: 7, border: 'none',
+            background: '#7C6FE0', color: '#fff', fontSize: 11, fontWeight: 700,
             cursor: 'pointer', fontFamily: 'inherit',
           }}>
-          <Sparkles size={12} /> Suggest defaults
+          <Sparkles size={11} /> Suggest defaults
         </button>
       </div>
 
-      {/* Legend */}
-      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginBottom: 8, fontSize: 10, color: '#4B5275' }}>
-        <span><strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>5</strong> theory</span>
-        <span style={{ color: '#D8D2FF' }}>·</span>
-        <span><strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>5+1</strong> theory + lab</span>
-        <span style={{ color: '#D8D2FF' }}>·</span>
-        <span><strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>3(2X)</strong> double periods</span>
-        <span style={{ color: '#D8D2FF' }}>·</span>
-        <span><strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>2L</strong> lab only</span>
-        <span style={{ color: '#D8D2FF' }}>·</span>
-        <span><strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>6T</strong> explicit theory</span>
+      {/* Syntax legend */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 10, color: '#4B5275', flexWrap: 'wrap' as const }}>
+        {[['5', 'theory'], ['5+1', '+ lab'], ['3(2X)', 'doubles'], ['2L', 'lab only']].map(([s, d]) => (
+          <span key={s}>
+            <strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>{s}</strong>
+            {' '}{d}
+          </span>
+        ))}
       </div>
 
       <DataGrid<Row>
@@ -312,7 +351,6 @@ export function AllocationGrid() {
         }}
       />
 
-      {/* Compare candidates modal — opens on Trophy button click */}
       {compareTarget && (
         <CandidateComparisonModal
           section={compareTarget.section}
