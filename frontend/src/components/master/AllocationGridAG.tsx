@@ -395,17 +395,49 @@ export function AllocationGridAG({
     getPeriodMinutes: () => periodMinRef.current,
   }), [])
 
-  // ── defaultColDef — stable, uses copyRangeRef closure ────────
-  // cellClassRules reads copyRangeRef.current at render time (ref is stable).
-  // No rebuild needed when copy state changes — refreshCells() triggers re-eval.
+  // ── Marching ants — direct DOM class manipulation ────────────
+  // Reason: cellClassRules + refreshCells is unreliable (AG Grid may skip cells
+  // it considers unchanged). Direct DOM manipulation is guaranteed to apply the
+  // class to every rendered cell in the selection, every time.
+  const applyMarchingAnts = useCallback((set: Set<string>) => {
+    requestAnimationFrame(() => {
+      const gridEl = wrapperRef.current
+      if (!gridEl) return
+      // Remove all existing march classes first
+      gridEl.querySelectorAll('.ag-cell-copy-march').forEach(
+        el => el.classList.remove('ag-cell-copy-march')
+      )
+      if (set.size === 0) return
+      // Add class to every cell whose "rowIndex:colId" key is in the set
+      gridEl.querySelectorAll('.ag-row[row-index] .ag-cell[col-id]').forEach(cellEl => {
+        const rowEl   = cellEl.closest('[row-index]')
+        const ri      = parseInt(rowEl?.getAttribute('row-index') ?? '-1')
+        const colId   = cellEl.getAttribute('col-id') ?? ''
+        if (ri >= 0 && set.has(`${ri}:${colId}`)) {
+          cellEl.classList.add('ag-cell-copy-march')
+        }
+      })
+    })
+  }, [])
+
+  const clearMarchingAnts = useCallback(() => {
+    copyRangeRef.current = new Set()
+    requestAnimationFrame(() => {
+      wrapperRef.current?.querySelectorAll('.ag-cell-copy-march').forEach(
+        el => el.classList.remove('ag-cell-copy-march')
+      )
+    })
+  }, [])
+
+  // ── defaultColDef — stable ────────────────────────────────────
   const defaultColDef = useMemo<ColDef<RowData>>(() => ({
     sortable: true,
     resizable: true,
     suppressMovable: false,
     suppressHeaderMenuButton: true,
     // suppressKeyboardEvent fires BEFORE AG Grid processes the key.
-    // On Esc (non-editing): synchronously blur + clear focus here so the
-    // header never receives focus at all — eliminating the visual flicker.
+    // On Esc (non-editing): synchronously blur + clear focus so the
+    // header never receives focus — eliminating the visual flicker.
     suppressKeyboardEvent: (params: any) => {
       if (params.event.key === 'Escape' && !params.editing) {
         ;(params.api as any).clearCellSelection?.()
@@ -415,18 +447,15 @@ export function AllocationGridAG({
       }
       return false
     },
-    // Esc on a header cell: blur immediately (no setTimeout needed here).
+    // Esc on a header: clear range selection + blur entirely.
     suppressHeaderKeyboardEvent: (params: any) => {
       if (params.event.key === 'Escape') {
+        ;(params.api as any).clearCellSelection?.()
+        ;(params.api as any).clearFocusedCell?.()
         ;(document.activeElement as HTMLElement)?.blur?.()
         return true
       }
       return false
-    },
-    cellClassRules: {
-      'ag-cell-copy-march': (p: any) =>
-        copyRangeRef.current.size > 0 &&
-        copyRangeRef.current.has(`${p.rowIndex}:${p.column.getColId()}`),
     },
   }), []) // empty deps — stable for grid lifetime
 
@@ -618,10 +647,9 @@ export function AllocationGridAG({
   const onPasteStart = useCallback(() => { isPastingRef.current = true }, [])
   const onPasteEnd   = useCallback(() => {
     isPastingRef.current = false
-    // Clear copy ants on paste (same as Excel)
-    copyRangeRef.current = new Set()
-    requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: true }))
-  }, [])
+    clearMarchingAnts()
+    requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
+  }, [clearMarchingAnts])
 
   // ── onCellKeyDown — OBSERVE ONLY, no preventDefault ───────────
   // Used solely to:
@@ -635,7 +663,7 @@ export function AllocationGridAG({
     const ctrl = ke.ctrlKey || ke.metaKey
 
     if (ctrl && key === 'c') {
-      // rAF: let AG Grid process the copy first, then read back the ranges
+      // rAF: let AG Grid process the copy first, then read the resulting ranges
       requestAnimationFrame(() => {
         const api = gridRef.current?.api
         if (!api) return
@@ -652,50 +680,33 @@ export function AllocationGridAG({
           })
         })
         copyRangeRef.current = newSet
-        // force: true — AG Grid can't know cellClassRules changed, must force re-eval
-        api.refreshCells({ force: true })
+        applyMarchingAnts(newSet)   // direct DOM — no refreshCells needed
       })
       return
     }
 
     if (key === 'escape') {
-      const api = gridRef.current?.api
-      if (!api) return
-      // Clear copy ants
-      if (copyRangeRef.current.size > 0) {
-        copyRangeRef.current = new Set()
-        api.refreshCells({ force: true })
-      }
-      // Clear cell selection range + focused cell indicator
-      const isEditing = api.getEditingCells?.().length > 0
-      if (!isEditing) {
-        ;(api as any).clearCellSelection?.()
-        ;(api as any).clearFocusedCell?.()
-      }
+      // suppressKeyboardEvent already handled clearCellSelection + blur.
+      // Just clear the marching ants here.
+      clearMarchingAnts()
     }
-  }, [])
+  }, [applyMarchingAnts, clearMarchingAnts])
 
   // ── Click outside → clear selection & copy state ──────────────
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
       if (wrapperRef.current?.contains(e.target as Node)) return
       const api = gridRef.current?.api
-      if (!api) return
-      // Blur the active DOM element first — this removes the browser focus ring
-      // even when the click target is a non-focusable element (plain div etc.)
       ;(document.activeElement as HTMLElement)?.blur?.()
-      // Then clear AG Grid's internal focused-cell and range-selection state
-      ;(api as any).clearCellSelection?.()
-      ;(api as any).clearFocusedCell?.()
-      // Clear copy state + marching ants
-      if (copyRangeRef.current.size > 0) {
-        copyRangeRef.current = new Set()
-        api.refreshCells({ force: true })
+      if (api) {
+        ;(api as any).clearCellSelection?.()
+        ;(api as any).clearFocusedCell?.()
       }
+      clearMarchingAnts()
     }
     document.addEventListener('mousedown', onDocMouseDown)
     return () => document.removeEventListener('mousedown', onDocMouseDown)
-  }, [])
+  }, [clearMarchingAnts])
 
   // ── Selection → status bar ─────────────────────────────────────
   const onCellSelectionChanged = useCallback((e: CellSelectionChangedEvent<RowData>) => {
