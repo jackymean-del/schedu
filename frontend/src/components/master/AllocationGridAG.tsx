@@ -410,6 +410,15 @@ export function AllocationGridAG({
       if (params.event.key === 'Escape' && !params.editing) return true
       return false
     },
+    // Suppress Esc on header cells — AG Grid's default re-focuses the header.
+    // Instead, blur the active element entirely so focus leaves the grid.
+    suppressHeaderKeyboardEvent: (params: any) => {
+      if (params.event.key === 'Escape') {
+        setTimeout(() => (document.activeElement as HTMLElement)?.blur?.(), 0)
+        return true
+      }
+      return false
+    },
     cellClassRules: {
       'ag-cell-copy-march': (p: any) =>
         copyRangeRef.current.size > 0 &&
