@@ -348,16 +348,16 @@ function SubjectAssignmentCell({ teacher, subjects, classOpts, onUpdateMappings 
         }}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
-          background: showAdd ? P : P_L,
-          border: `1px solid ${showAdd ? P : P_B}`,
-          borderRadius: 5, color: showAdd ? '#fff' : P_D,
+          background: showAdd ? P : '#fff',
+          border: `1.5px solid ${showAdd ? P : '#DDD8FF'}`,
+          borderRadius: 5, color: showAdd ? '#fff' : P,
           fontSize: 11, fontWeight: 700,
-          padding: '2px 8px',
+          padding: '3px 9px',
           marginTop: mappings.length > 0 ? 4 : 0,
           cursor: 'pointer', transition: 'all 0.12s',
         }}
-        onMouseEnter={e => { if (!showAdd) { e.currentTarget.style.background = '#DDD8FF'; e.currentTarget.style.borderColor = P } }}
-        onMouseLeave={e => { if (!showAdd) { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B } }}
+        onMouseEnter={e => { if (!showAdd) { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P } }}
+        onMouseLeave={e => { if (!showAdd) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF' } }}
       >
         <Plus size={10} /> Subject
       </button>
@@ -478,6 +478,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
   onDelete: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [hovered, setHovered]   = useState(false)
   const mappings = getMappings(t)
 
   function updateMappings(maps: SubjectMapping[]) {
@@ -493,9 +494,9 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
   return (
     <>
       <tr
-        style={{ verticalAlign: 'top', transition: 'background 0.08s' }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#F8F6FF')}
-        onMouseLeave={e => (e.currentTarget.style.background = '')}
+        style={{ verticalAlign: 'top', transition: 'background 0.08s', background: hovered ? '#F6F4FF' : '' }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
         {/* Name + avatar */}
         <td style={{ ...TD, padding: '7px 12px', whiteSpace: 'nowrap' }}>
@@ -534,33 +535,33 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
         </td>
 
         {/* Actions */}
-        <td style={{ ...TD, padding: '7px 10px', textAlign: 'right', whiteSpace: 'nowrap', width: 84 }}>
+        <td style={{ ...TD, padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', width: 88 }}>
           <button
             onClick={() => setExpanded(o => !o)}
             title="Details"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px', color: expanded ? P : '#D4CFF0', borderRadius: 4, marginRight: 1 }}
+            style={{ background: expanded ? P_L : 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', color: expanded ? P : (hovered ? '#B0ABCC' : 'transparent'), borderRadius: 4, marginRight: 1, transition: 'color 0.1s, background 0.1s' }}
             onMouseEnter={e => { (e.currentTarget.style.background = P_L); (e.currentTarget.style.color = P) }}
-            onMouseLeave={e => { (e.currentTarget.style.background = ''); (e.currentTarget.style.color = expanded ? P : '#D4CFF0') }}
+            onMouseLeave={e => { (e.currentTarget.style.background = expanded ? P_L : ''); (e.currentTarget.style.color = expanded ? P : (hovered ? '#B0ABCC' : 'transparent')) }}
           >
-            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
           <button
             onClick={onDuplicate}
             title="Duplicate"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px', color: '#D4CFF0', borderRadius: 4, marginRight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', color: hovered ? '#B0ABCC' : 'transparent', borderRadius: 4, marginRight: 1, transition: 'color 0.1s, background 0.1s' }}
             onMouseEnter={e => { (e.currentTarget.style.background = P_L); (e.currentTarget.style.color = P) }}
-            onMouseLeave={e => { (e.currentTarget.style.background = ''); (e.currentTarget.style.color = '#D4CFF0') }}
+            onMouseLeave={e => { (e.currentTarget.style.background = ''); (e.currentTarget.style.color = hovered ? '#B0ABCC' : 'transparent') }}
           >
-            <Copy size={13} />
+            <Copy size={14} />
           </button>
           <button
             onClick={onDelete}
             title="Delete"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px', color: '#D4CFF0', borderRadius: 4 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', color: hovered ? '#C4BCDC' : 'transparent', borderRadius: 4, transition: 'color 0.1s, background 0.1s' }}
             onMouseEnter={e => { (e.currentTarget.style.background = '#FFF0F0'); (e.currentTarget.style.color = '#e74c3c') }}
-            onMouseLeave={e => { (e.currentTarget.style.background = ''); (e.currentTarget.style.color = '#D4CFF0') }}
+            onMouseLeave={e => { (e.currentTarget.style.background = ''); (e.currentTarget.style.color = hovered ? '#C4BCDC' : 'transparent') }}
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
           </button>
         </td>
       </tr>

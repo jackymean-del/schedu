@@ -23,7 +23,7 @@ import { ScopeMatrixModal } from '@/components/DataGrid/ScopeMatrixModal'
 import { makeId } from '@/components/master/EntityGrids'
 import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
-import { SubjectsPanel } from '@/components/resources/SubjectsPanel'
+import { SubjectsPanel, generateShortName } from '@/components/resources/SubjectsPanel'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import {
   Sparkles, Users, BookOpen, Building2, GraduationCap,
@@ -116,7 +116,7 @@ function buildDefaultSubjects(): Subject[] {
   return defs.map(d => ({
     id: makeId(), name: d.name, periodsPerWeek: d.ppw,
     category: d.cat as any, isOptional: false,
-    shortName: d.name.slice(0, 6), sessionDuration: 45, maxPeriodsPerDay: 2,
+    shortName: generateShortName(d.name), sessionDuration: 45, maxPeriodsPerDay: 2,
     requiresLab: false, color: P, sections: [], classConfigs: [],
   } as unknown as Subject))
 }
@@ -254,22 +254,13 @@ export function StepResourcesV2() {
 
       {/* ══ Sidebar ══════════════════════════════════════════════════════════ */}
       <div style={{
-        width: 172, flexShrink: 0,
+        width: 168, flexShrink: 0,
         background: '#fff', borderRight: '1px solid #EAE6FF',
-        padding: '14px 0 16px',
+        padding: '10px 0 14px',
         position: 'sticky', top: 0,
         height: 'calc(100vh - 165px)', overflowY: 'auto',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Section label */}
-        <div style={{
-          padding: '0 14px 8px',
-          fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em',
-          textTransform: 'uppercase', color: '#B0ABCC',
-        }}>
-          Resource Types
-        </div>
-
         {/* Nav items */}
         {TAB_META.map(tab => {
           const active = activeTab === tab.key
@@ -280,30 +271,30 @@ export function StepResourcesV2() {
               onClick={() => setActiveTab(tab.key)}
               style={{
                 width: '100%', textAlign: 'left', border: 'none',
-                cursor: 'pointer', padding: '7px 14px',
-                background: active ? '#F3F0FF' : 'transparent',
-                borderRight: `2.5px solid ${active ? P : 'transparent'}`,
+                cursor: 'pointer', padding: '6px 12px',
+                background: active ? '#EDE9FF' : 'transparent',
+                borderRight: `3px solid ${active ? P : 'transparent'}`,
                 display: 'flex', alignItems: 'center', gap: 8,
                 fontFamily: 'inherit', transition: 'background 0.1s',
               }}
-              onMouseEnter={e => { if (!active) (e.currentTarget.style.background = '#F9F7FF') }}
+              onMouseEnter={e => { if (!active) (e.currentTarget.style.background = '#F5F3FF') }}
               onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent') }}
             >
               <span style={{ color: active ? P : ready ? '#8B87AD' : '#D1CFF0', display: 'flex', flexShrink: 0 }}>
                 {tab.icon}
               </span>
-              <span style={{ flex: 1, fontSize: 12.5, fontWeight: active ? 700 : 500, color: active ? P : '#374151' }}>
+              <span style={{ flex: 1, fontSize: 12.5, fontWeight: active ? 700 : 500, color: active ? P_D : '#374151' }}>
                 {tab.label}
               </span>
               {ready ? (
                 <span style={{
-                  fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9,
+                  fontSize: 10, fontWeight: 700, padding: '1px 6px 2px', borderRadius: 10,
                   background: active ? P : '#F0ECFE',
                   color: active ? '#fff' : '#8B87AD',
                   minWidth: 22, textAlign: 'center',
                 }}>{count}</span>
               ) : (
-                <span style={{ fontSize: 10, color: '#FCA5A5', fontWeight: 600 }}>—</span>
+                <span style={{ fontSize: 11, color: '#E0D4FF', fontWeight: 700 }}>—</span>
               )}
             </button>
           )
@@ -311,26 +302,26 @@ export function StepResourcesV2() {
 
         {/* Readiness */}
         <div style={{
-          margin: '14px 10px 0', padding: '9px 11px',
+          margin: '10px 10px 0', padding: '8px 10px',
           background: '#FAFAFE', borderRadius: 7, border: '1px solid #EAE6FF',
         }}>
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: '#B0ABCC', marginBottom: 7,
+            textTransform: 'uppercase', color: '#C4C0DC', marginBottom: 6,
           }}>
             Readiness
           </div>
           {TAB_META.map(tab => {
             const ok = counts[tab.key] > 0
             return (
-              <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, cursor: 'pointer' }}
+              <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer' }}
                 onClick={() => setActiveTab(tab.key)}>
                 <div style={{
-                  width: 11, height: 11, borderRadius: '50%',
+                  width: 10, height: 10, borderRadius: '50%',
                   background: ok ? '#22C55E' : '#E5E7EB',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
-                  {ok && <CheckCircle2 size={7} color="#fff" />}
+                  {ok && <CheckCircle2 size={6} color="#fff" />}
                 </div>
                 <span style={{ fontSize: 11, color: ok ? '#16A34A' : '#9CA3AF', fontWeight: ok ? 600 : 400 }}>
                   {tab.label}
@@ -342,22 +333,23 @@ export function StepResourcesV2() {
 
         {/* Regenerate all — in sidebar */}
         {hasAnyData && (
-          <div style={{ margin: '10px 10px 0' }}>
+          <div style={{ margin: '8px 10px 0' }}>
             <button
               onClick={handleGenerateAll}
               disabled={generating}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                padding: '6px 10px', borderRadius: 6, border: 'none',
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '8px 10px', borderRadius: 6, border: 'none',
                 background: generating ? '#E8E4FF' : P,
                 color: generating ? '#B4ADDD' : '#fff',
-                fontSize: 11, fontWeight: 700, cursor: generating ? 'default' : 'pointer',
+                fontSize: 11.5, fontWeight: 700, cursor: generating ? 'default' : 'pointer',
                 fontFamily: 'inherit', transition: 'background 0.15s',
+                boxShadow: generating ? 'none' : '0 2px 8px rgba(124,111,224,0.28)',
               }}
               onMouseEnter={e => { if (!generating) (e.currentTarget.style.background = P_D) }}
               onMouseLeave={e => { if (!generating) (e.currentTarget.style.background = P) }}
             >
-              <RefreshCw size={11} style={generating ? { animation: 'spin 1s linear infinite' } : {}} />
+              <RefreshCw size={12} style={generating ? { animation: 'spin 1s linear infinite' } : {}} />
               {generating ? 'Generating…' : 'Regenerate All'}
             </button>
           </div>
@@ -368,7 +360,7 @@ export function StepResourcesV2() {
 
       {/* ══ Content area ═════════════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ flex: 1, padding: '14px 20px 6px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, padding: '12px 18px 6px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
           {/* ── Empty state ───────────────────────────────────────────────── */}
           {!hasAnyData && (
@@ -417,11 +409,11 @@ export function StepResourcesV2() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {/* Slim context banner */}
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '6px 12px', marginBottom: 10, flexShrink: 0,
-                background: '#F3F0FF', borderRadius: 6, border: '1px solid #E8E4FF',
+                display: 'flex', alignItems: 'center',
+                padding: '4px 10px', marginBottom: 7, flexShrink: 0,
+                background: '#EDE9FF', borderRadius: 5, border: '1px solid #DDD8FF',
               }}>
-                <span style={{ fontSize: 11.5, color: '#5B52C4', fontWeight: 500 }}>
+                <span style={{ fontSize: 11, color: '#5B52C4', fontWeight: 600, letterSpacing: '-0.01em' }}>
                   {BANNER_TEXT[activeTab]}
                 </span>
               </div>
@@ -518,19 +510,19 @@ export function StepResourcesV2() {
             disabled={!allReady}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '7px 16px', borderRadius: 7, border: 'none',
+              padding: '8px 18px', borderRadius: 7, border: 'none',
               background: allReady ? P : '#E8E4FF',
               color: allReady ? '#fff' : '#B8B4D4',
-              fontSize: 12, fontWeight: 700,
+              fontSize: 12.5, fontWeight: 700,
               cursor: allReady ? 'pointer' : 'not-allowed',
               fontFamily: 'inherit',
-              boxShadow: allReady ? '0 2px 10px rgba(124,111,224,0.32)' : 'none',
+              boxShadow: allReady ? '0 3px 12px rgba(124,111,224,0.36)' : 'none',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { if (allReady) (e.currentTarget.style.background = P_D) }}
-            onMouseLeave={e => { if (allReady) (e.currentTarget.style.background = P) }}
+            onMouseEnter={e => { if (allReady) { (e.currentTarget.style.background = P_D); (e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,88,196,0.42)') } }}
+            onMouseLeave={e => { if (allReady) { (e.currentTarget.style.background = P); (e.currentTarget.style.boxShadow = '0 3px 12px rgba(124,111,224,0.36)') } }}
           >
-            Next: Allocation <ChevronRight size={13} />
+            Next: Allocation <ChevronRight size={14} />
           </button>
         </div>
       </div>

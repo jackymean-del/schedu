@@ -14,7 +14,7 @@ export const P_B = 'rgba(124,111,224,0.22)'     // border
 
 // ─── Table style constants ─────────────────────────────────────────────────────
 export const TH: React.CSSProperties = {
-  padding: '5px 10px', textAlign: 'left', fontWeight: 700,
+  padding: '4px 8px', textAlign: 'left', fontWeight: 700,
   fontSize: 10, letterSpacing: '0.07em', textTransform: 'uppercase',
   color: '#9896B5', borderBottom: '1.5px solid #EAE6FF',
   background: '#F7F5FF', whiteSpace: 'nowrap',
@@ -22,7 +22,7 @@ export const TH: React.CSSProperties = {
 }
 
 export const TD: React.CSSProperties = {
-  padding: '4px 10px', fontSize: 12, color: '#111028',
+  padding: '3px 8px', fontSize: 12, color: '#111028',
   borderBottom: '1px solid #F0ECFE', verticalAlign: 'middle',
 }
 
@@ -30,7 +30,7 @@ export const TD: React.CSSProperties = {
 export const chipStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 2,
   background: '#EDE9FF', color: '#5B52C4',
-  borderRadius: 4, padding: '1px 5px 2px',
+  borderRadius: 4, padding: '0 5px 1px',
   fontSize: 10.5, fontWeight: 600, lineHeight: '14px',
   border: '1px solid rgba(124,111,224,0.3)', whiteSpace: 'nowrap',
   maxWidth: 100, overflow: 'hidden',
@@ -53,8 +53,9 @@ export const primaryBtn: React.CSSProperties = {
 
 // ─── Table card container ──────────────────────────────────────────────────────
 export const TABLE_CARD: React.CSSProperties = {
-  flex: 1, overflowY: 'auto', marginTop: 6,
-  border: '1px solid #EAE6FF', borderRadius: 7, background: '#fff',
+  flex: 1, overflowY: 'auto', marginTop: 4,
+  border: '1px solid #E4E0FF', borderRadius: 7, background: '#fff',
+  boxShadow: '0 1px 4px rgba(124,111,224,0.06)',
 }
 
 // ─── useClickOutside (two elements) ───────────────────────────────────────────
@@ -267,16 +268,16 @@ export function InlineChipSelect({
         {/* Placeholder — button-style when empty, subtle edit icon when populated */}
         {!disabled && selected.length === 0 && (
           <span style={{
-            fontSize: 10.5, fontWeight: 600, color: P_D,
-            padding: '1px 7px 2px',
-            background: P_L, border: `1px solid ${P_B}`,
-            borderRadius: 4, lineHeight: '14px',
+            fontSize: 11, fontWeight: 600, color: P,
+            padding: '3px 10px',
+            background: '#fff', border: `1.5px solid #DDD8FF`,
+            borderRadius: 5, lineHeight: '14px', whiteSpace: 'nowrap',
           }}>
             {placeholder}
           </span>
         )}
         {!disabled && selected.length > 0 && (
-          <span style={{ fontSize: 10, color: '#C4C0DC', padding: '0 1px', lineHeight: 1, userSelect: 'none' }}>✎</span>
+          <span style={{ fontSize: 10, color: '#C4C0DC', padding: '0 2px', lineHeight: 1, userSelect: 'none' }}>✎</span>
         )}
       </div>
 

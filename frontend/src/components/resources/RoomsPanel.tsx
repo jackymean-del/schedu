@@ -125,6 +125,7 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
   onUpdateSections: (add: string[], remove: string[]) => void
   onDelete: () => void
 }) {
+  const [hovered, setHovered] = useState(false)
   const meta = TYPE_META[room.type] ?? TYPE_META.Other
 
   function handleClassChange(next: string[]) {
@@ -136,9 +137,9 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
 
   return (
     <tr
-      style={{ transition: 'background 0.08s' }}
-      onMouseEnter={e => (e.currentTarget.style.background = '#F8F6FF')}
-      onMouseLeave={e => (e.currentTarget.style.background = '')}
+      style={{ background: hovered ? '#F6F4FF' : '', transition: 'background 0.08s' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* Name */}
       <td style={TD}>
@@ -192,13 +193,18 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
         />
       </td>
       {/* Delete */}
-      <td style={{ ...TD, textAlign: 'right', paddingRight: 10 }}>
+      <td style={{ ...TD, textAlign: 'right', paddingRight: 6, width: 36 }}>
         <button onClick={onDelete}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFF0', padding: 2, lineHeight: 1 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#e74c3c')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#D4CFF0')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: hovered ? '#C4BCDC' : 'transparent',
+            padding: '3px 5px', borderRadius: 4, lineHeight: 1,
+            transition: 'color 0.1s, background 0.1s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#e74c3c'; e.currentTarget.style.background = '#FFF0F0' }}
+          onMouseLeave={e => { e.currentTarget.style.color = hovered ? '#C4BCDC' : 'transparent'; e.currentTarget.style.background = 'transparent' }}
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       </td>
     </tr>
