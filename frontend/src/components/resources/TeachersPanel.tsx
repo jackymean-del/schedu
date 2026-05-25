@@ -20,7 +20,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Staff, Section, Subject } from '@/types'
-import { Trash2, Plus, Copy, ChevronRight, ChevronDown, X } from 'lucide-react'
+import { Trash2, Plus, Copy, ChevronRight, ChevronDown, X, Users } from 'lucide-react'
 import { P, P_D, P_L, P_B, TH, TD, TABLE_CARD, InlineChipSelect } from './shared'
 import type { ChipOption } from './shared'
 
@@ -271,10 +271,10 @@ function SubjectLine({ mapping, subjectColor, classOpts, onUpdate, onRemove }: {
     <div style={{
       display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4,
       borderLeft: `2px solid ${subjectColor}99`,
-      paddingLeft: 6, marginBottom: 3,
+      paddingLeft: 5, marginBottom: 1,
       minHeight: 20,
     }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#111028', minWidth: 52, maxWidth: 96, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 10.5, fontWeight: 700, color: '#111028', minWidth: 52, maxWidth: 96, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {mapping.subject}
       </span>
       <InlineChipSelect
@@ -630,21 +630,30 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
+        display: 'flex', alignItems: 'center', gap: 10,
         paddingBottom: 8, borderBottom: '1px solid #EEE9FF', flexShrink: 0,
       }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
-          <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 13 }}>⌕</span>
+        {/* Left: title + badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+          <Users size={13} color={P} />
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111028' }}>Teachers</span>
+          <span style={{ fontSize: 10, color: P, background: P_L, borderRadius: 4, padding: '1px 6px 2px', fontWeight: 700, border: `1px solid ${P_B}` }}>
+            {staff.length}
+          </span>
+          {search && filtered.length !== staff.length && (
+            <span style={{ fontSize: 10, color: '#9896B5', fontWeight: 500 }}>{filtered.length} shown</span>
+          )}
+        </div>
+        <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1 }}>
+          <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 12 }}>⌕</span>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search teachers, subjects…"
-            style={{ width: '100%', padding: '5px 10px 5px 27px', border: '1px solid #E4E0FF', borderRadius: 6, fontSize: 12.5, color: '#111028', outline: 'none', boxSizing: 'border-box', background: '#FAFAFE', fontFamily: 'inherit' }}
+            style={{ width: '100%', padding: '4px 8px 4px 24px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, color: '#111028', outline: 'none', boxSizing: 'border-box', background: '#FAFAFE', fontFamily: 'inherit' }}
           />
         </div>
-        <span style={{ fontSize: 11, color: '#9896B5', fontWeight: 600, marginLeft: 'auto' }}>
-          {staff.length} teacher{staff.length !== 1 ? 's' : ''}
-          {search && filtered.length !== staff.length && ` · ${filtered.length} shown`}
-        </span>
       </div>
 
       {/* Table */}

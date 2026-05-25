@@ -5,7 +5,7 @@
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import type { Subject, Section } from '@/types'
-import { Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Trash2, Plus, ChevronDown, ChevronRight, BookOpen } from 'lucide-react'
 import { P, P_D, P_L, P_B, TH, TD, TABLE_CARD, InlineChipSelect } from './shared'
 import type { ChipOption } from './shared'
 
@@ -25,7 +25,7 @@ function gradeKey(g: string) { const i = GRADE_ORDER.indexOf(g); return i >= 0 ?
 const CATS = ['Compulsory','Language','4th Optional','5th Optional','6th Optional','Practical','Activity','EST','CCA','Skill']
 
 const inp: React.CSSProperties = {
-  padding: '3px 7px', border: '1px solid #E4E0FF', borderRadius: 5,
+  padding: '3px 6px', border: '1px solid #E4E0FF', borderRadius: 4,
   fontSize: 12, color: '#111028', outline: 'none', fontFamily: 'inherit', background: '#FAFAFE',
 }
 
@@ -48,7 +48,7 @@ function EditCell({ value, onSave, placeholder = '…', width = 100 }: {
   )
   return (
     <span onClick={() => setE(true)} title="Click to edit"
-      style={{ cursor: 'text', padding: '2px 4px', borderRadius: 4, display: 'inline-block', minWidth: 32, color: value ? '#111028' : '#C4C0DC' }}
+      style={{ cursor: 'text', padding: '2px 3px', borderRadius: 3, display: 'inline-block', minWidth: 30, color: value ? '#111028' : '#C4C0DC' }}
       onMouseEnter={ev => (ev.currentTarget.style.background = '#F0ECFE')}
       onMouseLeave={ev => (ev.currentTarget.style.background = '')}
     >{value || placeholder}</span>
@@ -61,32 +61,32 @@ function OptionalSettings({ sub, onChange }: {
   onChange: (patch: Partial<Subject>) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 12, padding: '8px 14px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
+    <div style={{ display: 'flex', gap: 12, padding: '7px 12px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 10.5, color: '#6B6891', fontWeight: 600 }}>
         Category
         <select value={sub.category ?? 'Compulsory'} onChange={e => onChange({ category: e.target.value })} style={inp}>
           {CATS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 10.5, color: '#6B6891', fontWeight: 600 }}>
         Session (min)
         <input type="number" value={sub.sessionDuration} min={10} max={180} step={5}
           onChange={e => onChange({ sessionDuration: +e.target.value })}
-          style={{ ...inp, width: 60 }}
+          style={{ ...inp, width: 56 }}
         />
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 10.5, color: '#6B6891', fontWeight: 600 }}>
         Max/day
         <input type="number" value={sub.maxPeriodsPerDay} min={1} max={8}
           onChange={e => onChange({ maxPeriodsPerDay: +e.target.value })}
-          style={{ ...inp, width: 48 }}
+          style={{ ...inp, width: 46 }}
         />
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#555', fontWeight: 600, cursor: 'pointer', paddingBottom: 2 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#555', fontWeight: 600, cursor: 'pointer', paddingBottom: 2 }}>
         <input type="checkbox" checked={!!sub.requiresLab} onChange={e => onChange({ requiresLab: e.target.checked })} style={{ accentColor: P }} />
         Lab required
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#555', fontWeight: 600, cursor: 'pointer', paddingBottom: 2 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#555', fontWeight: 600, cursor: 'pointer', paddingBottom: 2 }}>
         <input type="checkbox" checked={!!sub.isOptional} onChange={e => onChange({ isOptional: e.target.checked })} style={{ accentColor: P }} />
         Optional
       </label>
@@ -117,10 +117,10 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
 
   if (!active) return (
     <tr>
-      <td colSpan={5} style={{ ...TD, padding: '9px 12px' }}>
+      <td colSpan={5} style={{ ...TD, padding: '8px 10px' }}>
         <button onClick={() => setActive(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 6, color: P, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer' }}>
-          <Plus size={13} /> Add Subject
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 5, color: P, fontSize: 11.5, fontWeight: 600, padding: '3px 10px', cursor: 'pointer' }}>
+          <Plus size={11} /> Add Subject
         </button>
       </td>
     </tr>
@@ -131,22 +131,22 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
       <td style={TD}>
         <input ref={ref} value={name} onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
-          placeholder="Subject name" style={{ ...inp, width: 150 }}
+          placeholder="Subject name" style={{ ...inp, width: 145 }}
         />
       </td>
       <td style={TD}>
-        <span style={{ fontSize: 11, color: '#C4C0DC', fontStyle: 'italic' }}>{name.slice(0, 6) || '—'}</span>
+        <span style={{ fontSize: 10.5, color: '#C4C0DC', fontStyle: 'italic' }}>{name.slice(0, 6) || '—'}</span>
       </td>
       <td style={{ ...TD, textAlign: 'center' }}>
         <input type="number" value={ppw} onChange={e => setPpw(+e.target.value)} min={0} max={30}
-          style={{ ...inp, width: 44, textAlign: 'center', fontWeight: 700, color: P }} />
+          style={{ ...inp, width: 38, textAlign: 'center', fontWeight: 700, color: P }} />
       </td>
       <td style={TD}>
-        <span style={{ fontSize: 11, color: '#C4C0DC', fontStyle: 'italic' }}>Assign after saving</span>
+        <span style={{ fontSize: 10.5, color: '#C4C0DC', fontStyle: 'italic' }}>Assign after saving</span>
       </td>
       <td style={{ ...TD, whiteSpace: 'nowrap' }}>
-        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>✓</button>
-        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>✗</button>
+        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 9px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', marginRight: 3 }}>✓</button>
+        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 11.5, cursor: 'pointer' }}>✗</button>
       </td>
     </tr>
   )
@@ -166,36 +166,36 @@ function SubjectRow({ sub, classOptions, allSectionNames, onUpdate, onDelete }: 
   return (
     <>
       <tr
-        style={{ transition: 'background 0.08s' }}
+        style={{ transition: 'background 0.07s' }}
         onMouseEnter={e => (e.currentTarget.style.background = '#F8F6FF')}
         onMouseLeave={e => (e.currentTarget.style.background = '')}
       >
         {/* Name */}
         <td style={TD}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: sub.color ?? P, flexShrink: 0, border: '1.5px solid rgba(0,0,0,0.08)', display: 'inline-block' }} />
-            <EditCell value={sub.name} onSave={v => onUpdate({ name: v })} placeholder="Subject name" width={150} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: sub.color ?? P, flexShrink: 0, border: '1.5px solid rgba(0,0,0,0.08)', display: 'inline-block' }} />
+            <EditCell value={sub.name} onSave={v => onUpdate({ name: v })} placeholder="Subject name" width={145} />
           </div>
         </td>
         {/* Short */}
         <td style={TD}>
-          <EditCell value={sub.shortName ?? ''} onSave={v => onUpdate({ shortName: v })} placeholder="Short" width={58} />
+          <EditCell value={sub.shortName ?? ''} onSave={v => onUpdate({ shortName: v })} placeholder="Short" width={54} />
         </td>
-        {/* p/w — badge style */}
+        {/* p/w — styled badge */}
         <td style={{ ...TD, textAlign: 'center' }}>
           <input
             type="number" value={sub.periodsPerWeek} min={0} max={30}
             onChange={e => onUpdate({ periodsPerWeek: +e.target.value })}
             style={{
-              width: 40, padding: '3px 4px', border: '1px solid #E4E0FF', borderRadius: 5,
-              fontSize: 12.5, color: P, fontWeight: 800, outline: 'none', textAlign: 'center',
+              width: 36, padding: '2px 3px', border: '1px solid #DDD8FF', borderRadius: 4,
+              fontSize: 12, color: P, fontWeight: 800, outline: 'none', textAlign: 'center',
               background: P_L,
             }}
           />
         </td>
         {/* Applicable classes */}
-        <td style={{ ...TD, minWidth: 160 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <td style={{ ...TD, minWidth: 150 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <InlineChipSelect
               selected={selected}
               options={classOptions}
@@ -203,37 +203,35 @@ function SubjectRow({ sub, classOptions, allSectionNames, onUpdate, onDelete }: 
               placeholder="+ Assign classes"
               maxChips={3}
             />
-            {allSectionNames.length > 0 && selected.length < allSectionNames.length && (
+            {allSectionNames.length > 0 && selected.length > 0 && selected.length < allSectionNames.length && (
               <button
                 title="Assign to all classes"
                 onClick={() => onUpdate({ sections: allSectionNames })}
                 style={{
-                  fontSize: 10, color: P_D, background: P_L, border: `1px solid ${P_B}`,
-                  borderRadius: 4, padding: '2px 7px', cursor: 'pointer',
+                  fontSize: 9.5, color: P_D, background: P_L, border: `1px solid ${P_B}`,
+                  borderRadius: 3, padding: '1px 6px', cursor: 'pointer',
                   whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 700,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#DDD8FF')}
-                onMouseLeave={e => (e.currentTarget.style.background = P_L)}
               >All</button>
             )}
           </div>
         </td>
         {/* Actions */}
-        <td style={{ ...TD, whiteSpace: 'nowrap', textAlign: 'right', paddingRight: 10 }}>
+        <td style={{ ...TD, whiteSpace: 'nowrap', textAlign: 'right', paddingRight: 8 }}>
           <button onClick={() => setExpanded(o => !o)}
             title="Settings"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: expanded ? P : '#D4CFF0', padding: '2px 3px', marginRight: 2, lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: expanded ? P : '#D4CFF0', padding: '2px 2px', marginRight: 1, lineHeight: 1 }}
             onMouseEnter={e => (e.currentTarget.style.color = P)}
             onMouseLeave={e => (e.currentTarget.style.color = expanded ? P : '#D4CFF0')}
           >
-            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
           <button onClick={onDelete}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFF0', padding: '2px 3px', lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFF0', padding: '2px 2px', lineHeight: 1 }}
             onMouseEnter={e => (e.currentTarget.style.color = '#e74c3c')}
             onMouseLeave={e => (e.currentTarget.style.color = '#D4CFF0')}
           >
-            <Trash2 size={13} />
+            <Trash2 size={12} />
           </button>
         </td>
       </tr>
@@ -286,59 +284,77 @@ export function SubjectsPanel({ subjects, setSubjects, sections }: {
   function add(s: Subject) { setSubjects([...subjects, s]) }
   function assignAll() { setSubjects(subjects.map(s => ({ ...s, sections: allSectionNames }))) }
 
+  const assignedCount = useMemo(() => subjects.filter(s => (s.sections ?? []).length > 0).length, [subjects])
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid #EEE9FF', flexShrink: 0 }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 13 }}>⌕</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 8, flexShrink: 0 }}>
+        {/* Left: title + stats */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+          <BookOpen size={13} color={P} />
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111028' }}>Subjects</span>
+          <span style={{ fontSize: 10, color: P, background: P_L, borderRadius: 4, padding: '1px 6px 2px', fontWeight: 700, border: `1px solid ${P_B}` }}>
+            {subjects.length}
+          </span>
+          {subjects.length > 0 && assignedCount < subjects.length && (
+            <span style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600 }}>
+              {subjects.length - assignedCount} unassigned
+            </span>
+          )}
+        </div>
+
+        <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
+
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1 }}>
+          <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 12 }}>⌕</span>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search subjects…"
-            style={{ width: '100%', padding: '5px 10px 5px 27px', border: '1px solid #E4E0FF', borderRadius: 6, fontSize: 12.5, color: '#111028', outline: 'none', boxSizing: 'border-box', background: '#FAFAFE', fontFamily: 'inherit' }}
+            style={{ width: '100%', padding: '4px 8px 4px 24px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, color: '#111028', outline: 'none', boxSizing: 'border-box', background: '#FAFAFE', fontFamily: 'inherit' }}
           />
         </div>
+
+        {/* Actions */}
         {allSectionNames.length > 0 && (
           <button onClick={assignAll}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
               background: P, color: '#fff', border: 'none',
-              borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+              borderRadius: 5, padding: '4px 11px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = P_D)}
-            onMouseLeave={e => (e.currentTarget.style.background = P)}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            Assign All → All Classes
+            Assign All → Classes
           </button>
         )}
-        <span style={{ fontSize: 11, color: '#9896B5', fontWeight: 600, flexShrink: 0 }}>
-          {subjects.length} subject{subjects.length !== 1 ? 's' : ''}
-        </span>
       </div>
 
       {/* Classes hint */}
       {sections.length === 0 && (
-        <div style={{ margin: '8px 0 0', padding: '7px 12px', background: '#FFFBF0', border: '1px solid #FFE8A0', borderRadius: 6, fontSize: 11.5, color: '#7A5800' }}>
-          💡 Add classes first, then come back to assign subjects to them.
+        <div style={{ margin: '0 0 7px', padding: '6px 10px', background: '#FFFBF0', border: '1px solid #FFE8A0', borderRadius: 5, fontSize: 11, color: '#7A5800' }}>
+          💡 Add classes first, then assign subjects to them.
         </div>
       )}
 
       {/* Table */}
       <div style={TABLE_CARD}>
         {subjects.length === 0 && !search ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#9896B5', marginBottom: 4 }}>No subjects yet</div>
-            <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add your first subject below.</div>
+          <div style={{ textAlign: 'center', padding: '44px 0' }}>
+            <div style={{ fontSize: 28, marginBottom: 7 }}>📖</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#9896B5', marginBottom: 3 }}>No subjects yet</div>
+            <div style={{ fontSize: 11.5, color: '#C4C0DC' }}>Add your first subject below.</div>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 <th style={TH}>Subject</th>
-                <th style={{ ...TH, width: 72 }}>Short</th>
-                <th style={{ ...TH, width: 52, textAlign: 'center' }}>p/w</th>
+                <th style={{ ...TH, width: 64 }}>Short</th>
+                <th style={{ ...TH, width: 46, textAlign: 'center' }}>p/w</th>
                 <th style={TH}>Applicable Classes</th>
-                <th style={{ ...TH, width: 52 }} />
+                <th style={{ ...TH, width: 48 }} />
               </tr>
             </thead>
             <tbody>
@@ -353,7 +369,7 @@ export function SubjectsPanel({ subjects, setSubjects, sections }: {
                 />
               ))}
               {filtered.length === 0 && search && (
-                <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '20px 12px' }}>No subjects match "{search}"</td></tr>
+                <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '18px 10px' }}>No subjects match "{search}"</td></tr>
               )}
               <AddRow onAdd={add} />
             </tbody>
