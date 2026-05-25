@@ -176,6 +176,9 @@ function ExportDropdown({ onCsv, onExcel }: { onCsv: () => void; onExcel: () => 
   )
 }
 
+// Marching ants stroke colour (module-level constant, no hook deps)
+const MARCH_COLOR = '#1A1A2E'
+
 // ─────────────────────────────────────────────────────────────────
 // Grid styles
 // ─────────────────────────────────────────────────────────────────
@@ -292,15 +295,20 @@ const GRID_STYLES = `
 }
 
 /* ── Marching ants (copy mode) ─────────────────────────────────
-   Each cell in the copied range gets a ::before pseudo-element
-   that draws an animated dashed border on all 4 sides using
-   4 repeating-linear-gradients (top, right, bottom, left).
-   The center is transparent so cell content stays visible.
-   pointer-events: none ensures no interaction is blocked.
+   Cells in a copied range use CSS custom properties to draw ONLY
+   their outer edges, forming ONE continuous animated rectangle.
+
+   --mc-t/r/b/l are set per-cell via JS to the stroke colour when
+   that edge is on the outer boundary, or "transparent" when the
+   adjacent cell is also inside the range (internal edge hidden).
+
+   This gives Excel / Google Sheets "marching ants" appearance:
+   a single animated dashed rectangle around the whole selection,
+   with no internal grid lines between adjacent copied cells.
    ──────────────────────────────────────────────────────────── */
 @keyframes ag-march {
-  0%   { background-position: 0 0,     100% 0,     100% 100%,   0 100%; }
-  100% { background-position: 10px 0,  100% 10px,  calc(100% - 10px) 100%,  0 calc(100% - 10px); }
+  from { background-position: 0 0,     100% 0,     100% 100%,   0 100%; }
+  to   { background-position: 10px 0,  100% 10px,  calc(100% - 10px) 100%,  0 calc(100% - 10px); }
 }
 .ag-alloc-wrap .ag-cell.ag-cell-copy-march {
   position: relative;
@@ -311,11 +319,13 @@ const GRID_STYLES = `
   inset: 0;
   pointer-events: none;
   z-index: 4;
+  /* Each gradient uses its CSS var (color or "transparent") so only
+     outer-edge gradients are visible — inner edges stay transparent. */
   background-image:
-    repeating-linear-gradient(90deg,  #1A1A2E 0, #1A1A2E 5px, transparent 5px, transparent 10px),
-    repeating-linear-gradient(180deg, #1A1A2E 0, #1A1A2E 5px, transparent 5px, transparent 10px),
-    repeating-linear-gradient(90deg,  #1A1A2E 0, #1A1A2E 5px, transparent 5px, transparent 10px),
-    repeating-linear-gradient(180deg, #1A1A2E 0, #1A1A2E 5px, transparent 5px, transparent 10px);
+    repeating-linear-gradient(90deg,  var(--mc-t,transparent) 0, var(--mc-t,transparent) 5px, transparent 5px, transparent 10px),
+    repeating-linear-gradient(180deg, var(--mc-r,transparent) 0, var(--mc-r,transparent) 5px, transparent 5px, transparent 10px),
+    repeating-linear-gradient(90deg,  var(--mc-b,transparent) 0, var(--mc-b,transparent) 5px, transparent 5px, transparent 10px),
+    repeating-linear-gradient(180deg, var(--mc-l,transparent) 0, var(--mc-l,transparent) 5px, transparent 5px, transparent 10px);
   background-size:     10px 1.5px, 1.5px 10px, 10px 1.5px, 1.5px 10px;
   background-position: 0 0, 100% 0, 100% 100%, 0 100%;
   background-repeat:   repeat-x, repeat-y, repeat-x, repeat-y;
@@ -394,56 +404,96 @@ export function AllocationGridAG({
     getPeriodMinutes: () => periodMinRef.current,
   }), [])
 
-  // ── Marching ants — synchronous DOM walk ─────────────────────
-  // Strategy: build a Set of "rowIndex||colId" targets from the AG Grid
-  // range data, then walk EVERY rendered cell in one querySelectorAll pass
-  // and classList.toggle each one atomically.
+  // ── Marching ants — synchronous, edge-aware DOM walk ─────────
   //
-  // Why NOT querySelector(".ag-cell[col-id='...']"):
-  //   • querySelector returns the FIRST match — pinned-column copies of a
-  //     cell (same col-id) can shadow the scrollable body cell.
-  //   • CSS selector strings with `:` (colIds like "subj:English") work in
-  //     attribute-value context but remain fragile across AG Grid versions.
+  // Architecture:
+  //   • Build a Map of  key → { t, r, b, l }  from AG Grid's range data.
+  //     key = "rowIndex||colId"  (double-pipe avoids : ambiguity in colIds)
+  //     Edge flags indicate which of the 4 sides sit on the outer boundary.
   //
-  // Why synchronous (no inner rAF):
-  //   The caller already schedules one rAF so the DOM is painted; an extra
-  //   rAF frame lets AG Grid's post-copy refresh run and potentially
-  //   recreate cell elements AFTER we've toggled them.
+  //   • Single querySelectorAll walk — reads real DOM attributes via
+  //     getAttribute() (no CSS selector construction, no special-char risk).
+  //     classList.toggle + setProperty atomically adds/removes class AND
+  //     CSS custom properties in one pass.
+  //
+  //   • Each cell gets only the edge gradients for its outer sides, so the
+  //     whole selection renders as ONE continuous rectangle (not per-cell boxes).
+  //
+  //   • Fully synchronous — caller already scheduled one rAF; a second rAF
+  //     would let AG Grid's post-copy cell refresh recreate DOM nodes after
+  //     we've toggled them (causing wrong-cell highlights on the next frame).
+
   const applyMarchingAnts = useCallback((ranges: any[] | null | undefined) => {
     const gridEl = wrapperRef.current
     if (!gridEl) return
 
-    // Build target set: "rowIndex||colId" — double-pipe avoids ambiguity
-    // with colIds that contain a single colon (e.g. "subj:English").
-    const targets = new Set<string>()
+    // ── 1. Build edge map ─────────────────────────────────────────
+    type Edges = { t: boolean; r: boolean; b: boolean; l: boolean }
+    const edgeMap = new Map<string, Edges>()
+
     ranges?.forEach((range: any) => {
       if (!range.startRow || !range.endRow) return
-      const r0 = Math.min(range.startRow.rowIndex, range.endRow.rowIndex)
-      const r1 = Math.max(range.startRow.rowIndex, range.endRow.rowIndex)
-      ;(range.columns as any[]).forEach((col: any) => {
+      const r0   = Math.min(range.startRow.rowIndex, range.endRow.rowIndex)
+      const r1   = Math.max(range.startRow.rowIndex, range.endRow.rowIndex)
+      const cols = range.columns as any[]   // in display order, left → right
+      const cLast = cols.length - 1
+
+      cols.forEach((col: any, ci: number) => {
         const colId = col.getColId() as string
         for (let ri = r0; ri <= r1; ri++) {
-          targets.add(`${ri}||${colId}`)
+          // Merge with any existing flags if multiple ranges overlap a cell
+          const key  = `${ri}||${colId}`
+          const prev = edgeMap.get(key)
+          edgeMap.set(key, {
+            t: (prev?.t ?? false) || ri === r0,
+            b: (prev?.b ?? false) || ri === r1,
+            l: (prev?.l ?? false) || ci === 0,
+            r: (prev?.r ?? false) || ci === cLast,
+          })
         }
       })
     })
 
-    // Single DOM pass — toggle class on every cell atomically.
-    // getAttribute() reads the real DOM attribute; no selector parsing.
-    gridEl.querySelectorAll<HTMLElement>('.ag-row[row-index] .ag-cell[col-id]')
+    // ── 2. Single DOM pass ────────────────────────────────────────
+    // Walk every body cell (header/pinned structure excluded by row-index guard).
+    // getAttribute() reads real DOM attributes — no selector string construction.
+    gridEl
+      .querySelectorAll<HTMLElement>('.ag-row[row-index] .ag-cell[col-id]')
       .forEach(cell => {
-        const rowIndex = (cell.closest('.ag-row') as HTMLElement | null)
-          ?.getAttribute('row-index') ?? ''
-        const colId    = cell.getAttribute('col-id') ?? ''
-        cell.classList.toggle('ag-cell-copy-march', targets.has(`${rowIndex}||${colId}`))
+        const rowAttr = cell.parentElement?.getAttribute('row-index')
+                     ?? cell.closest('.ag-row')?.getAttribute('row-index')
+                     ?? ''
+        const colId   = cell.getAttribute('col-id') ?? ''
+        const key     = `${rowAttr}||${colId}`
+        const edges   = edgeMap.get(key)
+
+        if (edges) {
+          cell.classList.add('ag-cell-copy-march')
+          // Set outer-edge colour; inner edges get "transparent" → hidden
+          cell.style.setProperty('--mc-t', edges.t ? MARCH_COLOR : 'transparent')
+          cell.style.setProperty('--mc-r', edges.r ? MARCH_COLOR : 'transparent')
+          cell.style.setProperty('--mc-b', edges.b ? MARCH_COLOR : 'transparent')
+          cell.style.setProperty('--mc-l', edges.l ? MARCH_COLOR : 'transparent')
+        } else {
+          cell.classList.remove('ag-cell-copy-march')
+          cell.style.removeProperty('--mc-t')
+          cell.style.removeProperty('--mc-r')
+          cell.style.removeProperty('--mc-b')
+          cell.style.removeProperty('--mc-l')
+        }
       })
   }, [])
 
-  // Synchronous — no rAF so callers in suppressKeyboardEvent / event
-  // handlers don't race with subsequent AG Grid re-renders.
   const clearMarchingAnts = useCallback(() => {
-    wrapperRef.current?.querySelectorAll('.ag-cell-copy-march')
-      .forEach(el => el.classList.remove('ag-cell-copy-march'))
+    wrapperRef.current
+      ?.querySelectorAll<HTMLElement>('.ag-cell-copy-march')
+      .forEach(cell => {
+        cell.classList.remove('ag-cell-copy-march')
+        cell.style.removeProperty('--mc-t')
+        cell.style.removeProperty('--mc-r')
+        cell.style.removeProperty('--mc-b')
+        cell.style.removeProperty('--mc-l')
+      })
   }, [])
 
   // Keep ref in sync so useMemo closures can call latest clearMarchingAnts
@@ -685,10 +735,13 @@ export function AllocationGridAG({
     const ctrl = ke.ctrlKey || ke.metaKey
 
     if (ctrl && key === 'c') {
-      // Capture ranges NOW — synchronously, before AG Grid's internal copy
-      // handler runs (which could modify or re-set the cell ranges).
-      // Then apply ants in ONE rAF so the DOM is stable.
-      const ranges = (e.api ?? gridRef.current?.api)?.getCellRanges()
+      // Capture ranges synchronously NOW, before AG Grid's internal clipboard
+      // handler runs (it may modify the range state after copy completes).
+      // One rAF lets the browser paint, then we do a synchronous DOM walk.
+      const api    = (e.api ?? gridRef.current?.api)
+      const ranges = api?.getCellRanges()
+      // Clear any previous ants first so stale classes never linger
+      clearMarchingAnts()
       requestAnimationFrame(() => applyMarchingAnts(ranges))
       return
     }
