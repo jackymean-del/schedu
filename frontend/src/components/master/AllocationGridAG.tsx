@@ -985,18 +985,11 @@ export function AllocationGridAG({
       ref={wrapperRef}
       className="ag-alloc-wrap"
       style={{ display: 'flex', flexDirection: 'column', gap: 0 }}
-      // ── Eliminate native drag-ghost (the translucent "Mathematics" overlay) ──
-      // onDragStart: kills any drag that somehow initiates (belt-and-suspenders).
-      // onMouseDown: the primary fix — prevents the browser from entering its
-      //   "potential drag / text-selection" tracking mode on non-input targets.
-      //   We skip the guard for inputs/textareas so that editing (cursor placement,
-      //   text selection inside the cell editor) continues to work normally.
+      // user-select:none (CSS) prevents text selection → no draggable content →
+      // no ghost overlay.  onDragStart is belt-and-suspenders only.
+      // onMouseDown must NOT call preventDefault — doing so suppresses focus
+      // transfer to AG Grid cells and silences all keyboard shortcuts.
       onDragStart={(e) => { e.preventDefault() }}
-      onMouseDown={(e) => {
-        const t = e.target as HTMLElement
-        if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
-        e.preventDefault()
-      }}
     >
       <style>{GRID_STYLES}</style>
 
