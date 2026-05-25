@@ -380,6 +380,11 @@ export function AllocationGridAG({
   // ── Stable ref so clearMarchingAnts can be called from useMemo closures ──
   const clearMarchingAntsRef = useRef<() => void>(() => {})
 
+  // Sparse clipboard: column offsets captured on Ctrl+C of non-adjacent cells.
+  // processDataFromClipboard uses this to re-insert gaps into the pasted TSV matrix.
+  type SparseClip = { isSparse: true; colCount: number; colOffsets: number[] }
+  const sparseClipRef = useRef<SparseClip | null>(null)
+
   // Skip sibling sync + batch refresh during paste operations
   const isPastingRef = useRef(false)
 
@@ -426,37 +431,78 @@ export function AllocationGridAG({
   const applyMarchingAnts = useCallback((ranges: any[] | null | undefined) => {
     const gridEl = wrapperRef.current
     if (!gridEl) return
+    const api = gridRef.current?.api
+    if (!api) return
 
-    // ── 1. Build edge map ─────────────────────────────────────────
+    // ── 1. Build edge maps ────────────────────────────────────────
+    //
+    // Two parallel maps for fault-tolerant cell identification:
+    //   edgeByColId   — keyed by "rowIdx||colId"   (primary: exact string match)
+    //   edgeByDispIdx — keyed by "rowIdx||#dispIdx" (fallback: display-column index)
+    //
+    // The fallback guards against col-id attribute mismatches (e.g. AG Grid
+    // internal shadow copies of pinned columns, special-char encoding).
+    // With ensureDomOrder={true}, DOM cell order == display column order, so
+    // a per-row running counter correctly maps to getAllDisplayedColumns() indices.
     type Edges = { t: boolean; r: boolean; b: boolean; l: boolean }
-    const edgeMap = new Map<string, Edges>()
+
+    const allDisplayedCols  = (api.getAllDisplayedColumns() ?? []) as any[]
+    const colIdToDispIdx    = new Map<string, number>()
+    allDisplayedCols.forEach((col: any, i: number) => colIdToDispIdx.set(col.getColId(), i))
+
+    const edgeByColId   = new Map<string, Edges>()   // primary:  "rowIdx||colId"
+    const edgeByDispIdx = new Map<string, Edges>()   // fallback: "rowIdx||#dispIdx"
 
     ranges?.forEach((range: any) => {
       if (!range.startRow || !range.endRow) return
-      const r0   = Math.min(range.startRow.rowIndex, range.endRow.rowIndex)
-      const r1   = Math.max(range.startRow.rowIndex, range.endRow.rowIndex)
-      const cols = range.columns as any[]   // in display order, left → right
+      const r0    = Math.min(range.startRow.rowIndex, range.endRow.rowIndex)
+      const r1    = Math.max(range.startRow.rowIndex, range.endRow.rowIndex)
+      const cols  = range.columns as any[]   // in display order, left → right
       const cLast = cols.length - 1
 
       cols.forEach((col: any, ci: number) => {
-        const colId = col.getColId() as string
+        const colId   = col.getColId() as string
+        const dispIdx = colIdToDispIdx.get(colId) ?? -1
+
         for (let ri = r0; ri <= r1; ri++) {
-          // Merge with any existing flags if multiple ranges overlap a cell
-          const key  = `${ri}||${colId}`
-          const prev = edgeMap.get(key)
-          edgeMap.set(key, {
-            t: (prev?.t ?? false) || ri === r0,
-            b: (prev?.b ?? false) || ri === r1,
-            l: (prev?.l ?? false) || ci === 0,
-            r: (prev?.r ?? false) || ci === cLast,
+          const edges: Edges = {
+            t: ri === r0,
+            b: ri === r1,
+            l: ci === 0,
+            r: ci === cLast,
+          }
+
+          // Primary map (colId key)
+          const ck   = `${ri}||${colId}`
+          const prev = edgeByColId.get(ck)
+          edgeByColId.set(ck, {
+            t: (prev?.t ?? false) || edges.t,
+            b: (prev?.b ?? false) || edges.b,
+            l: (prev?.l ?? false) || edges.l,
+            r: (prev?.r ?? false) || edges.r,
           })
+
+          // Fallback map (display index key)
+          if (dispIdx >= 0) {
+            const dk    = `${ri}||#${dispIdx}`
+            const prevD = edgeByDispIdx.get(dk)
+            edgeByDispIdx.set(dk, {
+              t: (prevD?.t ?? false) || edges.t,
+              b: (prevD?.b ?? false) || edges.b,
+              l: (prevD?.l ?? false) || edges.l,
+              r: (prevD?.r ?? false) || edges.r,
+            })
+          }
         }
       })
     })
 
     // ── 2. Single DOM pass ────────────────────────────────────────
-    // Walk every body cell (header/pinned structure excluded by row-index guard).
-    // getAttribute() reads real DOM attributes — no selector string construction.
+    // rowCellCounter tracks how many cells we've seen per row across ALL containers
+    // (pinned + body), accumulating in DOM order.  Since ensureDomOrder={true},
+    // this running index equals the column's position in getAllDisplayedColumns().
+    const rowCellCounter = new Map<string, number>()
+
     gridEl
       .querySelectorAll<HTMLElement>('.ag-row[row-index] .ag-cell[col-id]')
       .forEach(cell => {
@@ -464,12 +510,18 @@ export function AllocationGridAG({
                      ?? cell.closest('.ag-row')?.getAttribute('row-index')
                      ?? ''
         const colId   = cell.getAttribute('col-id') ?? ''
-        const key     = `${rowAttr}||${colId}`
-        const edges   = edgeMap.get(key)
+
+        // Increment per-row running counter (display-index fallback)
+        const cnt = rowCellCounter.get(rowAttr) ?? 0
+        rowCellCounter.set(rowAttr, cnt + 1)
+
+        // Primary lookup by colId; fallback by display index
+        const ck    = `${rowAttr}||${colId}`
+        const dk    = `${rowAttr}||#${cnt}`
+        const edges = edgeByColId.get(ck) ?? edgeByDispIdx.get(dk)
 
         if (edges) {
           cell.classList.add('ag-cell-copy-march')
-          // Set outer-edge colour; inner edges get "transparent" → hidden
           cell.style.setProperty('--mc-t', edges.t ? MARCH_COLOR : 'transparent')
           cell.style.setProperty('--mc-r', edges.r ? MARCH_COLOR : 'transparent')
           cell.style.setProperty('--mc-b', edges.b ? MARCH_COLOR : 'transparent')
@@ -718,10 +770,32 @@ export function AllocationGridAG({
   // ── Paste handlers ─────────────────────────────────────────────
   const onPasteStart = useCallback(() => { isPastingRef.current = true }, [])
   const onPasteEnd   = useCallback(() => {
-    isPastingRef.current = false
+    isPastingRef.current   = false
+    sparseClipRef.current  = null   // sparse state consumed after paste
     clearMarchingAnts()
     requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
   }, [clearMarchingAnts])
+
+  // ── Sparse paste — re-insert column gaps ─────────────────────────
+  // AG Grid collapses multi-range copies to adjacent TSV (no gaps between
+  // non-adjacent columns).  When sparseClipRef is set, we expand the matrix
+  // back to its original column span by inserting empty strings at gap offsets.
+  //
+  // Guard: if the clipboard column count doesn't match our stored offsets
+  // (clipboard was replaced after copy) we pass through untouched.
+  const processDataFromClipboard = useCallback((params: { data: string[][] }) => {
+    const sparse = sparseClipRef.current
+    if (!sparse) return params.data                              // rectangular: pass through
+
+    const srcCols = params.data[0]?.length ?? 0
+    if (srcCols !== sparse.colOffsets.length) return params.data // mismatch: safe pass-through
+
+    return params.data.map(row => {
+      const expanded = Array<string>(sparse.colCount).fill('')
+      sparse.colOffsets.forEach((offset, i) => { expanded[offset] = row[i] ?? '' })
+      return expanded
+    })
+  }, [])
 
   // ── onCellKeyDown — OBSERVE ONLY, no preventDefault ───────────
   // Used solely to:
@@ -739,7 +813,40 @@ export function AllocationGridAG({
       // handler runs (it may modify the range state after copy completes).
       // One rAF lets the browser paint, then we do a synchronous DOM walk.
       const api    = (e.api ?? gridRef.current?.api)
-      const ranges = api?.getCellRanges()
+      const ranges = api?.getCellRanges() as any[] | undefined
+
+      // ── Sparse selection detection ────────────────────────────────
+      // Multiple ranges = Ctrl+Click on non-adjacent cells (sparse mode).
+      // Capture the display-column offsets of each selected column so that
+      // processDataFromClipboard can re-insert the gaps AG Grid strips from TSV.
+      if (ranges && ranges.length > 1) {
+        const allCols    = (api.getAllDisplayedColumns() ?? []) as any[]
+        const colIdToIdx = new Map<string, number>()
+        allCols.forEach((col: any, i: number) => colIdToIdx.set(col.getColId(), i))
+
+        const dispIdxs: number[] = []
+        ranges.forEach((range: any) => {
+          ;(range.columns as any[]).forEach((col: any) => {
+            const idx = colIdToIdx.get(col.getColId())
+            if (idx !== undefined) dispIdxs.push(idx)
+          })
+        })
+
+        if (dispIdxs.length > 0) {
+          const minIdx  = Math.min(...dispIdxs)
+          const maxIdx  = Math.max(...dispIdxs)
+          sparseClipRef.current = {
+            isSparse:   true,
+            colCount:   maxIdx - minIdx + 1,
+            colOffsets: dispIdxs.map(idx => idx - minIdx),
+          }
+        } else {
+          sparseClipRef.current = null
+        }
+      } else {
+        sparseClipRef.current = null   // rectangular selection, no gaps needed
+      }
+
       // Clear any previous ants first so stale classes never linger
       clearMarchingAnts()
       requestAnimationFrame(() => applyMarchingAnts(ranges))
@@ -907,7 +1014,6 @@ export function AllocationGridAG({
           suppressLastEmptyLineOnPaste={true}
 
           cellSelection={{
-            suppressMultiRanges: true,          // always one rectangle, like Excel
             enableColumnSelection: true,
             handle: { mode: 'fill', direction: 'xy' },
           }}
@@ -922,6 +1028,7 @@ export function AllocationGridAG({
           onCellValueChanged={onCellValueChanged}
           onPasteStart={onPasteStart}
           onPasteEnd={onPasteEnd}
+          processDataFromClipboard={processDataFromClipboard}
           onCellSelectionChanged={onCellSelectionChanged}
           onCellKeyDown={onCellKeyDown}
 
