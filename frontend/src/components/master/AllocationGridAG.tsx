@@ -184,6 +184,29 @@ const MARCH_COLOR = '#1A1A2E'
 // ─────────────────────────────────────────────────────────────────
 
 const GRID_STYLES = `
+/* ── Kill native drag-ghost / text-selection ────────────────────────────────
+   Ctrl+Click on cells fires browser text-selection + native drag logic, which
+   produces the translucent "Mathematics" ghost overlay.  Disabling user-select
+   on the wrapper prevents text from ever being selected (and therefore dragged).
+   Re-enable it only on active edit inputs so cursor/copy works inside cells.
+   onDragStart + preventDefault (see JSX) provides belt-and-suspenders coverage.
+   ─────────────────────────────────────────────────────────────────────────── */
+.ag-alloc-wrap {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Restore text selection inside the inline editor so the user can select/copy
+   the value they are currently editing. */
+.ag-alloc-wrap input,
+.ag-alloc-wrap textarea,
+.ag-alloc-wrap [contenteditable="true"] {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
+}
+
 /* ── Theme variables ── */
 .ag-alloc-wrap .ag-theme-quartz {
   --ag-border-color: #C8C8C8;
@@ -958,7 +981,23 @@ export function AllocationGridAG({
   const gridHeight = Math.max(200, Math.min(600, rowData.length * 32 + 32 + 2))
 
   return (
-    <div ref={wrapperRef} className="ag-alloc-wrap" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div
+      ref={wrapperRef}
+      className="ag-alloc-wrap"
+      style={{ display: 'flex', flexDirection: 'column', gap: 0 }}
+      // ── Eliminate native drag-ghost (the translucent "Mathematics" overlay) ──
+      // onDragStart: kills any drag that somehow initiates (belt-and-suspenders).
+      // onMouseDown: the primary fix — prevents the browser from entering its
+      //   "potential drag / text-selection" tracking mode on non-input targets.
+      //   We skip the guard for inputs/textareas so that editing (cursor placement,
+      //   text selection inside the cell editor) continues to work normally.
+      onDragStart={(e) => { e.preventDefault() }}
+      onMouseDown={(e) => {
+        const t = e.target as HTMLElement
+        if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
+        e.preventDefault()
+      }}
+    >
       <style>{GRID_STYLES}</style>
 
       {/* ── Toolbar ── */}
