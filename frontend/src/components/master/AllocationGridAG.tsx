@@ -176,12 +176,6 @@ function ExportDropdown({ onCsv, onExcel }: { onCsv: () => void; onExcel: () => 
   )
 }
 
-// Sentinel value used to fill gap positions in a sparse paste matrix.
-// processDataFromClipboard places this in non-selected columns so AG Grid
-// still receives a rectangular matrix of the correct size, but valueSetter
-// returns false immediately on seeing it — leaving gap cells untouched.
-const SPARSE_SKIP = '\x00SPARSE_SKIP\x00'
-
 // ─────────────────────────────────────────────────────────────────
 // Grid styles
 // ─────────────────────────────────────────────────────────────────
@@ -452,13 +446,12 @@ export function AllocationGridAG({
   displayModeRef.current = displayMode
   periodMinRef.current   = periodMinutes
 
-  // ── Stable ref so clearMarchingAnts can be called from useMemo closures ──
+  // ── Stable refs readable from useMemo closures ───────────────
   const clearMarchingAntsRef = useRef<() => void>(() => {})
-
-  // Sparse clipboard: column offsets captured on Ctrl+C of non-adjacent cells.
-  // processDataFromClipboard uses this to re-insert gaps into the pasted TSV matrix.
-  type SparseClip = { isSparse: true; colCount: number; colOffsets: number[] }
-  const sparseClipRef = useRef<SparseClip | null>(null)
+  // true while marching ants are visible — drives the two-press ESC model:
+  //   first  ESC → clearMarchingAnts() only  (ants on, selection stays)
+  //   second ESC → clearCellSelection()      (no ants, selection clears)
+  const marchActiveRef = useRef(false)
 
   // Skip sibling sync + batch refresh during paste operations
   const isPastingRef = useRef(false)
@@ -567,12 +560,14 @@ export function AllocationGridAG({
   }, [])
 
   const applyMarchingAnts = useCallback((ranges: any[] | null | undefined) => {
-    marchRangesRef.current = ranges ?? null
+    marchRangesRef.current  = ranges ?? null
+    marchActiveRef.current  = true
     setMarchRects(computeMarchRects(ranges))
   }, [computeMarchRects])
 
   const clearMarchingAnts = useCallback(() => {
-    marchRangesRef.current = null
+    marchRangesRef.current  = null
+    marchActiveRef.current  = false
     setMarchRects([])
   }, [])
 
@@ -593,25 +588,36 @@ export function AllocationGridAG({
     suppressMovable: false,
     suppressHeaderMenuButton: true,
     // suppressKeyboardEvent fires BEFORE AG Grid processes the key.
-    // On Esc (non-editing): synchronously blur + clear focus so the
-    // header never receives focus — eliminating the visual flicker.
+    // Two-press ESC model (matches Excel):
+    //   • Ants visible  → first  Esc clears ants only; selection stays active.
+    //   • No ants       → Esc clears selection + focus (standard behaviour).
+    // marchActiveRef and clearMarchingAntsRef are stable ref objects, so they
+    // are safe to read inside this empty-deps useMemo closure.
     suppressKeyboardEvent: (params: any) => {
       if (params.event.key === 'Escape' && !params.editing) {
-        ;(params.api as any).clearCellSelection?.()
-        ;(params.api as any).clearFocusedCell?.()
-        ;(document.activeElement as HTMLElement)?.blur?.()
-        clearMarchingAntsRef.current()   // clear copy ants on Esc
+        if (marchActiveRef.current) {
+          // First Esc: dismiss copy preview, leave selection intact
+          clearMarchingAntsRef.current()
+        } else {
+          // Second Esc (or Esc with no ants): clear selection + blur
+          ;(params.api as any).clearCellSelection?.()
+          ;(params.api as any).clearFocusedCell?.()
+          ;(document.activeElement as HTMLElement)?.blur?.()
+        }
         return true
       }
       return false
     },
-    // Esc on a header: clear range selection + blur + copy ants.
+    // Header Esc: same two-press model.
     suppressHeaderKeyboardEvent: (params: any) => {
       if (params.event.key === 'Escape') {
-        ;(params.api as any).clearCellSelection?.()
-        ;(params.api as any).clearFocusedCell?.()
-        ;(document.activeElement as HTMLElement)?.blur?.()
-        clearMarchingAntsRef.current()   // clear copy ants on Esc
+        if (marchActiveRef.current) {
+          clearMarchingAntsRef.current()
+        } else {
+          ;(params.api as any).clearCellSelection?.()
+          ;(params.api as any).clearFocusedCell?.()
+          ;(document.activeElement as HTMLElement)?.blur?.()
+        }
         return true
       }
       return false
@@ -664,7 +670,6 @@ export function AllocationGridAG({
         },
 
         valueSetter: (params) => {
-          if (params.newValue === SPARSE_SKIP) return false  // gap cell — leave untouched
           const sn = params.data?.sectionName ?? ''
           const n  = parseInt(String(params.newValue ?? ''), 10)
           if (isNaN(n) || n < 0) return false
@@ -719,11 +724,6 @@ export function AllocationGridAG({
         // AG Grid calls valueGetter() immediately after valueSetter() to
         // record newValue in its undo entry.  Stale ref → entry discarded.
         valueSetter: (params: ValueSetterParams<RowData>) => {
-          // SPARSE_SKIP marks a gap column in a sparse paste — leave the cell untouched.
-          // Returning false tells AG Grid "no change", so nothing is written and
-          // no undo entry is created for this position.
-          if (params.newValue === SPARSE_SKIP) return false
-
           let val = String(params.newValue ?? '').trim()
           if (displayModeRef.current === 'hours') val = parseHoursInput(val, periodMinRef.current)
 
@@ -809,45 +809,21 @@ export function AllocationGridAG({
   }, [])
 
   // ── Paste handlers ─────────────────────────────────────────────
+  //
+  // Excel clipboard lifecycle (implemented here):
+  //   Ctrl+C  → ants appear on source cells; selection unchanged
+  //   Ctrl+V  → values paste; source ants REMAIN; selection moves to paste target
+  //   1st Esc → ants clear; selection stays (suppressKeyboardEvent handles this)
+  //   2nd Esc → selection clears (suppressKeyboardEvent handles this)
+  //
+  // Therefore onPasteEnd must NOT clear the ants — the user still needs to see
+  // which cells were copied (matching Excel's post-paste dotted-border behaviour).
   const onPasteStart = useCallback(() => { isPastingRef.current = true }, [])
   const onPasteEnd   = useCallback(() => {
-    isPastingRef.current   = false
-    sparseClipRef.current  = null   // sparse state consumed after paste
-
-    // First clear: synchronous — removes overlay before AG Grid's DOM updates run.
-    clearMarchingAnts()
-
-    // Second clear inside rAF: AG Grid's post-paste refresh may trigger onBodyScroll
-    // while marchRangesRef is still briefly populated, which would recompute and
-    // re-show the overlay on the newly-scrolled-to cells.  Re-clearing inside the
-    // rAF guarantees the overlay is gone after AG Grid finishes its own DOM work.
-    requestAnimationFrame(() => {
-      clearMarchingAnts()
-      gridRef.current?.api?.refreshCells({ force: false })
-    })
-  }, [clearMarchingAnts])
-
-  // ── Sparse paste — re-insert column gaps ─────────────────────────
-  // AG Grid collapses multi-range copies to adjacent TSV (no gaps between
-  // non-adjacent columns).  When sparseClipRef is set, we expand the matrix
-  // back to its original column span by inserting empty strings at gap offsets.
-  //
-  // Guard: if the clipboard column count doesn't match our stored offsets
-  // (clipboard was replaced after copy) we pass through untouched.
-  const processDataFromClipboard = useCallback((params: { data: string[][] }) => {
-    const sparse = sparseClipRef.current
-    if (!sparse) return params.data                              // rectangular: pass through
-
-    const srcCols = params.data[0]?.length ?? 0
-    if (srcCols !== sparse.colOffsets.length) return params.data // mismatch: safe pass-through
-
-    return params.data.map(row => {
-      // Fill gap positions with SPARSE_SKIP, not ''.
-      // valueSetter returns false on SPARSE_SKIP → gap cells are never written.
-      const expanded = Array<string>(sparse.colCount).fill(SPARSE_SKIP)
-      sparse.colOffsets.forEach((offset, i) => { expanded[offset] = row[i] ?? '' })
-      return expanded
-    })
+    isPastingRef.current = false
+    // Refresh cells so sibling-sync and usage totals update after bulk paste.
+    // Do NOT call clearMarchingAnts() — source cells keep their ants until Esc.
+    requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
   }, [])
 
   // ── onCellKeyDown — OBSERVE ONLY, no preventDefault ───────────
@@ -862,59 +838,28 @@ export function AllocationGridAG({
     const ctrl = ke.ctrlKey || ke.metaKey
 
     if (ctrl && key === 'c') {
-      // Capture ranges synchronously NOW, before AG Grid's internal clipboard
-      // handler runs (it may modify the range state after copy completes).
-      // One rAF lets the browser paint, then we do a synchronous DOM walk.
+      // Capture ranges synchronously — before AG Grid's internal clipboard handler
+      // runs (it may shift range state internally after completing the copy).
+      // One rAF lets the browser commit AG Grid's own DOM updates, then the
+      // synchronous getBoundingClientRect() walk produces accurate overlay rects.
       const api    = (e.api ?? gridRef.current?.api)
       const ranges = api?.getCellRanges() as any[] | undefined
 
-      // ── Sparse selection detection ────────────────────────────────
-      // Multiple ranges = Ctrl+Click on non-adjacent cells (sparse mode).
-      // Capture the display-column offsets of each selected column so that
-      // processDataFromClipboard can re-insert the gaps AG Grid strips from TSV.
-      if (ranges && ranges.length > 1) {
-        const allCols    = (api.getAllDisplayedColumns() ?? []) as any[]
-        const colIdToIdx = new Map<string, number>()
-        allCols.forEach((col: any, i: number) => colIdToIdx.set(col.getColId(), i))
-
-        const dispIdxs: number[] = []
-        ranges.forEach((range: any) => {
-          ;(range.columns as any[]).forEach((col: any) => {
-            const idx = colIdToIdx.get(col.getColId())
-            if (idx !== undefined) dispIdxs.push(idx)
-          })
-        })
-
-        if (dispIdxs.length > 0) {
-          const minIdx  = Math.min(...dispIdxs)
-          const maxIdx  = Math.max(...dispIdxs)
-          sparseClipRef.current = {
-            isSparse:   true,
-            colCount:   maxIdx - minIdx + 1,
-            colOffsets: dispIdxs.map(idx => idx - minIdx),
-          }
-        } else {
-          sparseClipRef.current = null
-        }
-      } else {
-        sparseClipRef.current = null   // rectangular selection, no gaps needed
-      }
-
-      // Clear any previous ants first so stale classes never linger.
-      // Also wipe any native text selection the browser may have accumulated
-      // during Ctrl+Click — prevents native highlight from painting over ants.
-      clearMarchingAnts()
+      // Wipe any native text selection accumulated during Ctrl+Click so it
+      // doesn't render as a browser-native highlight on top of the ants.
       window.getSelection()?.removeAllRanges()
+
+      // Replace any previous ants with the new copy range.
+      // (clearMarchingAnts is NOT called here — applyMarchingAnts overwrites
+      //  marchRangesRef and sets new rects atomically, so there is no flicker.)
       requestAnimationFrame(() => applyMarchingAnts(ranges))
       return
     }
 
-    if (key === 'escape') {
-      // suppressKeyboardEvent fires first (handles focus/selection + ants).
-      // This branch runs when suppressKeyboardEvent didn't suppress (i.e. editing).
-      clearMarchingAnts()
-    }
-  }, [applyMarchingAnts, clearMarchingAnts])
+    // Escape in editing mode: suppressKeyboardEvent already handles non-editing
+    // Esc (two-press model).  This branch only fires during active cell editing —
+    // ESC exits edit mode; ants and selection are left alone (edit cancel ≠ deselect).
+  }, [applyMarchingAnts])
 
   // ── Click outside → clear selection & copy state ──────────────
   useEffect(() => {
@@ -1101,7 +1046,6 @@ export function AllocationGridAG({
           onCellValueChanged={onCellValueChanged}
           onPasteStart={onPasteStart}
           onPasteEnd={onPasteEnd}
-          processDataFromClipboard={processDataFromClipboard}
           onCellSelectionChanged={onCellSelectionChanged}
           onCellKeyDown={onCellKeyDown}
           onBodyScroll={onBodyScroll}
