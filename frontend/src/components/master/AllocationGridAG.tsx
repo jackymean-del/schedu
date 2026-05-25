@@ -1,27 +1,27 @@
 /**
  * AllocationGridAG — Period-allocation spreadsheet.
  *
- * Architecture contract:
- *   AG Grid OWNS — focus, selection, editing, clipboard, undo/redo, keyboard
- *   React/Zustand OWNS — data persistence only
+ * Architecture:
+ *   AG Grid OWNS:  DOM rendering, cell editing, undo/redo, OS clipboard write
+ *   Engine OWNS:   selection state, copy state, keyboard, paste validation, overlay
  *
- * One critical sync point that makes AG Grid undo work with Zustand:
- *   allocationsRef.current MUST be updated SYNCHRONOUSLY inside valueSetter
- *   before returning true.  AG Grid calls valueGetter() immediately after
- *   valueSetter() returns to capture newValue for its undo entry.  If the
- *   ref is stale (React hasn't re-rendered yet) valueGetter sees the old
- *   value → old === new → undo entry silently discarded.
+ * Single source of truth: SpreadsheetEngineState  (useReducer)
+ *   selection    — what is currently highlighted (CELL_RANGE | COLUMN_RANGE)
+ *   copied       — copy buffer: serialized values + source range + AG Grid ranges for overlay
+ *   pasteWarning — transient validation toast
  *
- * Custom additions ON TOP of AG Grid (no interference with core behavior):
- *   - Marching ants: observed via onCellKeyDown (no preventDefault),
- *     copyRangeRef drives cellClassRules → ::before pseudo-element CSS.
- *   - Click-outside: document mousedown listener clears selection + copy state.
+ * All AG Grid event callbacks normalize into engine state.
+ * All rendering derives from engine state.
+ * No parallel refs for selection or copy state.
+ *
+ * Undo/redo for cell values: owned entirely by AG Grid (undoRedoCellEditing).
+ * We intentionally do not duplicate that stack.
  */
 
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 
-import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
+import { useMemo, useCallback, useRef, useEffect, useState, useReducer } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import {
   ModuleRegistry,
@@ -32,6 +32,7 @@ import {
   type ICellRendererParams,
   type CellSelectionChangedEvent,
   type CellValueChangedEvent,
+  type ProcessDataFromClipboardParams,
 } from 'ag-grid-community'
 import { AllEnterpriseModule } from 'ag-grid-enterprise'
 
@@ -86,7 +87,7 @@ function abbrev(name: string, shortName?: string | null): string {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Types
+// Component types
 // ─────────────────────────────────────────────────────────────────
 
 interface RowData { __sectionId: string; sectionName: string }
@@ -183,10 +184,9 @@ function ExportDropdown({ onCsv, onExcel }: { onCsv: () => void; onExcel: () => 
 const GRID_STYLES = `
 /* ── Kill native drag-ghost / text-selection ────────────────────────────────
    Ctrl+Click on cells fires browser text-selection + native drag logic, which
-   produces the translucent "Mathematics" ghost overlay.  Disabling user-select
-   on the wrapper prevents text from ever being selected (and therefore dragged).
+   produces the translucent ghost overlay.  Disabling user-select on the wrapper
+   prevents text from ever being selected (and therefore dragged).
    Re-enable it only on active edit inputs so cursor/copy works inside cells.
-   onDragStart + preventDefault (see JSX) provides belt-and-suspenders coverage.
    ─────────────────────────────────────────────────────────────────────────── */
 .ag-alloc-wrap {
   -webkit-user-select: none;
@@ -194,8 +194,6 @@ const GRID_STYLES = `
   user-select: none;
   -webkit-touch-callout: none;
 }
-/* Restore text selection inside the inline editor so the user can select/copy
-   the value they are currently editing. */
 .ag-alloc-wrap input,
 .ag-alloc-wrap textarea,
 .ag-alloc-wrap [contenteditable="true"] {
@@ -273,44 +271,23 @@ const GRID_STYLES = `
 
 /* ── Suppress ALL native browser focus chrome ───────────────────────────────
    AG Grid adds tabIndex="0" dynamically to cells for keyboard navigation.
-   Without this block the browser paints its own focus ring (blue square) and
-   native selection highlight ON TOP of the custom marching-ants border, causing
-   the "stretched dashed border / horizontal corruption" artefact.
-
-   Rule order: generic reset first, then specific overrides for our custom styles.
-   The !important on outline beats AG Grid's inline style and any theme default.
+   Without this block the browser paints its own focus ring (blue square)
+   ON TOP of the custom marching-ants border.
    ─────────────────────────────────────────────────────────────────────────── */
-
-/* Every focusable element inside the grid: wipe browser outline unconditionally */
 .ag-alloc-wrap *:focus,
 .ag-alloc-wrap *:focus-visible,
 .ag-alloc-wrap *:focus-within {
   outline: none !important;
-  box-shadow: none !important;          /* also clears Firefox dotted ring */
+  box-shadow: none !important;
 }
-
-/* Cells specifically — covers the tabIndex AG Grid injects at runtime */
 .ag-alloc-wrap .ag-cell:focus,
-.ag-alloc-wrap .ag-cell:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Header cells */
+.ag-alloc-wrap .ag-cell:focus-visible { outline: none !important; box-shadow: none !important; }
 .ag-alloc-wrap .ag-header-cell:focus,
-.ag-alloc-wrap .ag-header-cell:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Grid root wrapper — AG Grid renders a focusable div at the root */
+.ag-alloc-wrap .ag-header-cell:focus-visible { outline: none !important; box-shadow: none !important; }
 .ag-alloc-wrap .ag-root-wrapper:focus,
 .ag-alloc-wrap .ag-root-wrapper:focus-visible,
 .ag-alloc-wrap .ag-root:focus,
-.ag-alloc-wrap .ag-root:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
+.ag-alloc-wrap .ag-root:focus-visible { outline: none !important; box-shadow: none !important; }
 
 /* ── Focus / selection states ── */
 .ag-alloc-wrap .ag-cell-focus:not(.ag-cell-range-selected):not(.ag-cell-inline-editing) {
@@ -327,22 +304,14 @@ const GRID_STYLES = `
 }
 
 /* ── Pinned columns ── */
-.ag-alloc-wrap .ag-pinned-left-header {
-  border-right: 2px solid #C0BCD8 !important;
-}
-.ag-alloc-wrap .ag-pinned-left-cols-container {
-  border-right: 2px solid #C0BCD8 !important;
-}
+.ag-alloc-wrap .ag-pinned-left-header { border-right: 2px solid #C0BCD8 !important; }
+.ag-alloc-wrap .ag-pinned-left-cols-container { border-right: 2px solid #C0BCD8 !important; }
 .ag-alloc-wrap .ag-pinned-left-header .ag-header-cell,
-.ag-alloc-wrap .ag-pinned-left-cols-container .ag-cell {
-  background: #FAFAFA !important;
-}
+.ag-alloc-wrap .ag-pinned-left-cols-container .ag-cell { background: #FAFAFA !important; }
 
-/* ── Range selection ─────────────────────────────────────────────────────────
-   AG Grid stacks darker backgrounds on ag-cell-range-selected-1/2/3/4 when
-   multiple ranges overlap a cell (e.g. multi-range Ctrl+Click, or immediately
-   after a sparse paste).  Without overriding ALL variants here, cells in two
-   ranges would compound to a dark/near-black tint.
+/* ── Range selection — override all stacking levels ─────────────────────────
+   AG Grid compounds ag-cell-range-selected-1/2/3/4 across overlapping ranges.
+   Without overriding ALL variants, cells in two ranges go near-black.
    ─────────────────────────────────────────────────────────────────────────── */
 .ag-alloc-wrap .ag-cell-range-selected,
 .ag-alloc-wrap .ag-cell-range-selected-1,
@@ -364,20 +333,12 @@ const GRID_STYLES = `
   background: #C8C4E8; border-radius: 3px;
 }
 
-/* ── Marching ants overlay (copy mode) ──────────────────────────
-   A single absolutely-positioned <div class="march-overlay-rect">
-   is rendered PER RANGE above the grid — no per-cell class toggling.
-
-   This mirrors the Excel / Google Sheets architecture:
-     grid cells  →  passive render only (no selection border)
-     overlay div →  one complete animated rectangle per range
-
-   Benefits over per-cell border approach:
-     • Sparse / non-adjacent selections each get their own clean rect
-     • No internal edge suppression hacks needed
-     • Horizontal and vertical selections are rendered identically
-     • Zero DOM-class churn on cells during copy state
-   ──────────────────────────────────────────────────────────── */
+/* ── Marching ants overlay ───────────────────────────────────────────────────
+   One absolutely-positioned <div.march-overlay-rect> per copied range, rendered
+   ABOVE the grid cells.  Excel / Google Sheets architecture: no per-cell class
+   toggling, no edge-suppression hacks.  The overlay container has overflow:hidden
+   so rects that extend beyond the viewport are clipped cleanly.
+   ─────────────────────────────────────────────────────────────────────────── */
 @keyframes ag-march {
   from { background-position: 0 0,     100% 0,     100% 100%,   0 100%; }
   to   { background-position: 10px 0,  100% 10px,  calc(100% - 10px) 100%,  0 calc(100% - 10px); }
@@ -385,7 +346,6 @@ const GRID_STYLES = `
 .march-overlay-rect {
   position: absolute;
   pointer-events: none;
-  /* All four edges always drawn — each rect represents a complete boundary */
   background-image:
     repeating-linear-gradient(90deg,  #1A1A2E 0, #1A1A2E 5px, transparent 5px, transparent 10px),
     repeating-linear-gradient(180deg, #1A1A2E 0, #1A1A2E 5px, transparent 5px, transparent 10px),
@@ -396,7 +356,99 @@ const GRID_STYLES = `
   background-repeat:   repeat-x,   repeat-y,    repeat-x,    repeat-y;
   animation: ag-march 0.45s linear infinite;
 }
+
+/* ── Paste warning toast ── */
+@keyframes paste-warn-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
 `
+
+// ─────────────────────────────────────────────────────────────────
+// Spreadsheet Engine — state machine
+//
+// This is the single source of truth for all spreadsheet interactions.
+// Selection, copy state, and paste validation all live here.
+// No parallel refs, no disconnected state.
+// ─────────────────────────────────────────────────────────────────
+
+type SelectionType = 'CELL_RANGE' | 'COLUMN_RANGE' | 'ROW_RANGE'
+
+/**
+ * Normalized selection in row-index × colId space.
+ * startRow/endRow are always the min/max (i.e. startRow <= endRow).
+ */
+interface SelectionCoords {
+  type:       SelectionType
+  startRow:   number    // inclusive, min row index
+  endRow:     number    // inclusive, max row index
+  startColId: string    // leftmost visible colId
+  endColId:   string    // rightmost visible colId
+}
+
+/**
+ * Snapshot of the copy buffer.
+ * data is serialized at copy-time so edits after copying don't affect it.
+ * agRanges is kept for the overlay DOM walk (getBoundingClientRect).
+ */
+interface CopiedState {
+  sourceRange: SelectionCoords
+  data:        string[][]   // [row][col], row-major
+  agRanges:    any[]        // raw AG Grid CellRange[] — for overlay recompute on scroll
+}
+
+interface SpreadsheetEngineState {
+  selection:    SelectionCoords | null
+  activeCell:   { rowIndex: number; colId: string } | null
+  copied:       CopiedState | null
+  pasteWarning: string | null
+}
+
+type EngineAction =
+  | { type: 'SELECTION_CHANGED'; selection: SelectionCoords | null; activeCell?: { rowIndex: number; colId: string } | null }
+  | { type: 'COPY';              copied: CopiedState }
+  | { type: 'CLEAR_COPY' }
+  | { type: 'CLEAR_SELECTION' }
+  | { type: 'SET_PASTE_WARNING'; message: string | null }
+
+const ENGINE_INITIAL: SpreadsheetEngineState = {
+  selection:    null,
+  activeCell:   null,
+  copied:       null,
+  pasteWarning: null,
+}
+
+function engineReducer(s: SpreadsheetEngineState, a: EngineAction): SpreadsheetEngineState {
+  switch (a.type) {
+
+    case 'SELECTION_CHANGED':
+      // Changing selection does NOT clear the copy buffer.
+      // Excel keeps marching ants alive after the selection moves so the user
+      // can pick a paste destination without losing the copy preview.
+      return {
+        ...s,
+        selection:  a.selection,
+        activeCell: a.activeCell !== undefined ? a.activeCell : s.activeCell,
+      }
+
+    case 'COPY':
+      return { ...s, copied: a.copied }
+
+    case 'CLEAR_COPY':
+      // First ESC: dismiss ants, keep selection active.
+      return { ...s, copied: null }
+
+    case 'CLEAR_SELECTION':
+      // Second ESC (or click outside): clear everything.
+      return { ...s, selection: null, activeCell: null, copied: null }
+
+    case 'SET_PASTE_WARNING':
+      return { ...s, pasteWarning: a.message }
+
+    default:
+      return s
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────
 // Props
@@ -424,102 +476,62 @@ export function AllocationGridAG({
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])
 
-  // ── Stable refs — closures always see the latest value without re-creating fns ──
+  // ── DOM refs ──────────────────────────────────────────────────
+  const gridRef          = useRef<AgGridReact<RowData>>(null)
+  const wrapperRef       = useRef<HTMLDivElement>(null)
+  // .ag-theme-quartz div — position:relative anchor for the overlay.
+  // Overlay coords are relative to THIS element, not wrapperRef.
+  const gridContainerRef = useRef<HTMLDivElement>(null)
+
+  // ── Live data refs — updated every render, O(1) ───────────────
+  // These allow all useCallback / useMemo closures to read fresh data
+  // without declaring it in their deps (which would cause re-creation).
   const allocationsRef  = useRef<Record<string, Record<string, string>>>(subjectAllocations)
   const capOverrideRef  = useRef<Record<string, number>>(sectionCapacityOverrides)
   const capRef          = useRef(cap)
   const sectionsRef     = useRef<Section[]>(sections)
   const displayModeRef  = useRef(displayMode)
   const periodMinRef    = useRef(periodMinutes)
-  const gridRef          = useRef<AgGridReact<RowData>>(null)
-  const wrapperRef       = useRef<HTMLDivElement>(null)
-  // Ref for the .ag-theme-quartz container — the position:relative element
-  // that is the overlay's containing block.  computeMarchRects must subtract
-  // THIS rect, not wrapperRef's, so overlay coords align with the grid cells.
-  const gridContainerRef = useRef<HTMLDivElement>(null)
+  allocationsRef.current  = subjectAllocations
+  capOverrideRef.current  = sectionCapacityOverrides
+  capRef.current          = cap
+  sectionsRef.current     = sections
+  displayModeRef.current  = displayMode
+  periodMinRef.current    = periodMinutes
 
-  // Update refs every render — O(1), no side effects
-  allocationsRef.current = subjectAllocations
-  capOverrideRef.current = sectionCapacityOverrides
-  capRef.current         = cap
-  sectionsRef.current    = sections
-  displayModeRef.current = displayMode
-  periodMinRef.current   = periodMinutes
+  // ── Spreadsheet Engine ────────────────────────────────────────
+  const [ssState, ssDispatch] = useReducer(engineReducer, ENGINE_INITIAL)
 
-  // ── Stable refs readable from useMemo closures ───────────────
-  const clearMarchingAntsRef = useRef<() => void>(() => {})
-  // true while marching ants are visible — drives the two-press ESC model:
-  //   first  ESC → clearMarchingAnts() only  (ants on, selection stays)
-  //   second ESC → clearCellSelection()      (no ants, selection clears)
-  const marchActiveRef = useRef(false)
+  // Stable refs so useMemo([]) closures always call the latest implementation
+  // without needing to be recreated.  Updated every render (O(1), no side effects).
+  const stateRef    = useRef(ssState)
+  const dispatchRef = useRef(ssDispatch)
+  stateRef.current    = ssState
+  dispatchRef.current = ssDispatch
 
-  // Skip sibling sync + batch refresh during paste operations
+  // handleCopyRef is synced below, after handleCopy is defined
+  const handleCopyRef = useRef<(api: any) => void>(() => {})
+
+  // ── Skip sibling sync during paste bulk-update ────────────────
   const isPastingRef = useRef(false)
 
-  // ── Overlay marching ants state ───────────────────────────────
-  // One rect per copied range, positioned absolutely above the grid.
-  // Stored as pixel coords relative to the .ag-alloc-wrap wrapper.
+  // ── Marching ants overlay ─────────────────────────────────────
+  // Derives entirely from ssState.copied — single source of truth.
+  // No separate marchRangesRef, no marchActiveRef.
   type MarchRect = { left: number; top: number; width: number; height: number }
   const [marchRects, setMarchRects] = useState<MarchRect[]>([])
-  // Keep the last set of AG Grid ranges so we can recompute on scroll
-  const marchRangesRef = useRef<any[] | null>(null)
 
-  // ── UI state ─────────────────────────────────────────────────
-  const [quickFilter, setQuickFilter] = useState('')
-  const [statusBar, setStatusBar] = useState<{ cells: number; periods: number; avg: number } | null>(null)
+  // DOM walk: convert AG Grid CellRange[] to pixel rects relative to the
+  // gridContainerRef (position:relative containing block of the overlay).
+  const computeMarchRects = useCallback((agRanges: any[]): MarchRect[] => {
+    const gridEl      = wrapperRef.current
+    const containerEl = gridContainerRef.current
+    if (!gridEl || !containerEl || !agRanges?.length) return []
 
-  // ── Row data ─────────────────────────────────────────────────
-  const rowData = useMemo<RowData[]>(() =>
-    (sections as Section[]).map((sec: any) => ({
-      __sectionId: sec.id,
-      sectionName: sec.name,
-    }))
-  , [sections])
-
-  // ── Grid context — stable, never recreated ────────────────────
-  const gridContext = useMemo<GridContext>(() => ({
-    getAllocations:   () => allocationsRef.current,
-    getCap:           () => capRef.current,
-    getCapOverrides:  () => capOverrideRef.current,
-    getDisplayMode:   () => displayModeRef.current,
-    getPeriodMinutes: () => periodMinRef.current,
-  }), [])
-
-  // ── Marching ants — overlay architecture ─────────────────────
-  //
-  // Excel / Google Sheets render selection borders as absolutely-
-  // positioned overlay rectangles ABOVE the grid, not as per-cell
-  // CSS classes.  We do the same:
-  //
-  //   1. computeMarchRects — converts AG Grid CellRange[] into pixel
-  //      bounding-box rects (relative to the wrapper div) by reading
-  //      each selected cell's getBoundingClientRect().  One rect per
-  //      range: sparse Ctrl+Click selections each get their own rect.
-  //
-  //   2. applyMarchingAnts — stores ranges in marchRangesRef, then
-  //      calls setMarchRects(computeMarchRects(ranges)) to update
-  //      React state.  The JSX overlay renders <div.march-overlay-rect>
-  //      for each rect — a complete animated dashed rectangle on ALL
-  //      4 edges.  No edge-suppression logic needed.
-  //
-  //   3. clearMarchingAnts — setMarchRects([]).
-  //
-  //   4. onBodyScroll — recomputes overlay rects whenever the grid
-  //      scrolls so ants stay aligned with the moving cells.
-
-  const computeMarchRects = useCallback((ranges: any[] | null | undefined): MarchRect[] => {
-    const gridEl       = wrapperRef.current
-    const containerEl  = gridContainerRef.current   // position:relative overlay parent
-    if (!gridEl || !containerEl || !ranges?.length) return []
-
-    // MUST use gridContainerRef (the .ag-theme-quartz div) as the coordinate
-    // base — it is the position:relative ancestor of the overlay div.
-    // Using wrapperRef would include the toolbar offset (~34px ≈ 1 row height)
-    // and shift every overlay rect one row below the actual selection.
     const wrapRect = containerEl.getBoundingClientRect()
     const out: MarchRect[] = []
 
-    ranges.forEach((range: any) => {
+    agRanges.forEach((range: any) => {
       if (!range.startRow || !range.endRow) return
       const r0   = Math.min(range.startRow.rowIndex, range.endRow.rowIndex)
       const r1   = Math.max(range.startRow.rowIndex, range.endRow.rowIndex)
@@ -531,23 +543,20 @@ export function AllocationGridAG({
       cols.forEach((col: any) => {
         const colId = col.getColId() as string
         for (let ri = r0; ri <= r1; ri++) {
-          // AG Grid may render two .ag-row[row-index=N] elements for the same
-          // row (one in the pinned-left container, one in the center-body).
-          // We walk both so pinned subject columns are found correctly.
-          // getAttribute() comparison is safe for any colId (colons, spaces, etc.)
+          // Both pinned-left and center-body containers may have the same row index
           gridEl.querySelectorAll<HTMLElement>(`.ag-row[row-index="${ri}"]`)
-                .forEach(rowEl => {
-                  rowEl.querySelectorAll<HTMLElement>('.ag-cell').forEach(cell => {
-                    if (cell.getAttribute('col-id') !== colId) return
-                    const r = cell.getBoundingClientRect()
-                    if (r.width === 0 || r.height === 0) return  // virtualised / hidden
-                    minL = Math.min(minL, r.left   - wrapRect.left)
-                    minT = Math.min(minT, r.top    - wrapRect.top)
-                    maxR = Math.max(maxR, r.right  - wrapRect.left)
-                    maxB = Math.max(maxB, r.bottom - wrapRect.top)
-                    hit  = true
-                  })
-                })
+            .forEach(rowEl => {
+              rowEl.querySelectorAll<HTMLElement>('.ag-cell').forEach(cell => {
+                if (cell.getAttribute('col-id') !== colId) return
+                const r = cell.getBoundingClientRect()
+                if (r.width === 0 || r.height === 0) return
+                minL = Math.min(minL, r.left   - wrapRect.left)
+                minT = Math.min(minT, r.top    - wrapRect.top)
+                maxR = Math.max(maxR, r.right  - wrapRect.left)
+                maxB = Math.max(maxB, r.bottom - wrapRect.top)
+                hit  = true
+              })
+            })
         }
       })
 
@@ -559,60 +568,147 @@ export function AllocationGridAG({
     return out
   }, [])
 
-  const applyMarchingAnts = useCallback((ranges: any[] | null | undefined) => {
-    marchRangesRef.current  = ranges ?? null
-    marchActiveRef.current  = true
-    setMarchRects(computeMarchRects(ranges))
+  // Overlay re-derives whenever copied state changes
+  useEffect(() => {
+    if (!ssState.copied) { setMarchRects([]); return }
+    setMarchRects(computeMarchRects(ssState.copied.agRanges))
+  }, [ssState.copied, computeMarchRects])
+
+  // Recompute overlay on grid scroll (cells move, overlay must follow)
+  const onBodyScroll = useCallback(() => {
+    const copied = stateRef.current.copied
+    if (copied) setMarchRects(computeMarchRects(copied.agRanges))
   }, [computeMarchRects])
 
-  const clearMarchingAnts = useCallback(() => {
-    marchRangesRef.current  = null
-    marchActiveRef.current  = false
-    setMarchRects([])
+  // ── Paste warning auto-dismiss ────────────────────────────────
+  useEffect(() => {
+    if (!ssState.pasteWarning) return
+    const t = setTimeout(
+      () => dispatchRef.current({ type: 'SET_PASTE_WARNING', message: null }),
+      4000
+    )
+    return () => clearTimeout(t)
+  }, [ssState.pasteWarning])
+
+  // ── Helper: normalize AG Grid CellRange[] → SelectionCoords ──
+  // Detects COLUMN_RANGE when the selection spans all displayed rows.
+  // For multiple ranges (Ctrl+Click sparse) we take the bounding box.
+  const normalizeAgRanges = useCallback((
+    agRanges: any[],
+    totalRows: number
+  ): SelectionCoords | null => {
+    if (!agRanges?.length) return null
+
+    let startRow = Infinity, endRow = -Infinity
+    const colIds: string[] = []
+
+    agRanges.forEach((range: any) => {
+      if (!range.startRow || !range.endRow) return
+      startRow = Math.min(startRow, range.startRow.rowIndex, range.endRow.rowIndex)
+      endRow   = Math.max(endRow,   range.startRow.rowIndex, range.endRow.rowIndex)
+      ;(range.columns as any[]).forEach((col: any) => {
+        const id = col.getColId()
+        if (!colIds.includes(id)) colIds.push(id)
+      })
+    })
+
+    if (!isFinite(startRow) || !colIds.length) return null
+
+    // COLUMN_RANGE: the selection covers every row in the grid
+    const type: SelectionType =
+      startRow === 0 && endRow >= totalRows - 1 ? 'COLUMN_RANGE' : 'CELL_RANGE'
+
+    return {
+      type,
+      startRow,
+      endRow,
+      startColId: colIds[0],
+      endColId:   colIds[colIds.length - 1],
+    }
   }, [])
 
-  // Keep ref in sync so useMemo closures can call latest clearMarchingAnts
-  clearMarchingAntsRef.current = clearMarchingAnts
+  // ── Helper: serialize SelectionCoords → string[][] ────────────
+  // Reads from allocationsRef (the Zustand store mirror) — NOT from the DOM.
+  // This is why the clipboard engine is decoupled from visual rendering.
+  const serializeSelection = useCallback((
+    sel: SelectionCoords,
+    api: any
+  ): string[][] => {
+    const allCols: any[] = (api as any).getAllDisplayedColumns?.() ?? []
+    const si = allCols.findIndex(c => c.getColId() === sel.startColId)
+    const ei = allCols.findIndex(c => c.getColId() === sel.endColId)
+    const c0 = Math.min(si < 0 ? 0 : si, ei < 0 ? 0 : ei)
+    const c1 = Math.max(si < 0 ? 0 : si, ei < 0 ? 0 : ei)
+    const rangedCols = allCols.slice(c0, c1 + 1)
 
-  // Recompute overlay rects when the grid body scrolls so ants follow the cells
-  const onBodyScroll = useCallback(() => {
-    if (marchRangesRef.current) {
-      setMarchRects(computeMarchRects(marchRangesRef.current))
+    const rows: string[][] = []
+    for (let ri = sel.startRow; ri <= sel.endRow; ri++) {
+      const node = api.getDisplayedRowAtIndex(ri)
+      if (!node?.data) continue
+      const sn = (node.data as RowData).sectionName
+      rows.push(
+        rangedCols.map((col: any) => {
+          const colId = col.getColId() as string
+          if (!colId.startsWith('subj:')) return ''
+          return allocationsRef.current[sn]?.[colId.slice(5)] ?? ''
+        })
+      )
     }
-  }, [computeMarchRects])
+    return rows
+  }, [])
 
-  // ── defaultColDef — stable ────────────────────────────────────
+  // ── Copy handler — single entry point for ALL copy operations ─
+  // Called from onCellKeyDown (cell Ctrl+C) and suppressHeaderKeyboardEvent
+  // (column header Ctrl+C).  Returns false everywhere so AG Grid still writes
+  // the TSV to the OS clipboard — we only add the engine state snapshot.
+  const handleCopy = useCallback((api: any) => {
+    if (!api) return
+    const agRanges = (api as any).getCellRanges?.() as any[] | undefined
+    if (!agRanges?.length) return
+
+    const totalRows = (api as any).getDisplayedRowCount?.() ?? 0
+    const sel = normalizeAgRanges(agRanges, totalRows)
+    if (!sel) return
+
+    window.getSelection()?.removeAllRanges()
+
+    // Serialize into engine state.  One rAF lets AG Grid finish its internal
+    // copy so getBoundingClientRect() in computeMarchRects sees stable DOM.
+    const data = serializeSelection(sel, api)
+    requestAnimationFrame(() => {
+      dispatchRef.current({ type: 'COPY', copied: { sourceRange: sel, data, agRanges } })
+    })
+  }, [normalizeAgRanges, serializeSelection])
+
+  // Keep handleCopyRef in sync so useMemo([]) closures can call it
+  handleCopyRef.current = handleCopy
+
+  // ── Grid context — stable, never recreated ────────────────────
+  const gridContext = useMemo<GridContext>(() => ({
+    getAllocations:   () => allocationsRef.current,
+    getCap:           () => capRef.current,
+    getCapOverrides:  () => capOverrideRef.current,
+    getDisplayMode:   () => displayModeRef.current,
+    getPeriodMinutes: () => periodMinRef.current,
+  }), [])
+
+  // ── defaultColDef — stable, empty deps ───────────────────────
+  // Must be empty deps because AG Grid memoizes this at grid init.
+  // stateRef, dispatchRef, handleCopyRef are stable ref objects — safe to
+  // read from an empty-deps useMemo closure.
   const defaultColDef = useMemo<ColDef<RowData>>(() => ({
     sortable: true,
     resizable: true,
     suppressMovable: false,
     suppressHeaderMenuButton: true,
-    // suppressKeyboardEvent fires BEFORE AG Grid processes the key.
-    // Two-press ESC model (matches Excel):
-    //   • Ants visible  → first  Esc clears ants only; selection stays active.
-    //   • No ants       → Esc clears selection + focus (standard behaviour).
-    // marchActiveRef and clearMarchingAntsRef are stable ref objects, so they
-    // are safe to read inside this empty-deps useMemo closure.
+
+    // Two-press ESC model (matches Excel exactly):
+    //   Ants visible  → first  ESC: CLEAR_COPY only  (selection stays active)
+    //   No ants       → second ESC: clear selection + blur
     suppressKeyboardEvent: (params: any) => {
       if (params.event.key === 'Escape' && !params.editing) {
-        if (marchActiveRef.current) {
-          // First Esc: dismiss copy preview, leave selection intact
-          clearMarchingAntsRef.current()
-        } else {
-          // Second Esc (or Esc with no ants): clear selection + blur
-          ;(params.api as any).clearCellSelection?.()
-          ;(params.api as any).clearFocusedCell?.()
-          ;(document.activeElement as HTMLElement)?.blur?.()
-        }
-        return true
-      }
-      return false
-    },
-    // Header Esc: same two-press model.
-    suppressHeaderKeyboardEvent: (params: any) => {
-      if (params.event.key === 'Escape') {
-        if (marchActiveRef.current) {
-          clearMarchingAntsRef.current()
+        if (stateRef.current.copied) {
+          dispatchRef.current({ type: 'CLEAR_COPY' })
         } else {
           ;(params.api as any).clearCellSelection?.()
           ;(params.api as any).clearFocusedCell?.()
@@ -622,45 +718,61 @@ export function AllocationGridAG({
       }
       return false
     },
-  }), []) // empty deps — stable for grid lifetime
 
-  // ── Column definitions — only rebuilt when subjects list changes ──
+    // Column header keyboard: Ctrl+C → handleCopy; ESC → same two-press model.
+    suppressHeaderKeyboardEvent: (params: any) => {
+      const ctrl = params.event.ctrlKey || params.event.metaKey
+      const key  = params.event.key
+
+      if (ctrl && key.toLowerCase() === 'c') {
+        // Trigger engine copy (ants + state snapshot).
+        // Return false so AG Grid also writes TSV to the OS clipboard.
+        handleCopyRef.current(params.api)
+        return false
+      }
+
+      if (key === 'Escape') {
+        if (stateRef.current.copied) {
+          dispatchRef.current({ type: 'CLEAR_COPY' })
+        } else {
+          ;(params.api as any).clearCellSelection?.()
+          ;(params.api as any).clearFocusedCell?.()
+          ;(document.activeElement as HTMLElement)?.blur?.()
+        }
+        return true
+      }
+      return false
+    },
+  }), []) // intentionally empty — reads only stable refs
+
+  // ── Column definitions ────────────────────────────────────────
   const columnDefs = useMemo<ColDef<RowData>[]>(() => {
     const cols: ColDef<RowData>[] = [
 
-      // ── Class (read-only label, navigable) ───────────────────
+      // Class label (pinned, read-only)
       {
         headerName: 'Class',
         colId: 'sectionName',
         field: 'sectionName',
         pinned: 'left',
-        width: 120,
-        minWidth: 90,
+        width: 120, minWidth: 90,
         editable: false,
-        lockPinned: true,
-        suppressMovable: true,
-        sortable: true,
+        lockPinned: true, suppressMovable: true, sortable: true,
         cellStyle: {
-          fontWeight: 600,
-          fontSize: 11.5,
-          color: '#13111E',
-          fontFamily: "'DM Sans', sans-serif",
-          paddingLeft: 10,
+          fontWeight: 600, fontSize: 11.5, color: '#13111E',
+          fontFamily: "'DM Sans', sans-serif", paddingLeft: 10,
         },
       },
 
-      // ── Used / Capacity (editable denominator) ───────────────
+      // Used / Capacity (editable denominator)
       {
         headerName: 'Used',
         colId: '__usage',
         headerTooltip: 'Used / Capacity.  Click the capacity number to override per section.',
         pinned: 'left',
-        width: 82,
-        minWidth: 74,
+        width: 82, minWidth: 74,
         editable: true,
-        lockPinned: true,
-        suppressMovable: true,
-        sortable: false,
+        lockPinned: true, suppressMovable: true, sortable: false,
         cellRenderer: UsageCellRenderer,
 
         valueGetter: (params) => {
@@ -686,15 +798,15 @@ export function AllocationGridAG({
             if (!raw || raw === '0') return
             const p = parseAllocation(raw); if (p.valid) u += p.weeklyTotal
           })
-          const s = utilisationStatus(u, c)
-          if (s === 'over')  return { backgroundColor: '#FEF2F2' }
-          if (s === 'tight') return { backgroundColor: '#FFFBEB' }
+          const st = utilisationStatus(u, c)
+          if (st === 'over')  return { backgroundColor: '#FEF2F2' }
+          if (st === 'tight') return { backgroundColor: '#FFFBEB' }
           return null
         },
       },
     ]
 
-    // ── Subject columns ─────────────────────────────────────────
+    // Subject columns
     ;(subjects as Subject[]).forEach((sub: Subject) => {
       const hdr = abbrev(sub.name, sub.shortName)
       cols.push({
@@ -702,8 +814,7 @@ export function AllocationGridAG({
         colId: `subj:${sub.name}`,
         editable: true,
         width: Math.max(52, Math.min(64, hdr.length * 10 + 22)),
-        minWidth: 48,
-        maxWidth: 90,
+        minWidth: 48, maxWidth: 90,
         sortable: true,
         headerTooltip: sub.name,
 
@@ -719,30 +830,28 @@ export function AllocationGridAG({
           return v
         },
 
-        // ── THE CRITICAL CONTRACT ──────────────────────────────
-        // allocationsRef.current MUST be updated before returning true.
-        // AG Grid calls valueGetter() immediately after valueSetter() to
-        // record newValue in its undo entry.  Stale ref → entry discarded.
+        // ── CRITICAL CONTRACT ────────────────────────────────────
+        // allocationsRef.current MUST be updated SYNCHRONOUSLY before returning
+        // true.  AG Grid calls valueGetter() immediately after valueSetter() to
+        // capture newValue for its undo entry.  Stale ref → entry discarded → undo broken.
         valueSetter: (params: ValueSetterParams<RowData>) => {
           let val = String(params.newValue ?? '').trim()
           if (displayModeRef.current === 'hours') val = parseHoursInput(val, periodMinRef.current)
 
           const sn = params.data?.sectionName ?? ''
 
-          // Synchronous ref update (AG Grid reads this in its immediate valueGetter call)
           const secRow = { ...(allocationsRef.current[sn] ?? {}) }
           if (val === '') delete secRow[sub.name]; else secRow[sub.name] = val
           const withCurrent = { ...allocationsRef.current }
           if (Object.keys(secRow).length === 0) delete withCurrent[sn]; else withCurrent[sn] = secRow
-          allocationsRef.current = withCurrent
+          allocationsRef.current = withCurrent   // sync BEFORE returning
 
-          // Paste: write only current section (no sibling sync)
           if (isPastingRef.current) {
             store.setSubjectAllocations?.(withCurrent)
             return true
           }
 
-          // Normal edit: propagate to same-grade siblings atomically
+          // Propagate to same-grade siblings
           const grade    = gradeOf(sn)
           const siblings = (sectionsRef.current as Section[]).filter(
             (s: Section) => gradeOf(s.name) === grade && s.name !== sn
@@ -773,9 +882,149 @@ export function AllocationGridAG({
     return cols
   }, [subjects, gridContext])
 
+  // ── Row data ──────────────────────────────────────────────────
+  const rowData = useMemo<RowData[]>(() =>
+    (sections as Section[]).map((sec: any) => ({
+      __sectionId: sec.id,
+      sectionName: sec.name,
+    }))
+  , [sections])
+
+  // ── onCellSelectionChanged ────────────────────────────────────
+  // Projects AG Grid selection into engine state.
+  // Also computes the status bar (cell count, period sum, average).
+  const [statusBar, setStatusBar] = useState<{ cells: number; periods: number; avg: number } | null>(null)
+
+  const onCellSelectionChanged = useCallback((e: CellSelectionChangedEvent<RowData>) => {
+    window.getSelection()?.removeAllRanges()
+
+    const api      = e.api
+    const agRanges = api.getCellRanges() as any[] ?? []
+    const totalRows = (api as any).getDisplayedRowCount?.() ?? 0
+
+    // Project into engine
+    const sel = normalizeAgRanges(agRanges, totalRows)
+    dispatchRef.current({ type: 'SELECTION_CHANGED', selection: sel })
+
+    // Status bar
+    if (!sel || !agRanges.length) { setStatusBar(null); return }
+    let cells = 0, total = 0
+    agRanges.forEach((range: any) => {
+      const r0 = Math.min(range.startRow!.rowIndex, range.endRow!.rowIndex)
+      const r1 = Math.max(range.startRow!.rowIndex, range.endRow!.rowIndex)
+      ;(range.columns as any[]).forEach((col: any) => {
+        const colId = col.getColId() as string
+        if (!colId.startsWith('subj:')) return
+        const subName = colId.slice(5)
+        for (let i = r0; i <= r1; i++) {
+          const node = api.getDisplayedRowAtIndex(i)
+          if (!node?.data) continue
+          cells++
+          const rawV = allocationsRef.current[node.data.sectionName]?.[subName]
+          if (rawV && rawV !== '0') {
+            const p = parseAllocation(rawV)
+            if (p.valid) total += p.weeklyTotal
+          }
+        }
+      })
+    })
+    if (cells <= 1) { setStatusBar(null); return }
+    setStatusBar({ cells, periods: total, avg: cells > 0 ? Math.round((total / cells) * 10) / 10 : 0 })
+  }, [normalizeAgRanges])
+
+  // ── onCellKeyDown — observe only, no preventDefault ───────────
+  // Delegates Ctrl+C to handleCopy; AG Grid handles everything else.
+  const onCellKeyDown = useCallback((e: any) => {
+    const ke = e.event as KeyboardEvent | undefined
+    if (!ke) return
+    if ((ke.ctrlKey || ke.metaKey) && ke.key.toLowerCase() === 'c') {
+      handleCopy(e.api ?? gridRef.current?.api)
+    }
+  }, [handleCopy])
+
+  // ── Paste handlers ────────────────────────────────────────────
+  const onPasteStart = useCallback(() => { isPastingRef.current = true }, [])
+  const onPasteEnd   = useCallback(() => {
+    isPastingRef.current = false
+    // Refresh UI after bulk paste; keep ants alive (Excel behaviour)
+    requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
+  }, [])
+
+  // ── processDataFromClipboard — overlap validation ─────────────
+  // Reads from ssState.copied (engine state) — NOT from a separate marchRangesRef.
+  // If the paste footprint overlaps the copy source with an incompatible shape,
+  // shows a warning and cancels the paste (return null).
+  const processDataFromClipboard = useCallback((
+    params: ProcessDataFromClipboardParams
+  ): string[][] | null => {
+    const api    = gridRef.current?.api
+    const copied = stateRef.current.copied
+    if (!api || !copied) return params.data
+
+    const dstRanges = (api as any).getCellRanges?.() as any[] | undefined
+    if (!dstRanges?.length) return params.data
+
+    const allCols: any[] = (api as any).getAllDisplayedColumns?.() ?? []
+    const ci = (id: string) => allCols.findIndex(c => c.getColId() === id)
+
+    const src    = copied.sourceRange
+    const srcC0  = Math.min(ci(src.startColId), ci(src.endColId))
+    const srcC1  = Math.max(ci(src.startColId), ci(src.endColId))
+    const srcR0  = src.startRow
+    const srcR1  = src.endRow
+
+    // Paste expands from the top-left anchor of the destination selection
+    let dstR0 = Infinity, dstC0 = Infinity
+    dstRanges.forEach((range: any) => {
+      if (!range.startRow) return
+      const r = Math.min(range.startRow.rowIndex, range.endRow?.rowIndex ?? range.startRow.rowIndex)
+      dstR0 = Math.min(dstR0, r)
+      ;(range.columns as any[]).forEach((col: any) => {
+        const i = ci(col.getColId()); if (i >= 0) dstC0 = Math.min(dstC0, i)
+      })
+    })
+    if (!isFinite(dstR0)) return params.data
+
+    const dataRows = params.data.length
+    const dataCols = Math.max(...params.data.map(r => r.length), 0)
+    const dstR1    = dstR0 + dataRows - 1
+    const dstC1    = dstC0 + dataCols - 1
+
+    const rowOvlp = srcR0 <= dstR1 && dstR0 <= srcR1
+    const colOvlp = srcC0 <= dstC1 && dstC0 <= srcC1
+    if (!rowOvlp || !colOvlp) return params.data   // no overlap → proceed
+
+    // Compatible: exact size match, or 1×1 broadcast
+    const exactFit   = dataRows === (srcR1 - srcR0 + 1) && dataCols === (srcC1 - srcC0 + 1)
+    const singleCell = dataRows === 1 && dataCols === 1
+    if (exactFit || singleCell) return params.data
+
+    dispatchRef.current({
+      type: 'SET_PASTE_WARNING',
+      message: `The copy area and paste area aren't the same size. Move the paste destination outside the copy area and try again.`,
+    })
+    return null   // cancel paste
+  }, [])   // reads only stable refs (stateRef, gridRef, dispatchRef)
+
+  // ── Click outside → clear engine state ───────────────────────
+  useEffect(() => {
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (wrapperRef.current?.contains(e.target as Node)) return
+      const api = gridRef.current?.api
+      ;(document.activeElement as HTMLElement)?.blur?.()
+      if (api) {
+        ;(api as any).clearCellSelection?.()
+        ;(api as any).clearFocusedCell?.()
+      }
+      dispatchRef.current({ type: 'CLEAR_SELECTION' })
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [])
+
   // ── Refresh siblings + usage after each cell edit ─────────────
   const onCellValueChanged = useCallback((e: CellValueChangedEvent<RowData>) => {
-    if (isPastingRef.current) return   // onPasteEnd handles bulk refresh
+    if (isPastingRef.current) return
 
     const colId = e.column.getColId()
     const sn    = e.data?.sectionName
@@ -806,104 +1055,6 @@ export function AllocationGridAG({
       if (sibNodes.length) api.refreshCells({ rowNodes: sibNodes as any, columns: [colId], force: false })
       api.refreshCells({ rowNodes: allNodes, columns: ['__usage'], force: false })
     })
-  }, [])
-
-  // ── Paste handlers ─────────────────────────────────────────────
-  //
-  // Excel clipboard lifecycle (implemented here):
-  //   Ctrl+C  → ants appear on source cells; selection unchanged
-  //   Ctrl+V  → values paste; source ants REMAIN; selection moves to paste target
-  //   1st Esc → ants clear; selection stays (suppressKeyboardEvent handles this)
-  //   2nd Esc → selection clears (suppressKeyboardEvent handles this)
-  //
-  // Therefore onPasteEnd must NOT clear the ants — the user still needs to see
-  // which cells were copied (matching Excel's post-paste dotted-border behaviour).
-  const onPasteStart = useCallback(() => { isPastingRef.current = true }, [])
-  const onPasteEnd   = useCallback(() => {
-    isPastingRef.current = false
-    // Refresh cells so sibling-sync and usage totals update after bulk paste.
-    // Do NOT call clearMarchingAnts() — source cells keep their ants until Esc.
-    requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
-  }, [])
-
-  // ── onCellKeyDown — OBSERVE ONLY, no preventDefault ───────────
-  // Used solely to:
-  //   Ctrl+C → record copied range into copyRangeRef → trigger marching ants
-  //   Esc    → clear copyRangeRef → stop marching ants
-  // AG Grid still owns the actual copy/cancel logic.
-  const onCellKeyDown = useCallback((e: any) => {
-    const ke = e.event as KeyboardEvent | undefined
-    if (!ke) return
-    const key  = ke.key.toLowerCase()
-    const ctrl = ke.ctrlKey || ke.metaKey
-
-    if (ctrl && key === 'c') {
-      // Capture ranges synchronously — before AG Grid's internal clipboard handler
-      // runs (it may shift range state internally after completing the copy).
-      // One rAF lets the browser commit AG Grid's own DOM updates, then the
-      // synchronous getBoundingClientRect() walk produces accurate overlay rects.
-      const api    = (e.api ?? gridRef.current?.api)
-      const ranges = api?.getCellRanges() as any[] | undefined
-
-      // Wipe any native text selection accumulated during Ctrl+Click so it
-      // doesn't render as a browser-native highlight on top of the ants.
-      window.getSelection()?.removeAllRanges()
-
-      // Replace any previous ants with the new copy range.
-      // (clearMarchingAnts is NOT called here — applyMarchingAnts overwrites
-      //  marchRangesRef and sets new rects atomically, so there is no flicker.)
-      requestAnimationFrame(() => applyMarchingAnts(ranges))
-      return
-    }
-
-    // Escape in editing mode: suppressKeyboardEvent already handles non-editing
-    // Esc (two-press model).  This branch only fires during active cell editing —
-    // ESC exits edit mode; ants and selection are left alone (edit cancel ≠ deselect).
-  }, [applyMarchingAnts])
-
-  // ── Click outside → clear selection & copy state ──────────────
-  useEffect(() => {
-    const onDocMouseDown = (e: MouseEvent) => {
-      if (wrapperRef.current?.contains(e.target as Node)) return
-      const api = gridRef.current?.api
-      ;(document.activeElement as HTMLElement)?.blur?.()
-      if (api) {
-        ;(api as any).clearCellSelection?.()
-        ;(api as any).clearFocusedCell?.()
-      }
-      clearMarchingAnts()
-    }
-    document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
-  }, [clearMarchingAnts])
-
-  // ── Selection → status bar ─────────────────────────────────────
-  const onCellSelectionChanged = useCallback((e: CellSelectionChangedEvent<RowData>) => {
-    // Clear native text selection on every AG Grid selection change.
-    // Drag-select and Shift+Arrow can accumulate a browser text selection
-    // that paints a native highlight rectangle over the custom ants border.
-    window.getSelection()?.removeAllRanges()
-
-    const ranges = e.api.getCellRanges()
-    if (!ranges?.length) { setStatusBar(null); return }
-    let cells = 0, total = 0
-    ranges.forEach(range => {
-      const r0 = Math.min(range.startRow!.rowIndex, range.endRow!.rowIndex)
-      const r1 = Math.max(range.startRow!.rowIndex, range.endRow!.rowIndex)
-      range.columns.forEach(col => {
-        if (!col.getColId().startsWith('subj:')) return
-        const subName = col.getColId().slice(5)
-        for (let i = r0; i <= r1; i++) {
-          const node = e.api.getDisplayedRowAtIndex(i)
-          if (!node?.data) continue
-          cells++
-          const rawV = allocationsRef.current[node.data.sectionName]?.[subName]
-          if (rawV && rawV !== '0') { const p = parseAllocation(rawV); if (p.valid) total += p.weeklyTotal }
-        }
-      })
-    })
-    if (cells <= 1) { setStatusBar(null); return }
-    setStatusBar({ cells, periods: total, avg: cells > 0 ? Math.round((total / cells) * 10) / 10 : 0 })
   }, [])
 
   // ── AI fill ───────────────────────────────────────────────────
@@ -940,7 +1091,7 @@ export function AllocationGridAG({
     requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
   }, [store, subjects, gridContext])
 
-  // Auto-fill on mount if empty or conflicted
+  // Auto-fill on mount if grid is empty or over-capacity
   useEffect(() => {
     const alloc = allocationsRef.current
     const secs  = sectionsRef.current as Section[]
@@ -963,15 +1114,12 @@ export function AllocationGridAG({
 
   const gridHeight = Math.max(200, Math.min(600, rowData.length * 32 + 32 + 2))
 
+  // ── Render ────────────────────────────────────────────────────
   return (
     <div
       ref={wrapperRef}
       className="ag-alloc-wrap"
       style={{ display: 'flex', flexDirection: 'column', gap: 0 }}
-      // user-select:none (CSS) prevents text selection → no draggable content →
-      // no ghost overlay.  onDragStart is belt-and-suspenders only.
-      // onMouseDown must NOT call preventDefault — doing so suppresses focus
-      // transfer to AG Grid cells and silences all keyboard shortcuts.
       onDragStart={(e) => { e.preventDefault() }}
     >
       <style>{GRID_STYLES}</style>
@@ -992,9 +1140,8 @@ export function AllocationGridAG({
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <Search size={10} style={{ position: 'absolute', left: 7, color: '#C0BDDA', pointerEvents: 'none' }} />
           <input
-            type="text" placeholder="Search…" value={quickFilter}
+            type="text" placeholder="Search…"
             onChange={e => {
-              setQuickFilter(e.target.value)
               gridRef.current?.api?.setGridOption('quickFilterText', e.target.value)
             }}
             style={{
@@ -1006,11 +1153,12 @@ export function AllocationGridAG({
         </div>
       </div>
 
-      {/* ── AG Grid ── */}
-      {/* gridContainerRef — the position:relative containing block for the march overlay.
-          computeMarchRects subtracts THIS element's getBoundingClientRect(), ensuring
-          overlay coords are in the same coordinate space as position:absolute children. */}
-      <div ref={gridContainerRef} className="ag-theme-quartz" style={{ height: gridHeight, width: '100%', border: '1px solid #C8C8C8', borderTop: 'none', overflow: 'hidden', position: 'relative' }}>
+      {/* ── AG Grid container — position:relative anchor for the overlay ── */}
+      <div
+        ref={gridContainerRef}
+        className="ag-theme-quartz"
+        style={{ height: gridHeight, width: '100%', border: '1px solid #C8C8C8', borderTop: 'none', overflow: 'hidden', position: 'relative' }}
+      >
         <AgGridReact<RowData>
           ref={gridRef}
           rowData={rowData}
@@ -1021,14 +1169,12 @@ export function AllocationGridAG({
 
           rowNumbers={{ width: 40, minWidth: 36 }}
 
-          // ── AG Grid owns the full editing/keyboard/clipboard/undo lifecycle ──
           singleClickEdit={false}
           stopEditingWhenCellsLoseFocus={true}
           enterNavigatesVertically={true}
           enterNavigatesVerticallyAfterEdit={true}
           undoRedoCellEditing={true}
           undoRedoCellEditingLimit={1000}
-
           suppressLastEmptyLineOnPaste={true}
 
           cellSelection={{
@@ -1046,6 +1192,7 @@ export function AllocationGridAG({
           onCellValueChanged={onCellValueChanged}
           onPasteStart={onPasteStart}
           onPasteEnd={onPasteEnd}
+          processDataFromClipboard={processDataFromClipboard}
           onCellSelectionChanged={onCellSelectionChanged}
           onCellKeyDown={onCellKeyDown}
           onBodyScroll={onBodyScroll}
@@ -1054,11 +1201,10 @@ export function AllocationGridAG({
           tooltipHideDelay={3000}
         />
 
-        {/* ── Marching ants overlay ─────────────────────────────────
-            Absolutely positioned above the grid — one <div> per copied
-            range.  Sparse Ctrl+Click selections render as independent
-            rectangles with no shared-edge artifacts.  pointerEvents:none
-            ensures zero interference with grid mouse interactions.       */}
+        {/* ── Marching ants overlay ──────────────────────────────────
+            Renders from ssState.copied — the single source of truth.
+            One absolutely-positioned div per copied range.
+            pointerEvents:none — zero interference with grid interactions. */}
         {marchRects.length > 0 && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5, overflow: 'hidden' }}>
             {marchRects.map((rect, i) => (
@@ -1068,6 +1214,26 @@ export function AllocationGridAG({
                 style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}
               />
             ))}
+          </div>
+        )}
+
+        {/* ── Paste validation warning toast ─────────────────────────
+            Renders from ssState.pasteWarning.  Auto-dismisses after 4 s. */}
+        {ssState.pasteWarning && (
+          <div style={{
+            position: 'absolute', bottom: 10, left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 20, pointerEvents: 'none',
+            background: '#1A1A2E', color: '#fff',
+            fontSize: 11.5, fontFamily: 'inherit', fontWeight: 500,
+            padding: '7px 14px', borderRadius: 6,
+            boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+            display: 'flex', alignItems: 'center', gap: 7,
+            maxWidth: 420, textAlign: 'center', lineHeight: 1.4,
+            animation: 'paste-warn-in 0.15s ease-out',
+          }}>
+            <span style={{ fontSize: 13 }}>⚠️</span>
+            {ssState.pasteWarning}
           </div>
         )}
       </div>
