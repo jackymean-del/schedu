@@ -1,8 +1,8 @@
 /**
- * TeachersPanel — Tab 3 (compact, premium redesign).
+ * TeachersPanel — Tab 3.
  *
- * Unified subject→class mapping:  each subject carries its own applicable classes.
- * Table: Name | Subject Assignments | Class Teacher | Actions
+ * Unified subject→class mapping: each subject carries its own applicable classes.
+ * Table: Teacher | Subject Assignments | Class Teacher Of | [ Show More ] [ Duplicate ] [ Delete ]
  *
  * Subject Assignments cell:
  *   ┃ English   [V-A] [V-B] ✕
@@ -14,14 +14,18 @@
  *   Step 2 → pick applicable classes (grade-grouped, bulk actions)
  *
  * Data model: Staff extended with `subjectMappings?: { subject, classes }[]`
- * On every change, `subjects[]` and `classes[]` are kept in sync for backward compat.
  */
 
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Staff, Section, Subject } from '@/types'
-import { Trash2, Plus, Copy, ChevronRight, ChevronDown, X, Users } from 'lucide-react'
-import { P, P_D, P_L, P_B, TH, TD, TABLE_CARD, InlineChipSelect, ImportModal } from './shared'
+import { Plus, X, Users } from 'lucide-react'
+import {
+  P, P_D, P_L, P_B,
+  TH, TD, TABLE_CARD,
+  InlineChipSelect, ImportModal,
+  actionBtn, deleteBtn, outlineBtn,
+} from './shared'
 import type { ChipOption } from './shared'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -77,7 +81,7 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
   const [selClasses, setSelCls]   = useState<string[]>([])
   const [subSearch, setSubSearch] = useState('')
   const [clsSearch, setClsSearch] = useState('')
-  const [pos, setPos]             = useState({ top: 0, left: 0, width: 280 })
+  const [pos, setPos]             = useState({ top: 0, left: 0, width: 290 })
   const dropRef   = useRef<HTMLDivElement>(null)
   const subInRef  = useRef<HTMLInputElement>(null)
   const clsInRef  = useRef<HTMLInputElement>(null)
@@ -102,10 +106,7 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (
-        dropRef.current && !dropRef.current.contains(e.target as Node) &&
-        anchorEl && !anchorEl.contains(e.target as Node)
-      ) onClose()
+      if (dropRef.current && !dropRef.current.contains(e.target as Node) && anchorEl && !anchorEl.contains(e.target as Node)) onClose()
     }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
@@ -133,70 +134,52 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
     return map
   }, [classOpts, clsSearch])
 
-  const bb: React.CSSProperties = {
-    fontSize: 10, borderRadius: 3, padding: '2px 6px', cursor: 'pointer',
-    border: '1px solid #e0dcff', background: '#f5f3ff', color: '#555',
-  }
+  const bb: React.CSSProperties = { fontSize: 10, borderRadius: 3, padding: '2px 6px', cursor: 'pointer', border: '1px solid #e0dcff', background: '#f5f3ff', color: '#555' }
 
   return createPortal(
-    <div ref={dropRef} style={{
-      position: 'fixed', top: pos.top, left: pos.left, width: pos.width,
-      background: '#fff', border: '1px solid #dbd5ff',
-      borderRadius: 10, boxShadow: '0 10px 32px rgba(124,111,224,0.22)',
-      zIndex: 9999, overflow: 'hidden',
-    }}>
+    <div ref={dropRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, background: '#fff', border: '1px solid #dbd5ff', borderRadius: 10, boxShadow: '0 10px 32px rgba(124,111,224,0.22)', zIndex: 9999, overflow: 'hidden' }}>
       {step === 1 ? (
         <>
-          {/* Header */}
           <div style={{ padding: '9px 12px', background: '#faf9ff', borderBottom: '1px solid #f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: P, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Select Subject</span>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', padding: 2, lineHeight: 1 }}><X size={12} /></button>
           </div>
-          {/* Search */}
           <div style={{ padding: '7px 10px', borderBottom: '1px solid #f5f3ff' }}>
-            <input ref={subInRef} value={subSearch} onChange={e => setSubSearch(e.target.value)}
-              placeholder="Search subjects…"
-              style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            <input ref={subInRef} value={subSearch} onChange={e => setSubSearch(e.target.value)} placeholder="Search subjects…"
+              style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
             />
           </div>
-          {/* List */}
           <div style={{ maxHeight: 230, overflowY: 'auto' }}>
             {filteredSubs.length === 0 ? (
               <div style={{ padding: '16px', textAlign: 'center', fontSize: 12, color: '#bbb' }}>
                 {subSearch ? `No matches for "${subSearch}"` : 'All subjects already assigned'}
               </div>
             ) : filteredSubs.map(s => (
-              <div key={s.id}
-                onClick={() => { setSelSub(s); setStep(2) }}
+              <div key={s.id} onClick={() => { setSelSub(s); setStep(2) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, color: '#1a1a2e' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
                 onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color ?? P, flexShrink: 0 }} />
                 <span style={{ flex: 1, fontWeight: 500 }}>{s.name}</span>
-                <ChevronRight size={11} color="#ccc" />
+                <span style={{ fontSize: 11, color: '#ccc' }}>›</span>
               </div>
             ))}
           </div>
         </>
       ) : (
         <>
-          {/* Header with back */}
           <div style={{ padding: '9px 12px', background: '#faf9ff', borderBottom: '1px solid #f0eeff', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => { setStep(1); setSelCls([]) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: P, padding: '0 4px 0 0', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>←</button>
+            <button onClick={() => { setStep(1); setSelCls([]) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: P, padding: '0 4px 0 0', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>←</button>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: selSubject?.color ?? P, flexShrink: 0 }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', flex: 1 }}>{selSubject?.name}</span>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', padding: 2, lineHeight: 1 }}><X size={12} /></button>
           </div>
-          {/* Search */}
           <div style={{ padding: '7px 10px', borderBottom: '1px solid #f5f3ff' }}>
-            <input ref={clsInRef} value={clsSearch} onChange={e => setClsSearch(e.target.value)}
-              placeholder="Search classes…"
-              style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            <input ref={clsInRef} value={clsSearch} onChange={e => setClsSearch(e.target.value)} placeholder="Search classes…"
+              style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
             />
           </div>
-          {/* Bulk */}
           <div style={{ padding: '4px 8px', display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid #f5f3ff', background: '#faf9ff' }}>
             <button onMouseDown={e => { e.preventDefault(); setSelCls(classOpts.map(o => o.value)) }} style={{ ...bb, color: P, background: '#f0eeff', borderColor: `${P}22`, fontWeight: 700 }}>All</button>
             <button onMouseDown={e => { e.preventDefault(); setSelCls([]) }} style={bb}>None</button>
@@ -214,7 +197,6 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
               )
             })}
           </div>
-          {/* Class list */}
           <div style={{ maxHeight: 190, overflowY: 'auto' }}>
             {Array.from(groupedCls.entries()).map(([grp, opts]) => (
               <div key={grp}>
@@ -238,17 +220,12 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
             ))}
             {groupedCls.size === 0 && <div style={{ padding: '16px', textAlign: 'center', fontSize: 12, color: '#bbb' }}>No classes available</div>}
           </div>
-          {/* Footer */}
           <div style={{ padding: '8px 12px', borderTop: '1px solid #f0eeff', display: 'flex', gap: 8, justifyContent: 'flex-end', background: '#faf9ff' }}>
-            <button onClick={onClose} style={{ background: 'none', border: '1px solid #e0e0e0', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: '#666' }}>Cancel</button>
+            <button onClick={onClose} style={{ background: 'none', border: '1px solid #e0e0e0', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: '#666', fontFamily: 'inherit' }}>Cancel</button>
             <button
               onClick={() => { if (selSubject) { onAdd(selSubject.name, selClasses); onClose() } }}
               disabled={selClasses.length === 0}
-              style={{
-                background: selClasses.length > 0 ? P : '#e0dcff', color: '#fff', border: 'none',
-                borderRadius: 6, padding: '5px 16px', fontSize: 12, fontWeight: 700,
-                cursor: selClasses.length > 0 ? 'pointer' : 'not-allowed',
-              }}
+              style={{ background: selClasses.length > 0 ? P : '#e0dcff', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 16px', fontSize: 12, fontWeight: 700, cursor: selClasses.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
             >Add {selClasses.length > 0 ? `(${selClasses.length})` : ''}</button>
           </div>
         </>
@@ -259,65 +236,38 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
 }
 
 // ─── Subject mapping line ─────────────────────────────────────────────────────
-// Shows one subject with its applicable classes inside the assignments cell.
 function SubjectLine({ mapping, subjectColor, classOpts, onUpdate, onRemove }: {
-  mapping: SubjectMapping
-  subjectColor: string
-  classOpts: ChipOption[]
-  onUpdate: (classes: string[]) => void
-  onRemove: () => void
+  mapping: SubjectMapping; subjectColor: string
+  classOpts: ChipOption[]; onUpdate: (classes: string[]) => void; onRemove: () => void
 }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 3,
-      borderLeft: `2.5px solid ${subjectColor}bb`,
-      paddingLeft: 6, marginBottom: 2, overflow: 'hidden',
-      minHeight: 22,
-    }}>
-      {/* Subject name — fixed width, ellipsis */}
-      <span style={{
-        fontSize: 11, fontWeight: 700, color: '#111028',
-        width: 96, flexShrink: 0,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
+    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 3, borderLeft: `2.5px solid ${subjectColor}bb`, paddingLeft: 6, marginBottom: 2, overflow: 'hidden', minHeight: 22 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#111028', width: 96, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {mapping.subject}
       </span>
-      {/* Compact class chips */}
       <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        <InlineChipSelect
-          selected={mapping.classes}
-          options={classOpts}
-          onChange={onUpdate}
-          placeholder="+ classes"
-          maxChips={2}
-          minDropdownWidth={260}
-        />
+        <InlineChipSelect selected={mapping.classes} options={classOpts} onChange={onUpdate} placeholder="+ classes" maxChips={2} minDropdownWidth={260} />
       </div>
-      {/* Remove */}
       <button onClick={onRemove}
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 2px', color: '#D4CFEC', lineHeight: 1, flexShrink: 0 }}
         onMouseEnter={e => (e.currentTarget.style.color = '#e74c3c')}
         onMouseLeave={e => (e.currentTarget.style.color = '#D4CFEC')}
-      >
-        <X size={10} />
-      </button>
+      ><X size={10} /></button>
     </div>
   )
 }
 
 // ─── Subject assignments cell ─────────────────────────────────────────────────
 function SubjectAssignmentCell({ teacher, subjects, classOpts, onUpdateMappings }: {
-  teacher: StaffExt
-  subjects: Subject[]
-  classOpts: ChipOption[]
-  onUpdateMappings: (m: SubjectMapping[]) => void
+  teacher: StaffExt; subjects: Subject[]
+  classOpts: ChipOption[]; onUpdateMappings: (m: SubjectMapping[]) => void
 }) {
   const [showAdd, setShowAdd] = useState(false)
   const addBtnRef = useRef<HTMLButtonElement>(null)
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const [anchor, setAnchor]   = useState<HTMLElement | null>(null)
 
-  const mappings = getMappings(teacher)
-  const assigned = new Set(mappings.map(m => m.subject))
+  const mappings  = getMappings(teacher)
+  const assigned  = new Set(mappings.map(m => m.subject))
   const available = subjects.filter(s => !assigned.has(s.name))
 
   const subjectColorMap = useMemo(() => {
@@ -326,57 +276,34 @@ function SubjectAssignmentCell({ teacher, subjects, classOpts, onUpdateMappings 
     return m
   }, [subjects])
 
-  function addMapping(subject: string, classes: string[]) {
-    onUpdateMappings([...mappings, { subject, classes }])
-  }
-  function removeMapping(i: number) {
-    const n = [...mappings]; n.splice(i, 1); onUpdateMappings(n)
-  }
-  function updateClasses(i: number, classes: string[]) {
-    const n = [...mappings]; n[i] = { ...n[i], classes }; onUpdateMappings(n)
-  }
+  function addMapping(subject: string, classes: string[]) { onUpdateMappings([...mappings, { subject, classes }]) }
+  function removeMapping(i: number) { const n = [...mappings]; n.splice(i, 1); onUpdateMappings(n) }
+  function updateClasses(i: number, classes: string[]) { const n = [...mappings]; n[i] = { ...n[i], classes }; onUpdateMappings(n) }
 
   return (
     <div style={{ minWidth: 180 }}>
       {mappings.map((m, i) => (
-        <SubjectLine
-          key={m.subject + i}
-          mapping={m}
+        <SubjectLine key={m.subject + i} mapping={m}
           subjectColor={subjectColorMap[m.subject] ?? P}
           classOpts={classOpts}
           onUpdate={cls => updateClasses(i, cls)}
           onRemove={() => removeMapping(i)}
         />
       ))}
-      <button
-        ref={addBtnRef}
+      <button ref={addBtnRef}
         onClick={() => {
           if (showAdd) { setShowAdd(false); setAnchor(null); return }
-          setAnchor(addBtnRef.current)
-          setShowAdd(true)
+          setAnchor(addBtnRef.current); setShowAdd(true)
         }}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          background: showAdd ? P : '#fff',
-          border: `1.5px solid ${showAdd ? P : '#DDD8FF'}`,
-          borderRadius: 5, color: showAdd ? '#fff' : P,
-          fontSize: 11, fontWeight: 700,
-          padding: '3px 9px',
-          marginTop: mappings.length > 0 ? 4 : 0,
-          cursor: 'pointer', transition: 'all 0.12s',
-        }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: showAdd ? P : '#fff', border: `1.5px solid ${showAdd ? P : '#DDD8FF'}`, borderRadius: 5, color: showAdd ? '#fff' : P, fontSize: 11, fontWeight: 700, padding: '3px 9px', marginTop: mappings.length > 0 ? 4 : 0, cursor: 'pointer', transition: 'all 0.12s', fontFamily: 'inherit' }}
         onMouseEnter={e => { if (!showAdd) { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P } }}
         onMouseLeave={e => { if (!showAdd) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF' } }}
       >
         <Plus size={10} /> Subject
       </button>
       {showAdd && anchor && (
-        <AddSubjectFlow
-          anchorEl={anchor}
-          availableSubjects={available}
-          classOpts={classOpts}
-          onAdd={addMapping}
-          onClose={() => { setShowAdd(false); setAnchor(null) }}
+        <AddSubjectFlow anchorEl={anchor} availableSubjects={available} classOpts={classOpts}
+          onAdd={addMapping} onClose={() => { setShowAdd(false); setAnchor(null) }}
         />
       )}
     </div>
@@ -388,9 +315,10 @@ const fld: React.CSSProperties = {
   padding: '3px 7px', border: '1px solid #E4E0FF', borderRadius: 5,
   fontSize: 12, color: '#111028', outline: 'none', fontFamily: 'inherit', background: '#FAFAFE',
 }
+
 function ExpandedDetails({ t, onChange }: { t: Staff; onChange: (p: Partial<Staff>) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 12, padding: '8px 52px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+    <div style={{ display: 'flex', gap: 14, padding: '8px 52px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', flexWrap: 'wrap', alignItems: 'flex-end' }}>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
         Role
         <select value={t.role ?? 'Teacher'} onChange={e => onChange({ role: e.target.value })} style={fld}>
@@ -426,12 +354,12 @@ function NameCell({ value, onSave }: { value: string; onSave: (v: string) => voi
     <input ref={ref} value={t} onChange={ev => setT(ev.target.value)}
       onBlur={commit}
       onKeyDown={ev => { if (ev.key === 'Enter') commit(); if (ev.key === 'Escape') { setT(value); setE(false) } }}
-      style={{ ...fld, width: 150, fontSize: 12.5, fontWeight: 600 }}
+      style={{ ...fld, width: '100%', fontSize: 12.5, fontWeight: 600 }}
     />
   )
   return (
     <span onClick={() => setE(true)} title="Click to edit"
-      style={{ cursor: 'text', fontSize: 12.5, fontWeight: 600, color: '#111028', padding: '2px 3px', borderRadius: 3, display: 'inline-block' }}
+      style={{ cursor: 'text', fontSize: 12.5, fontWeight: 600, color: '#111028', padding: '2px 4px', borderRadius: 3, display: 'inline-block' }}
       onMouseEnter={ev => (ev.currentTarget.style.background = '#F0ECFE')}
       onMouseLeave={ev => (ev.currentTarget.style.background = '')}
     >{value}</span>
@@ -453,7 +381,7 @@ function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
     <tr>
       <td colSpan={4} style={{ ...TD, padding: '9px 12px' }}>
         <button onClick={() => setActive(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 6, color: P, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer' }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 6, color: P, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>
           <Plus size={13} /> Add Teacher
         </button>
       </td>
@@ -465,12 +393,12 @@ function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
         <input ref={ref} value={name} onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
           placeholder="Teacher full name"
-          style={{ ...fld, width: 220, fontSize: 12.5 }}
+          style={{ ...fld, width: '100%', fontSize: 12.5, boxSizing: 'border-box' as const }}
         />
       </td>
       <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap' }}>
-        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 5 }}>✓ Add</button>
-        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>✗</button>
+        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
+        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
       </td>
     </tr>
   )
@@ -487,7 +415,6 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
   onDelete: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [hovered, setHovered]   = useState(false)
   const mappings = getMappings(t)
 
   function updateMappings(maps: SubjectMapping[]) {
@@ -503,9 +430,9 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
   return (
     <>
       <tr
-        style={{ verticalAlign: 'top', transition: 'background 0.08s', background: hovered ? '#F6F4FF' : '' }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        style={{ verticalAlign: 'top', transition: 'background 0.08s' }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#F6F4FF')}
+        onMouseLeave={e => (e.currentTarget.style.background = '')}
       >
         {/* Name + avatar */}
         <td style={{ ...TD, padding: '7px 12px', whiteSpace: 'nowrap' }}>
@@ -522,16 +449,11 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
 
         {/* Subject assignments */}
         <td style={{ ...TD, padding: '7px 10px' }}>
-          <SubjectAssignmentCell
-            teacher={t}
-            subjects={subjects}
-            classOpts={classOpts}
-            onUpdateMappings={updateMappings}
-          />
+          <SubjectAssignmentCell teacher={t} subjects={subjects} classOpts={classOpts} onUpdateMappings={updateMappings} />
         </td>
 
         {/* Class teacher (single select) */}
-        <td style={{ ...TD, padding: '7px 10px', width: 140 }}>
+        <td style={{ ...TD, padding: '7px 10px' }}>
           <InlineChipSelect
             selected={isClassTeacherOf ? [isClassTeacherOf] : []}
             options={classTeacherOpts}
@@ -543,40 +465,38 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDupl
           />
         </td>
 
-        {/* Actions */}
-        <td style={{ ...TD, padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', width: 88 }}>
-          <button
-            onClick={() => setExpanded(o => !o)}
-            title="Teacher details"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: expanded ? P_L : (hovered ? '#F0ECFE' : 'transparent'), border: `1px solid ${expanded ? P_B : 'transparent'}`, cursor: 'pointer', padding: '3px 7px', color: expanded ? P : (hovered ? '#9896B5' : 'transparent'), borderRadius: 5, marginRight: 1, transition: 'all 0.1s', fontSize: 10.5, fontWeight: 600 }}
-            onMouseEnter={e => { (e.currentTarget.style.background = P_L); (e.currentTarget.style.color = P); (e.currentTarget.style.borderColor = P_B) }}
-            onMouseLeave={e => { (e.currentTarget.style.background = expanded ? P_L : (hovered ? '#F0ECFE' : 'transparent')); (e.currentTarget.style.color = expanded ? P : (hovered ? '#9896B5' : 'transparent')); (e.currentTarget.style.borderColor = expanded ? P_B : 'transparent') }}
-          >
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {expanded ? 'Less' : 'More'}
-          </button>
-          <button
-            onClick={onDuplicate}
-            title="Duplicate"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', color: '#C4BCDC', borderRadius: 4, marginRight: 1, transition: 'color 0.1s, background 0.1s' }}
-            onMouseEnter={e => { (e.currentTarget.style.background = P_L); (e.currentTarget.style.color = P) }}
-            onMouseLeave={e => { (e.currentTarget.style.background = ''); (e.currentTarget.style.color = '#C4BCDC') }}
-          >
-            <Copy size={14} />
-          </button>
-          <button
-            onClick={onDelete}
-            title="Delete teacher"
-            style={{ background: 'transparent', border: '1px solid transparent', cursor: 'pointer', padding: '3px 7px', color: '#C4BCDC', borderRadius: 5, transition: 'all 0.1s' }}
-            onMouseEnter={e => { (e.currentTarget.style.background = '#FFF0F0'); (e.currentTarget.style.color = '#e74c3c'); (e.currentTarget.style.borderColor = '#FFCDD2') }}
-            onMouseLeave={e => { (e.currentTarget.style.background = 'transparent'); (e.currentTarget.style.color = '#C4BCDC'); (e.currentTarget.style.borderColor = 'transparent') }}
-          >
-            <Trash2 size={14} />
-          </button>
+        {/* Actions — always visible text buttons */}
+        <td style={{ ...TD, padding: '6px 10px', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={() => setExpanded(o => !o)}
+              style={{
+                ...actionBtn,
+                ...(expanded ? { background: P_L, color: P_D, borderColor: P_B } : {}),
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = expanded ? P_L : 'transparent'
+                e.currentTarget.style.color = expanded ? P_D : '#8886A8'
+                e.currentTarget.style.borderColor = expanded ? P_B : '#DDD8FF'
+              }}
+            >{expanded ? 'Show Less' : 'Show More'}</button>
+            <button
+              onClick={onDuplicate}
+              style={actionBtn}
+              onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8886A8'; e.currentTarget.style.borderColor = '#DDD8FF' }}
+            >Duplicate</button>
+            <button
+              onClick={onDelete}
+              style={deleteBtn}
+              onMouseEnter={e => { e.currentTarget.style.background = '#FFE4E4' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#FFF0F0' }}
+            >Delete</button>
+          </div>
         </td>
       </tr>
 
-      {/* Expanded details */}
       {expanded && (
         <tr>
           <td colSpan={4} style={{ padding: 0 }}>
@@ -619,7 +539,6 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
     )
   }, [staff, search])
 
-  // Build grade-grouped class options
   const classOpts = useMemo<ChipOption[]>(() => {
     const map = new Map<string, string[]>()
     sections.forEach(s => {
@@ -633,7 +552,6 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
     return opts
   }, [sections])
 
-  // Class teacher options (same as class options)
   const classTeacherOpts = classOpts
 
   function update(id: string, p: Partial<StaffExt>) {
@@ -646,17 +564,12 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
   }
 
   function remove(id: string) { setStaff(staff.filter(t => t.id !== id)) }
-
   function add(t: StaffExt) { setStaff([...staff, t as Staff]) }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        paddingBottom: 8, borderBottom: '1px solid #EEE9FF', flexShrink: 0,
-      }}>
-        {/* Left: title + badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 7, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
           <Users size={13} color={P} />
           <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111028' }}>Teachers</span>
@@ -668,36 +581,32 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
           )}
         </div>
         <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
-        {/* Search */}
         <div style={{ position: 'relative', flex: 1 }}>
           <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 12 }}>⌕</span>
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
+          <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search teachers, subjects…"
-            style={{ width: '100%', padding: '4px 8px 4px 24px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, color: '#111028', outline: 'none', boxSizing: 'border-box', background: '#FAFAFE', fontFamily: 'inherit' }}
+            style={{ width: '100%', padding: '4px 8px 4px 24px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, color: '#111028', outline: 'none', boxSizing: 'border-box' as const, background: '#FAFAFE', fontFamily: 'inherit' }}
           />
         </div>
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
           <button
             onClick={() => setImportOpen(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff', color: '#6B6891', border: '1px solid #DDD8FF', borderRadius: 5, padding: '4px 9px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={outlineBtn}
             onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
           >⬆ Import</button>
         </div>
       </div>
 
-      {/* Import Modal */}
       {importOpen && (
         <ImportModal
           title="Teachers"
           sampleHeaders={['Teacher Name', 'Role (optional)']}
           sampleRows={[
-            ['Mrs. Anita Sharma',   'Teacher'],
-            ['Mr. Rajesh Kumar',    'HoD'],
-            ['Ms. Priya Nair',      'Teacher'],
-            ['Dr. Suresh Menon',    'Coordinator'],
+            ['Mrs. Anita Sharma', 'Teacher'],
+            ['Mr. Rajesh Kumar',  'HoD'],
+            ['Ms. Priya Nair',    'Teacher'],
+            ['Dr. Suresh Menon',  'Coordinator'],
           ]}
           onImport={handleImport}
           onClose={() => setImportOpen(false)}
@@ -713,13 +622,19 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
             <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add teachers, then assign subjects and classes to them.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 200 }} />
+              <col />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 230 }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ ...TH, width: 200 }}>Teacher</th>
+                <th style={TH}>Teacher</th>
                 <th style={TH}>Subject Assignments</th>
-                <th style={{ ...TH, width: 160 }}>Class Teacher Of</th>
-                <th style={{ ...TH, width: 96 }} />
+                <th style={TH}>Class Teacher Of</th>
+                <th style={{ ...TH, textAlign: 'right', paddingRight: 10 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -737,7 +652,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
               ))}
               {filtered.length === 0 && search && (
                 <tr>
-                  <td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '20px 12px' }}>
+                  <td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>
                     No teachers match "{search}"
                   </td>
                 </tr>

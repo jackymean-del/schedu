@@ -1,13 +1,19 @@
 /**
- * RoomsPanel — Tab 4. Premium compact redesign.
- * Columns: Room | Type | Cap | Assigned Classes | Special Subjects | [delete]
+ * RoomsPanel — Tab 4.
+ * Columns: Room | Type | Cap | Assigned Classes | Special Subjects | [ Delete ]
+ * Fixed-width grid layout, text action buttons.
  */
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import type { Subject, Section } from '@/types'
 import type { RoomRow } from '@/components/master/EntityGrids'
-import { Trash2, Plus, Building2 } from 'lucide-react'
-import { P, P_D, P_L, P_B, TH, TD, TABLE_CARD, InlineChipSelect, ImportModal } from './shared'
+import { Plus, Building2 } from 'lucide-react'
+import {
+  P, P_D, P_L, P_B,
+  TH, TD, TABLE_CARD,
+  InlineChipSelect, ImportModal,
+  deleteBtn, outlineBtn,
+} from './shared'
 import type { ChipOption } from './shared'
 
 export type RoomExt = RoomRow & { subjectMappings?: string[]; notes?: string }
@@ -25,20 +31,21 @@ const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','V
 function gradeKey(g: string) { const i = GRADE_ORDER.indexOf(g); return i >= 0 ? i : 100 + g.charCodeAt(0) }
 
 const ROOM_TYPES = ['Classroom','Lab','Computer Lab','Library','Hall','Gym','Staff Room','Other']
-const TYPE_META: Record<string, { color: string; dot: string }> = {
-  Classroom:     { color: '#3B82F6', dot: '#93C5FD' },
-  Lab:           { color: '#EF4444', dot: '#FCA5A5' },
-  'Computer Lab':{ color: '#10B981', dot: '#6EE7B7' },
-  Library:       { color: '#F59E0B', dot: '#FCD34D' },
-  Hall:          { color: '#8B5CF6', dot: '#C4B5FD' },
-  Gym:           { color: '#14B8A6', dot: '#5EEAD4' },
-  'Staff Room':  { color: '#6B7280', dot: '#D1D5DB' },
-  Other:         { color: '#7C6FE0', dot: '#C4B5FD' },
+const TYPE_META: Record<string, { color: string }> = {
+  Classroom:      { color: '#3B82F6' },
+  Lab:            { color: '#EF4444' },
+  'Computer Lab': { color: '#10B981' },
+  Library:        { color: '#F59E0B' },
+  Hall:           { color: '#8B5CF6' },
+  Gym:            { color: '#14B8A6' },
+  'Staff Room':   { color: '#6B7280' },
+  Other:          { color: '#7C6FE0' },
 }
 
 const inp: React.CSSProperties = {
   padding: '3px 7px', border: '1px solid #E4E0FF', borderRadius: 5,
   fontSize: 12, color: '#111028', outline: 'none', fontFamily: 'inherit', background: '#FAFAFE',
+  boxSizing: 'border-box' as const,
 }
 
 // ─── Inline name cell ─────────────────────────────────────────────────────────
@@ -53,7 +60,7 @@ function NameCell({ value, onSave }: { value: string; onSave: (v: string) => voi
     <input ref={ref} value={t} onChange={ev => setT(ev.target.value)}
       onBlur={commit}
       onKeyDown={ev => { if (ev.key === 'Enter') commit(); if (ev.key === 'Escape') { setT(value); setE(false) } }}
-      style={{ ...inp, width: 140, fontWeight: 600 }}
+      style={{ ...inp, width: '100%', fontWeight: 600 }}
     />
   )
   return (
@@ -84,7 +91,7 @@ function AddRow({ onAdd }: { onAdd: (r: RoomExt) => void }) {
     <tr>
       <td colSpan={6} style={{ ...TD, padding: '9px 12px' }}>
         <button onClick={() => setActive(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 6, color: P, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer' }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 6, color: P, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>
           <Plus size={13} /> Add Room
         </button>
       </td>
@@ -96,20 +103,21 @@ function AddRow({ onAdd }: { onAdd: (r: RoomExt) => void }) {
       <td style={TD}>
         <input ref={ref} value={name} onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
-          placeholder="Room name" style={{ ...inp, width: 130 }}
+          placeholder="Room name" style={{ ...inp, width: '100%' }}
         />
       </td>
       <td style={TD}>
-        <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, width: 120 }}>
+        <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, width: '100%' }}>
           {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </td>
       <td style={TD}>
-        <input type="number" value={cap} onChange={e => setCap(+e.target.value)} min={1} max={999} style={{ ...inp, width: 52, textAlign: 'center' }} />
+        <input type="number" value={cap} onChange={e => setCap(+e.target.value)} min={1} max={999}
+          style={{ ...inp, width: '100%', textAlign: 'center' }} />
       </td>
       <td colSpan={3} style={{ ...TD, whiteSpace: 'nowrap' }}>
-        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 4 }}>✓</button>
-        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>✗</button>
+        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
+        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
       </td>
     </tr>
   )
@@ -125,11 +133,10 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
   onUpdateSections: (add: string[], remove: string[]) => void
   onDelete: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
   const meta = TYPE_META[room.type] ?? TYPE_META.Other
 
   function handleClassChange(next: string[]) {
-    const prev = assignedClasses
+    const prev    = assignedClasses
     const toAdd    = next.filter(v => !prev.includes(v))
     const toRemove = prev.filter(v => !next.includes(v))
     onUpdateSections(toAdd, toRemove)
@@ -137,14 +144,15 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
 
   return (
     <tr
-      style={{ background: hovered ? '#F6F4FF' : '', transition: 'background 0.08s' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{ transition: 'background 0.08s' }}
+      onMouseEnter={e => (e.currentTarget.style.background = '#F6F4FF')}
+      onMouseLeave={e => (e.currentTarget.style.background = '')}
     >
       {/* Name */}
       <td style={TD}>
         <NameCell value={room.name} onSave={v => onUpdate({ name: v })} />
       </td>
+
       {/* Type — colored badge select */}
       <td style={TD}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -165,15 +173,17 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
           </select>
         </div>
       </td>
+
       {/* Capacity */}
-      <td style={{ ...TD, textAlign: 'center' }}>
+      <td style={{ ...TD }}>
         <input type="number" value={room.capacity} min={1} max={999}
           onChange={e => onUpdate({ capacity: +e.target.value })}
-          style={{ width: 52, padding: '3px 5px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, fontWeight: 600, color: '#444', outline: 'none', textAlign: 'center', background: '#FAFAFE' }}
+          style={{ width: '100%', padding: '3px 5px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12.5, fontWeight: 600, color: '#444', outline: 'none', textAlign: 'center', background: '#FAFAFE', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
         />
       </td>
+
       {/* Assigned Classes */}
-      <td style={{ ...TD, minWidth: 130 }}>
+      <td style={{ ...TD }}>
         <InlineChipSelect
           selected={assignedClasses}
           options={classOpts}
@@ -182,8 +192,9 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
           maxChips={2}
         />
       </td>
+
       {/* Special Subjects */}
-      <td style={{ ...TD, minWidth: 130 }}>
+      <td style={{ ...TD }}>
         <InlineChipSelect
           selected={room.subjectMappings ?? []}
           options={subjectOpts}
@@ -192,20 +203,15 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
           maxChips={2}
         />
       </td>
+
       {/* Delete */}
-      <td style={{ ...TD, textAlign: 'right', paddingRight: 6, width: 36 }}>
-        <button onClick={onDelete}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#C4BCDC',
-            padding: '3px 5px', borderRadius: 4, lineHeight: 1,
-            transition: 'color 0.1s, background 0.1s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#e74c3c'; e.currentTarget.style.background = '#FFF0F0' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#C4BCDC'; e.currentTarget.style.background = 'transparent' }}
-        >
-          <Trash2 size={14} />
-        </button>
+      <td style={{ ...TD, whiteSpace: 'nowrap' }}>
+        <button
+          onClick={onDelete}
+          style={deleteBtn}
+          onMouseEnter={e => { e.currentTarget.style.background = '#FFE4E4' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#FFF0F0' }}
+        >Delete</button>
       </td>
     </tr>
   )
@@ -292,8 +298,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 8, borderBottom: '1px solid #EEE9FF', flexShrink: 0 }}>
-        {/* Left: title + badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 7, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
           <Building2 size={13} color={P} />
           <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111028' }}>Rooms</span>
@@ -305,26 +310,23 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
           )}
         </div>
         <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
-        {/* Search */}
         <div style={{ position: 'relative', flex: 1 }}>
           <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 12 }}>⌕</span>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search rooms…"
-            style={{ width: '100%', padding: '4px 8px 4px 24px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, color: '#111028', outline: 'none', boxSizing: 'border-box', background: '#FAFAFE', fontFamily: 'inherit' }}
+            style={{ width: '100%', padding: '4px 8px 4px 24px', border: '1px solid #E4E0FF', borderRadius: 5, fontSize: 12, color: '#111028', outline: 'none', boxSizing: 'border-box' as const, background: '#FAFAFE', fontFamily: 'inherit' }}
           />
         </div>
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
           <button
             onClick={() => setImportOpen(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff', color: '#6B6891', border: '1px solid #DDD8FF', borderRadius: 5, padding: '4px 9px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={outlineBtn}
             onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
           >⬆ Import</button>
         </div>
       </div>
 
-      {/* Import Modal */}
       {importOpen && (
         <ImportModal
           title="Rooms"
@@ -350,15 +352,23 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
             <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add rooms, then assign classes and special subjects to them.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 150 }} />
+              <col style={{ width: 140 }} />
+              <col style={{ width: 72 }} />
+              <col />
+              <col style={{ width: 180 }} />
+              <col style={{ width: 88 }} />
+            </colgroup>
             <thead>
               <tr>
                 <th style={TH}>Room</th>
-                <th style={{ ...TH, width: 140 }}>Type</th>
-                <th style={{ ...TH, width: 54, textAlign: 'center' }}>Cap</th>
-                <th style={{ ...TH, minWidth: 160 }}>Assigned Classes</th>
-                <th style={{ ...TH, minWidth: 160 }}>Special Subjects</th>
-                <th style={{ ...TH, width: 40 }} />
+                <th style={TH}>Type</th>
+                <th style={{ ...TH, textAlign: 'center' }}>Cap</th>
+                <th style={TH}>Assigned Classes</th>
+                <th style={TH}>Special Subjects</th>
+                <th style={{ ...TH, textAlign: 'right', paddingRight: 10 }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -375,7 +385,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
                 />
               ))}
               {filtered.length === 0 && search && (
-                <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '20px 12px' }}>No rooms match "{search}"</td></tr>
+                <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>No rooms match "{search}"</td></tr>
               )}
               <AddRow onAdd={addRoom} />
             </tbody>
