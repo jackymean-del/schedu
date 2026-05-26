@@ -581,8 +581,7 @@ export function SubjectsPanel({
     if ('sections' in patch && localAiAssignedIds.has(id)) {
       setLocalAiAssignedIds(prev => { const next = new Set(prev); next.delete(id); return next })
     }
-    // Functional form avoids stale-closure issues when multiple rapid updates fire
-    setSubjects(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
+    setSubjects(subjects.map(s => s.id === id ? { ...s, ...patch } : s))
   }
 
   function remove(id: string) { setSubjects(subjects.filter(s => s.id !== id)) }
