@@ -3,7 +3,7 @@
  * Premium spreadsheet-grade academic workspace.
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Trash2 } from 'lucide-react'
 
@@ -123,6 +123,30 @@ export const outlineBtn: React.CSSProperties = {
   transition: 'all 0.12s',
 }
 
+// ─── Undo history hook ────────────────────────────────────────────────────────
+/**
+ * Ref-based undo stack. Stable function refs — safe in useEffect/onKeyDown.
+ * Call push(currentValue) BEFORE every mutation.
+ * Call undo() on Ctrl+Z to get the previous value (or undefined if empty).
+ * Use onKeyDown on the panel outer div — bubbles up from any focused input.
+ */
+export function useUndoHistory<T>(): {
+  push: (snapshot: T) => void
+  undo: () => T | undefined
+} {
+  const stack = useRef<T[]>([])
+  const push = useCallback((snapshot: T) => {
+    stack.current = [...stack.current.slice(-29), snapshot]
+  }, [])
+  const undo = useCallback((): T | undefined => {
+    if (stack.current.length === 0) return undefined
+    const last = stack.current[stack.current.length - 1]
+    stack.current = stack.current.slice(0, -1)
+    return last
+  }, [])
+  return { push, undo }
+}
+
 // ─── Table card container ──────────────────────────────────────────────────────
 export const TABLE_CARD: React.CSSProperties = {
   flex: 1, overflowY: 'auto', overflowX: 'hidden', marginTop: 6,
@@ -134,13 +158,36 @@ export const TABLE_CARD: React.CSSProperties = {
 export function ResourceGlobalStyles() {
   return (
     <style>{`
-      .rp-inp { transition: border-color 0.15s, box-shadow 0.15s; }
-      .rp-inp:hover  { border-color: #A89FEC !important; }
-      .rp-inp:focus  { border-color: #7C6FE0 !important; box-shadow: 0 0 0 3px rgba(124,111,224,0.2) !important; outline: none !important; }
+      .rp-inp {
+        transition: border-color 0.15s, box-shadow 0.15s;
+        cursor: text;
+      }
+      .rp-inp:hover {
+        border-color: #A89FEC !important;
+        background: #FAFAFE !important;
+      }
+      .rp-inp:focus {
+        border-color: #7C6FE0 !important;
+        box-shadow: 0 0 0 3px rgba(124,111,224,0.2) !important;
+        outline: none !important;
+        background: #fff !important;
+      }
+      .rp-sel {
+        transition: border-color 0.15s;
+        cursor: pointer;
+      }
       .rp-sel:hover  { border-color: #A89FEC !important; }
-      .rp-sel:focus  { border-color: #7C6FE0 !important; outline: 1px solid #7C6FE0 !important; }
+      .rp-sel:focus  {
+        border-color: #7C6FE0 !important;
+        box-shadow: 0 0 0 3px rgba(124,111,224,0.2) !important;
+        outline: none !important;
+      }
+      /* Hide number spinners — use keyboard or type directly */
       .rp-num::-webkit-inner-spin-button,
-      .rp-num::-webkit-outer-spin-button { opacity: 0.4; }
+      .rp-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+      .rp-num { -moz-appearance: textfield; }
+      /* Table cell hover: subtle lift effect */
+      .rp-td-hover:hover { background: #F6F4FF; }
     `}</style>
   )
 }

@@ -4,7 +4,7 @@
  * Fixed-width grid layout, text action buttons.
  */
 
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Subject, Section } from '@/types'
 import type { RoomRow } from '@/components/master/EntityGrids'
 import { Plus, Building2 } from 'lucide-react'
@@ -13,7 +13,7 @@ import {
   TH, TD, TABLE_CARD,
   InlineChipSelect, ImportModal,
   DeleteActionButton, outlineBtn,
-  ResourceGlobalStyles,
+  ResourceGlobalStyles, useUndoHistory,
 } from './shared'
 import type { ChipOption } from './shared'
 
@@ -225,6 +225,14 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const undoHistory = useUndoHistory<RoomExt[]>()
+
+  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      const prev = undoHistory.undo()
+      if (prev !== undefined) { e.preventDefault(); setRooms(prev) }
+    }
+  }, [undoHistory, setRooms])
 
   function handleImport(rows: string[][]) {
     const newRooms = rows
@@ -274,6 +282,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
   }, [rooms, sections])
 
   function updateRoom(id: string, p: Partial<RoomExt>) {
+    undoHistory.push(rooms)
     setRooms(rooms.map(r => r.id === id ? { ...r, ...p } : r))
   }
 
@@ -286,15 +295,19 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
   }
 
   function removeRoom(id: string) {
+    undoHistory.push(rooms)
     const room = rooms.find(r => r.id === id)
     if (room) setSections(sections.map(s => s.room === room.name ? { ...s, room: '' } : s))
     setRooms(rooms.filter(r => r.id !== id))
   }
 
-  function addRoom(r: RoomExt) { setRooms([...rooms, r]) }
+  function addRoom(r: RoomExt) { undoHistory.push(rooms); setRooms([...rooms, r]) }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      onKeyDown={handlePanelKeyDown}
+    >
       <ResourceGlobalStyles />
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 7, flexShrink: 0 }}>

@@ -16,7 +16,7 @@
  * Data model: Staff extended with `subjectMappings?: { subject, classes }[]`
  */
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback, type KeyboardEvent as RKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { Staff, Section, Subject } from '@/types'
 import { Plus, X, Users, ChevronDown, ChevronUp } from 'lucide-react'
@@ -25,7 +25,7 @@ import {
   TH, TD, TABLE_CARD,
   InlineChipSelect, ImportModal,
   actionBtn, DeleteActionButton, outlineBtn,
-  ResourceGlobalStyles,
+  ResourceGlobalStyles, useUndoHistory,
 } from './shared'
 import type { ChipOption } from './shared'
 import { calcTeacherSlots, slotLoadLevel } from './aiEngine'
@@ -576,6 +576,14 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const undoHistory = useUndoHistory<Staff[]>()
+
+  const handlePanelKeyDown = useCallback((e: RKeyboardEvent<HTMLDivElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      const prev = undoHistory.undo()
+      if (prev !== undefined) { e.preventDefault(); setStaff(prev) }
+    }
+  }, [undoHistory, setStaff])
 
   function handleImport(rows: string[][]) {
     const newStaff = rows
@@ -614,14 +622,18 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
   const classTeacherOpts = classOpts
 
   function update(id: string, p: Partial<StaffExt>) {
+    undoHistory.push(staff)
     setStaff((staff as StaffExt[]).map(t => t.id === id ? { ...t, ...p } : t) as Staff[])
   }
 
-  function remove(id: string) { setStaff(staff.filter(t => t.id !== id)) }
-  function add(t: StaffExt) { setStaff([...staff, t as Staff]) }
+  function remove(id: string) { undoHistory.push(staff); setStaff(staff.filter(t => t.id !== id)) }
+  function add(t: StaffExt) { undoHistory.push(staff); setStaff([...staff, t as Staff]) }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      onKeyDown={handlePanelKeyDown}
+    >
       <ResourceGlobalStyles />
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 7, flexShrink: 0 }}>

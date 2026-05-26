@@ -4,7 +4,7 @@
  * Class Teacher is handled in the Shift & Timing step — not here.
  */
 
-import React, { useState, useRef, useMemo, useEffect } from 'react'
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Section } from '@/types'
 import { Layers, X } from 'lucide-react'
 import {
@@ -13,7 +13,7 @@ import {
   ImportModal,
   DeleteActionButton,
   outlineBtn, primaryBtn,
-  ResourceGlobalStyles,
+  ResourceGlobalStyles, useUndoHistory,
 } from './shared'
 
 type SectionExt = Section & { strength?: number }
@@ -240,6 +240,14 @@ export function ClassesPanel({ sections, setSections }: {
   const [showBulk, setShowBulk]     = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const undoHistory = useUndoHistory<Section[]>()
+
+  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      const prev = undoHistory.undo()
+      if (prev !== undefined) { e.preventDefault(); setSections(prev) }
+    }
+  }, [undoHistory, setSections])
 
   function handleImport(rows: string[][]) {
     const newSections = rows
@@ -272,14 +280,18 @@ export function ClassesPanel({ sections, setSections }: {
   )
 
   function update(id: string, patch: Partial<SectionExt>) {
+    undoHistory.push(sections)
     setSections(sections.map(s => s.id === id ? { ...s, ...patch } : s))
   }
-  function remove(id: string) { setSections(sections.filter(s => s.id !== id)) }
-  function add(s: SectionExt) { setSections([...sections, s as Section]) }
-  function bulkAdd(news: SectionExt[]) { setSections([...sections, ...news.map(s => s as Section)]) }
+  function remove(id: string) { undoHistory.push(sections); setSections(sections.filter(s => s.id !== id)) }
+  function add(s: SectionExt) { undoHistory.push(sections); setSections([...sections, s as Section]) }
+  function bulkAdd(news: SectionExt[]) { undoHistory.push(sections); setSections([...sections, ...news.map(s => s as Section)]) }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      onKeyDown={handlePanelKeyDown}
+    >
       <ResourceGlobalStyles />
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 7, flexShrink: 0 }}>
@@ -368,9 +380,9 @@ export function ClassesPanel({ sections, setSections }: {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '48%' }} />
-              <col style={{ width: '30%' }} />
-              <col style={{ width: '22%' }} />
+              <col />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 72 }} />
             </colgroup>
             <thead>
               <tr>

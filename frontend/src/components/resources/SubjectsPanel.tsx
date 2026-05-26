@@ -19,7 +19,7 @@
  * - All chips shown (no truncation)
  */
 
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Subject, Section, SubjectClassConfig } from '@/types'
 import { Plus, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
 import {
@@ -29,7 +29,7 @@ import {
   DeleteActionButton, actionBtn, outlineBtn,
   type AllocationUnit, ALLOCATION_LABELS, ALLOCATION_SHORT,
   toDisplayValue, fromDisplayValue,
-  ResourceGlobalStyles,
+  ResourceGlobalStyles, useUndoHistory,
 } from './shared'
 import type { ChipOption } from './shared'
 import {
@@ -375,28 +375,34 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
     })
   }
 
-  // Atomically update slots for ALL sections of a grade in one state write
+  // Atomically update slots for ALL sections of a grade — always syncs sections too
   function handleUpdateGradeSlots(classNames: string[], periodsPerWeek: number) {
     const classSet = new Set(classNames)
-    const base = sub.classConfigs ?? []
-    const updated = base.map(c =>
-      classSet.has(c.sectionName!) ? { ...c, periodsPerWeek } : c
+    // Clone the array so we never mutate the prop
+    const existing = [...(sub.classConfigs ?? [])]
+    const updated = existing.map(c =>
+      c.sectionName && classSet.has(c.sectionName)
+        ? { ...c, periodsPerWeek }
+        : c
     )
-    // Add configs for any section not yet in classConfigs
+    // Add configs for any section not yet tracked
     for (const name of classNames) {
       if (!updated.some(c => c.sectionName === name)) {
         updated.push({ sectionName: name, periodsPerWeek, maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2, sessionDuration: sub.sessionDuration ?? 45 })
       }
     }
-    onUpdate({ classConfigs: updated })
+    // CRITICAL: derive sections from classConfigs so both fields are always in sync.
+    // Without this, a stale sections[] can make getAssignedClasses() return wrong data.
+    const newSections = updated.map(c => c.sectionName!).filter(Boolean)
+    onUpdate({ classConfigs: updated, sections: newSections })
   }
 
-  // Atomically remove all sections of a grade in one state write
+  // Atomically remove all sections of a grade
   function handleRemoveGrade(classNames: string[]) {
     const classSet = new Set(classNames)
-    const newClasses = assignedClasses.filter(c => !classSet.has(c))
-    const newConfigs = (sub.classConfigs ?? []).filter(c => !classSet.has(c.sectionName!))
-    onUpdate({ sections: newClasses, classConfigs: newConfigs })
+    const newConfigs = (sub.classConfigs ?? []).filter(c => c.sectionName && !classSet.has(c.sectionName))
+    const newSections = newConfigs.map(c => c.sectionName!).filter(Boolean)
+    onUpdate({ sections: newSections, classConfigs: newConfigs })
   }
 
   const isExpanded = expandSlots || expandSettings
@@ -535,6 +541,7 @@ export function SubjectsPanel({
   const [search,     setSearch]     = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const undoHistory = useUndoHistory<Subject[]>()
 
   // Academic Load Unit — applies to per-class slots in expanded view
   const [unit, setUnit] = useState<AllocationUnit>(() => {
@@ -578,20 +585,22 @@ export function SubjectsPanel({
   }, [sections])
 
   function update(id: string, patch: Partial<Subject>) {
+    undoHistory.push(subjects)
     if ('sections' in patch && localAiAssignedIds.has(id)) {
       setLocalAiAssignedIds(prev => { const next = new Set(prev); next.delete(id); return next })
     }
     setSubjects(subjects.map(s => s.id === id ? { ...s, ...patch } : s))
   }
 
-  function remove(id: string) { setSubjects(subjects.filter(s => s.id !== id)) }
-  function add(s: Subject)    { setSubjects([...subjects, s]) }
+  function remove(id: string) { undoHistory.push(subjects); setSubjects(subjects.filter(s => s.id !== id)) }
+  function add(s: Subject)    { undoHistory.push(subjects); setSubjects([...subjects, s]) }
 
   // ── Local AI assign (subject-only fallback) ───────────────────────────────
   // Re-evaluates ALL subjects every run — no "already assigned" guard.
   // buildClassConfigs() preserves any existing per-class slot overrides.
   function localAiAssignAll() {
     if (!sections.length) return
+    undoHistory.push(subjects)
     const snapshot: SubjectSnapshot[] = subjects.map(s => ({
       id: s.id,
       sections: s.sections ?? [],
@@ -647,7 +656,16 @@ export function SubjectsPanel({
     else localUndoAI()
   }
 
+  // Ctrl+Z handler — fires on keydown bubbled from any focused child input
+  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      const prev = undoHistory.undo()
+      if (prev !== undefined) { e.preventDefault(); setSubjects(prev) }
+    }
+  }, [undoHistory, setSubjects])
+
   function handlePasteImport(rows: string[][]) {
+    undoHistory.push(subjects)
     const newSubjects = rows
       .map(cells => ({
         id: makeId(),
@@ -668,7 +686,10 @@ export function SubjectsPanel({
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      onKeyDown={handlePanelKeyDown}
+    >
       <ResourceGlobalStyles />
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
