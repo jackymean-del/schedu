@@ -365,15 +365,15 @@ export function ClassesPanel({ sections, setSections }: {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col />
-              <col style={{ width: 110 }} />
-              <col style={{ width: 60 }} />
+              <col style={{ width: '68%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '12%' }} />
             </colgroup>
             <thead>
               <tr>
                 <th style={TH}>Class</th>
                 <th style={{ ...TH, textAlign: 'center' }}>Strength</th>
-                <th style={{ ...TH, textAlign: 'center' }}>Del</th>
+                <th style={{ ...TH, textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>

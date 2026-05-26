@@ -21,7 +21,7 @@
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import type { Subject, Section, SubjectClassConfig } from '@/types'
-import { Plus, BookOpen } from 'lucide-react'
+import { Plus, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -120,7 +120,13 @@ function EditCell({ value, onSave, placeholder = '…', style: extra }: {
   )
 }
 
-// ─── Expanded per-class slots view ────────────────────────────────────────────
+// ─── Expanded grade-level slots view ─────────────────────────────────────────
+/**
+ * Shows slots/week grouped by GRADE (not section).
+ * VI-A, VI-B, VI-C → one row "VI" with shared slots value.
+ * Editing a grade's slots updates ALL its sections.
+ * Arrow keys on number inputs are stopped from bubbling to prevent chip side-effects.
+ */
 function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateConfig, onRemoveClass }: {
   sub: Subject
   unit: AllocationUnit
@@ -132,53 +138,85 @@ function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateConfig, onRemoveCl
 
   if (classes.length === 0) {
     return (
-      <div style={{ padding: '10px 16px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', fontSize: 11.5, color: '#C4C0DC', fontStyle: 'italic' }}>
-        No classes assigned yet — use the Applicable Classes column to assign.
+      <div style={{ padding: '8px 16px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', fontSize: 11.5, color: '#C4C0DC', fontStyle: 'italic' }}>
+        No classes assigned — use the Applicable Classes column above to assign.
       </div>
     )
   }
 
+  // Group sections by grade: "VI-A" → "VI", "IX-Sci-B" → "IX"
+  const gradeMap = new Map<string, string[]>()
+  for (const cls of classes) {
+    const grade = getGrade(cls)
+    if (!gradeMap.has(grade)) gradeMap.set(grade, [])
+    gradeMap.get(grade)!.push(cls)
+  }
+  // Sort grades by canonical order
+  const sortedGrades = [...gradeMap.keys()].sort((a, b) => gradeKey(a) - gradeKey(b))
+
   return (
-    <div style={{ background: '#FAFAFE', borderTop: '1px solid #EEE9FF', padding: '8px 16px 12px' }}>
-      <div style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>
-        Slots per Class
+    <div style={{ background: '#FAFAFE', borderTop: '1px solid #EEE9FF', padding: '7px 16px 10px' }}>
+      <div style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+        Slots per Grade
         <span style={{ fontWeight: 500, textTransform: 'none', marginLeft: 6, fontSize: 9.5, color: '#C4C0DC' }}>
           · {ALLOCATION_LABELS[unit]}
         </span>
       </div>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', maxWidth: 380 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', maxWidth: 340 }}>
         <colgroup>
-          <col />
-          <col style={{ width: 130 }} />
-          <col style={{ width: 36 }} />
+          <col style={{ width: 120 }} />
+          <col style={{ width: 120 }} />
+          <col style={{ width: 28 }} />
         </colgroup>
         <thead>
           <tr>
-            <th style={{ padding: '3px 8px', fontSize: 9.5, fontWeight: 700, color: '#9896B5', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #E4E0FF' }}>Class</th>
-            <th style={{ padding: '3px 8px', fontSize: 9.5, fontWeight: 700, color: '#9896B5', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #E4E0FF' }}>{ALLOCATION_SHORT[unit]}</th>
+            <th style={{ padding: '2px 8px', fontSize: 9.5, fontWeight: 700, color: '#9896B5', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #E4E0FF' }}>Grade</th>
+            <th style={{ padding: '2px 8px', fontSize: 9.5, fontWeight: 700, color: '#9896B5', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #E4E0FF' }}>{ALLOCATION_SHORT[unit]}</th>
             <th style={{ borderBottom: '1px solid #E4E0FF' }} />
           </tr>
         </thead>
         <tbody>
-          {classes.map(cls => {
-            const slots = getClassSlots(sub, cls)
+          {sortedGrades.map(grade => {
+            const sections = gradeMap.get(grade)!
+            // Use first section's value as the grade default (all sections share the same slots)
+            const slots = getClassSlots(sub, sections[0])
             const displayVal = toDisplayValue(slots, unit, sessionMins)
             return (
-              <tr key={cls}
-                onMouseEnter={e => (e.currentTarget.style.background = '#F6F4FF')}
+              <tr key={grade}
+                style={{ transition: 'background 0.06s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#F0EDFF')}
                 onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
-                <td style={{ padding: '4px 8px', fontSize: 12, fontWeight: 600, color: '#111028' }}>
-                  <span style={{ background: '#E8E3FF', color: '#3D35A8', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(100,85,210,0.3)' }}>
-                    {cls}
+                {/* Grade label — shows section count as tooltip */}
+                <td style={{ padding: '3px 8px' }}>
+                  <span
+                    style={{ background: '#E8E3FF', color: '#3D35A8', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(100,85,210,0.3)', cursor: 'default' }}
+                    title={sections.length > 1 ? `Applies to: ${sections.join(', ')}` : sections[0]}
+                  >
+                    {grade}
+                    {sections.length > 1 && (
+                      <span style={{ fontSize: 9, fontWeight: 600, color: '#6B5FC8', marginLeft: 3, opacity: 0.8 }}>
+                        ×{sections.length}
+                      </span>
+                    )}
                   </span>
                 </td>
-                <td style={{ padding: '4px 8px' }}>
+                {/* Slots input — stopPropagation prevents arrow keys affecting parent chips */}
+                <td style={{ padding: '3px 8px' }}>
                   <input
                     type="number"
                     value={displayVal}
-                    min={0} max={200} step={unit.includes('hour') ? 0.5 : 1}
-                    onChange={e => onUpdateConfig(cls, fromDisplayValue(+e.target.value, unit, sessionMins))}
+                    min={1} max={200} step={unit.includes('hour') ? 0.5 : 1}
+                    onChange={e => {
+                      const newSlots = fromDisplayValue(+e.target.value, unit, sessionMins)
+                      // Update ALL sections of this grade simultaneously
+                      sections.forEach(cls => onUpdateConfig(cls, newSlots))
+                    }}
+                    onKeyDown={e => {
+                      // Critical: stop arrow-key events from bubbling and
+                      // accidentally triggering chip removal in parent components
+                      e.stopPropagation()
+                    }}
                     style={{
                       width: '100%', padding: '3px 6px',
                       border: '1.5px solid #C4BDFF', borderRadius: 5,
@@ -190,11 +228,12 @@ function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateConfig, onRemoveCl
                     onBlur={e => (e.currentTarget.style.borderColor = '#C4BDFF')}
                   />
                 </td>
-                <td style={{ padding: '4px 4px', textAlign: 'center' }}>
+                {/* Remove grade — removes ALL sections of this grade */}
+                <td style={{ padding: '3px 4px', textAlign: 'center' }}>
                   <button
-                    onClick={() => onRemoveClass(cls)}
-                    title={`Remove ${cls}`}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFEC', padding: 2, lineHeight: 1 }}
+                    onClick={() => sections.forEach(cls => onRemoveClass(cls))}
+                    title={`Remove Grade ${grade}`}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFEC', padding: '1px 2px', lineHeight: 1, fontSize: 14 }}
                     onMouseEnter={e => (e.currentTarget.style.color = '#E11D48')}
                     onMouseLeave={e => (e.currentTarget.style.color = '#D4CFEC')}
                   >×</button>
@@ -419,6 +458,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
               onClick={() => { setExpandSlots(o => !o); setExpandSettings(false) }}
               style={{
                 ...actionBtn,
+                gap: 5,
                 ...(expandSlots ? { background: P_L, color: P_D, borderColor: P_B } : {}),
               }}
               onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
@@ -427,7 +467,10 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
                 e.currentTarget.style.color = expandSlots ? P_D : '#8886A8'
                 e.currentTarget.style.borderColor = expandSlots ? P_B : '#DDD8FF'
               }}
-            >{expandSlots ? 'Show Less' : 'Show More'}</button>
+            >
+              {expandSlots ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              {expandSlots ? 'Show Less' : 'Show More'}
+            </button>
             <DeleteActionButton onDelete={onDelete} tooltip="Delete subject" />
           </div>
         </td>
@@ -667,16 +710,19 @@ export function SubjectsPanel({
           </select>
         </div>
 
-        {/* Board selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-          <span style={{ fontSize: 9.5, color: '#9896B5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>Board</span>
-          <select value={board} onChange={e => setBoard(e.target.value as CurriculumBoard)}
-            style={{ border: `1.5px solid ${P_B}`, borderRadius: 6, padding: '4px 8px', fontSize: 11.5, color: P_D, background: P_L, outline: 'none', fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', height: 34, boxSizing: 'border-box' as const }}
-            title="Select curriculum board"
-          >
-            {BOARD_ORDER.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
+        {/* Board — readonly badge (set during school profile setup) */}
+        <span
+          title="Board set during school profile setup"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: P_L, color: P_D, border: `1.5px solid ${P_B}`,
+            borderRadius: 6, padding: '4px 10px', fontSize: 11.5, fontWeight: 800,
+            height: 34, boxSizing: 'border-box' as const, flexShrink: 0,
+            letterSpacing: '0.04em', cursor: 'default', userSelect: 'none',
+          }}
+        >
+          {board}
+        </span>
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />

@@ -19,7 +19,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Staff, Section, Subject } from '@/types'
-import { Plus, X, Users } from 'lucide-react'
+import { Plus, X, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -329,26 +329,52 @@ const fld: React.CSSProperties = {
   fontSize: 12, color: '#111028', outline: 'none', fontFamily: 'inherit', background: '#FAFAFE',
 }
 
+const DESIGNATIONS = ['Teacher','Senior Teacher','HoD','Coordinator','Principal','Vice Principal','Lab Incharge','Librarian','Counselor','Admin Staff']
+
 function ExpandedDetails({ t, onChange }: { t: Staff; onChange: (p: Partial<Staff>) => void }) {
+  const ext = t as any  // extended fields not in the base type yet
+  const lbl: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }
   return (
-    <div style={{ display: 'flex', gap: 14, padding: '8px 52px 10px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
-        Role
+    <div style={{ display: 'flex', gap: 12, padding: '8px 50px 10px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      <label style={lbl}>
+        Designation
         <select value={t.role ?? 'Teacher'} onChange={e => onChange({ role: e.target.value })} style={fld}>
-          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          {DESIGNATIONS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
+      <label style={lbl}>
         Gender
         <select value={t.gender ?? ''} onChange={e => onChange({ gender: e.target.value as any })} style={fld}>
           {GENDERS.map(g => <option key={g} value={g}>{g || '— not set —'}</option>)}
         </select>
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: '#6B6891', fontWeight: 600 }}>
-        Max periods / week
-        <input type="number" value={t.maxPeriodsPerWeek ?? 30} min={1} max={50}
-          onChange={e => onChange({ maxPeriodsPerWeek: +e.target.value })}
-          style={{ ...fld, width: 64 }}
+      <label style={lbl}>
+        Contact
+        <input
+          type="tel"
+          value={ext.phone ?? ''}
+          onChange={e => onChange({ ...t, phone: e.target.value } as any)}
+          placeholder="+91 98765 43210"
+          style={{ ...fld, width: 138 }}
+        />
+      </label>
+      <label style={lbl}>
+        Email
+        <input
+          type="email"
+          value={ext.email ?? ''}
+          onChange={e => onChange({ ...t, email: e.target.value } as any)}
+          placeholder="teacher@school.edu"
+          style={{ ...fld, width: 180 }}
+        />
+      </label>
+      <label style={lbl}>
+        Notes
+        <input
+          value={ext.notes ?? ''}
+          onChange={e => onChange({ ...t, notes: e.target.value } as any)}
+          placeholder="Optional notes…"
+          style={{ ...fld, width: 200 }}
         />
       </label>
     </div>
@@ -505,6 +531,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDele
               onClick={() => setExpanded(o => !o)}
               style={{
                 ...actionBtn,
+                gap: 5,
                 ...(expanded ? { background: P_L, color: P_D, borderColor: P_B } : {}),
               }}
               onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
@@ -513,7 +540,10 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDele
                 e.currentTarget.style.color = expanded ? P_D : '#8886A8'
                 e.currentTarget.style.borderColor = expanded ? P_B : '#DDD8FF'
               }}
-            >{expanded ? 'Show Less' : 'Show More'}</button>
+            >
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              {expanded ? 'Show Less' : 'Show More'}
+            </button>
             <DeleteActionButton onDelete={onDelete} tooltip="Delete teacher" />
           </div>
         </td>
@@ -653,11 +683,11 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: 190 }} />
-              <col />
-              <col style={{ width: 88 }} />
-              <col style={{ width: 145 }} />
-              <col style={{ width: 140 }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '50%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '10%' }} />
             </colgroup>
             <thead>
               <tr>
