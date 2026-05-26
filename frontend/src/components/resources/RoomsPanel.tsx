@@ -225,6 +225,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<RoomExt[]>()
 
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -324,10 +325,14 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects }:
         <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
         <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 13 }}>⌕</span>
-          <input value={search} onChange={e => setSearch(e.target.value)}
+          <input
+            ref={searchRef}
+            value={search} onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
+            onMouseEnter={() => searchRef.current?.focus()}
             placeholder="Search rooms…"
+            className="rp-inp"
             style={{
               width: '100%', padding: '6px 10px 6px 28px',
               border: `1.5px solid ${searchFocused ? P : '#E4E0FF'}`,

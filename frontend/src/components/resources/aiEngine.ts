@@ -14,7 +14,7 @@
  *   - Graceful degradation: works with partial data (no teachers, no rooms, etc.)
  */
 
-import type { Subject, Section, Staff } from '@/types'
+import type { Subject, Section, Staff, SubjectClassConfig } from '@/types'
 import type { RoomExt } from './RoomsPanel'
 import {
   suggestClassesForSubject,
@@ -220,9 +220,20 @@ export function runAIAssignment(
     const classes = suggestClassesForSubject(sub.name, sections, board)
     subjectClassMap.set(sub.id, classes)
     const newSlots = recommendedSlots(sub, classes, board)
+    // Build classConfigs so getAssignedClasses() reads the new data (not stale old classConfigs)
+    const newConfigs: SubjectClassConfig[] = classes.map(name => {
+      const existing = (sub.classConfigs ?? []).find(c => c.sectionName === name)
+      return {
+        sectionName:      name,
+        periodsPerWeek:   newSlots,
+        maxPeriodsPerDay: existing?.maxPeriodsPerDay ?? (sub.maxPeriodsPerDay ?? 2),
+        sessionDuration:  existing?.sessionDuration  ?? (sub.sessionDuration  ?? 45),
+      }
+    })
     return {
       ...sub,
       sections:       classes,
+      classConfigs:   newConfigs,
       periodsPerWeek: newSlots,
       requiresLab:    CURRICULUM[sub.name]?.requiresLab ?? sub.requiresLab,
     }

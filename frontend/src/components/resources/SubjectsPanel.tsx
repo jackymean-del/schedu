@@ -28,7 +28,7 @@ import {
   InlineChipSelect, ImportModal,
   DeleteActionButton, actionBtn, outlineBtn,
   type AllocationUnit, ALLOCATION_LABELS, ALLOCATION_SHORT,
-  toDisplayValue, fromDisplayValue,
+  toDisplayValue, toEditableHours, fromDisplayValue,
   ResourceGlobalStyles, useUndoHistory,
 } from './shared'
 import type { ChipOption } from './shared'
@@ -121,18 +121,127 @@ function EditCell({ value, onSave, placeholder = '…', style: extra }: {
   )
 }
 
-// ─── Expanded grade-level slots view ─────────────────────────────────────────
+// ─── Single grade row in the expanded slots table ────────────────────────────
 /**
- * Shows slots/week grouped by GRADE (not section).
- * VI-A, VI-B, VI-C → one row "VI" with shared slots value.
- * Editing a grade's slots updates ALL its sections.
- * Arrow keys on number inputs are stopped from bubbling to prevent chip side-effects.
+ * Extracted to a real component so it can hold local state (focus/edit mode for hours units).
+ * Hours units: display shows "45 min" / "1hr 30min"; on focus, switches to editable decimal hours.
+ * Non-hours units: plain number input.
  */
+function GradeSlotRow({
+  grade, sections, sub, unit, sessionMins, onUpdateGradeSlots, onRemoveGrade,
+}: {
+  grade:              string
+  sections:           string[]
+  sub:                Subject
+  unit:               AllocationUnit
+  sessionMins:        number
+  onUpdateGradeSlots: (classNames: string[], periodsPerWeek: number) => void
+  onRemoveGrade:      (classNames: string[]) => void
+}) {
+  const [editFocused, setEditFocused] = useState(false)
+  const [editText,    setEditText]    = useState('')
+  const isHours = unit === 'hours_week' || unit === 'hours_month'
+
+  const slots      = getClassSlots(sub, sections[0])
+  const displayVal = toDisplayValue(slots, unit, sessionMins)           // "45 min" | number
+  const editableHr = toEditableHours(slots, unit, sessionMins)          // 0.75 for hours edit
+
+  // Value shown in the input element
+  const inputValue = isHours
+    ? (editFocused ? editText : String(displayVal))
+    : (displayVal as number)
+
+  function handleFocus() {
+    if (!isHours) return
+    setEditFocused(true)
+    setEditText(String(editableHr))
+  }
+
+  function handleBlur() {
+    if (!isHours) return
+    const parsed = parseFloat(editText)
+    if (!isNaN(parsed) && parsed > 0) {
+      const newSlots = fromDisplayValue(parsed, unit, sessionMins)
+      if (newSlots >= 1) onUpdateGradeSlots(sections, newSlots)
+    }
+    setEditFocused(false)
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (isHours) {
+      setEditText(e.target.value)
+    } else {
+      const newSlots = fromDisplayValue(+e.target.value, unit, sessionMins)
+      if (newSlots >= 1) onUpdateGradeSlots(sections, newSlots)
+    }
+  }
+
+  return (
+    <tr
+      style={{ transition: 'background 0.06s' }}
+      onMouseEnter={e => (e.currentTarget.style.background = '#F0EDFF')}
+      onMouseLeave={e => (e.currentTarget.style.background = '')}
+    >
+      {/* Grade label */}
+      <td style={{ padding: '3px 8px' }}>
+        <span
+          style={{ background: '#E8E3FF', color: '#3D35A8', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(100,85,210,0.3)', cursor: 'default' }}
+          title={sections.length > 1 ? `Applies to: ${sections.join(', ')}` : sections[0]}
+        >
+          {grade}
+          {sections.length > 1 && (
+            <span style={{ fontSize: 9, fontWeight: 600, color: '#6B5FC8', marginLeft: 3, opacity: 0.8 }}>×{sections.length}</span>
+          )}
+        </span>
+      </td>
+
+      {/* Slots / time input */}
+      <td style={{ padding: '3px 8px' }}>
+        <input
+          type={isHours ? 'text' : 'number'}
+          inputMode={isHours ? 'decimal' : 'numeric'}
+          value={inputValue}
+          min={isHours ? undefined : 1}
+          max={isHours ? undefined : 200}
+          step={isHours ? undefined : 1}
+          className="rp-inp rp-num"
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={e => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault()
+            e.stopPropagation()
+            if (isHours && e.key === 'Enter') e.currentTarget.blur()
+          }}
+          style={{
+            width: '100%', padding: '3px 6px',
+            border: '1.5px solid #C4BDFF', borderRadius: 5,
+            fontSize: 12.5, color: P_D, fontWeight: 800,
+            outline: 'none', textAlign: 'center', background: P_L,
+            fontFamily: 'inherit', boxSizing: 'border-box' as const,
+          }}
+        />
+      </td>
+
+      {/* Remove grade */}
+      <td style={{ padding: '3px 4px', textAlign: 'center' }}>
+        <button
+          onClick={() => onRemoveGrade(sections)}
+          title={`Remove Grade ${grade}`}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFEC', padding: '1px 2px', lineHeight: 1, fontSize: 14 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#E11D48')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#D4CFEC')}
+        >×</button>
+      </td>
+    </tr>
+  )
+}
+
+// ─── Expanded grade-level slots view ─────────────────────────────────────────
 function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateGradeSlots, onRemoveGrade }: {
   sub: Subject
   unit: AllocationUnit
   sessionMins: number
-  /** Single call updating ALL sections of a grade atomically — avoids stale closure batch bugs */
   onUpdateGradeSlots: (classNames: string[], periodsPerWeek: number) => void
   onRemoveGrade: (classNames: string[]) => void
 }) {
@@ -146,14 +255,12 @@ function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateGradeSlots, onRemo
     )
   }
 
-  // Group sections by grade: "VI-A" → "VI", "IX-Sci-B" → "IX"
   const gradeMap = new Map<string, string[]>()
   for (const cls of classes) {
     const grade = getGrade(cls)
     if (!gradeMap.has(grade)) gradeMap.set(grade, [])
     gradeMap.get(grade)!.push(cls)
   }
-  // Sort grades by canonical order
   const sortedGrades = [...gradeMap.keys()].sort((a, b) => gradeKey(a) - gradeKey(b))
 
   return (
@@ -164,10 +271,10 @@ function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateGradeSlots, onRemo
           · {ALLOCATION_LABELS[unit]}
         </span>
       </div>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', maxWidth: 340 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', maxWidth: 360 }}>
         <colgroup>
           <col style={{ width: 120 }} />
-          <col style={{ width: 120 }} />
+          <col style={{ width: 148 }} />
           <col style={{ width: 28 }} />
         </colgroup>
         <thead>
@@ -178,73 +285,18 @@ function ClassSlotsExpanded({ sub, unit, sessionMins, onUpdateGradeSlots, onRemo
           </tr>
         </thead>
         <tbody>
-          {sortedGrades.map(grade => {
-            const sections = gradeMap.get(grade)!
-            // Use first section's value as the grade default (all sections share the same slots)
-            const slots = getClassSlots(sub, sections[0])
-            const displayVal = toDisplayValue(slots, unit, sessionMins)
-            return (
-              <tr key={grade}
-                style={{ transition: 'background 0.06s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#F0EDFF')}
-                onMouseLeave={e => (e.currentTarget.style.background = '')}
-              >
-                {/* Grade label — shows section count as tooltip */}
-                <td style={{ padding: '3px 8px' }}>
-                  <span
-                    style={{ background: '#E8E3FF', color: '#3D35A8', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(100,85,210,0.3)', cursor: 'default' }}
-                    title={sections.length > 1 ? `Applies to: ${sections.join(', ')}` : sections[0]}
-                  >
-                    {grade}
-                    {sections.length > 1 && (
-                      <span style={{ fontSize: 9, fontWeight: 600, color: '#6B5FC8', marginLeft: 3, opacity: 0.8 }}>
-                        ×{sections.length}
-                      </span>
-                    )}
-                  </span>
-                </td>
-                {/* Slots input — single batch update; preventDefault stops native arrow-key increment */}
-                <td style={{ padding: '3px 8px' }}>
-                  <input
-                    type="number"
-                    value={displayVal}
-                    min={1} max={200} step={unit.includes('hour') ? 0.5 : 1}
-                    className="rp-inp rp-num"
-                    onChange={e => {
-                      const newSlots = fromDisplayValue(+e.target.value, unit, sessionMins)
-                      // Single atomic call — avoids stale-closure batch issues
-                      onUpdateGradeSlots(sections, newSlots)
-                    }}
-                    onKeyDown={e => {
-                      // Prevent native number-input increment/decrement on arrow keys
-                      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault()
-                      // Also stop bubbling so parent chip selectors don't react
-                      e.stopPropagation()
-                    }}
-                    style={{
-                      width: '100%', padding: '3px 6px',
-                      border: '1.5px solid #C4BDFF', borderRadius: 5,
-                      fontSize: 12.5, color: P_D, fontWeight: 800,
-                      outline: 'none', textAlign: 'center', background: P_L,
-                      fontFamily: 'inherit', boxSizing: 'border-box' as const,
-                    }}
-                    onFocus={e => { e.currentTarget.style.borderColor = P; e.currentTarget.style.boxShadow = `0 0 0 3px ${P_B}` }}
-                    onBlur={e => { e.currentTarget.style.borderColor = '#C4BDFF'; e.currentTarget.style.boxShadow = 'none' }}
-                  />
-                </td>
-                {/* Remove grade — single atomic call removes ALL sections */}
-                <td style={{ padding: '3px 4px', textAlign: 'center' }}>
-                  <button
-                    onClick={() => onRemoveGrade(sections)}
-                    title={`Remove Grade ${grade}`}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D4CFEC', padding: '1px 2px', lineHeight: 1, fontSize: 14 }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#E11D48')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#D4CFEC')}
-                  >×</button>
-                </td>
-              </tr>
-            )
-          })}
+          {sortedGrades.map(grade => (
+            <GradeSlotRow
+              key={grade}
+              grade={grade}
+              sections={gradeMap.get(grade)!}
+              sub={sub}
+              unit={unit}
+              sessionMins={sessionMins}
+              onUpdateGradeSlots={onUpdateGradeSlots}
+              onRemoveGrade={onRemoveGrade}
+            />
+          ))}
         </tbody>
       </table>
     </div>
@@ -377,30 +429,49 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
 
   // Atomically update slots for ALL sections of a grade — always syncs sections too
   function handleUpdateGradeSlots(classNames: string[], periodsPerWeek: number) {
-    const classSet = new Set(classNames)
-    // Clone the array so we never mutate the prop
-    const existing = [...(sub.classConfigs ?? [])]
-    const updated = existing.map(c =>
-      c.sectionName && classSet.has(c.sectionName)
-        ? { ...c, periodsPerWeek }
-        : c
-    )
-    // Add configs for any section not yet tracked
+    const classSet    = new Set(classNames)
+    // CRITICAL: build from ALL currently assigned classes (sections OR classConfigs).
+    // When classes come from `sections` array (chip selector, AI assign), classConfigs may be [],
+    // so iterating only classConfigs would silently drop all other grades.
+    const allAssigned = getAssignedClasses(sub)
+    const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
+
+    const updated: SubjectClassConfig[] = allAssigned.map(name => {
+      const ex = existingMap.get(name)
+      return {
+        sectionName:      name,
+        periodsPerWeek:   classSet.has(name) ? periodsPerWeek : (ex?.periodsPerWeek ?? sub.periodsPerWeek),
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
+      }
+    })
+    // Also add any classNames not yet in allAssigned (shouldn't normally happen, but guard)
     for (const name of classNames) {
       if (!updated.some(c => c.sectionName === name)) {
         updated.push({ sectionName: name, periodsPerWeek, maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2, sessionDuration: sub.sessionDuration ?? 45 })
       }
     }
-    // CRITICAL: derive sections from classConfigs so both fields are always in sync.
-    // Without this, a stale sections[] can make getAssignedClasses() return wrong data.
     const newSections = updated.map(c => c.sectionName!).filter(Boolean)
     onUpdate({ classConfigs: updated, sections: newSections })
   }
 
   // Atomically remove all sections of a grade
   function handleRemoveGrade(classNames: string[]) {
-    const classSet = new Set(classNames)
-    const newConfigs = (sub.classConfigs ?? []).filter(c => c.sectionName && !classSet.has(c.sectionName))
+    const classSet    = new Set(classNames)
+    // Same pattern: start from ALL assigned classes, not just classConfigs
+    const allAssigned = getAssignedClasses(sub)
+    const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
+    const newConfigs: SubjectClassConfig[] = allAssigned
+      .filter(name => !classSet.has(name))
+      .map(name => {
+        const ex = existingMap.get(name)
+        return {
+          sectionName:      name,
+          periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
+          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+          sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
+        }
+      })
     const newSections = newConfigs.map(c => c.sectionName!).filter(Boolean)
     onUpdate({ sections: newSections, classConfigs: newConfigs })
   }
@@ -541,6 +612,7 @@ export function SubjectsPanel({
   const [search,     setSearch]     = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<Subject[]>()
 
   // Academic Load Unit — applies to per-class slots in expanded view
@@ -715,10 +787,13 @@ export function SubjectsPanel({
         <div style={{ position: 'relative', width: 280, flexShrink: 0 }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 13 }}>⌕</span>
           <input
+            ref={searchRef}
             value={search} onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
+            onMouseEnter={() => searchRef.current?.focus()}
             placeholder="Search subjects…"
+            className="rp-inp"
             style={{
               width: '100%', padding: '6px 10px 6px 28px',
               border: `1.5px solid ${searchFocused ? P : '#E4E0FF'}`,

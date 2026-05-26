@@ -217,21 +217,55 @@ export const ALLOCATION_SHORT: Record<AllocationUnit, string> = {
 }
 
 /**
+ * Format total minutes as human-readable time string.
+ * < 60 min  → "45 min"
+ * ≥ 60 min  → "1hr 30min" or "2hr" (no trailing min if 0)
+ */
+export function formatTimeDuration(totalMins: number): string {
+  if (totalMins < 60) return `${totalMins} min`
+  const hrs  = Math.floor(totalMins / 60)
+  const mins = totalMins % 60
+  return mins > 0 ? `${hrs}hr ${mins}min` : `${hrs}hr`
+}
+
+/**
  * Convert canonical slots/week to display value for given unit.
  * sessionMins = typical period duration in minutes (default 45).
+ * Hours units return a human-readable time string ("45 min", "1hr 30min").
+ * Other units return a number.
  */
 export function toDisplayValue(
   slotsPerWeek: number,
   unit: AllocationUnit,
   sessionMins = 45,
-): number {
+): string | number {
   switch (unit) {
     case 'slots_week':  return slotsPerWeek
-    case 'hours_week':  return +(slotsPerWeek * sessionMins / 60).toFixed(1)
+    case 'hours_week': {
+      const totalMins = Math.round(slotsPerWeek * sessionMins)
+      return formatTimeDuration(totalMins)
+    }
     case 'slots_month': return slotsPerWeek * 4
-    case 'hours_month': return +(slotsPerWeek * 4 * sessionMins / 60).toFixed(1)
+    case 'hours_month': {
+      const totalMins = Math.round(slotsPerWeek * 4 * sessionMins)
+      return formatTimeDuration(totalMins)
+    }
     case 'daily_slots': return +(slotsPerWeek / 5).toFixed(1)
   }
+}
+
+/**
+ * Raw decimal value for editing hours units (e.g. 0.75 hrs for 1 slot × 45 min session).
+ * Used to populate a text input when the user clicks to edit.
+ */
+export function toEditableHours(
+  slotsPerWeek: number,
+  unit: AllocationUnit,
+  sessionMins = 45,
+): number {
+  if (unit === 'hours_week')  return +(slotsPerWeek * sessionMins / 60).toFixed(2)
+  if (unit === 'hours_month') return +(slotsPerWeek * 4 * sessionMins / 60).toFixed(2)
+  return toDisplayValue(slotsPerWeek, unit, sessionMins) as number
 }
 
 /**

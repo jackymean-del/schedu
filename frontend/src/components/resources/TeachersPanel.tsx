@@ -531,14 +531,10 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDele
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
             <button
               onClick={() => setExpanded(o => !o)}
-              title={expanded ? 'Show Less' : 'Show More'}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '5px 9px', borderRadius: 7, border: `1.5px solid ${expanded ? P_B : '#DDD8FF'}`,
-                background: expanded ? P_L : 'transparent', color: expanded ? P_D : '#8886A8',
-                fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'inherit', whiteSpace: 'nowrap',
-                height: 32, transition: 'all 0.12s', flexShrink: 0,
+                ...actionBtn,
+                gap: 5,
+                ...(expanded ? { background: P_L, color: P_D, borderColor: P_B } : {}),
               }}
               onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
               onMouseLeave={e => {
@@ -547,8 +543,8 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, onUpdate, onDele
                 e.currentTarget.style.borderColor = expanded ? P_B : '#DDD8FF'
               }}
             >
-              {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              {expanded ? 'Less' : 'More'}
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              {expanded ? 'Show Less' : 'Show More'}
             </button>
             <DeleteActionButton onDelete={onDelete} tooltip="Delete teacher" />
           </div>
@@ -576,6 +572,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<Staff[]>()
 
   const handlePanelKeyDown = useCallback((e: RKeyboardEvent<HTMLDivElement>) => {
@@ -650,10 +647,14 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
         <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
         <div style={{ position: 'relative', width: 280, flexShrink: 0 }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 13 }}>⌕</span>
-          <input value={search} onChange={e => setSearch(e.target.value)}
+          <input
+            ref={searchRef}
+            value={search} onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
+            onMouseEnter={() => searchRef.current?.focus()}
             placeholder="Search teachers, subjects…"
+            className="rp-inp"
             style={{
               width: '100%', padding: '6px 10px 6px 28px',
               border: `1.5px solid ${searchFocused ? P : '#E4E0FF'}`,
@@ -702,10 +703,10 @@ export function TeachersPanel({ staff, setStaff, sections, subjects }: {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '17%' }} />
-              <col style={{ width: '47%' }} />
-              <col style={{ width: '9%' }} />
-              <col style={{ width: '13%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '40%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '18%' }} />
               <col style={{ width: '14%' }} />
             </colgroup>
             <thead>
