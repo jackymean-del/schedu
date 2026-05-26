@@ -24,6 +24,7 @@ import { makeId } from '@/components/master/EntityGrids'
 import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
 import { SubjectsPanel, generateShortName } from '@/components/resources/SubjectsPanel'
+import { suggestSlotsPerWeek, normalizeBoardType, type CurriculumBoard } from '@/components/resources/curriculum'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import {
   Sparkles, Users, BookOpen, Building2, GraduationCap,
@@ -72,53 +73,72 @@ function buildDefaultSections(): Section[] {
   return out
 }
 
-function buildDefaultSubjects(): Subject[] {
-  const defs: Array<{ name: string; cat: string; ppw: number }> = [
-    { name: 'Mathematics',              cat: 'Compulsory', ppw: 6 },
-    { name: 'English',                  cat: 'Compulsory', ppw: 6 },
-    { name: 'Science',                  cat: 'Compulsory', ppw: 5 },
-    { name: 'Social Studies',           cat: 'Compulsory', ppw: 4 },
-    { name: 'Hindi',                    cat: 'Language',   ppw: 5 },
-    { name: 'Sanskrit / MIL',           cat: 'Language',   ppw: 3 },
-    { name: 'EVS',                      cat: 'Compulsory', ppw: 3 },
-    { name: 'Computer Science',         cat: 'Compulsory', ppw: 2 },
-    { name: 'Physics',                  cat: 'Compulsory', ppw: 5 },
-    { name: 'Chemistry',                cat: 'Compulsory', ppw: 5 },
-    { name: 'Biology',                  cat: 'Compulsory', ppw: 4 },
-    { name: 'Accountancy',              cat: 'Compulsory', ppw: 5 },
-    { name: 'Business Studies',         cat: 'Compulsory', ppw: 4 },
-    { name: 'Economics',                cat: 'Compulsory', ppw: 4 },
-    { name: 'History',                  cat: 'Compulsory', ppw: 3 },
-    { name: 'Geography',                cat: 'Compulsory', ppw: 3 },
-    { name: 'Political Science',        cat: 'Compulsory', ppw: 3 },
-    { name: 'Psychology',               cat: '5th Optional', ppw: 3 },
-    { name: 'Informatics Practices',    cat: 'Compulsory', ppw: 2 },
-    { name: 'English Literature',       cat: 'Language',   ppw: 3 },
-    { name: 'Moral Science',            cat: 'Activity',   ppw: 1 },
-    { name: 'Entrepreneurship',         cat: 'Skill',      ppw: 2 },
-    { name: 'Environmental Studies',    cat: 'Compulsory', ppw: 2 },
-    { name: 'Number Work',              cat: 'Compulsory', ppw: 4 },
-    { name: 'Nursery Rhymes & Stories', cat: 'Activity',   ppw: 3 },
-    { name: 'G.K.',                     cat: 'Activity',   ppw: 1 },
-    { name: 'Drawing',                  cat: 'CCA',        ppw: 2 },
-    { name: 'Activity / Free Play',     cat: 'Activity',   ppw: 3 },
-    { name: 'Physical Education',       cat: 'CCA',        ppw: 2 },
-    { name: 'Art & Craft',              cat: 'CCA',        ppw: 2 },
-    { name: 'Music',                    cat: 'CCA',        ppw: 1 },
-    { name: 'Dance',                    cat: 'CCA',        ppw: 1 },
-    { name: 'Library',                  cat: 'CCA',        ppw: 1 },
-    { name: 'SUPW / Life Skills',       cat: 'Activity',   ppw: 1 },
-    { name: 'Yoga & Health',            cat: 'Activity',   ppw: 1 },
-    { name: 'Scout & Guide',            cat: 'CCA',        ppw: 1 },
-    { name: 'Odia / Regional Language', cat: 'Language',   ppw: 3 },
-    { name: 'Mathematics (Optional)',   cat: '4th Optional', ppw: 5 },
-  ]
-  return defs.map(d => ({
-    id: makeId(), name: d.name, periodsPerWeek: d.ppw,
-    category: d.cat as any, isOptional: false,
-    shortName: generateShortName(d.name), sessionDuration: 45, maxPeriodsPerDay: 2,
-    requiresLab: false, color: P, sections: [], classConfigs: [],
-  } as unknown as Subject))
+// Subject definitions: curriculum-aware with AI-recommended slots (middle-school baseline)
+// ppw = fallback; the actual value gets set when the user runs "AI Assign" from SubjectsPanel
+const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number }> = [
+  // Core academics
+  { name: 'Mathematics',              cat: 'Compulsory',   ppw: 6 },
+  { name: 'English',                  cat: 'Compulsory',   ppw: 6 },
+  { name: 'Science',                  cat: 'Compulsory',   ppw: 5 },
+  { name: 'Social Studies',           cat: 'Compulsory',   ppw: 5 },
+  // Languages
+  { name: 'Hindi',                    cat: 'Language',     ppw: 4 },
+  { name: 'Sanskrit / MIL',           cat: 'Language',     ppw: 3 },
+  { name: 'EVS',                      cat: 'Compulsory',   ppw: 4 },
+  // Technology
+  { name: 'Computer Science',         cat: 'Compulsory',   ppw: 3 },
+  // Sciences (secondary / sr. secondary)
+  { name: 'Physics',                  cat: 'Compulsory',   ppw: 5 },
+  { name: 'Chemistry',                cat: 'Compulsory',   ppw: 5 },
+  { name: 'Biology',                  cat: 'Compulsory',   ppw: 5 },
+  // Commerce
+  { name: 'Accountancy',              cat: 'Compulsory',   ppw: 5 },
+  { name: 'Business Studies',         cat: 'Compulsory',   ppw: 5 },
+  { name: 'Economics',                cat: 'Compulsory',   ppw: 5 },
+  // Humanities / SST components
+  { name: 'History',                  cat: 'Compulsory',   ppw: 5 },
+  { name: 'Geography',                cat: 'Compulsory',   ppw: 5 },
+  { name: 'Political Science',        cat: 'Compulsory',   ppw: 5 },
+  // Electives
+  { name: 'Psychology',               cat: '5th Optional', ppw: 5 },
+  { name: 'Informatics Practices',    cat: 'Compulsory',   ppw: 4 },
+  { name: 'English Literature',       cat: 'Language',     ppw: 4 },
+  { name: 'Entrepreneurship',         cat: 'Skill',        ppw: 4 },
+  { name: 'Mathematics (Optional)',   cat: '4th Optional', ppw: 6 },
+  // Activities & CCA
+  { name: 'Physical Education',       cat: 'CCA',          ppw: 2 },
+  { name: 'Art & Craft',              cat: 'CCA',          ppw: 2 },
+  { name: 'Music',                    cat: 'CCA',          ppw: 1 },
+  { name: 'Dance',                    cat: 'CCA',          ppw: 1 },
+  { name: 'Library',                  cat: 'CCA',          ppw: 1 },
+  { name: 'Drawing',                  cat: 'CCA',          ppw: 2 },
+  { name: 'Moral Science',            cat: 'Activity',     ppw: 1 },
+  { name: 'G.K.',                     cat: 'Activity',     ppw: 2 },
+  { name: 'SUPW / Life Skills',       cat: 'Activity',     ppw: 2 },
+  { name: 'Yoga & Health',            cat: 'Activity',     ppw: 1 },
+  { name: 'Scout & Guide',            cat: 'CCA',          ppw: 1 },
+  // Pre-primary
+  { name: 'Number Work',              cat: 'Compulsory',   ppw: 4 },
+  { name: 'Nursery Rhymes & Stories', cat: 'Activity',     ppw: 3 },
+  { name: 'Activity / Free Play',     cat: 'Activity',     ppw: 4 },
+  // Regional
+  { name: 'Odia / Regional Language', cat: 'Language',     ppw: 3 },
+  { name: 'Environmental Studies',    cat: 'Compulsory',   ppw: 4 },
+]
+
+function buildDefaultSubjects(board: CurriculumBoard = 'CBSE'): Subject[] {
+  return DEFAULT_SUBJECTS.map(d => {
+    // Use curriculum-recommended middle-school slot as the starting baseline
+    const aiPpw = suggestSlotsPerWeek(d.name, 'middle', board) ?? d.ppw
+    return {
+      id: makeId(), name: d.name,
+      periodsPerWeek: aiPpw,
+      category: d.cat as any, isOptional: false,
+      shortName: generateShortName(d.name),
+      sessionDuration: 45, maxPeriodsPerDay: 2,
+      requiresLab: false, color: P, sections: [], classConfigs: [],
+    } as unknown as Subject
+  })
 }
 
 function buildDefaultRooms(): RoomExt[] {
@@ -223,7 +243,7 @@ export function StepResourcesV2() {
     await new Promise(r => setTimeout(r, 700))
     const newSections = buildDefaultSections()
     const newStaff    = buildDefaultStaff(84)
-    const newSubjects = buildDefaultSubjects()
+    const newSubjects = buildDefaultSubjects(normalizeBoardType(config.board))
     const newRooms    = buildDefaultRooms()
     setSections(newSections.map((sec, i) => ({
       ...sec,
@@ -423,7 +443,7 @@ export function StepResourcesV2() {
                 <ClassesPanel sections={sections} setSections={setSections} />
               </div>
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'subjects' ? 'flex' : 'none', flexDirection: 'column' }}>
-                <SubjectsPanel subjects={subjects} setSubjects={setSubjects} sections={sections} />
+                <SubjectsPanel subjects={subjects} setSubjects={setSubjects} sections={sections} board={config.board} />
               </div>
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'teachers' ? 'flex' : 'none', flexDirection: 'column' }}>
                 <TeachersPanel staff={staff} setStaff={setStaff} sections={sections} subjects={subjects} />
