@@ -420,14 +420,14 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add rooms, then assign classes and special subjects to them.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ minWidth: 110 }} />  {/* Room */}
-              <col style={{ minWidth: 120 }} />  {/* Type */}
-              <col style={{ width: 52 }} />      {/* Cap — compact */}
-              <col />                            {/* Assigned Classes — flexible */}
-              <col />                            {/* Special Subjects — flexible */}
-              <col />                            {/* Actions — auto-sizes to buttons */}
+              <col style={{ width: '13%' }} />  {/* Room */}
+              <col style={{ width: '14%' }} />  {/* Type */}
+              <col style={{ width: '5%' }} />   {/* Cap */}
+              <col style={{ width: '26%' }} />  {/* Assigned Classes */}
+              <col style={{ width: '22%' }} />  {/* Special Subjects */}
+              <col style={{ width: '20%' }} />  {/* Actions */}
             </colgroup>
             <thead>
               <tr>

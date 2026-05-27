@@ -270,6 +270,45 @@ function CategoryManager({
   )
 }
 
+// ─── Grade table keyboard navigation (Excel-like: Tab/Arrow moves between cells) ─
+function gradeTableKeyNav(e: React.KeyboardEvent<HTMLInputElement>) {
+  const key = e.key
+  const isTabF  = key === 'Tab' && !e.shiftKey
+  const isTabB  = key === 'Tab' && e.shiftKey
+  const isRight = key === 'ArrowRight'
+  const isLeft  = key === 'ArrowLeft'
+  const isDown  = key === 'ArrowDown'
+  const isUp    = key === 'ArrowUp'
+
+  if (!(isTabF || isTabB || isRight || isLeft || isDown || isUp)) return
+
+  const table = e.currentTarget.closest('table')
+  if (!table) return
+  const all = Array.from(table.querySelectorAll<HTMLInputElement>('input[data-grade-input]'))
+  const idx = all.indexOf(e.currentTarget)
+  if (idx === -1) return
+
+  let next: HTMLInputElement | undefined
+  if (isTabF || isRight) {
+    next = all[idx + 1]
+  } else if (isTabB || isLeft) {
+    next = all[idx - 1]
+  } else if (isDown || isUp) {
+    const row = e.currentTarget.closest('tr')
+    const rowLen = row ? row.querySelectorAll('input[data-grade-input]').length : 1
+    next = isDown ? all[idx + rowLen] : all[idx - rowLen]
+  }
+
+  if (next) {
+    e.preventDefault()
+    e.stopPropagation()
+    next.focus()
+    next.select()
+  } else if (isTabF || isTabB) {
+    e.preventDefault()  // don't leave the grade table
+  }
+}
+
 // ─── Per-section sub-row (within an expanded grade) ───────────────────────────
 function SectionSubRow({
   secName, sub, unit, sessionMins, index, extraCats,
@@ -297,8 +336,8 @@ function SectionSubRow({
   const editableHr  = toEditableHours(slots, unit, sessionMins)
   const inputValue  = isHours ? (editFocused ? editText : String(displayVal)) : (displayVal as number)
 
-  // Alternate colors for visual differentiation
-  const rowBg = index % 2 === 0 ? '#EAE5FF' : '#F2EEFF'
+  // Warm yellow tint — all section rows share the same warm base
+  const rowBg = index % 2 === 0 ? '#FFFBEB' : '#FFF6D8'
 
   const secInp: React.CSSProperties = {
     width: '100%', padding: '2px 5px', border: '1px solid #D8D2F4', borderRadius: 4,
@@ -309,7 +348,7 @@ function SectionSubRow({
   return (
     <tr
       style={{ background: rowBg }}
-      onMouseEnter={e => (e.currentTarget.style.background = '#E2DBFF')}
+      onMouseEnter={e => (e.currentTarget.style.background = '#FEF3C7')}
       onMouseLeave={e => (e.currentTarget.style.background = rowBg)}
     >
       {/* Section name — indented, no arrow prefix */}
@@ -326,14 +365,16 @@ function SectionSubRow({
           onChange={e => { if (isHours) setEditText(e.target.value); else { const ns = fromDisplayValue(+e.target.value, unit, sessionMins); if (ns >= 1) onUpdateSlots(ns) } }}
           onFocus={() => { if (isHours) { setEditFocused(true); setEditText(String(editableHr)) } }}
           onBlur={() => { if (!isHours) return; const p = parseFloat(editText); if (!isNaN(p) && p > 0) { const ns = fromDisplayValue(p, unit, sessionMins); if (ns >= 1) onUpdateSlots(ns) } setEditFocused(false) }}
-          onKeyDown={e => { e.stopPropagation(); if (isHours && e.key === 'Enter') e.currentTarget.blur() }}
+          onKeyDown={e => { e.stopPropagation(); gradeTableKeyNav(e); if (isHours && e.key === 'Enter') e.currentTarget.blur() }}
           style={{ ...secInp, border: '1px solid #C4BDFF', background: '#F5F2FF', color: P_D, fontWeight: 800, fontSize: 12 }}
         />
       </td>
       <td style={{ padding: '2px 8px' }}>
         <input type="number" min={1} max={8} value={maxDay}
           onChange={e => { const v = +e.target.value; if (v >= 1) onUpdateMaxDay(v) }}
-          className="rp-inp rp-num" style={secInp}
+          className="rp-inp rp-num" data-grade-input
+          onKeyDown={e => { e.stopPropagation(); gradeTableKeyNav(e) }}
+          style={secInp}
         />
       </td>
       <td style={{ padding: '2px 5px' }}>
@@ -358,7 +399,8 @@ function SectionSubRow({
 // ─── Grade-level row in the expanded slots table ──────────────────────────────
 function GradeSlotRow({
   grade, sections, sub, unit, sessionMins, extraCats,
-  onUpdateGradeSlots, onRemoveGrade, onUpdateSectionMaxDay, onUpdateSectionConfig, onChange, onAddCategory,
+  onUpdateGradeSlots, onRemoveGrade, onUpdateSectionMaxDay, onUpdateSectionConfig,
+  onUpdateGradeRequiresLab, onChange, onAddCategory,
 }: {
   grade:              string
   sections:           string[]
@@ -366,12 +408,13 @@ function GradeSlotRow({
   unit:               AllocationUnit
   sessionMins:        number
   extraCats:          string[]
-  onUpdateGradeSlots:    (classNames: string[], periodsPerWeek: number) => void
-  onRemoveGrade:         (classNames: string[]) => void
-  onUpdateSectionMaxDay: (sectionName: string, max: number) => void
-  onUpdateSectionConfig: (sectionName: string, patch: Partial<SubjectClassConfig>) => void
-  onChange:              (patch: Partial<Subject>) => void
-  onAddCategory:         (cat: string) => void
+  onUpdateGradeSlots:       (classNames: string[], periodsPerWeek: number) => void
+  onRemoveGrade:            (classNames: string[]) => void
+  onUpdateSectionMaxDay:    (sectionName: string, max: number) => void
+  onUpdateSectionConfig:    (sectionName: string, patch: Partial<SubjectClassConfig>) => void
+  onUpdateGradeRequiresLab: (classNames: string[], requiresLab: boolean) => void
+  onChange:                 (patch: Partial<Subject>) => void
+  onAddCategory:            (cat: string) => void
 }) {
   const [expandedSections, setExpandedSections] = useState(false)
   const [editFocused, setEditFocused] = useState(false)
@@ -438,20 +481,7 @@ function GradeSlotRow({
             onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur}
             onKeyDown={e => {
               e.stopPropagation()
-              const isUp = e.key === 'ArrowUp', isDown = e.key === 'ArrowDown'
-              const isTabF = e.key === 'Tab' && !e.shiftKey, isTabB = e.key === 'Tab' && e.shiftKey
-              if (isUp || isDown || isTabF || isTabB) {
-                const table = e.currentTarget.closest('table')
-                if (table) {
-                  const inputs = Array.from(table.querySelectorAll<HTMLInputElement>('input[data-grade-input]'))
-                  const idx = inputs.indexOf(e.currentTarget)
-                  if (idx !== -1) {
-                    const next = (isDown || isTabF) ? inputs[idx + 1] : inputs[idx - 1]
-                    if (next) { e.preventDefault(); next.focus(); next.select?.(); return }
-                  }
-                }
-                if (isUp || isDown) e.preventDefault()
-              }
+              gradeTableKeyNav(e)
               if (isHours && e.key === 'Enter') e.currentTarget.blur()
             }}
             style={{
@@ -467,7 +497,8 @@ function GradeSlotRow({
         <td style={{ padding: '3px 8px' }}>
           <input type="number" min={1} max={8} value={maxDay}
             onChange={e => { const v = +e.target.value; if (v >= 1) sections.forEach(sn => onUpdateSectionMaxDay(sn, v)) }}
-            className="rp-inp rp-num"
+            className="rp-inp rp-num" data-grade-input
+            onKeyDown={e => { e.stopPropagation(); gradeTableKeyNav(e) }}
             style={{ ...fldS, textAlign: 'center' as const, fontSize: 12 }}
           />
         </td>
@@ -481,10 +512,14 @@ function GradeSlotRow({
           />
         </td>
 
-        {/* Lab Required — subject-level */}
+        {/* Lab Required — tick-all for this grade */}
         <td style={{ padding: '3px 6px', textAlign: 'center' as const }}>
-          <input type="checkbox" checked={!!sub.requiresLab}
-            onChange={e => onChange({ requiresLab: e.target.checked })}
+          <input type="checkbox"
+            checked={sections.every(sn => {
+              const cfg = (sub.classConfigs ?? []).find(c => c.sectionName === sn)
+              return cfg?.requiresLab !== undefined ? cfg.requiresLab : (sub.requiresLab ?? false)
+            })}
+            onChange={e => onUpdateGradeRequiresLab(sections, e.target.checked)}
             style={{ accentColor: P, width: 14, height: 14 }}
           />
         </td>
@@ -521,19 +556,20 @@ function GradeSlotRow({
 // ─── Expanded grade-level slots view ─────────────────────────────────────────
 function ClassSlotsExpanded({
   sub, unit, sessionMins, onUpdateGradeSlots, onRemoveGrade, onChange,
-  onUpdateSectionMaxDay, onUpdateSectionConfig, onAddCategory, onDeleteCategory, extraCats = [],
+  onUpdateSectionMaxDay, onUpdateSectionConfig, onUpdateGradeRequiresLab, onAddCategory, onDeleteCategory, extraCats = [],
 }: {
   sub: Subject
   unit: AllocationUnit
   sessionMins: number
-  onUpdateGradeSlots:    (classNames: string[], periodsPerWeek: number) => void
-  onRemoveGrade:         (classNames: string[]) => void
-  onChange:              (patch: Partial<Subject>) => void
-  onUpdateSectionMaxDay: (sectionName: string, max: number) => void
-  onUpdateSectionConfig: (sectionName: string, patch: Partial<SubjectClassConfig>) => void
-  onAddCategory:         (cat: string) => void
-  onDeleteCategory?:     (cat: string) => void
-  extraCats?:            string[]
+  onUpdateGradeSlots:       (classNames: string[], periodsPerWeek: number) => void
+  onRemoveGrade:            (classNames: string[]) => void
+  onChange:                 (patch: Partial<Subject>) => void
+  onUpdateSectionMaxDay:    (sectionName: string, max: number) => void
+  onUpdateSectionConfig:    (sectionName: string, patch: Partial<SubjectClassConfig>) => void
+  onUpdateGradeRequiresLab: (classNames: string[], requiresLab: boolean) => void
+  onAddCategory:            (cat: string) => void
+  onDeleteCategory?:        (cat: string) => void
+  extraCats?:               string[]
 }) {
   const [catMgrAnchor, setCatMgrAnchor] = useState<HTMLElement | null>(null)
   const classes = getAssignedClasses(sub)
@@ -577,7 +613,7 @@ function ClassSlotsExpanded({
           <col style={{ width: 96 }} />    {/* Slots/Wk */}
           <col style={{ width: 64 }} />    {/* Max/day */}
           <col />                          {/* Category — flex */}
-          <col style={{ width: 46 }} />    {/* Lab Req */}
+          <col style={{ width: 68 }} />    {/* Lab Req */}
           <col style={{ width: 26 }} />    {/* Remove */}
         </colgroup>
         <thead>
@@ -604,7 +640,7 @@ function ClassSlotsExpanded({
                 )}
               </div>
             </th>
-            <th style={{ ...thS, textAlign: 'center' }}>Lab</th>
+            <th style={{ ...thS, textAlign: 'center', whiteSpace: 'nowrap' }}>Lab Req.</th>
             <th style={{ borderBottom: '1px solid #E4E0FF' }} />
           </tr>
         </thead>
@@ -622,6 +658,7 @@ function ClassSlotsExpanded({
               onRemoveGrade={onRemoveGrade}
               onUpdateSectionMaxDay={onUpdateSectionMaxDay}
               onUpdateSectionConfig={onUpdateSectionConfig}
+              onUpdateGradeRequiresLab={onUpdateGradeRequiresLab}
               onChange={onChange}
               onAddCategory={onAddCategory}
             />
@@ -817,6 +854,26 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
     onUpdate({ classConfigs: updated })
   }
 
+  // Atomically set requiresLab for all sections of a grade
+  function handleUpdateGradeRequiresLab(classNames: string[], requiresLab: boolean) {
+    const classSet    = new Set(classNames)
+    const allAssigned = getAssignedClasses(sub)
+    const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
+    const updated: SubjectClassConfig[] = allAssigned.map(name => {
+      const ex = existingMap.get(name)
+      const base: SubjectClassConfig = {
+        sectionName:      name,
+        periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
+        category:         ex?.category,
+        requiresLab:      ex?.requiresLab,
+      }
+      return classSet.has(name) ? { ...base, requiresLab } : base
+    })
+    onUpdate({ classConfigs: updated })
+  }
+
   const isExpanded = expandSlots || expandSettings
 
   return (
@@ -927,6 +984,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
               onChange={onUpdate}
               onUpdateSectionMaxDay={handleUpdateSectionMaxDay}
               onUpdateSectionConfig={handleUpdateSectionConfig}
+              onUpdateGradeRequiresLab={handleUpdateGradeRequiresLab}
               onAddCategory={onAddCategory ?? (() => {})}
               onDeleteCategory={onDeleteCategory}
               extraCats={extraCats}
@@ -970,7 +1028,9 @@ export function SubjectsPanel({
   const [search,     setSearch]     = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
-  const searchRef   = useRef<HTMLInputElement>(null)
+  const [catMgrOpen, setCatMgrOpen] = useState(false)
+  const searchRef    = useRef<HTMLInputElement>(null)
+  const catMgrBtnRef = useRef<HTMLButtonElement>(null)
   const undoHistory = useUndoHistory<Subject[]>()
 
   // Extra (custom) category options — persist to localStorage
@@ -1217,7 +1277,25 @@ export function SubjectsPanel({
         <div style={{ flex: 1 }} />
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center', position: 'relative' }}>
+          {/* Category Manager */}
+          <button
+            ref={catMgrBtnRef}
+            onClick={() => setCatMgrOpen(o => !o)}
+            title="Add, edit or delete subject categories"
+            style={outlineBtn}
+            onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
+          >⚙ Category</button>
+          {catMgrOpen && catMgrBtnRef.current && (
+            <CategoryManager
+              extraCats={extraCats}
+              onAdd={addCategory}
+              onDelete={deleteCategory}
+              anchorEl={catMgrBtnRef.current}
+              onClose={() => setCatMgrOpen(false)}
+            />
+          )}
           {onScopeClick && (
             <button
               title="Set availability scope for all subjects"
@@ -1298,12 +1376,12 @@ export function SubjectsPanel({
             <div style={{ fontSize: 11.5, color: '#C4C0DC' }}>Add subjects, then use ⚡ AI Assign to auto-fill class mappings and teacher workloads.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ minWidth: 155 }} />  {/* Subject */}
-              <col style={{ minWidth: 52 }} />   {/* Short */}
-              <col />                             {/* Applicable Classes — flexible */}
-              <col />                             {/* Actions — auto-sizes to buttons */}
+              <col style={{ width: '18%' }} />  {/* Subject */}
+              <col style={{ width: '6%' }} />   {/* Short */}
+              <col style={{ width: '52%' }} />  {/* Applicable Classes */}
+              <col style={{ width: '24%' }} />  {/* Actions */}
             </colgroup>
             <thead>
               <tr>

@@ -743,13 +743,13 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add educators, then assign subjects and classes to them.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ minWidth: 120 }} />  {/* Educator */}
-              <col />                             {/* Subject Assignments — flexible */}
-              <col style={{ width: 90 }} />       {/* Slots/Wk — compact */}
-              <col />                             {/* Class Teacher Of — flexible */}
-              <col />                             {/* Actions — auto-sizes to buttons */}
+              <col style={{ width: '14%' }} />  {/* Educator */}
+              <col style={{ width: '28%' }} />  {/* Subject Assignments */}
+              <col style={{ width: '10%' }} />  {/* Slots/Wk */}
+              <col style={{ width: '24%' }} />  {/* Class Teacher Of */}
+              <col style={{ width: '24%' }} />  {/* Actions */}
             </colgroup>
             <thead>
               <tr>
