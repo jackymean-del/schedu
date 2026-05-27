@@ -443,13 +443,23 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
 
   // ── Middle school (VI–VIII) ────────────────────────────────────────────────────
+  //
+  // Science scope note:
+  //   Standard CBSE — Science is a unified subject from I through X (Physics/Chemistry/
+  //   Biology are introduced as separate subjects only at XI–XII).
+  //   Many Indian schools however split earlier: "Science" for Classes I–V (primary),
+  //   then separate Physics, Chemistry, Biology from Class VI onwards.
+  //   This template uses grades: ['primary','middle'] (I–VIII) so the AI engine does NOT
+  //   auto-assign Science to secondary sections (IX–X) where schools often prefer the
+  //   separate-subject approach.  Adjust classConfigs in Resources → Subjects if your
+  //   school keeps unified Science through X.
   'Science': {
-    grades: ['middle','secondary'],
-    slots:           { middle: 5, secondary: 8 },
-    icseSlots:       { middle: 5, secondary: 7 },
-    ibSlots:         { middle: 5, secondary: 6 },
-    cambridgeSlots:  { middle: 5, secondary: 6 },
-    hint: 'Unified Science — CBSE VI–X before subject-split at XI; ICSE uses same unified approach through X',
+    grades: ['primary', 'middle'],
+    slots:           { primary: 4, middle: 5 },
+    icseSlots:       { primary: 4, middle: 5 },
+    ibSlots:         { primary: 4, middle: 5 },
+    cambridgeSlots:  { primary: 4, middle: 5 },
+    hint: 'Unified Science — typically I–V (primary) or I–VIII (middle); Physics/Chemistry/Biology take over from IX or VI depending on school. Adjust per your board.',
   },
   'Social Studies': {
     grades: ['middle','secondary'],

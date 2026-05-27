@@ -152,10 +152,40 @@ export function StepAllocation() {
       soft.push(`"${subName}" has no teacher assigned in: ${display} — assign in Resources → Teachers`)
     })
 
-    // Resource-level: lab subjects but no lab room exists
-    const labSubjects = (subjects as Subject[]).filter(s => !!(s as any).requiresLab)
+    // Resource-level: lab subjects with no suitable lab room
+    //
+    // Detect "needs a lab" via TWO signals:
+    //   1. subject.requiresLab === true  (set in Resources → Subjects)
+    //   2. allocation uses +L or nL syntax (labPeriods > 0)
+    //
+    // Only count subjects that are ACTUALLY ALLOCATED to at least one section in this
+    // timetable — this prevents false positives from subjects that have the requiresLab
+    // flag set but are not in use (e.g. an elective added to Resources but never scheduled).
+    //
+    // Room-type match: case-insensitive, checks both .type (RoomRow / new RoomsPanel) and
+    // .roomType (legacy Room type stored with lowercase 'lab').  Handles 'Lab', 'lab',
+    // 'Computer Lab', 'Science Lab', etc.
+    const labSubjects = (subjects as Subject[]).filter(s => {
+      // Signal 1 — explicit flag
+      const hasFlag = !!(s as any).requiresLab
+      // Signal 2 — any section uses +L / nL allocation syntax for this subject
+      const hasLabSyntax = !hasFlag && (sections as Section[]).some(sec => {
+        const raw = (subjectAllocations as any)?.[sec.name]?.[s.name]
+        return raw ? parseAllocation(raw).labPeriods > 0 : false
+      })
+      if (!hasFlag && !hasLabSyntax) return false
+      // Guard: only include if subject is actually allocated (has periods > 0 somewhere)
+      return (sections as Section[]).some(sec => {
+        const raw = (subjectAllocations as any)?.[sec.name]?.[s.name]
+        return raw ? parseAllocation(raw).weeklyTotal > 0 : false
+      })
+    })
     if (labSubjects.length > 0) {
-      const hasLabRoom = storeRooms.some((r: any) => r.type === 'Lab' || r.type === 'Computer Lab')
+      const hasLabRoom = storeRooms.some((r: any) => {
+        // Support both RoomRow (.type) and legacy Room (.roomType), case-insensitive
+        const t = ((r.type ?? r.roomType) ?? '').toLowerCase()
+        return t.includes('lab')
+      })
       if (!hasLabRoom) {
         const names = labSubjects.slice(0, 3).map(s => s.name).join(', ')
         soft.push(`${labSubjects.length} subject${labSubjects.length > 1 ? 's require' : ' requires'} a lab room (${names}${labSubjects.length > 3 ? ' +more' : ''}) — add a Lab room in Resources → Rooms`)
