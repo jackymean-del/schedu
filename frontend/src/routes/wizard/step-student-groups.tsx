@@ -173,20 +173,23 @@ function EditableColHeader({ value, onChange }: { value: string; onChange: (v: s
 
 // ── NA cell ───────────────────────────────────────────────────────────────────
 
-function NACell({ onUnmark }: { onUnmark: () => void }) {
+/**
+ * NA = subject not offered to this class-section.
+ * Read-only from Student Groups — to enable editing, go to Resources → Subject →
+ * "Assign class" to add this section to the subject's applicable classes.
+ */
+function NACell() {
   return (
-    <button
-      onClick={onUnmark}
-      title="Not applicable — click to enter a value"
+    <span
+      title="Not applicable to this class. To enable, go to Resources → Subject → assign this class to the subject."
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 46, height: 26, borderRadius: 5,
-        border: '1px dashed #D1D5DB', background: '#F9F9F9',
-        color: '#D1D5DB', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+        border: '1px dashed #E5E7EB', background: '#F9FAFB',
+        color: '#D1D5DB', fontSize: 10, fontWeight: 700,
+        cursor: 'default', userSelect: 'none',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FECACA' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#F9F9F9'; e.currentTarget.style.color = '#D1D5DB'; e.currentTarget.style.borderColor = '#D1D5DB' }}
-    >NA</button>
+    >NA</span>
   )
 }
 
@@ -684,7 +687,7 @@ export function StepStudentGroups() {
                           if (isNA || wouldBeNA) {
                             return (
                               <td key={col.key} style={tdCenter()}>
-                                <NACell onUnmark={() => updateCell(row.sectionName, col.key, 0)} />
+                                <NACell />
                               </td>
                             )
                           }
@@ -695,10 +698,7 @@ export function StepStudentGroups() {
                                 value={val || ''} placeholder="0"
                                 data-row={ri} data-col={ci}
                                 onChange={e => updateCell(row.sectionName, col.key, parseInt(e.target.value) || 0)}
-                                onKeyDown={e => {
-                                  if ((e.key === 'Delete' || e.key === 'Backspace') && (e.ctrlKey || e.metaKey)) { updateCell(row.sectionName, col.key, -1); e.preventDefault(); return }
-                                  handleCellKey(e, ri, ci)
-                                }}
+                                onKeyDown={e => { handleCellKey(e, ri, ci) }}
                                 onFocus={e => e.currentTarget.select()}
                                 style={{ width: '100%', maxWidth: 62, textAlign: 'center', padding: '4px 5px', borderRadius: 6, border: `1px solid ${val >= 5 ? '#7C6FE0' : '#E8E4FF'}`, background: val >= 5 ? '#F5F2FF' : '#fff', fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: val >= 5 ? '#7C3AED' : '#4B5275', outline: 'none' }}
                               />
@@ -740,7 +740,7 @@ export function StepStudentGroups() {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={10} color="#15803D" /> All filled & sum = total</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertCircle size={10} color="#D97706" /> Under / partial</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><XCircle size={10} color="#DC2626" /> Over-subscribed</span>
-          <span>NA = not offered · Ctrl+Del = mark NA</span>
+          <span>NA = not offered to this class (configure in Resources → Subject)</span>
         </div>
         <TableKeyboardHint />
       </Section>
@@ -1003,7 +1003,7 @@ function tdCenter(): React.CSSProperties {
 
 const TABLE_SHORTCUTS = [
   { key: 'Tab', label: 'Next field' }, { key: 'Enter', label: 'Next row' },
-  { key: '↑↓ ←→', label: 'Navigate' }, { key: 'Ctrl+Del', label: 'Mark NA' }, { key: 'Esc', label: 'Cancel' },
+  { key: '↑↓ ←→', label: 'Navigate' }, { key: 'Esc', label: 'Cancel' },
 ]
 function TableKeyboardHint() {
   return (
