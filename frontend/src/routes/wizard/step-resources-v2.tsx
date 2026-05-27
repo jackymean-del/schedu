@@ -244,7 +244,7 @@ export function StepResourcesV2() {
 
   // ── Rooms AI Fix — infer room type and subject mappings from room names ───────
   function handleRoomAIFix() {
-    const subjectNames = subjects.map((s: Subject) => s.name)
+    const subjectNames: string[] = subjects.map((s: Subject) => s.name)
 
     const updatedRooms = rooms.map((room: RoomExt) => {
       const n = room.name
