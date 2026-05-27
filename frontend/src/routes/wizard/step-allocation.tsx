@@ -348,14 +348,17 @@ export function StepAllocation() {
     handleAITeacherAllocate(nextPeriods)   // passes fresh periods — avoids stale-state race
   }, [derivePeriodsFromResources, handleAITeacherAllocate, store])
 
-  // ── Auto-derive on first entry if allocations are empty ───────────────────────
+  // ── Auto-derive on first entry: run if allocations empty OR hard conflicts exist ──
   const autoRanRef = useRef(false)
   useEffect(() => {
     if (autoRanRef.current) return
     autoRanRef.current = true
     const hasSubs = (subjects as Subject[]).length > 0
     const hasSecs = (sections as Section[]).length > 0
-    if (!hasAllocations && hasSubs && hasSecs) handleSyncFromResources()
+    // Auto-sync if: (a) no allocations yet, OR (b) existing data has hard conflicts
+    if ((!hasAllocations || hardConflicts.length > 0) && hasSubs && hasSecs) {
+      handleSyncFromResources()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // intentionally mount-only — autoRanRef prevents double-fire in StrictMode
 
