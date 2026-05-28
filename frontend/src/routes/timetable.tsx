@@ -699,6 +699,26 @@ export function TimetablePage() {
                           Lunch Break
                         </td>
                       )
+                      // Upcoming lunch notification: if any of teacher's sections
+                      // has a lunch break immediately after this class period
+                      const periodN = classPeriods.findIndex(cp => cp.id === p.id) + 1
+                      if (periodN > 0 && cwBreaksTT?.length) {
+                        const lunchSec = tdata.classes.find(cls => {
+                          const ck = getSectionClassKey(cls)
+                          return cwBreaksTT!.some(brk =>
+                            brk.afterPeriod === periodN &&
+                            (brk.classes.length === 0 || brk.classes.includes(ck))
+                          )
+                        })
+                        if (lunchSec) return (
+                          <td key={p.id} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", padding:4 }}>
+                            <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", justifyContent:"center", minHeight:44, gap:2 }}>
+                              <div style={{ fontSize:9, fontStyle:"italic", color:"#D4920E", fontWeight:600 }}>Lunch Break</div>
+                              <div style={{ fontSize:9, color:"#D4920E", opacity:0.75 }}>{lunchSec}</div>
+                            </div>
+                          </td>
+                        )
+                      }
                       return (
                         <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div style={{ height:44, background:"#FAFAFE", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
@@ -802,6 +822,26 @@ export function TimetablePage() {
                         if ((cell as any)?.isLunch || (cell as any)?.type === "lunch") return (
                           <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D4920E", fontSize:9, fontStyle:"italic", padding:6 }}>Lunch Break</td>
                         )
+                        // Upcoming lunch notification: if any of teacher's sections
+                        // has a lunch break immediately after this class period
+                        const periodN = classPeriods.findIndex(cp => cp.id === p.id) + 1
+                        if (periodN > 0 && cwBreaksTTT?.length) {
+                          const lunchSec = tdata.classes.find(cls => {
+                            const ck = getSectionClassKey(cls)
+                            return cwBreaksTTT!.some(brk =>
+                              brk.afterPeriod === periodN &&
+                              (brk.classes.length === 0 || brk.classes.includes(ck))
+                            )
+                          })
+                          if (lunchSec) return (
+                            <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", padding:4 }}>
+                              <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", justifyContent:"center", minHeight:42, gap:2 }}>
+                                <div style={{ fontSize:9, fontStyle:"italic", color:"#D4920E", fontWeight:600 }}>Lunch Break</div>
+                                <div style={{ fontSize:9, color:"#D4920E", opacity:0.75 }}>{lunchSec}</div>
+                              </div>
+                            </td>
+                          )
+                        }
                         return (
                           <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                             <div style={{ height:42, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
