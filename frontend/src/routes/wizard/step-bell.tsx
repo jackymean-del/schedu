@@ -342,6 +342,7 @@ interface SavedBell {
   dayStartTimes?:  Record<string, string>   // per-day start time overrides (dayKey → HH:MM)
   dayPeriodDurs?:  Record<string, number>   // per-day period duration overrides (dayKey → mins)
   dayOffRules?:    DayOffRule[]             // class-specific off-day rules
+  cwRows?:         CwBreakRow[]            // class-wise break configuration
   // Per-day bell config
   varyByDay?: boolean; dayRows?: Record<string, BellRow[]>
   // Multi-shift (Advanced mode)
@@ -378,9 +379,22 @@ function ClasswiseBreaksPanel({
 }) {
   const [openPicker, setOpenPicker] = useState<string | null>(null)
 
-  /** Calculate the clock time a break starts, given it falls after `afterPeriod` periods. */
-  const breakStartTime = (afterPeriod: number) =>
-    addMins(startTime, 15 /* assembly */ + afterPeriod * periodDur)
+  /**
+   * Calculate the clock time a break starts.
+   * Accounts for the assembly (15 min) AND any preceding breaks that share at
+   * least one class with this row — so that stacked breaks (e.g. morning break
+   * before a lunch break) are correctly offset.
+   */
+  const breakStartTime = (row: CwBreakRow): string => {
+    const precedingBreakMins = cwRows
+      .filter(b =>
+        b.id !== row.id &&
+        b.afterPeriod < row.afterPeriod &&
+        b.classes.some(c => row.classes.includes(c))
+      )
+      .reduce((sum, b) => sum + b.duration, 0)
+    return addMins(startTime, 15 /* assembly */ + precedingBreakMins + row.afterPeriod * periodDur)
+  }
 
   const updateBreak = (id: string, patch: Partial<CwBreakRow>) =>
     setCwRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r))
@@ -467,7 +481,7 @@ function ClasswiseBreaksPanel({
       {/* Break rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
         {cwRows.map(row => {
-          const bStart = breakStartTime(row.afterPeriod)
+          const bStart = breakStartTime(row)
           const bEnd   = addMins(bStart, row.duration)
           return (
             <div key={row.id} style={{
@@ -921,19 +935,19 @@ export function StepBell() {
   const [openPicker,    setOpenPicker]    = useState<string | null>(null)
   const [editingEnd,    setEditingEnd]    = useState(false)
   const [showCwPanel,   setShowCwPanel]   = useState(false)
-  const [cwRows,        setCwRows]        = useState<CwBreakRow[]>([])
+  const [cwRows,        setCwRows]        = useState<CwBreakRow[]>(() => _saved?.cwRows ?? [])
 
   // ── Persistence ───────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem(BELL_KEY, JSON.stringify({
       shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
-      weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, varyByDay, dayRows,
+      weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows,
     } satisfies SavedBell))
   }, [shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
-      weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, varyByDay, dayRows,
+      weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows])
 
   // ── Day keys ─────────────────────────────────────────────────
@@ -1488,7 +1502,7 @@ export function StepBell() {
       localStorage.setItem(BELL_KEY, JSON.stringify({
         shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
         cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
-        weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, varyByDay, dayRows,
+        weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
         scheduleMode, shifts, activeShiftId, shiftRows,
       } satisfies SavedBell))
     } catch { /* localStorage might be full */ }
@@ -1497,6 +1511,8 @@ export function StepBell() {
       startTime, endTime, periodsPerDay: maxPeriods, defaultSessionDuration: periodDur,
       // Persist class-specific day-off rules so the scheduling engine can honour them
       dayOffRules: dayOffRules.length > 0 ? dayOffRules : undefined,
+      // Persist class-wise break config so the timetable display shows correct per-class times
+      classwiseBreaks: cwRows.length > 0 ? cwRows : undefined,
     } as any)
     setBreaks(displayRows.filter(r => r.type !== 'teaching').map(r => ({
       id: r.id, name: r.name, duration: r.duration, type: r.type as any, shiftable: r.type === 'short-break',

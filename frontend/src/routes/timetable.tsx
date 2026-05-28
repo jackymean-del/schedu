@@ -33,6 +33,65 @@ function calcTimes(periods: any[], config: any): Map<string,{start:string;end:st
   return map
 }
 
+// ── Class key from section name ────────────────────────────
+// e.g. "Nursery-A" → "nur", "LKG-B" → "lkg", "XI-Sci-A" → "xi"
+function getSectionClassKey(sectionName: string): string {
+  const norm = sectionName.toLowerCase().replace(/[\s-]/g, "")
+  if (norm.startsWith("nur")) return "nur"
+  if (norm.startsWith("lkg")) return "lkg"
+  if (norm.startsWith("ukg")) return "ukg"
+  return sectionName.split(/[\s-]/)[0].toLowerCase()
+}
+
+/**
+ * Compute per-teaching-period start/end times for a specific section,
+ * accounting for its class-wise break offsets.
+ *
+ * Algorithm for teaching period pN (1-based):
+ *   start = schoolStart + assembly(15 min) + sum(classBrks where afterPeriod < N) + (N-1)*periodDur
+ *
+ * Returns null when no class-wise breaks are configured (caller falls back
+ * to the unified periodTimes map).
+ */
+function calcSectionTimes(
+  sectionName: string,
+  classwiseBreaks: Array<{classes: string[]; afterPeriod: number; duration: number}> | undefined,
+  config: any,
+  classPeriods: Period[],
+): Map<string,{start:string;end:string}> | null {
+  if (!classwiseBreaks?.length) return null
+
+  const classKey = getSectionClassKey(sectionName)
+  const sectionBreaks = classwiseBreaks.filter(b =>
+    b.classes.length === 0 || b.classes.includes(classKey)
+  )
+  if (!sectionBreaks.length) return null
+
+  const [sh, sm] = (config.startTime ?? "09:00").split(":").map(Number)
+  const startMins = sh * 60 + sm
+  const assembly = 15 // fixed-start assembly duration (matches step-bell default)
+  const periodDur = config.defaultSessionDuration ?? 40
+
+  const fmt = (m: number): string => {
+    if ((config.timeFormat ?? "12h") === "24h")
+      return Math.floor(m/60).toString().padStart(2,"0")+":"+( m%60).toString().padStart(2,"0")
+    const h = Math.floor(m/60); const min = m%60
+    const ap = h>=12?"PM":"AM", h12 = h%12||12
+    return h12+":"+(min.toString().padStart(2,"0"))+" "+ap
+  }
+
+  const map = new Map<string,{start:string;end:string}>()
+  classPeriods.forEach((p, idx) => {
+    const N = idx + 1
+    const precedingMins = sectionBreaks
+      .filter(b => b.afterPeriod < N)
+      .reduce((s, b) => s + b.duration, 0)
+    const s = startMins + assembly + precedingMins + (N - 1) * periodDur
+    map.set(p.id, { start: fmt(s), end: fmt(s + periodDur) })
+  })
+  return map
+}
+
 // ── Period header ──────────────────────────────────────────
 function PeriodCol({ p, times, onShiftLeft, onShiftRight }: { p:Period; times?:{start:string;end:string}; onShiftLeft?:()=>void; onShiftRight?:()=>void }) {
   const isBreak = p.type !== "class"
@@ -250,6 +309,8 @@ export function TimetablePage() {
     const section = sections.find(s => s.name === sn)
     const ctName = resolveTeacher(section?.classTeacher ?? "")
     const usedDays = config.workDays.filter(d => sd[d])
+    // Use class-wise timing when configured, fall back to unified periodTimes
+    const sectionTimes = calcSectionTimes(sn, (config as any).classwiseBreaks, config, classPeriods) ?? periodTimes
     return (
       <div>
         <SectionHeader name={sn} classTeacher={ctName} meta={`${config.workDays.length} days/week · ${classPeriods.length} periods/day`} />
@@ -258,7 +319,7 @@ export function TimetablePage() {
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:70, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Day</th>
               {periods.map((p, pi) => (
-                <PeriodCol key={p.id} p={p} times={periodTimes.get(p.id)}
+                <PeriodCol key={p.id} p={p} times={sectionTimes.get(p.id)}
                   onShiftLeft={() => handleShift(pi, -1)} onShiftRight={() => handleShift(pi, 1)} />
               ))}
             </tr></thead>
@@ -305,6 +366,8 @@ export function TimetablePage() {
     const section = sections.find(s => s.name === sn)
     const ctName = resolveTeacher(section?.classTeacher ?? "")
     const usedDays = config.workDays.filter(d => sd[d])
+    // Use class-wise timing when configured, fall back to unified periodTimes
+    const sectionTimes = calcSectionTimes(sn, (config as any).classwiseBreaks, config, classPeriods) ?? periodTimes
     return (
       <div>
         <SectionHeader name={sn} classTeacher={ctName} meta="Transposed view" />
@@ -319,7 +382,7 @@ export function TimetablePage() {
             <tbody>
               {periods.map((p, pi) => {
                 const isBreak = p.type !== "class"
-                const times = periodTimes.get(p.id)
+                const times = sectionTimes.get(p.id)
                 return (
                   <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#FAFAFE" }}>
                     <td style={{ padding:"6px 10px", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>

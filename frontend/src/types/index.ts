@@ -979,6 +979,15 @@ export interface WizardConfig {
   // Step 2 — class-specific day-off rules  (e.g. Saturday off for Nursery/LKG/UKG)
   // day: short format ('Sat', 'Mon', …)  ·  classes: class keys ('nur', 'lkg', 'ukg', 'i', …)
   dayOffRules?: Array<{ id: string; day: string; classes: string[] }>
+
+  // Step 2 — class-wise break configuration (different break timings per class group)
+  // afterPeriod: 0 = after assembly (before P1), 1 = after P1, etc.
+  classwiseBreaks?: Array<{
+    id: string; name: string; type: 'short-break' | 'lunch' | 'assembly' | 'dispersal'
+    classes: string[]   // class keys ('nur', 'lkg', …) — empty = all
+    afterPeriod: number
+    duration: number
+  }>
 }
 
 export const defaultWizardConfig: WizardConfig = {
