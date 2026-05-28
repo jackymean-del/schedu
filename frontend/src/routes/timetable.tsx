@@ -287,11 +287,13 @@ function BreakCell({ p }: { p:Period }) {
 }
 
 // ── Subject color cell ─────────────────────────────────────
-function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher, showTeacher, showRoom, onClick, dragOver, onDragOver, onDrop, onDragLeave, absentHighlight }:{
+type CellOption = { subject: string; teacher: string; room: string }
+function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher, showTeacher, showRoom, onClick, dragOver, onDragOver, onDrop, onDragLeave, absentHighlight, options }:{
   subject?:string; teacher?:string; room?:string; isClassTeacher?:boolean; isSub?:boolean; subTeacher?:string;
   showTeacher:boolean; showRoom:boolean; onClick?:()=>void;
   dragOver?:boolean; onDragOver?:(e:React.DragEvent)=>void; onDrop?:(e:React.DragEvent)=>void; onDragLeave?:()=>void;
   absentHighlight?:boolean;
+  options?: CellOption[];
 }) {
   if (!subject) return (
     <td style={{ border:"1px solid #E8E4FF", padding:2 }}
@@ -303,6 +305,31 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
       </div>
     </td>
   )
+  // ── Multi-option / parallel group block ──────────────────
+  if (options && options.length > 1) {
+    return (
+      <td style={{ border:"1px solid #E8E4FF", padding:2 }} onClick={onClick}>
+        <div style={{ borderRadius:5, padding:"3px 5px", minHeight:44, background:"linear-gradient(135deg,#F5F2FF 0%,#FAFAFE 100%)", borderLeft:"3px solid #7C6FE0", border:"1px solid #D8D2FF", position:"relative" as const, cursor:onClick?"pointer":"default" }}>
+          {absentHighlight && <span style={{ position:"absolute" as const, top:2, left:3, fontSize:8, color:"#D4920E" }}>⚠</span>}
+          {options.map((opt, i) => {
+            const oc = getSubjectColor(opt.subject)
+            return (
+              <div key={i} style={{ marginBottom: i < options.length-1 ? 3 : 0, borderBottom: i < options.length-1 ? "1px dashed #E8E4FF" : "none", paddingBottom: i < options.length-1 ? 3 : 0 }}>
+                <div className={oc} style={{ borderRadius:3, padding:"2px 4px" }}>
+                  <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{opt.subject}</div>
+                  {showTeacher && opt.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{opt.teacher}</div>}
+                  {showRoom && opt.room && <div style={{ fontSize:8, opacity:0.55 }}>{opt.room}</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </td>
+    )
+  }
+  // ── Single subject (with teacher fallback from options[0]) ─
+  const effectiveTeacher = teacher || options?.[0]?.teacher
+  const effectiveRoom    = room    || options?.[0]?.room
   const colorClass = getSubjectColor(subject)
   return (
     <td style={{ border:"1px solid #E8E4FF", padding:2 }}>
@@ -311,13 +338,13 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         {isSub && <span style={{ position:"absolute" as const, top:2, right:3, width:6, height:6, borderRadius:"50%", background:"#f59e0b" }} title="Substituted" />}
         {absentHighlight && <span style={{ position:"absolute" as const, top:2, left:3, fontSize:8, color:"#D4920E" }}>⚠</span>}
         <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{subject}</div>
-        {showTeacher && teacher && (
+        {showTeacher && effectiveTeacher && (
           <div style={{ fontSize:9, opacity:0.75, marginTop:2, display:"flex", alignItems:"center", gap:3 }}>
             {isClassTeacher && <span style={{ color:"#7C6FE0" }}>★</span>}
-            {isSub ? <span style={{ color:"#D4920E" }}>🔄 {subTeacher}</span> : teacher}
+            {isSub ? <span style={{ color:"#D4920E" }}>🔄 {subTeacher}</span> : effectiveTeacher}
           </div>
         )}
-        {showRoom && room && <div style={{ fontSize:8, opacity:0.55, marginTop:1 }}>{room}</div>}
+        {showRoom && effectiveRoom && <div style={{ fontSize:8, opacity:0.55, marginTop:1 }}>{effectiveRoom}</div>}
       </div>
     </td>
   )
@@ -521,6 +548,7 @@ export function TimetablePage() {
                       return (
                         <SubjectCell key={p.id}
                           subject={cell?.subject} teacher={cell?.teacher} room={cell?.room}
+                          options={(cell as any)?.options as CellOption[] | undefined}
                           isClassTeacher={cell?.isClassTeacher} isSub={isSub} subTeacher={subTeacher}
                           showTeacher={showTeacher} showRoom={showRoom}
                           absentHighlight={highlight}
@@ -593,13 +621,38 @@ export function TimetablePage() {
                       const cell = sd[day]?.[p.id]
                       const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
                       if (!cell?.subject) return <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}><div style={{ height:38, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:10 }}>—</div></td>
+                      const cellOpts = (cell as any)?.options as CellOption[] | undefined
+                      // Multi-option parallel block
+                      if (cellOpts && cellOpts.length > 1) {
+                        return (
+                          <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }} onClick={() => editMode && setEditTarget({section:sn, day, periodId:p.id})}>
+                            <div style={{ borderRadius:5, padding:"3px 5px", minHeight:38, background:"linear-gradient(135deg,#F5F2FF 0%,#FAFAFE 100%)", borderLeft:"3px solid #7C6FE0", border:"1px solid #D8D2FF", cursor:editMode?"pointer":"default", outline:highlight?"3px solid #f59e0b":"none", outlineOffset:"-2px" }}>
+                              {cellOpts.map((opt, i) => {
+                                const oc = getSubjectColor(opt.subject)
+                                return (
+                                  <div key={i} style={{ marginBottom: i < cellOpts.length-1 ? 3 : 0, borderBottom: i < cellOpts.length-1 ? "1px dashed #E8E4FF" : "none", paddingBottom: i < cellOpts.length-1 ? 3 : 0 }}>
+                                    <div className={oc} style={{ borderRadius:3, padding:"2px 4px" }}>
+                                      <div style={{ fontSize:10, fontWeight:700 }}>{opt.subject}</div>
+                                      {showTeacher && opt.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{opt.teacher}</div>}
+                                      {showRoom && opt.room && <div style={{ fontSize:8, opacity:0.55 }}>{opt.room}</div>}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </td>
+                        )
+                      }
+                      // Single subject (with options[0] fallback)
+                      const effectiveTeacherT = cell.teacher || cellOpts?.[0]?.teacher
+                      const effectiveRoomT    = cell.room    || cellOpts?.[0]?.room
                       const colorClass = getSubjectColor(cell.subject)
                       return (
                         <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
                           <div className={colorClass} onClick={() => editMode && setEditTarget({section:sn, day, periodId:p.id})} style={{ borderRadius:5, padding:"4px 7px", minHeight:38, cursor:editMode?"pointer":"default", outline:highlight?"3px solid #f59e0b":"none", outlineOffset:"-2px" }}>
                             <div style={{ fontSize:10, fontWeight:700 }}>{cell.subject}</div>
-                            {showTeacher && cell.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{cell.teacher}</div>}
-                            {showRoom && cell.room && <div style={{ fontSize:8, opacity:0.55 }}>{cell.room}</div>}
+                            {showTeacher && effectiveTeacherT && <div style={{ fontSize:9, opacity:0.75 }}>{effectiveTeacherT}</div>}
+                            {showRoom && effectiveRoomT && <div style={{ fontSize:8, opacity:0.55 }}>{effectiveRoomT}</div>}
                           </div>
                         </td>
                       )
