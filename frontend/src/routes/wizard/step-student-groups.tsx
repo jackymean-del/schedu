@@ -35,7 +35,13 @@ import {
 
 // ── types ─────────────────────────────────────────────────────
 
-type GroupingBehavior = 'NO_GROUPING' | 'SAME_GRADE_ONLY' | 'CROSS_GRADE_ALLOWED' | 'FLEXIBLE_GROUPING'
+type GroupingBehavior =
+  | 'NO_GROUPING'
+  | 'SAME_GRADE_ONLY'
+  | 'SAME_STREAM_ONLY'
+  | 'CROSS_GRADE_ALLOWED'
+  | 'CROSS_STREAM_ALLOWED'
+  | 'FLEXIBLE_GROUPING'
 type RowStatus = 'match' | 'under' | 'over' | 'partial' | 'empty'
 
 interface RowStatusInfo {
@@ -48,12 +54,17 @@ interface RowStatusInfo {
 const BEHAVIOR_META: Record<GroupingBehavior, {
   label: string; short: string; bg: string; fg: string; border: string; desc: string
 }> = {
-  NO_GROUPING:         { label: 'No grouping',     short: 'No group',    bg: '#F8F7FF', fg: '#8B87AD', border: '#E8E4FF', desc: 'Each class schedules independently' },
-  SAME_GRADE_ONLY:     { label: 'Same grade only', short: 'Same grade',  bg: '#EFF6FF', fg: '#1D4ED8', border: '#DBEAFE', desc: 'Groups sections within the same grade' },
-  CROSS_GRADE_ALLOWED: { label: 'Cross grade',      short: 'Cross grade', bg: '#EDE9FF', fg: '#7C3AED', border: '#C4B5FD', desc: 'Can mix students from different grades' },
-  FLEXIBLE_GROUPING:   { label: 'Flexible',         short: 'Flexible',    bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0', desc: 'AI decides best grouping strategy' },
+  NO_GROUPING:          { label: 'No grouping',     short: 'No group',      bg: '#F8F7FF', fg: '#8B87AD', border: '#E8E4FF', desc: 'Each class section schedules this subject independently — no cross-class grouping.' },
+  SAME_GRADE_ONLY:      { label: 'Same grade only', short: 'Same grade',    bg: '#EFF6FF', fg: '#1D4ED8', border: '#DBEAFE', desc: 'One group per grade. All streams within the same grade are merged (e.g. XI-Sci + XI-Com + XI-Arts → one XI group).' },
+  SAME_STREAM_ONLY:     { label: 'Same stream only',short: 'Same stream',   bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA', desc: 'One group per stream across all grades. XI-Arts + XII-Arts form one group; XI-Sci + XII-Sci another. Useful for stream-specific electives.' },
+  CROSS_GRADE_ALLOWED:  { label: 'Cross grade',     short: 'Cross grade',   bg: '#EDE9FF', fg: '#7C3AED', border: '#C4B5FD', desc: 'All grades merged into one group regardless of grade or stream. Best for whole-school electives like Music or Dance.' },
+  CROSS_STREAM_ALLOWED: { label: 'Cross stream',    short: 'Cross stream',  bg: '#FCE7F3', fg: '#9D174D', border: '#FBCFE8', desc: 'One group per grade but streams within that grade are kept separate (e.g. XI-Arts alone, XI-Sci alone). Opposite of "Same grade".' },
+  FLEXIBLE_GROUPING:    { label: 'Flexible (AI)',   short: 'Flexible',      bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0', desc: 'AI starts with the strictest rule (same grade + same stream) and progressively relaxes — merging streams, then grades — until every group reaches the minimum size threshold.' },
 }
-const BEHAVIORS: GroupingBehavior[] = ['NO_GROUPING', 'SAME_GRADE_ONLY', 'CROSS_GRADE_ALLOWED', 'FLEXIBLE_GROUPING']
+const BEHAVIORS: GroupingBehavior[] = [
+  'NO_GROUPING', 'SAME_GRADE_ONLY', 'SAME_STREAM_ONLY',
+  'CROSS_GRADE_ALLOWED', 'CROSS_STREAM_ALLOWED', 'FLEXIBLE_GROUPING',
+]
 const GROUP_COLORS = ['#7C6FE0', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#8B5CF6', '#06B6D4']
 function groupColor(i: number) { return GROUP_COLORS[i % GROUP_COLORS.length] }
 
@@ -243,7 +254,32 @@ export function StepStudentGroups() {
   } = store
 
   const subjectAllocations: Record<string, any> = useMemo(() => (store as any).subjectAllocations ?? {}, [store])
-  const storeRooms: any[] = useMemo(() => (store as any).rooms ?? [], [store])
+  const storeRooms: any[]          = useMemo(() => (store as any).rooms             ?? [], [store])
+  const storeStaff: any[]          = useMemo(() => (store as any).staff             ?? [], [store])
+  const teacherAllocations: any    = useMemo(() => (store as any).teacherAllocations ?? {}, [store])
+
+  /** Find the teacher(s) assigned to a subject for a set of sections. Returns a
+   *  display string ("Mrs. Sharma" or "Mrs. Sharma, Mr. Kumar" if multiple). */
+  const findTeacherForGroup = useCallback((subject: string, sectionNames: string[]): string => {
+    const found = new Set<string>()
+    // Signal A — teacherAllocations
+    for (const t of storeStaff) {
+      for (const sec of sectionNames) {
+        const p = teacherAllocations?.[t.name]?.[sec]?.[subject]
+        if (typeof p === 'number' && p > 0) { found.add(t.name); break }
+      }
+    }
+    // Signal B — subjectMappings designation
+    for (const t of storeStaff) {
+      const maps: Array<{ subject: string; classes: string[] }> = t.subjectMappings ?? []
+      if (maps.some(m => m.subject === subject && sectionNames.some(s => (m.classes ?? []).includes(s))))
+        found.add(t.name)
+    }
+    const names = [...found]
+    if (names.length === 0) return ''
+    if (names.length <= 2) return names.join(', ')
+    return `${names[0]}, +${names.length - 1} more`
+  }, [storeStaff, teacherAllocations])
 
   const [regenerating, setRegenerating]   = useState(false)
   const [minGroupSize, setMinGroupSize]   = useState(5)
@@ -541,8 +577,7 @@ export function StepStudentGroups() {
       }
 
       if (behavior === 'SAME_GRADE_ONLY') {
-        // Split by grade (first hyphen-segment: "XI-Com-A" → "XI")
-        // Preserves insertion order so groups come out in grade-order
+        // One group per grade — all streams in that grade merged
         const byGrade = new Map<string, SectionStrength[]>()
         participating.forEach(r => {
           const grade = extractGrade(r.sectionName)
@@ -551,6 +586,30 @@ export function StepStudentGroups() {
         })
         let gIdx = 0
         byGrade.forEach(gradeSections => { pushGroup(gradeSections, gIdx++) })
+
+      } else if (behavior === 'CROSS_STREAM_ALLOWED') {
+        // One group per grade, streams kept SEPARATE within the grade
+        // (opposite of SAME_GRADE_ONLY which merges streams within a grade)
+        const byGradeStream = new Map<string, SectionStrength[]>()
+        participating.forEach(r => {
+          const key = `${extractGrade(r.sectionName)}::${guessStream(r.sectionName)}`
+          if (!byGradeStream.has(key)) byGradeStream.set(key, [])
+          byGradeStream.get(key)!.push(r)
+        })
+        let gsIdx = 0
+        byGradeStream.forEach(gs => { pushGroup(gs, gsIdx++) })
+
+      } else if (behavior === 'SAME_STREAM_ONLY') {
+        // One group per stream across ALL grades (e.g. XI-Arts + XII-Arts)
+        const byStream = new Map<string, SectionStrength[]>()
+        participating.forEach(r => {
+          const stream = guessStream(r.sectionName)
+          if (!byStream.has(stream)) byStream.set(stream, [])
+          byStream.get(stream)!.push(r)
+        })
+        let sIdx = 0
+        byStream.forEach(streamSections => { pushGroup(streamSections, sIdx++) })
+
       } else {
         // CROSS_GRADE_ALLOWED / FLEXIBLE_GROUPING — all sections in one group
         pushGroup(participating, 0)
@@ -612,7 +671,31 @@ export function StepStudentGroups() {
         byGrade.forEach((gradeSections, grade) =>
           addGroup(col.key, `${col.key}::${grade}`, `${col.label} — Class ${grade}`, gradeSections),
         )
+      } else if (behavior === 'CROSS_STREAM_ALLOWED') {
+        // One group per grade, streams kept SEPARATE within the grade
+        const byGradeStream = new Map<string, SectionStrength[]>()
+        participating.forEach(r => {
+          const k = `${r.sectionName.split('-')[0].trim()}::${guessStream(r.sectionName)}`
+          if (!byGradeStream.has(k)) byGradeStream.set(k, [])
+          byGradeStream.get(k)!.push(r)
+        })
+        byGradeStream.forEach((gs, k) => {
+          const [grade, stream] = k.split('::')
+          addGroup(col.key, `${col.key}::${k}`, `${col.label} — Class ${grade} (${stream})`, gs)
+        })
+      } else if (behavior === 'SAME_STREAM_ONLY') {
+        // One group per stream across all grades (e.g. XI-Arts + XII-Arts)
+        const byStream = new Map<string, SectionStrength[]>()
+        participating.forEach(r => {
+          const stream = guessStream(r.sectionName)
+          if (!byStream.has(stream)) byStream.set(stream, [])
+          byStream.get(stream)!.push(r)
+        })
+        byStream.forEach((streamSections, stream) =>
+          addGroup(col.key, `${col.key}::stream::${stream}`, `${col.label} — ${stream}`, streamSections),
+        )
       } else {
+        // CROSS_GRADE_ALLOWED / FLEXIBLE_GROUPING — all sections in one group
         addGroup(col.key, col.key, col.label, participating)
       }
     })
@@ -873,7 +956,10 @@ export function StepStudentGroups() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
               {dynamicLearningGroups.map((grp: any, gi: number) => (
-                <GroupCard key={grp.id} grp={grp} colorDot={groupColor(gi)} />
+                <GroupCard
+                  key={grp.id} grp={grp} colorDot={groupColor(gi)}
+                  teacher={findTeacherForGroup(grp.subject, grp.sectionNames ?? [])}
+                />
               ))}
             </div>
           </>
@@ -1040,7 +1126,7 @@ function EmptyState({ msg }: { msg: string }) {
   return <div style={{ padding: '20px 0', textAlign: 'center', color: '#B8B4D4', fontSize: 12 }}>{msg}</div>
 }
 
-function GroupCard({ grp, colorDot }: { grp: any; colorDot: string }) {
+function GroupCard({ grp, colorDot, teacher }: { grp: any; colorDot: string; teacher?: string }) {
   const behMeta = BEHAVIOR_META[grp.behavior as GroupingBehavior] ?? BEHAVIOR_META.SAME_GRADE_ONLY
   const overCapacity = grp.roomCapacity > 0 && grp.totalStrength > grp.roomCapacity
   const roomOk = grp.roomCapacity > 0 && grp.totalStrength <= grp.roomCapacity
@@ -1052,7 +1138,18 @@ function GroupCard({ grp, colorDot }: { grp: any; colorDot: string }) {
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: behMeta.bg, color: behMeta.fg, border: `1px solid ${behMeta.border}` }}>{behMeta.short}</span>
       </div>
       <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontSize: 11, color: '#4B5275', marginBottom: 6 }}><strong style={{ color: '#13111E' }}>Subject:</strong> {grp.subject}</div>
+        <div style={{ fontSize: 11, color: '#4B5275', marginBottom: 4 }}><strong style={{ color: '#13111E' }}>Subject:</strong> {grp.subject}</div>
+        {teacher ? (
+          <div style={{ fontSize: 11, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <GraduationCap size={11} color="#7C6FE0" style={{ flexShrink: 0 }} />
+            <span style={{ color: '#13111E', fontWeight: 600 }}>{teacher}</span>
+          </div>
+        ) : (
+          <div style={{ fontSize: 10, color: '#C4C0DC', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <GraduationCap size={10} color="#D1D5DB" style={{ flexShrink: 0 }} />
+            <span>No teacher assigned yet</span>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
           {grp.sectionNames.map((sn: string) => <span key={sn} style={{ padding: '2px 7px', borderRadius: 8, background: '#EDE9FF', color: '#7C3AED', fontSize: 10, fontWeight: 700, border: '1px solid #C4B5FD' }}>{sn}</span>)}
         </div>
