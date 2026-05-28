@@ -501,29 +501,62 @@ export function StepStudentGroups() {
   }, [])
 
   // ── AI Regenerate ─────────────────────────────────────────────────────────
+  //
+  // Grade extraction: "XI-Com-A" → "XI", "XII-Arts" → "XII", "IX-B" → "IX"
+  // (first hyphen-separated segment of the section name)
+  const extractGrade = (sectionName: string) => sectionName.split('-')[0].trim()
+
   const handleRegenerate = async () => {
     setRegenerating(true)
     await new Promise(r => setTimeout(r, 900))
     const generated: typeof dynamicLearningGroups = []
     const optionalDay = 'Monday', optionalPeriod = 'P6'
+    const ts = Date.now()
 
     allCols.forEach((col, si) => {
       const behavior = (subjectGroupingRules[col.key] ?? 'SAME_GRADE_ONLY') as GroupingBehavior
       if (behavior === 'NO_GROUPING') return
+
       const participating = rows.filter(r => (r.subjectStrengths?.[col.key] ?? 0) > 0)
       if (participating.length === 0) return
-      const totalStr = participating.reduce((a, r) => a + (r.subjectStrengths?.[col.key] ?? 0), 0)
-      if (totalStr < minGroupSize) return
-      const sorted = [...storeRooms].sort((a: any, b: any) => (a.capacity ?? 0) - (b.capacity ?? 0))
-      const room = sorted.find((rm: any) => (rm.capacity ?? 0) >= totalStr) ?? storeRooms[si % Math.max(1, storeRooms.length)]
-      generated.push({
-        id: `${generateGroupId(col.label, 0)}_${Date.now() + si}`,
-        subject: col.label, sectionNames: participating.map(r => r.sectionName), totalStrength: totalStr,
-        teacher: '', room: room?.name ?? `Room ${101 + si}`,
-        roomCapacity: room?.capacity ?? 0, capacityWarning: (room?.capacity ?? 0) > 0 && totalStr > (room?.capacity ?? 0),
-        behavior, day: optionalDay, periodId: optionalPeriod,
-      })
+
+      // Helper: build one group from a slice of sections
+      const pushGroup = (groupSections: SectionStrength[], groupIdx: number) => {
+        const totalStr = groupSections.reduce((a, r) => a + (r.subjectStrengths?.[col.key] ?? 0), 0)
+        if (totalStr < minGroupSize) return
+        const sorted = [...storeRooms].sort((a: any, b: any) => (a.capacity ?? 0) - (b.capacity ?? 0))
+        const room = sorted.find((rm: any) => (rm.capacity ?? 0) >= totalStr)
+          ?? (storeRooms.length > 0 ? storeRooms[(si + groupIdx) % storeRooms.length] : null)
+        generated.push({
+          id: `${generateGroupId(col.label, groupIdx)}_${ts + si * 100 + groupIdx}`,
+          subject: col.label,
+          sectionNames: groupSections.map(r => r.sectionName),
+          totalStrength: totalStr,
+          teacher: '',
+          room: room?.name ?? `Room ${101 + si + groupIdx}`,
+          roomCapacity: room?.capacity ?? 0,
+          capacityWarning: (room?.capacity ?? 0) > 0 && totalStr > (room?.capacity ?? 0),
+          behavior, day: optionalDay, periodId: optionalPeriod,
+        })
+      }
+
+      if (behavior === 'SAME_GRADE_ONLY') {
+        // Split by grade (first hyphen-segment: "XI-Com-A" → "XI")
+        // Preserves insertion order so groups come out in grade-order
+        const byGrade = new Map<string, SectionStrength[]>()
+        participating.forEach(r => {
+          const grade = extractGrade(r.sectionName)
+          if (!byGrade.has(grade)) byGrade.set(grade, [])
+          byGrade.get(grade)!.push(r)
+        })
+        let gIdx = 0
+        byGrade.forEach(gradeSections => { pushGroup(gradeSections, gIdx++) })
+      } else {
+        // CROSS_GRADE_ALLOWED / FLEXIBLE_GROUPING — all sections in one group
+        pushGroup(participating, 0)
+      }
     })
+
     setDynamicLearningGroups(generated)
     setRegenerating(false)
   }
@@ -542,16 +575,51 @@ export function StepStudentGroups() {
   }, [subjects, alreadyInCols, pickerSearch])
 
   // ── Live group preview ────────────────────────────────────────────────────
+  // Mirrors handleRegenerate exactly: SAME_GRADE_ONLY expands one subject column
+  // into one preview row per grade; other modes collapse all sections into one row.
   const previewGroups = useMemo(() => {
-    return allCols.map(col => {
+    const result: PreviewGroup[] = []
+    const roomSorted = [...storeRooms].sort((a: any, b: any) => (a.capacity ?? 0) - (b.capacity ?? 0))
+    const biggestRoom = storeRooms.reduce(
+      (best: any, rm: any) => (rm.capacity ?? 0) > (best?.capacity ?? 0) ? rm : best, null as any,
+    )
+
+    // colKey  = the actual subject key for subjectStrengths lookups
+    // groupKey = React key (may have "::grade" suffix for same-grade rows)
+    const addGroup = (colKey: string, groupKey: string, label: string, sections: SectionStrength[]) => {
+      if (sections.length === 0) return
+      const total = sections.reduce((a, r) => a + (r.subjectStrengths?.[colKey] ?? 0), 0)
+      const suitableRoom = roomSorted.find((rm: any) => (rm.capacity ?? 0) >= total)
+      result.push({
+        key: groupKey, colKey, label, sections, total, suitableRoom,
+        noRoom: storeRooms.length > 0 && !suitableRoom && total > 0,
+        biggestRoom, belowThreshold: total > 0 && total < minGroupSize,
+      })
+    }
+
+    allCols.forEach(col => {
+      const behavior = (subjectGroupingRules[col.key] ?? 'SAME_GRADE_ONLY') as GroupingBehavior
       const participating = rows.filter(r => (r.subjectStrengths?.[col.key] ?? 0) > 0)
-      const total = participating.reduce((a, r) => a + (r.subjectStrengths?.[col.key] ?? 0), 0)
-      const sorted = [...storeRooms].sort((a: any, b: any) => (a.capacity ?? 0) - (b.capacity ?? 0))
-      const suitableRoom = sorted.find((rm: any) => (rm.capacity ?? 0) >= total)
-      const biggestRoom = storeRooms.reduce((best: any, rm: any) => (rm.capacity ?? 0) > (best?.capacity ?? 0) ? rm : best, null as any)
-      return { ...col, sections: participating, total, suitableRoom, noRoom: storeRooms.length > 0 && !suitableRoom && total > 0, biggestRoom, belowThreshold: total > 0 && total < minGroupSize }
-    }).filter(g => g.sections.length > 0)
-  }, [allCols, rows, storeRooms, minGroupSize])
+      if (participating.length === 0) return
+
+      if (behavior === 'SAME_GRADE_ONLY') {
+        const byGrade = new Map<string, SectionStrength[]>()
+        participating.forEach(r => {
+          const grade = r.sectionName.split('-')[0].trim()
+          if (!byGrade.has(grade)) byGrade.set(grade, [])
+          byGrade.get(grade)!.push(r)
+        })
+        byGrade.forEach((gradeSections, grade) =>
+          addGroup(col.key, `${col.key}::${grade}`, `${col.label} — Class ${grade}`, gradeSections),
+        )
+      } else {
+        addGroup(col.key, col.key, col.label, participating)
+      }
+    })
+
+    return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCols, rows, storeRooms, minGroupSize, subjectGroupingRules])
 
   const colW = Math.max(70, Math.min(100, Math.floor((1100 - 140 - 100 - 36 - 80) / Math.max(1, allCols.length))))
   const showMatrix = allCols.length > 0 || allRowNames.length > 0
@@ -855,7 +923,11 @@ function SortToggle({ active, onToggle, label }: { active: boolean; onToggle: ()
 // ── Group Formation Logic panel ───────────────────────────────────────────────
 
 interface PreviewGroup {
-  key: string; label: string; sections: SectionStrength[]
+  /** Unique key for React (may include "::grade" suffix for same-grade sub-groups) */
+  key: string
+  /** The actual subject column key — used to look up subjectStrengths in each row */
+  colKey: string
+  label: string; sections: SectionStrength[]
   total: number; suitableRoom: any; noRoom: boolean; biggestRoom: any; belowThreshold: boolean
 }
 
@@ -865,7 +937,7 @@ function GroupFormationLogicPanel({ minGroupSize, setMinGroupSize, previewGroups
 }) {
   const steps = [
     { num: '1', color: '#7C6FE0', bg: '#F5F2FF', title: 'Collect preferences', desc: 'Count how many students in each class-section chose each optional subject from the matrix.' },
-    { num: '2', color: '#10B981', bg: '#ECFDF5', title: 'Merge into one group per subject', desc: 'All students from all sections who chose the same subject combine into one cross-class group.' },
+    { num: '2', color: '#10B981', bg: '#ECFDF5', title: 'Group by rule', desc: 'Same Grade: one group per grade per subject (e.g. XI-group, XII-group). Cross Grade: all sections in one combined group.' },
     { num: '3', color: '#F59E0B', bg: '#FFFBEB', title: 'Same slot — parallel teaching', desc: 'Every subject group runs in the same "optional period". Students from the same class go to different rooms at the same time — zero schedule conflict.' },
     { num: '4', color: '#3B82F6', bg: '#EFF6FF', title: 'Room & capacity check', desc: 'Each group gets its own room. AI picks the smallest room that fits. A warning is shown if no room is large enough.' },
   ]
@@ -902,7 +974,7 @@ function GroupFormationLogicPanel({ minGroupSize, setMinGroupSize, previewGroups
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#13111E', minWidth: 120 }}>{g.label}</span>
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flex: 1 }}>
                     {g.sections.map(r => (
-                      <span key={r.sectionName} style={{ padding: '1px 7px', borderRadius: 8, background: '#EDE9FF', color: '#7C3AED', fontSize: 10, fontWeight: 700, border: '1px solid #C4B5FD' }}>{r.sectionName} ({r.subjectStrengths?.[g.key] ?? 0})</span>
+                      <span key={r.sectionName} style={{ padding: '1px 7px', borderRadius: 8, background: '#EDE9FF', color: '#7C3AED', fontSize: 10, fontWeight: 700, border: '1px solid #C4B5FD' }}>{r.sectionName} ({r.subjectStrengths?.[g.colKey] ?? 0})</span>
                     ))}
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#13111E' }}>= {g.total} students</span>
