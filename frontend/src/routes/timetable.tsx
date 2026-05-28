@@ -175,6 +175,59 @@ function buildClassPeriods(
   return result
 }
 
+// ── Build teacher-specific period sequence ─────────────────
+/**
+ * Filters the global periods array to only include break periods that
+ * apply to at least one section this teacher teaches.
+ *
+ *   Teacher → Nursery only   → sees Nursery's lunch break (after P4)
+ *   Teacher → Primary only   → sees Primary's lunch break (after P6)
+ *   Teacher → Nursery+Primary → sees both lunch breaks
+ *
+ * Fixed-start / fixed-end / class periods are always kept.
+ * When no class-wise breaks are configured the global array is returned unchanged.
+ */
+function buildTeacherPeriods(
+  teacherClasses: string[],
+  allPeriods: Period[],
+  classwiseBreaks: Array<{id:string; name:string; type:string; classes:string[]; afterPeriod:number; duration:number}> | undefined,
+): Period[] {
+  if (!classwiseBreaks?.length) return allPeriods
+  const classKeys = new Set(teacherClasses.map(getSectionClassKey))
+  const relevantBreakIds = new Set<string>()
+  classwiseBreaks.forEach(brk => {
+    if (brk.classes.length === 0 || brk.classes.some(c => classKeys.has(c)))
+      relevantBreakIds.add(brk.id)
+  })
+  return allPeriods.filter(p =>
+    p.type === 'class' || p.type === 'fixed-start' || p.type === 'fixed-end' ||
+    relevantBreakIds.has(p.id)
+  )
+}
+
+/**
+ * Returns true when EVERY working-day cell in a period column is a
+ * lunch break — i.e. the whole column should be rendered as a merged
+ * "Lunch Break" column rather than a mixed period column.
+ *
+ * For the current data model (break periods are structurally always breaks,
+ * class periods are never lunch) this is equivalent to `p.type === "lunch"`.
+ * The usedDays + sch params allow the check to work correctly if future data
+ * ever embeds explicit isLunch flags in the teacher schedule.
+ */
+function isFullLunchColumn(
+  p: Period,
+  usedDays: string[],
+  sch: Record<string, Record<string, any>>,
+): boolean {
+  if (p.type !== 'class') return p.type === 'lunch'
+  // Class period: only "full lunch" if every day explicitly marks it as lunch
+  return usedDays.length > 0 && usedDays.every(day => {
+    const cell = sch[day]?.[p.id]
+    return cell && (cell.isLunch === true || cell.type === 'lunch')
+  })
+}
+
 // ── Period header ──────────────────────────────────────────
 function PeriodCol({ p, times, onShiftLeft, onShiftRight }: { p:Period; times?:{start:string;end:string}; onShiftLeft?:()=>void; onShiftRight?:()=>void }) {
   const isBreak = p.type !== "class"
@@ -546,6 +599,12 @@ export function TimetablePage() {
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
     const assignedStr = (st?.subjects ?? []).filter(s => s.includes("::")).map(s => { const [cls,sub]=s.split("::"); return `${cls}: ${sub}` }).join(" · ") || (st?.subjects??[]).join(", ") || "—"
 
+    // ── Teacher-specific periods ──────────────────────────────
+    // Only include breaks that apply to sections this teacher teaches.
+    // A teacher who only teaches Nursery must NOT see Primary's lunch column.
+    const cwBreaksTT = (config as any).classwiseBreaks as Parameters<typeof buildTeacherPeriods>[2]
+    const teacherPeriods = buildTeacherPeriods(tdata.classes, periods, cwBreaksTT)
+
     return (
       <div>
         <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
@@ -569,20 +628,32 @@ export function TimetablePage() {
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:70, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Day</th>
-              {periods.map(p => <PeriodCol key={p.id} p={p} times={periodTimes.get(p.id)} />)}
+              {teacherPeriods.map(p => <PeriodCol key={p.id} p={p} times={periodTimes.get(p.id)} />)}
             </tr></thead>
             <tbody>
               {usedDays.map((day, di) => (
                 <tr key={day} style={{ background:di%2===0?"#fff":"#FAFAFE" }}>
                   <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
-                  {periods.map(p => {
+                  {teacherPeriods.map(p => {
+                    // ── Full lunch column ── all days are lunch → merged break cell
+                    if (isFullLunchColumn(p, usedDays, sch)) return <BreakCell key={p.id} p={p} />
+                    // ── Other break periods (assembly, morning break, etc.)
                     if (p.type !== "class") return <BreakCell key={p.id} p={p} />
+                    // ── Class period: mixed column ─────────────────────
                     const cell = sch[day]?.[p.id]
-                    if (!cell?.subject) return (
-                      <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
-                        <div style={{ height:44, background:"#FAFAFE", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
-                      </td>
-                    )
+                    if (!cell?.subject) {
+                      // Explicit lunch flag on a class period slot (edge case / future data)
+                      if (cell?.isLunch || cell?.type === "lunch") return (
+                        <td key={p.id} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D4920E", fontSize:9, fontStyle:"italic", padding:6 }}>
+                          Lunch Break
+                        </td>
+                      )
+                      return (
+                        <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
+                          <div style={{ height:44, background:"#FAFAFE", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
+                        </td>
+                      )
+                    }
                     const colorClass = getSubjectColor(cell.subject.split(" (")[0])
                     return (
                       <td key={p.id} style={{ border:"1px solid #E8E4FF", padding:2 }}>
@@ -618,6 +689,11 @@ export function TimetablePage() {
     const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
     const pct = Math.min(150, Math.round(total/max*100))
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
+
+    // ── Teacher-specific periods (same logic as normal view)
+    const cwBreaksTTT = (config as any).classwiseBreaks as Parameters<typeof buildTeacherPeriods>[2]
+    const teacherPeriodsT = buildTeacherPeriods(tdata.classes, periods, cwBreaksTTT)
+
     return (
       <div>
         <div style={{ padding:"10px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -633,19 +709,37 @@ export function TimetablePage() {
               ))}
             </tr></thead>
             <tbody>
-              {periods.map((p, pi) => {
+              {teacherPeriodsT.map((p, pi) => {
+                const isFullLunch = isFullLunchColumn(p, usedDays, sch)
                 const isBreak = p.type !== "class"
                 const times = periodTimes.get(p.id)
+                const rowBg = isBreak ? "#fffbeb" : pi%2===0 ? "#fff" : "#FAFAFE"
                 return (
-                  <tr key={p.id} style={{ background: isBreak?"#fffbeb":pi%2===0?"#fff":"#FAFAFE" }}>
+                  <tr key={p.id} style={{ background: rowBg }}>
                     <td style={{ padding:"6px 10px", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
                       <div style={{ fontWeight:700, fontSize:11, color:isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
                       {times && <div style={{ fontSize:9, color:"#8B87AD" }}>{times.start} → {times.end}</div>}
                     </td>
                     {usedDays.map(day => {
+                      // ── Full lunch row → all day cells show Lunch Break ──
+                      if (isFullLunch || (isBreak && p.type === "lunch")) {
+                        return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>Lunch Break</td>
+                      }
+                      // ── Other break (assembly, morning break) ────────────
                       if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
+                      // ── Class period: mixed column ───────────────────────
                       const cell = sch[day]?.[p.id]
-                      if (!cell?.subject) return <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}><div style={{ height:42, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div></td>
+                      if (!cell?.subject) {
+                        // Edge case: cell explicitly marked as lunch
+                        if (cell?.isLunch || cell?.type === "lunch") return (
+                          <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D4920E", fontSize:9, fontStyle:"italic", padding:6 }}>Lunch Break</td>
+                        )
+                        return (
+                          <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
+                            <div style={{ height:42, background:"#FAFAFE", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:9, fontStyle:"italic" }}>Free</div>
+                          </td>
+                        )
+                      }
                       const colorClass = getSubjectColor(cell.subject.split(" (")[0])
                       return (
                         <td key={day} style={{ border:"1px solid #E8E4FF", padding:2 }}>
