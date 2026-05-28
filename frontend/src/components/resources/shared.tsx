@@ -348,22 +348,31 @@ export function InlineChipSelect({
 }: InlineChipSelectProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [gradeFilter, setGradeFilter] = useState<string | null>(null)
   const [pos, setPos] = useState({ top: 0, left: 0, width: minDropdownWidth })
   const triggerRef = useRef<HTMLDivElement>(null)
   const dropRef    = useRef<HTMLDivElement>(null)
   const searchRef  = useRef<HTMLInputElement>(null)
 
-  useClickOutsideTwo(triggerRef, dropRef, () => { setOpen(false); setSearch('') }, open)
+  useClickOutsideTwo(triggerRef, dropRef, () => { setOpen(false); setSearch(''); setGradeFilter(null) }, open)
+
+  // Reset view filter when dropdown closes
+  useEffect(() => { if (!open) setGradeFilter(null) }, [open])
 
   function calcPos() {
     const rect = triggerRef.current?.getBoundingClientRect()
     if (!rect) return
     const w = Math.max(rect.width + 40, minDropdownWidth)
+    // Approximate dropdown height: search(38) + filter-bar(up to 96) + list(230) + padding(8)
+    const dropH = 372
     const spaceBelow = window.innerHeight - rect.bottom
+    const goBelow = spaceBelow >= dropH
+    const rawTop = goBelow ? rect.bottom + 4 : rect.top - dropH - 4
     setPos({
       left: Math.min(rect.left, window.innerWidth - w - 8),
       width: w,
-      top: spaceBelow > 260 ? rect.bottom + 4 : rect.top - 290,
+      // Clamp so the dropdown never clips against top or bottom of viewport
+      top: Math.max(8, Math.min(rawTop, window.innerHeight - dropH - 8)),
     })
   }
 
@@ -389,6 +398,21 @@ export function InlineChipSelect({
   }
 
   const hasGroups = options.some(o => o.group)
+
+  /** All unique group names from options — stable list for rendering filter buttons. */
+  const allGroups = useMemo(() => {
+    const groups: string[] = []
+    const seen = new Set<string>()
+    for (const opt of options) {
+      if (opt.group && !seen.has(opt.group)) {
+        groups.push(opt.group)
+        seen.add(opt.group)
+      }
+    }
+    return groups
+  }, [options])
+
+  /** Options visible in the list — respects search text AND active grade filter. */
   const grouped = useMemo(() => {
     const q = search.toLowerCase()
     const map = new Map<string, ChipOption[]>()
@@ -396,11 +420,13 @@ export function InlineChipSelect({
       const lbl = opt.label ?? opt.value
       if (q && !lbl.toLowerCase().includes(q) && !opt.value.toLowerCase().includes(q)) continue
       const g = opt.group ?? ''
+      // When a grade filter is active, hide sections that belong to other grades
+      if (gradeFilter && g !== gradeFilter) continue
       if (!map.has(g)) map.set(g, [])
       map.get(g)!.push(opt)
     }
     return map
-  }, [options, search])
+  }, [options, search, gradeFilter])
 
   const visible  = selected.slice(0, maxChips)
   const overflow = selected.length - visible.length
@@ -444,26 +470,52 @@ export function InlineChipSelect({
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, background: 'transparent', color: '#111028', fontFamily: 'inherit' }} />
             {search && <button onMouseDown={e => { e.preventDefault(); setSearch('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C0BBD8', padding: 0, fontSize: 13, lineHeight: 1 }}>×</button>}
           </div>
-          {/* Bulk actions */}
+          {/* Bulk actions + grade view filters */}
           {!singleSelect && (
             <div style={{ padding: '4px 8px', display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid #EEE9FF', background: '#F9F7FF' }}>
-              <button onMouseDown={e => { e.preventDefault(); onChange(options.map(o => o.value)) }}
-                style={{ fontSize: 10, color: '#5B52C4', background: '#EDE9FF', border: `1px solid ${P_B}`, borderRadius: 3, padding: '2px 7px', cursor: 'pointer', fontWeight: 700 }}>All</button>
-              <button onMouseDown={e => { e.preventDefault(); onChange([]) }}
-                style={{ fontSize: 10, color: '#888', background: '#F0F0F0', border: '1px solid #E4E4E4', borderRadius: 3, padding: '2px 7px', cursor: 'pointer' }}>None</button>
-              {hasGroups && Array.from(grouped.keys()).filter(g => g).map(g => {
-                const vals = (grouped.get(g) ?? []).map(o => o.value)
-                const allIn = vals.every(v => selected.includes(v))
+              {/* All / None operate on currently visible (filtered) options only */}
+              <button onMouseDown={e => {
+                e.preventDefault()
+                const visibleVals = Array.from(grouped.values()).flat().map(o => o.value)
+                const ns = new Set(selected); visibleVals.forEach(v => ns.add(v)); onChange([...ns])
+              }} style={{ fontSize: 10, color: '#5B52C4', background: '#EDE9FF', border: `1px solid ${P_B}`, borderRadius: 3, padding: '2px 7px', cursor: 'pointer', fontWeight: 700 }}>All</button>
+              <button onMouseDown={e => {
+                e.preventDefault()
+                const visibleVals = new Set(Array.from(grouped.values()).flat().map(o => o.value))
+                onChange(selected.filter(v => !visibleVals.has(v)))
+              }} style={{ fontSize: 10, color: '#888', background: '#F0F0F0', border: '1px solid #E4E4E4', borderRadius: 3, padding: '2px 7px', cursor: 'pointer' }}>None</button>
+              {/* Grade filter buttons — two separate visual states:
+                    • light purple tint  = this grade has ≥1 selected section (selection indicator)
+                    • dark purple / bold = this grade is the ACTIVE VIEW FILTER (click to narrow list)
+                  Clicking a button sets/clears the view filter; it does NOT change the selection. */}
+              {hasGroups && allGroups.map(g => {
+                const isActive = gradeFilter === g
+                const gradeOpts = options.filter(o => o.group === g)
+                const selCount  = gradeOpts.filter(o => selected.includes(o.value)).length
+                const hasSel    = selCount > 0
+                // Style combines both states
+                const bg     = isActive ? (hasSel ? '#C4BAEE' : '#EDE9FF') : hasSel ? '#F3F1FF' : '#F0F0F0'
+                const col    = isActive ? '#3D35A8' : hasSel ? '#6358C4' : '#555'
+                const bdr    = (isActive || hasSel) ? `1px solid ${P_B}` : '1px solid #E4E4E4'
+                const weight = (isActive || hasSel) ? 700 : 400
                 return (
                   <button key={g} onMouseDown={e => {
                     e.preventDefault()
-                    if (allIn) onChange(selected.filter(v => !vals.includes(v)))
-                    else { const ns = new Set(selected); vals.forEach(v => ns.add(v)); onChange([...ns]) }
-                  }} style={{ fontSize: 10, color: allIn ? '#5B52C4' : '#555', background: allIn ? '#EDE9FF' : '#F0F0F0', border: allIn ? `1px solid ${P_B}` : '1px solid #E4E4E4', borderRadius: 3, padding: '2px 7px', cursor: 'pointer', fontWeight: allIn ? 700 : 400 }}>
-                    {g}
+                    setGradeFilter(isActive ? null : g)
+                  }} style={{
+                    fontSize: 10, color: col, background: bg, border: bdr,
+                    borderRadius: 3, padding: '2px 7px', cursor: 'pointer', fontWeight: weight,
+                  }}>
+                    {g}{hasSel ? ` (${selCount})` : ''}
                   </button>
                 )
               })}
+              {/* Show active filter hint */}
+              {gradeFilter && (
+                <span style={{ fontSize: 10, color: '#9896B5', alignSelf: 'center', marginLeft: 2 }}>
+                  showing {gradeFilter} only ×
+                </span>
+              )}
             </div>
           )}
           {/* Options */}

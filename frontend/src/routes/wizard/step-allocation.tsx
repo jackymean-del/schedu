@@ -207,6 +207,93 @@ export function StepAllocation() {
       }
     }
 
+    // Resource-level: subjects configured in Resources for a section but with no period allocation.
+    //
+    // When a user sets up classConfigs in Resources → Subjects (assigning a subject to
+    // specific sections) but then never fills in that cell in the Period Allocation grid,
+    // the teacher warning above is silently skipped (no raw allocation → outer `if (!raw) return`).
+    // This check catches those orphaned sections so the user knows to allocate or run Sync.
+    //
+    // Guard: only fire if the subject IS allocated somewhere else in the timetable — this
+    // prevents false alarms for subjects that are in Resources but not yet scheduled at all.
+    const allocationGaps: Record<string, string[]> = {}
+    ;(subjects as Subject[]).forEach(s => {
+      // Collect every section this subject is configured for — classConfigs takes
+      // priority; fall back to the legacy sections[] array on the subject object.
+      const configs = (s as any).classConfigs as any[] | undefined
+      const appliedSections: string[] = configs && configs.length > 0
+        ? configs.map((c: any) => c.sectionName).filter(Boolean)
+        : ((s as any).sections as string[] | undefined ?? [])
+      if (!appliedSections.length) return
+      // Subject must be actively allocated somewhere to be "in use"
+      const hasAnyAllocation = appliedSections.some(secName => {
+        const raw = (subjectAllocations as any)?.[secName]?.[s.name]
+        return raw ? parseAllocation(raw).weeklyTotal > 0 : false
+      })
+      if (!hasAnyAllocation) return
+      // Find configured sections that have no period allocation
+      appliedSections.forEach(secName => {
+        const raw = (subjectAllocations as any)?.[secName]?.[s.name]
+        if (!raw || parseAllocation(raw).weeklyTotal <= 0) {
+          if (!allocationGaps[s.name]) allocationGaps[s.name] = []
+          allocationGaps[s.name].push(secName)
+        }
+      })
+    })
+    Object.entries(allocationGaps).forEach(([subName, classes]) => {
+      const display = classes.length > 4
+        ? `${classes.slice(0, 4).join(', ')} +${classes.length - 4} more`
+        : classes.join(', ')
+      soft.push(`"${subName}" is in Resources for: ${display} — but has no period allocation. Run Sync or fill manually.`)
+    })
+
+    // Grade-level cross-section consistency check
+    //
+    // If subject X has period allocations in ≥2 sections of a grade AND in >50 % of that
+    // grade's total sections, but is MISSING from some others, flag those missing sections.
+    //
+    // This catches "PE is in XI-Arts + XI-Com-A but accidentally skipped XI-Sci-A" even
+    // when XI-Sci-A never appears in PE's sections[] / classConfigs at all.
+    //
+    // Why >50 % threshold?  Prevents false positives for stream-specific subjects:
+    //   Biology: only in XI-Sci-A (1/3 = 33 %) → no warning
+    //   PE: in XI-Arts + XI-Com-A (2/3 = 67 %) → warns about XI-Sci-A ✓
+    const sectionsByGrade = new Map<string, string[]>()
+    ;(sections as Section[]).forEach(sec => {
+      const grade = sec.name.split('-')[0].trim()
+      if (!sectionsByGrade.has(grade)) sectionsByGrade.set(grade, [])
+      sectionsByGrade.get(grade)!.push(sec.name)
+    })
+    const gradeConsistencyGaps: Record<string, string[]> = {}
+    ;(subjects as Subject[]).forEach(s => {
+      sectionsByGrade.forEach(gradeSecs => {
+        if (gradeSecs.length < 2) return  // nothing to compare in a single-section grade
+        const allocated = gradeSecs.filter(sec => {
+          const raw = (subjectAllocations as any)?.[sec]?.[s.name]
+          return raw ? parseAllocation(raw).weeklyTotal > 0 : false
+        })
+        // Need ≥2 sections allocated AND ratio > 50 %
+        if (allocated.length < 2 || allocated.length * 2 <= gradeSecs.length) return
+        const missing = gradeSecs.filter(sec => {
+          const raw = (subjectAllocations as any)?.[sec]?.[s.name]
+          return !raw || parseAllocation(raw).weeklyTotal <= 0
+        })
+        if (!missing.length) return
+        missing.forEach(sec => {
+          // Skip if already covered by allocationGaps warning for this subject+section
+          if ((allocationGaps[s.name] ?? []).includes(sec)) return
+          if (!gradeConsistencyGaps[s.name]) gradeConsistencyGaps[s.name] = []
+          gradeConsistencyGaps[s.name].push(sec)
+        })
+      })
+    })
+    Object.entries(gradeConsistencyGaps).forEach(([subName, classes]) => {
+      const display = classes.length > 4
+        ? `${classes.slice(0, 4).join(', ')} +${classes.length - 4} more`
+        : classes.join(', ')
+      soft.push(`"${subName}" has periods in other sections of the same grade but none in: ${display} — check Period Allocation or add to Resources → Subjects`)
+    })
+
     // Resource-level: total period demand vs total teacher capacity
     let totalPeriodDemand = 0
     ;(sections as Section[]).forEach(sec => {
@@ -300,13 +387,50 @@ export function StepAllocation() {
     store.setSubjectAllocations?.(derivePeriodsFromResources())
   }, [derivePeriodsFromResources, store])
 
-  // ── Derive teacher allocations — NEVER exceeds maxPeriodsPerWeek ─────────────
+  // ── Derive teacher allocations ─────────────────────────────────────────────────
   // Pass 1a: explicit subjectMappings, strictly capped at teacher's weekly max.
   // Pass 1b: overflow from capped mappings re-assigned to any other qualified teacher.
-  // Pass 2:  remaining uncovered pairs filled with load-balanced intelligent assign.
-  // Hard rule: if no teacher has remaining capacity, skip the pair (soft warning)
-  //            rather than creating an overload hard conflict.
+  // Pass 2:  remaining pairs — load-balanced, grade-band aware.
+  // Pass 3:  absolute fallback — any remaining pair gets the best-fit teacher even if
+  //          slightly over-max (surfaces as a soft warning, never leaves a blank cell).
   const handleAITeacherAllocate = useCallback((periodAllocs?: Record<string, Record<string, string>>) => {
+    // Grade-band restriction helpers (defined inside callback — no stable-ref issue)
+    //
+    // Grade rank: 0-2 = pre-primary (Nursery/LKG/UKG)
+    //             3-4 = lower primary (I-II)
+    //             5-7 = upper primary (III-V)
+    //             8+  = secondary (VI and above)
+    //
+    // Rules: pre-primary/lower/upper teachers stay in their own band.
+    // Secondary (VI+) teachers are flexible across all secondary grades.
+    const GRADE_RANK_MAP: Record<string, number> = {
+      NURSERY: 0, NUR: 0,
+      LKG: 1, 'LOWER-KG': 1, LOWERKG: 1,
+      UKG: 2, 'UPPER-KG': 2, UPPERKG: 2,
+      I: 3, '1': 3, II: 4, '2': 4,
+      III: 5, '3': 5, IV: 6, '4': 6, V: 7, '5': 7,
+      VI: 8, '6': 8, VII: 9, '7': 9, VIII: 10, '8': 10,
+      IX: 11, '9': 11, X: 12, '10': 12,
+      XI: 13, '11': 13, XII: 14, '12': 14,
+    }
+    const gradeRankOf = (secName: string) => {
+      const g = secName.split('-')[0].trim().toUpperCase()
+      return GRADE_RANK_MAP[g] ?? 8
+    }
+    const bandOf = (rank: number) =>
+      rank <= 2 ? 'pre' : rank <= 4 ? 'lower' : rank <= 7 ? 'upper' : 'secondary'
+    const teacherAllowedForSection = (t: any, targetSec: string): boolean => {
+      const maps: Array<{ subject: string; classes: string[] }> = t.subjectMappings ?? []
+      const mapped: string[] = []
+      maps.forEach(m => mapped.push(...(m.classes ?? [])))
+      ;(t.classes ?? []).forEach((c: string) => mapped.push(c))
+      if (!mapped.length) return true  // no prior assignments → no band restriction
+      const minRank    = Math.min(...mapped.map(gradeRankOf))
+      const tBand      = bandOf(minRank)
+      const targetBand = bandOf(gradeRankOf(targetSec))
+      if (tBand === 'secondary') return targetBand === 'secondary'
+      return tBand === targetBand
+    }
     const allocs   = periodAllocs ?? subjectAllocations ?? {}
     const next: Record<string, Record<string, Record<string, number>>> = {}
     const load:  Record<string, number> = {}
@@ -343,20 +467,27 @@ export function StepAllocation() {
     })
 
     // Shared helper: assign a cls+subject to the best available qualified teacher.
-    // Returns false if no teacher has remaining capacity (caller logs soft warning).
+    // Priority order:
+    //   1. Grade-band appropriate + has subject in subjects[] + has capacity
+    //   2. Grade-band appropriate + has capacity (any subject knowledge)
+    //   3. Any teacher with capacity (cross-band fallback for unmatched grades)
+    // Returns false only when truly no teacher has any remaining capacity.
     const assignToAvailable = (cls: string, subject: string, target: number): boolean => {
       if (covered.has(`${cls}::${subject}`)) return true
-      const pool = (staff as Staff[]).filter(t =>
-        (t.subjects ?? []).some((x: string) => x === subject)
-      )
-      const eligible = pool.length > 0 ? pool : (staff as Staff[])
       const maxFn = (t: Staff) => (t as any).maxPeriodsPerWeek ?? 32
-      // Strictly only pick teachers who still have capacity — never breach max
-      const withRoom = eligible
-        .filter(t => (load[t.name] ?? 0) + target <= maxFn(t))
-        .sort((a, b) => (load[a.name] ?? 0) - (load[b.name] ?? 0))
-      const chosen = withRoom[0]
-      if (!chosen) return false  // no capacity — surfaces as soft warning in Validation
+      const hasRoom  = (t: Staff) => (load[t.name] ?? 0) + target <= maxFn(t)
+      const knowsSub = (t: Staff) => (t.subjects ?? []).some((x: string) => x === subject)
+      const inBand   = (t: Staff) => teacherAllowedForSection(t as any, cls)
+
+      // Build candidate pools in priority order, each requiring capacity
+      const allWithRoom = (staff as Staff[]).filter(hasRoom)
+      const band1 = allWithRoom.filter(t => inBand(t) && knowsSub(t))
+      const band2 = allWithRoom.filter(t => inBand(t) && !knowsSub(t))
+      const band3 = allWithRoom.filter(t => !inBand(t))  // cross-band last resort
+
+      const pool = band1.length ? band1 : band2.length ? band2 : band3
+      const chosen = [...pool].sort((a, b) => (load[a.name] ?? 0) - (load[b.name] ?? 0))[0]
+      if (!chosen) return false  // truly no capacity anywhere
       if (!next[chosen.name])            next[chosen.name]            = {}
       if (!next[chosen.name][cls])       next[chosen.name][cls]       = {}
       next[chosen.name][cls][subject] = (next[chosen.name][cls][subject] ?? 0) + target
@@ -368,7 +499,7 @@ export function StepAllocation() {
     // PASS 1b — re-assign overflowed explicit mappings to other available teachers
     overflow.forEach(({ cls, subject, target }) => assignToAvailable(cls, subject, target))
 
-    // PASS 2 — intelligent assignment for pairs not covered by any mapping
+    // PASS 2 — grade-band-aware assignment for pairs not covered by any explicit mapping
     ;(sections as Section[]).forEach((sec: Section) => {
       ;(subjects as Subject[]).forEach((s: Subject) => {
         if (covered.has(`${sec.name}::${s.name}`)) return
@@ -387,8 +518,46 @@ export function StepAllocation() {
       })
     })
 
+    // PASS 3 — absolute coverage fallback: any still-uncovered pair gets the lightest-loaded
+    // grade-band-appropriate teacher, even if it slightly exceeds their maxPeriodsPerWeek.
+    // This ensures NO cell is left without a teacher name — the resulting overload surfaces
+    // as a soft "over capacity" warning in Validation rather than silently going blank.
+    ;(sections as Section[]).forEach((sec: Section) => {
+      ;(subjects as Subject[]).forEach((s: Subject) => {
+        if (covered.has(`${sec.name}::${s.name}`)) return
+        const raw = allocs[sec.name]?.[s.name]
+        if (!raw) return
+        const target = parseAllocation(raw).weeklyTotal || 0
+        if (target <= 0) return
+        const sExt    = s as any
+        const configs = sExt.classConfigs as any[] | undefined
+        const isAssigned = configs?.length
+          ? configs.some((c: any) => c.sectionName === sec.name)
+          : (sExt.sections ?? []).includes(sec.name)
+        if (!isAssigned) return
+        // Sort: band-appropriate first, then by lightest load — ignore max cap this pass
+        const sorted = [...(staff as Staff[])].sort((a, b) => {
+          const aOk = teacherAllowedForSection(a as any, sec.name) ? 0 : 1
+          const bOk = teacherAllowedForSection(b as any, sec.name) ? 0 : 1
+          if (aOk !== bOk) return aOk - bOk
+          const aKnows = (a.subjects ?? []).includes(s.name) ? 0 : 1
+          const bKnows = (b.subjects ?? []).includes(s.name) ? 0 : 1
+          if (aKnows !== bKnows) return aKnows - bKnows
+          return (load[a.name] ?? 0) - (load[b.name] ?? 0)
+        })
+        const chosen = sorted[0]
+        if (!chosen) return
+        if (!next[chosen.name])                next[chosen.name]                = {}
+        if (!next[chosen.name][sec.name])      next[chosen.name][sec.name]      = {}
+        next[chosen.name][sec.name][s.name] = (next[chosen.name][sec.name][s.name] ?? 0) + target
+        load[chosen.name] = (load[chosen.name] ?? 0) + target
+        covered.add(`${sec.name}::${s.name}`)
+      })
+    })
+
     Object.keys(next).forEach(k => { if (!Object.keys(next[k]).length) delete next[k] })
     store.setTeacherAllocations?.(next)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staff, sections, subjects, subjectAllocations, store])
 
   // ── One-click sync: periods + teachers from Resources in one pass ─────────────

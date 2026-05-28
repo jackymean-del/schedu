@@ -41,8 +41,13 @@ function initials(n: string) {
 }
 function getGrade(n: string) {
   const t = n.trim(), idx = t.lastIndexOf('-')
-  if (idx > 0 && t.slice(idx + 1).length <= 3)
-    return t.slice(0, idx).replace(/-(sci|com|arts?|hum|gen|pcm|pcb)$/i, '').trim()
+  // Treat the trailing segment as a section suffix (not part of the grade) if it is
+  // ≤ 4 chars.  Limit bumped from 3→4 so "Arts" (4) is treated as a suffix rather
+  // than a grade name — keeping "XI-Arts", "XI-Com-A", "XI-Sci-A" all in "Grade XI".
+  if (idx > 0 && t.slice(idx + 1).length <= 4)
+    return t.slice(0, idx)
+              .replace(/-(science|commerce|humanities?|sci|com|arts?|hum|gen|pcm|pcb)$/i, '')
+              .trim()
   return t
 }
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
