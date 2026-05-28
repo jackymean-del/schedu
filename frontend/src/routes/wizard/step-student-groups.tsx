@@ -109,6 +109,18 @@ const MODE_META: Record<GroupingMode, { label: string; bg: string; fg: string; b
   flexible:     { label: 'Flexible (AI)',    bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0' },
 }
 
+/**
+ * Mutually exclusive pairs — selecting one automatically deselects the other.
+ * Same grade ↔ Cross grade  (they contradict each other)
+ * Same stream ↔ Cross stream (they contradict each other)
+ */
+const BEHAVIOR_OPPOSITE: Partial<Record<GroupingBehavior, GroupingBehavior>> = {
+  SAME_GRADE_ONLY:     'CROSS_GRADE_ALLOWED',
+  CROSS_GRADE_ALLOWED: 'SAME_GRADE_ONLY',
+  SAME_STREAM_ONLY:    'CROSS_STREAM_ALLOWED',
+  CROSS_STREAM_ALLOWED:'SAME_STREAM_ONLY',
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function guessStream(secName: string): string {
@@ -299,11 +311,10 @@ export function StepStudentGroups() {
   const storeStaff: any[]          = useMemo(() => (store as any).staff             ?? [], [store])
   const teacherAllocations: any    = useMemo(() => (store as any).teacherAllocations ?? {}, [store])
 
-  /** Find the teacher(s) assigned to a subject for a set of sections. Returns a
-   *  display string ("Mrs. Sharma" or "Mrs. Sharma, Mr. Kumar" if multiple). */
-  const findTeacherForGroup = useCallback((subject: string, sectionNames: string[]): string => {
+  /** All candidate teachers for a subject+sections combo (ordered by signal strength). */
+  const findTeacherCandidates = useCallback((subject: string, sectionNames: string[]): string[] => {
     const found = new Set<string>()
-    // Signal A — teacherAllocations
+    // Signal A — explicit period allocations (stronger signal)
     for (const t of storeStaff) {
       for (const sec of sectionNames) {
         const p = teacherAllocations?.[t.name]?.[sec]?.[subject]
@@ -316,11 +327,40 @@ export function StepStudentGroups() {
       if (maps.some(m => m.subject === subject && sectionNames.some(s => (m.classes ?? []).includes(s))))
         found.add(t.name)
     }
-    const names = [...found]
+    return [...found]
+  }, [storeStaff, teacherAllocations])
+
+  /** Format candidates as a display string (used for preview panel). */
+  const findTeacherForGroup = useCallback((subject: string, sectionNames: string[]): string => {
+    const names = findTeacherCandidates(subject, sectionNames)
     if (names.length === 0) return ''
     if (names.length <= 2) return names.join(', ')
     return `${names[0]}, +${names.length - 1} more`
-  }, [storeStaff, teacherAllocations])
+  }, [findTeacherCandidates])
+
+  /**
+   * Greedy deduplication: assign each generated group a unique teacher within
+   * the shared parallel period. Groups are processed in order; each teacher
+   * can only appear once. If all candidates are taken, mark as conflict.
+   */
+  const groupTeacherMap = useMemo((): Record<string, { teacher: string; conflict: boolean }> => {
+    const result: Record<string, { teacher: string; conflict: boolean }> = {}
+    const usedThisPeriod = new Set<string>()
+    for (const grp of dynamicLearningGroups as any[]) {
+      const candidates = findTeacherCandidates(grp.subject, grp.sectionNames ?? [])
+      const available  = candidates.find(t => !usedThisPeriod.has(t))
+      if (available) {
+        result[grp.id] = { teacher: available, conflict: false }
+        usedThisPeriod.add(available)
+      } else if (candidates.length > 0) {
+        // All known teachers already scheduled in another group this period
+        result[grp.id] = { teacher: candidates[0], conflict: true }
+      } else {
+        result[grp.id] = { teacher: '', conflict: false }
+      }
+    }
+    return result
+  }, [dynamicLearningGroups, findTeacherCandidates])
 
   const [regenerating, setRegenerating]   = useState(false)
   const [minGroupSize, setMinGroupSize]   = useState(5)
@@ -969,9 +1009,15 @@ export function StepStudentGroups() {
                   // Exclusive: clicking replaces everything; second click deselects back to default
                   next = curr.includes(beh) ? ['SAME_GRADE_ONLY'] : [beh]
                 } else {
-                  // Normal toggle — strip exclusive behaviors first
+                  // Normal toggle — strip exclusive behaviors, then enforce mutual exclusivity
                   const base = curr.filter(b => b !== 'NO_GROUPING' && b !== 'FLEXIBLE_GROUPING')
-                  next = base.includes(beh) ? base.filter(b => b !== beh) : [...base, beh]
+                  if (base.includes(beh)) {
+                    next = base.filter(b => b !== beh)
+                  } else {
+                    // Remove the contradictory opposite before adding
+                    const opp = BEHAVIOR_OPPOSITE[beh]
+                    next = [...base.filter(b => b !== opp), beh]
+                  }
                   if (!next.length) next = ['SAME_GRADE_ONLY'] // never leave empty
                 }
                 setSubjectGroupingRule(col.key, next)
@@ -1016,12 +1062,15 @@ export function StepStudentGroups() {
               All {dynamicLearningGroups.length} groups share the same period (Mon P6) — parallel teaching, no clashes.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {dynamicLearningGroups.map((grp: any, gi: number) => (
-                <GroupCard
-                  key={grp.id} grp={grp} colorDot={groupColor(gi)}
-                  teacher={findTeacherForGroup(grp.subject, grp.sectionNames ?? [])}
-                />
-              ))}
+              {dynamicLearningGroups.map((grp: any, gi: number) => {
+                const { teacher, conflict } = groupTeacherMap[grp.id] ?? { teacher: '', conflict: false }
+                return (
+                  <GroupCard
+                    key={grp.id} grp={grp} colorDot={groupColor(gi)}
+                    teacher={teacher} teacherConflict={conflict}
+                  />
+                )
+              })}
             </div>
           </>
         )}
@@ -1187,12 +1236,14 @@ function EmptyState({ msg }: { msg: string }) {
   return <div style={{ padding: '20px 0', textAlign: 'center', color: '#B8B4D4', fontSize: 12 }}>{msg}</div>
 }
 
-function GroupCard({ grp, colorDot, teacher }: { grp: any; colorDot: string; teacher?: string }) {
-  const behMeta = BEHAVIOR_META[grp.behavior as GroupingBehavior] ?? BEHAVIOR_META.SAME_GRADE_ONLY
+function GroupCard({ grp, colorDot, teacher, teacherConflict }: {
+  grp: any; colorDot: string; teacher?: string; teacherConflict?: boolean
+}) {
+  const behMeta = BEHAVIOR_META[grp.behavior as GroupingBehavior] ?? MODE_META.grade
   const overCapacity = grp.roomCapacity > 0 && grp.totalStrength > grp.roomCapacity
   const roomOk = grp.roomCapacity > 0 && grp.totalStrength <= grp.roomCapacity
   return (
-    <div style={{ borderRadius: 10, border: `1px solid ${overCapacity ? '#FECACA' : '#E8E4FF'}`, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 4px rgba(124,111,224,0.07)' }}>
+    <div style={{ borderRadius: 10, border: `1px solid ${overCapacity ? '#FECACA' : teacherConflict ? '#FED7AA' : '#E8E4FF'}`, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 4px rgba(124,111,224,0.07)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'linear-gradient(135deg, #F5F2FF, #FAFAFE)', borderBottom: '1px solid #F0EDFF' }}>
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: colorDot, flexShrink: 0 }} />
         <span style={{ fontSize: 12, fontWeight: 800, color: '#13111E', fontFamily: "'DM Mono', monospace", flex: 1 }}>{grp.id.split('_')[0]}_{grp.id.split('_')[1]}</span>
@@ -1200,10 +1251,19 @@ function GroupCard({ grp, colorDot, teacher }: { grp: any; colorDot: string; tea
       </div>
       <div style={{ padding: '10px 12px' }}>
         <div style={{ fontSize: 11, color: '#4B5275', marginBottom: 4 }}><strong style={{ color: '#13111E' }}>Subject:</strong> {grp.subject}</div>
+
+        {/* Teacher row */}
         {teacher ? (
-          <div style={{ fontSize: 11, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <GraduationCap size={11} color="#7C6FE0" style={{ flexShrink: 0 }} />
-            <span style={{ color: '#13111E', fontWeight: 600 }}>{teacher}</span>
+          <div style={{ fontSize: 11, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            <GraduationCap size={11} color={teacherConflict ? '#D97706' : '#7C6FE0'} style={{ flexShrink: 0 }} />
+            <span style={{ color: teacherConflict ? '#92400E' : '#13111E', fontWeight: 600 }}>{teacher}</span>
+            {teacherConflict && (
+              <span
+                title="This teacher is already assigned to another group in the same period. Assign a different teacher for this group."
+                style={{ fontSize: 9, fontWeight: 700, color: '#DC2626', background: '#FEF2F2', padding: '1px 6px', borderRadius: 8, border: '1px solid #FECACA', cursor: 'help' }}>
+                ⚠ scheduling conflict
+              </span>
+            )}
           </div>
         ) : (
           <div style={{ fontSize: 10, color: '#C4C0DC', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1211,6 +1271,12 @@ function GroupCard({ grp, colorDot, teacher }: { grp: any; colorDot: string; tea
             <span>No teacher assigned yet</span>
           </div>
         )}
+        {teacherConflict && (
+          <div style={{ marginBottom: 6, padding: '4px 8px', borderRadius: 6, background: '#FFF7ED', border: '1px solid #FED7AA', fontSize: 10, color: '#92400E', fontWeight: 600 }}>
+            ⚠ Teacher conflict — same teacher scheduled in another group this period. Assign a unique teacher.
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
           {grp.sectionNames.map((sn: string) => <span key={sn} style={{ padding: '2px 7px', borderRadius: 8, background: '#EDE9FF', color: '#7C3AED', fontSize: 10, fontWeight: 700, border: '1px solid #C4B5FD' }}>{sn}</span>)}
         </div>
