@@ -58,7 +58,7 @@ const BEHAVIOR_META: Record<GroupingBehavior, {
   SAME_GRADE_ONLY:      { label: 'Same grade only', short: 'Same grade',    bg: '#EFF6FF', fg: '#1D4ED8', border: '#DBEAFE', desc: 'One group per grade. All streams within the same grade are merged (e.g. XI-Sci + XI-Com + XI-Arts → one XI group).' },
   SAME_STREAM_ONLY:     { label: 'Same stream only',short: 'Same stream',   bg: '#FFF7ED', fg: '#C2410C', border: '#FED7AA', desc: 'One group per stream across all grades. XI-Arts + XII-Arts form one group; XI-Sci + XII-Sci another. Useful for stream-specific electives.' },
   CROSS_GRADE_ALLOWED:  { label: 'Cross grade',     short: 'Cross grade',   bg: '#EDE9FF', fg: '#7C3AED', border: '#C4B5FD', desc: 'All grades merged into one group regardless of grade or stream. Best for whole-school electives like Music or Dance.' },
-  CROSS_STREAM_ALLOWED: { label: 'Any stream',      short: 'Any stream',    bg: '#FCE7F3', fg: '#9D174D', border: '#FBCFE8', desc: 'No stream restriction — students from any stream can be grouped together. Pair with Same grade to get one group per grade with all streams merged.' },
+  CROSS_STREAM_ALLOWED: { label: 'Cross stream',    short: 'Cross stream',  bg: '#FCE7F3', fg: '#9D174D', border: '#FBCFE8', desc: 'No stream restriction — students from any stream can be grouped together. Pair with Same grade to get one group per grade with all streams merged.' },
   FLEXIBLE_GROUPING:    { label: 'Flexible (AI)',   short: 'Flexible',      bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0', desc: 'AI starts with the strictest rule (same grade + same stream) and progressively relaxes — merging streams, then grades — until every group reaches the minimum size threshold.' },
 }
 const BEHAVIORS: GroupingBehavior[] = [
@@ -366,28 +366,27 @@ export function StepStudentGroups() {
   }, [findTeacherCandidates])
 
   /**
-   * Greedy deduplication: assign each generated group a unique teacher within
-   * the shared parallel period. Groups are processed in order; each teacher
-   * can only appear once. If all candidates are taken, mark as conflict.
+   * Conflict map: a group has a teacher conflict if another group in the same
+   * day+period already has the same teacher assigned.
+   * Teacher is now stored on each group during generation (handleRegenerate),
+   * so we just scan grp.teacher + grp.day + grp.periodId.
    */
-  const groupTeacherMap = useMemo((): Record<string, { teacher: string; conflict: boolean }> => {
-    const result: Record<string, { teacher: string; conflict: boolean }> = {}
-    const usedThisPeriod = new Set<string>()
+  const groupConflictMap = useMemo((): Record<string, boolean> => {
+    const result: Record<string, boolean> = {}
+    const seen = new Map<string, string>() // "teacher::day::period" → first grp.id that claimed it
     for (const grp of dynamicLearningGroups as any[]) {
-      const candidates = findTeacherCandidates(grp.subject, grp.sectionNames ?? [])
-      const available  = candidates.find(t => !usedThisPeriod.has(t))
-      if (available) {
-        result[grp.id] = { teacher: available, conflict: false }
-        usedThisPeriod.add(available)
-      } else if (candidates.length > 0) {
-        // All known teachers already scheduled in another group this period
-        result[grp.id] = { teacher: candidates[0], conflict: true }
+      const teacher = grp.teacher ?? ''
+      if (!teacher) { result[grp.id] = false; continue }
+      const key = `${teacher}::${grp.day ?? ''}::${grp.periodId ?? ''}`
+      if (seen.has(key)) {
+        result[grp.id] = true // duplicate teacher in same slot
       } else {
-        result[grp.id] = { teacher: '', conflict: false }
+        seen.set(key, grp.id)
+        result[grp.id] = false
       }
     }
     return result
-  }, [dynamicLearningGroups, findTeacherCandidates])
+  }, [dynamicLearningGroups])
 
   const [regenerating, setRegenerating]   = useState(false)
   const [minGroupSize, setMinGroupSize]   = useState(5)
@@ -654,8 +653,36 @@ export function StepStudentGroups() {
     setRegenerating(true)
     await new Promise(r => setTimeout(r, 900))
     const generated: typeof dynamicLearningGroups = []
-    const optionalDay = 'Monday', optionalPeriod = 'P6'
+    const OPTIONAL_DAY = 'Monday'
+    // Ordered period slots — additional slots are used when teacher conflicts arise
+    const PERIOD_SLOTS = ['P6', 'P7', 'P8', 'P9', 'P10']
     const ts = Date.now()
+
+    // Track which teachers are already booked in each period slot
+    // slot → Set<teacherName>
+    const bookedInSlot = new Map<string, Set<string>>()
+    PERIOD_SLOTS.forEach(s => bookedInSlot.set(s, new Set()))
+
+    // Sorted rooms (ascending capacity) — computed once outside the subject loop
+    const sortedRooms = [...storeRooms].sort((a: any, b: any) => (a.capacity ?? 0) - (b.capacity ?? 0))
+    const biggestRoomCap = sortedRooms.length > 0 ? (sortedRooms[sortedRooms.length - 1]?.capacity ?? 0) : 0
+
+    /** All candidate teachers for a subject+sections combo (same logic as findTeacherCandidates). */
+    const getCandidates = (subjectLabel: string, sectionNames: string[]): string[] => {
+      const found = new Set<string>()
+      for (const t of storeStaff) {
+        for (const sec of sectionNames) {
+          const p = teacherAllocations?.[t.name]?.[sec]?.[subjectLabel]
+          if (typeof p === 'number' && p > 0) { found.add(t.name); break }
+        }
+      }
+      for (const t of storeStaff) {
+        const maps: Array<{ subject: string; classes: string[] }> = t.subjectMappings ?? []
+        if (maps.some(m => m.subject === subjectLabel && sectionNames.some(s => (m.classes ?? []).includes(s))))
+          found.add(t.name)
+      }
+      return [...found]
+    }
 
     allCols.forEach((col, si) => {
       const behaviors = getBehaviors(subjectGroupingRules[col.key])
@@ -665,62 +692,114 @@ export function StepStudentGroups() {
       const participating = rows.filter(r => (r.subjectStrengths?.[col.key] ?? 0) > 0)
       if (participating.length === 0) return
 
-      // Helper: build one group from a slice of sections
-      const pushGroup = (groupSections: SectionStrength[], groupIdx: number) => {
+      let gIdx = 0 // group counter within this subject column
+
+      /**
+       * Emit a single concrete group entry.
+       * Picks the earliest period slot where a candidate teacher is free.
+       * If all slots are taken by all candidates, uses slot 0 (marks conflict).
+       */
+      const emitGroup = (groupSections: SectionStrength[], candidates: string[]) => {
         const totalStr = groupSections.reduce((a, r) => a + (r.subjectStrengths?.[col.key] ?? 0), 0)
         if (totalStr < minGroupSize) return
-        const sorted = [...storeRooms].sort((a: any, b: any) => (a.capacity ?? 0) - (b.capacity ?? 0))
-        const room = sorted.find((rm: any) => (rm.capacity ?? 0) >= totalStr)
-          ?? (storeRooms.length > 0 ? storeRooms[(si + groupIdx) % storeRooms.length] : null)
+
+        // Find best (teacher, slot) — earliest slot where any candidate is free
+        let teacher = ''
+        let slot = PERIOD_SLOTS[0]
+        outer: for (const s of PERIOD_SLOTS) {
+          for (const c of candidates) {
+            if (!bookedInSlot.get(s)!.has(c)) { teacher = c; slot = s; break outer }
+          }
+        }
+        if (!teacher && candidates.length > 0) { teacher = candidates[0]; slot = PERIOD_SLOTS[0] }
+        if (teacher) bookedInSlot.get(slot)!.add(teacher)
+
+        const room = sortedRooms.find((rm: any) => (rm.capacity ?? 0) >= totalStr)
+          ?? (storeRooms.length > 0 ? storeRooms[(si + gIdx) % storeRooms.length] : null)
+
         generated.push({
-          id: `${generateGroupId(col.label, groupIdx)}_${ts + si * 100 + groupIdx}`,
+          id: `${generateGroupId(col.label, gIdx)}_${ts + si * 100 + gIdx}`,
           subject: col.label,
           sectionNames: groupSections.map(r => r.sectionName),
           totalStrength: totalStr,
-          teacher: '',
-          room: room?.name ?? `Room ${101 + si + groupIdx}`,
+          teacher,
+          room: room?.name ?? `Room ${101 + si + gIdx}`,
           roomCapacity: room?.capacity ?? 0,
           capacityWarning: (room?.capacity ?? 0) > 0 && totalStr > (room?.capacity ?? 0),
-          behavior: mode, day: optionalDay, periodId: optionalPeriod,
+          behavior: mode, day: OPTIONAL_DAY, periodId: slot,
         })
+        gIdx++
       }
 
+      /**
+       * Push a section set as one or more groups.
+       * If the combined strength exceeds the biggest available room, the sections
+       * are split into room-sized batches — each batch becomes its own group
+       * (teacher teaches the same subject in successive periods).
+       */
+      const pushGroup = (groupSections: SectionStrength[]) => {
+        const totalStr = groupSections.reduce((a, r) => a + (r.subjectStrengths?.[col.key] ?? 0), 0)
+        if (totalStr < minGroupSize) return
+
+        const sectionNames = groupSections.map(r => r.sectionName)
+        const candidates   = getCandidates(col.label, sectionNames)
+
+        // If it fits (or no room data) → emit as one group
+        if (biggestRoomCap === 0 || totalStr <= biggestRoomCap || groupSections.length <= 1) {
+          emitGroup(groupSections, candidates)
+          return
+        }
+
+        // Capacity overflow: split into room-sized batches greedily
+        const batches: SectionStrength[][] = []
+        let current: SectionStrength[] = []
+        let currentStr = 0
+        for (const sec of groupSections) {
+          const secStr = sec.subjectStrengths?.[col.key] ?? 0
+          if (currentStr + secStr > biggestRoomCap && current.length > 0) {
+            batches.push(current)
+            current = [sec]; currentStr = secStr
+          } else {
+            current.push(sec); currentStr += secStr
+          }
+        }
+        if (current.length > 0) batches.push(current)
+
+        // Each batch shares the same teacher candidates (same subject content,
+        // different sessions/periods). emitGroup picks a free slot for each.
+        batches.forEach(batch => emitGroup(batch, candidates))
+      }
+
+      // ── Mode-based section partitioning ──────────────────────────────────────
       if (mode === 'grade') {
-        // One group per grade — all streams in that grade merged
         const byGrade = new Map<string, SectionStrength[]>()
         participating.forEach(r => {
           const grade = extractGrade(r.sectionName)
           if (!byGrade.has(grade)) byGrade.set(grade, [])
           byGrade.get(grade)!.push(r)
         })
-        let gIdx = 0
-        byGrade.forEach(gradeSections => { pushGroup(gradeSections, gIdx++) })
+        byGrade.forEach(gs => pushGroup(gs))
 
       } else if (mode === 'grade_stream') {
-        // One group per grade+stream combination — streams kept SEPARATE within each grade
         const byGradeStream = new Map<string, SectionStrength[]>()
         participating.forEach(r => {
           const key = `${extractGrade(r.sectionName)}::${guessStream(r.sectionName)}`
           if (!byGradeStream.has(key)) byGradeStream.set(key, [])
           byGradeStream.get(key)!.push(r)
         })
-        let gsIdx = 0
-        byGradeStream.forEach(gs => { pushGroup(gs, gsIdx++) })
+        byGradeStream.forEach(gs => pushGroup(gs))
 
       } else if (mode === 'stream') {
-        // One group per stream across ALL grades (e.g. XI-Arts + XII-Arts together)
         const byStream = new Map<string, SectionStrength[]>()
         participating.forEach(r => {
           const stream = guessStream(r.sectionName)
           if (!byStream.has(stream)) byStream.set(stream, [])
           byStream.get(stream)!.push(r)
         })
-        let sIdx = 0
-        byStream.forEach(streamSections => { pushGroup(streamSections, sIdx++) })
+        byStream.forEach(gs => pushGroup(gs))
 
       } else {
-        // 'all' / 'flexible' — all sections in one big group
-        pushGroup(participating, 0)
+        pushGroup(participating)
       }
     })
 
@@ -1103,7 +1182,7 @@ export function StepStudentGroups() {
 
       {/* ══ PANEL 4: AI-Generated Groups ══ */}
       <Section title="AI-Generated Groups" icon={<Sparkles size={15} color="#7C6FE0" />}
-        hint={dynamicLearningGroups.length > 0 ? `${dynamicLearningGroups.length} group${dynamicLearningGroups.length !== 1 ? 's' : ''} — all scheduled in the same parallel period.` : 'Click "Generate groups" below.'}>
+        hint={dynamicLearningGroups.length > 0 ? `${dynamicLearningGroups.length} group${dynamicLearningGroups.length !== 1 ? 's' : ''} generated — teacher & room conflicts resolved by period spreading.` : 'Click "Generate groups" below.'}>
         {dynamicLearningGroups.length === 0 ? (
           <div style={{ padding: '32px 24px', textAlign: 'center', background: '#F8F7FF', borderRadius: 10, border: '1px dashed #D8D2FF' }}>
             <Sparkles size={28} color="#C4B5FD" style={{ marginBottom: 10 }} />
@@ -1112,20 +1191,33 @@ export function StepStudentGroups() {
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', marginBottom: 12, borderRadius: 8, background: '#EDE9FF', border: '1px solid #C4B5FD', fontSize: 11, color: '#7C3AED', fontWeight: 600 }}>
-              <Zap size={13} />
-              All {dynamicLearningGroups.length} groups share the same period (Mon P6) — parallel teaching, no clashes.
-            </div>
+            {(() => {
+              const usedPeriods = [...new Set((dynamicLearningGroups as any[]).map((g: any) => g.periodId).filter(Boolean))].sort()
+              const anyConflict = Object.values(groupConflictMap).some(Boolean)
+              const day = (dynamicLearningGroups as any[])[0]?.day?.slice(0, 3) ?? 'Mon'
+              const periodStr = usedPeriods.length === 0 ? 'P6'
+                : usedPeriods.length === 1 ? `${day} ${usedPeriods[0]}`
+                : `${day} ${usedPeriods[0]}–${usedPeriods[usedPeriods.length - 1]}`
+              const bg     = anyConflict ? '#FFF7ED' : '#EDE9FF'
+              const border = anyConflict ? '#FED7AA' : '#C4B5FD'
+              const color  = anyConflict ? '#92400E' : '#7C3AED'
+              const msg = usedPeriods.length <= 1
+                ? `All ${dynamicLearningGroups.length} groups share period ${periodStr} — parallel teaching, no clashes.`
+                : `${dynamicLearningGroups.length} groups span ${periodStr} to avoid teacher & room conflicts — each group runs in its assigned period.`
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', marginBottom: 12, borderRadius: 8, background: bg, border: `1px solid ${border}`, fontSize: 11, color, fontWeight: 600 }}>
+                  <Zap size={13} />{msg}
+                </div>
+              )
+            })()}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {dynamicLearningGroups.map((grp: any, gi: number) => {
-                const { teacher, conflict } = groupTeacherMap[grp.id] ?? { teacher: '', conflict: false }
-                return (
-                  <GroupCard
-                    key={grp.id} grp={grp} colorDot={groupColor(gi)}
-                    teacher={teacher} teacherConflict={conflict}
-                  />
-                )
-              })}
+              {dynamicLearningGroups.map((grp: any, gi: number) => (
+                <GroupCard
+                  key={grp.id} grp={grp} colorDot={groupColor(gi)}
+                  teacher={grp.teacher || ''}
+                  teacherConflict={groupConflictMap[grp.id] ?? false}
+                />
+              ))}
             </div>
           </>
         )}
