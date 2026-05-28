@@ -200,6 +200,8 @@ export function Step6Generate() {
         subjectAllocations,
         rooms,
         teacherAvailability: (store as any).teacherAvailability ?? {},
+        // Class-specific day-off rules from bell schedule step (e.g. Sat off for Nursery/LKG)
+        dayOffRules: (store as any).config?.dayOffRules ?? [],
       })
       solveMs = Date.now() - startedAt
 

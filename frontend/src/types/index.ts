@@ -975,6 +975,10 @@ export interface WizardConfig {
   timetableName: string
   timetableStartDate: string   // YYYY-MM-DD
   timetableEndDate: string     // YYYY-MM-DD
+
+  // Step 2 — class-specific day-off rules  (e.g. Saturday off for Nursery/LKG/UKG)
+  // day: short format ('Sat', 'Mon', …)  ·  classes: class keys ('nur', 'lkg', 'ukg', 'i', …)
+  dayOffRules?: Array<{ id: string; day: string; classes: string[] }>
 }
 
 export const defaultWizardConfig: WizardConfig = {

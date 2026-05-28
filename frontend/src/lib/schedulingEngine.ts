@@ -84,6 +84,12 @@ export interface SolverInput {
    *  'blocked' slots are treated as permanently busy — solver will never
    *  place a lesson there.  'preferred' slots get a soft scoring bonus. */
   teacherAvailability?: import('@/types').TeacherAvailability
+  /** Class-specific day-off rules from the bell schedule step.
+   *  e.g. [{ day: 'Sat', classes: ['nur', 'lkg', 'ukg'] }]
+   *  day:     short format ('Mon', 'Sat', …) mapped to UPPERCASE workDay keys.
+   *  classes: class-key prefixes ('nur', 'lkg', 'ukg', 'i', 'xi', …) —
+   *           matched against section names by case-insensitive prefix. */
+  dayOffRules?: Array<{ id?: string; day: string; classes: string[] }>
 }
 
 /** schedU Phase 6 — Auto-infer Optional Blocks from section strengths.
@@ -621,6 +627,47 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     }
   }
 
+  // ── Day-off rules: build per-section off-day set ──────────────────────────
+  // DayOffRule.day is short format ('Sat') → map to full uppercase ('SATURDAY')
+  // DayOffRule.classes are class-key prefixes — match section names by prefix.
+  const SHORT_TO_FULL: Record<string, string> = {
+    Mon: 'MONDAY', Tue: 'TUESDAY', Wed: 'WEDNESDAY',
+    Thu: 'THURSDAY', Fri: 'FRIDAY', Sat: 'SATURDAY', Sun: 'SUNDAY',
+  }
+  /**
+   * Returns true if sectionName belongs to the given class key.
+   * e.g. 'nur' matches 'Nursery-A', 'NURSERY-B'
+   *      'lkg' matches 'LKG-A', 'lkg-b'
+   *      'xi'  matches 'XI-Sci-A', 'XI-Arts'
+   */
+  const sectionMatchesClassKey = (sectionName: string, classKey: string): boolean => {
+    const sn  = sectionName.toLowerCase().replace(/[\s-]/g, '')
+    const ck  = classKey.toLowerCase()
+    if (ck === 'nur') return sn.startsWith('nur')
+    if (ck === 'lkg') return sn.startsWith('lkg')
+    if (ck === 'ukg') return sn.startsWith('ukg')
+    // For roman-numeral grade keys ('i', 'ii', …, 'xii'): the first
+    // hyphen/space segment of the section name must equal the key.
+    const firstSeg = sectionName.split(/[\s-]/)[0].toLowerCase()
+    return firstSeg === ck
+  }
+
+  // sectionOffDays: sectionName → Set of full-uppercase day names that are off
+  const sectionOffDays = new Map<string, Set<string>>()
+  if (input.dayOffRules?.length) {
+    sections.forEach(sec => {
+      const offSet = new Set<string>()
+      input.dayOffRules!.forEach(rule => {
+        const fullDay = SHORT_TO_FULL[rule.day] ?? rule.day.toUpperCase()
+        // If no classes specified → applies to ALL sections
+        if (rule.classes.length === 0 || rule.classes.some(ck => sectionMatchesClassKey(sec.name, ck))) {
+          offSet.add(fullDay)
+        }
+      })
+      if (offSet.size > 0) sectionOffDays.set(sec.name, offSet)
+    })
+  }
+
   // ── Phase 6: Auto-infer Optional Blocks from section strengths ──
   // If no manual blocks were authored AND a strength matrix is present,
   // derive blocks automatically. This is the new simplified flow.
@@ -667,13 +714,20 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       }
     }
 
-    // Place the multi-option cell in every section sharing this block
+    // Place the multi-option cell in every section sharing this block,
+    // unless that section is off on the block's day (day-off rule).
     block.sectionNames.forEach(secName => {
+      // Day-off check: don't place an optional block on a section's off-day
+      if (sectionOffDays.get(secName)?.has(block.day)) return
+
       if (!classTT[secName]) classTT[secName] = {}
       if (!classTT[secName][block.day]) classTT[secName][block.day] = {}
       classTT[secName][block.day][block.periodId] = {
         subject: block.options.map(o => o.subject).filter(Boolean).join(' / '),
-        teacher: block.options[0]?.teacher ?? '',
+        // teacher is left blank at the section level — real teacher info lives in
+        // the `options` array.  This prevents false double-booking conflicts when
+        // multiple sections share the same block (all got the same teacher field).
+        teacher: '',
         room: block.options[0]?.room ?? '',
         optionalBlockId: block.id,
         options: block.options,
@@ -710,6 +764,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     const ctSubject = ctSubjectRaw.replace(/.*::/, '')
 
     workDays.forEach(day => {
+      // Day-off rule: skip class-teacher assignment on off-days too
+      if (sectionOffDays.get(sec.name)?.has(day)) return
       const p = classPeriods[0]
       if (!p) return
       // Skip if Pass 0 already placed an optional block here
@@ -745,6 +801,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     const sorted = [...sectionSubjects].sort((a, b) => b.periodsPerWeek - a.periodsPerWeek)
 
     workDays.forEach((day, di) => {
+      // ── Day-off rule: skip this section on its off-days ─────────────────
+      if (sectionOffDays.get(sec.name)?.has(day)) return
+
       classPeriods.forEach((period, pi) => {
         if (pi === 0) return // already filled by class teacher pass
 
@@ -1001,14 +1060,21 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   })
 
   // ── Detect Hard Conflicts ──
+  // Uses the same optional-block-aware logic as the exported detectConflicts()
+  // to avoid false positives where multiple sections share one optional block.
   const conflicts: Conflict[] = []
   classPeriods.forEach(p => {
     workDays.forEach(day => {
       const teacherMap: Record<string, string> = {}
+      const blockSlotIds: Record<string, string> = {} // sec → optionalBlockId at this slot
       Object.entries(classTT).forEach(([sec, sd]) => {
-        const cell = sd[day]?.[p.id]
+        const cell = sd[day]?.[p.id] as any
+        if (cell?.optionalBlockId) blockSlotIds[sec] = cell.optionalBlockId
         if (cell?.teacher) {
           if (teacherMap[cell.teacher]) {
+            // Skip if both sections share the same optional block (intentional pooling)
+            const otherSec = teacherMap[cell.teacher]
+            if (blockSlotIds[sec] && blockSlotIds[otherSec] && blockSlotIds[sec] === blockSlotIds[otherSec]) return
             conflicts.push({
               type: 'double-booking',
               message: `${cell.teacher} double-booked: ${teacherMap[cell.teacher]} & ${sec} on ${day} ${p.name}`,

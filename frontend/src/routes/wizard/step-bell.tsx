@@ -1495,6 +1495,8 @@ export function StepBell() {
     setConfig({
       workDays: workDays.map(d => DAY_TO_FULL[d] ?? d.toUpperCase()),
       startTime, endTime, periodsPerDay: maxPeriods, defaultSessionDuration: periodDur,
+      // Persist class-specific day-off rules so the scheduling engine can honour them
+      dayOffRules: dayOffRules.length > 0 ? dayOffRules : undefined,
     } as any)
     setBreaks(displayRows.filter(r => r.type !== 'teaching').map(r => ({
       id: r.id, name: r.name, duration: r.duration, type: r.type as any, shiftable: r.type === 'short-break',
