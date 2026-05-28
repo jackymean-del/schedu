@@ -43,6 +43,27 @@ function getSectionClassKey(sectionName: string): string {
   return sectionName.split(/[\s-]/)[0].toLowerCase()
 }
 
+// ── Off-day set for a section ───────────────────────────────
+// Returns full-day names (e.g. 'SATURDAY') that are off for this section.
+const SHORT_TO_FULL_DAY: Record<string, string> = {
+  Mon: "MONDAY", Tue: "TUESDAY", Wed: "WEDNESDAY",
+  Thu: "THURSDAY", Fri: "FRIDAY", Sat: "SATURDAY", Sun: "SUNDAY",
+}
+function getSectionOffDays(
+  sectionName: string,
+  dayOffRules: Array<{day: string; classes: string[]}> | undefined,
+): Set<string> {
+  if (!dayOffRules?.length) return new Set()
+  const classKey = getSectionClassKey(sectionName)
+  const off = new Set<string>()
+  dayOffRules.forEach(rule => {
+    if (rule.classes.length === 0 || rule.classes.includes(classKey)) {
+      off.add(SHORT_TO_FULL_DAY[rule.day] ?? rule.day.toUpperCase())
+    }
+  })
+  return off
+}
+
 /**
  * Compute per-period start/end times for a specific section,
  * accounting for its class-wise break offsets.
@@ -375,6 +396,7 @@ export function TimetablePage() {
     const cwBreaks = (config as any).classwiseBreaks as Parameters<typeof buildClassPeriods>[2]
     const sectionPeriods = buildClassPeriods(sn, periods, cwBreaks)
     const sectionTimes   = calcSectionTimes(sn, cwBreaks, config, classPeriods) ?? periodTimes
+    const offDays        = getSectionOffDays(sn, (config as any).dayOffRules)
     return (
       <div>
         <SectionHeader name={sn} classTeacher={ctName} meta={`${config.workDays.length} days/week · ${classPeriods.length} periods/day`} />
@@ -388,32 +410,48 @@ export function TimetablePage() {
               ))}
             </tr></thead>
             <tbody>
-              {usedDays.map((day, di) => (
-                <tr key={day} style={{ background: di%2===0?"#fff":"#FAFAFE" }}>
-                  <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
-                  {sectionPeriods.map(p => {
-                    if (p.type !== "class") return <BreakCell key={p.id} p={p} />
-                    const cell = sd[day]?.[p.id]
-                    const isSub = !!substitutions[`${sn}|${day}|${p.id}`]
-                    const subTeacher = substitutions[`${sn}|${day}|${p.id}`]
-                    const cellKey = `${sn}|${day}|${p.id}`
-                    const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
-                    return (
-                      <SubjectCell key={p.id}
-                        subject={cell?.subject} teacher={cell?.teacher} room={cell?.room}
-                        isClassTeacher={cell?.isClassTeacher} isSub={isSub} subTeacher={subTeacher}
-                        showTeacher={showTeacher} showRoom={showRoom}
-                        absentHighlight={highlight}
-                        dragOver={dragOverCell === cellKey && !cell?.subject}
-                        onDragOver={() => !cell?.subject && setDragOverCell(cellKey)}
-                        onDrop={e => handleDrop(e, sn, day, p.id)}
-                        onDragLeave={() => setDragOverCell(null)}
-                        onClick={() => editMode ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
-                      />
-                    )
-                  })}
-                </tr>
-              ))}
+              {usedDays.map((day, di) => {
+                const isDayOff = offDays.has(day)
+                if (isDayOff) {
+                  return (
+                    <tr key={day} style={{ background: "#F9FAFB" }}>
+                      <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#9CA3AF", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
+                        {DAY_SHORT[day]??day.slice(0,3)}
+                        <span style={{ fontSize:9, fontWeight:400, marginLeft:4, color:"#D1D5DB" }}>off</span>
+                      </td>
+                      <td colSpan={sectionPeriods.length} style={{ background:"#F3F4F6", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D1D5DB", fontSize:11, fontStyle:"italic", padding:"10px 0" }}>
+                        — Day off —
+                      </td>
+                    </tr>
+                  )
+                }
+                return (
+                  <tr key={day} style={{ background: di%2===0?"#fff":"#FAFAFE" }}>
+                    <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#1e293b", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>{DAY_SHORT[day]??day.slice(0,3)}</td>
+                    {sectionPeriods.map(p => {
+                      if (p.type !== "class") return <BreakCell key={p.id} p={p} />
+                      const cell = sd[day]?.[p.id]
+                      const isSub = !!substitutions[`${sn}|${day}|${p.id}`]
+                      const subTeacher = substitutions[`${sn}|${day}|${p.id}`]
+                      const cellKey = `${sn}|${day}|${p.id}`
+                      const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
+                      return (
+                        <SubjectCell key={p.id}
+                          subject={cell?.subject} teacher={cell?.teacher} room={cell?.room}
+                          isClassTeacher={cell?.isClassTeacher} isSub={isSub} subTeacher={subTeacher}
+                          showTeacher={showTeacher} showRoom={showRoom}
+                          absentHighlight={highlight}
+                          dragOver={dragOverCell === cellKey && !cell?.subject}
+                          onDragOver={() => !cell?.subject && setDragOverCell(cellKey)}
+                          onDrop={e => handleDrop(e, sn, day, p.id)}
+                          onDragLeave={() => setDragOverCell(null)}
+                          onClick={() => editMode ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
+                        />
+                      )
+                    })}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -430,9 +468,10 @@ export function TimetablePage() {
     const section = sections.find(s => s.name === sn)
     const ctName = resolveTeacher(section?.classTeacher ?? "")
     const usedDays = config.workDays.filter(d => sd[d])
-    const cwBreaksT = (config as any).classwiseBreaks as Parameters<typeof buildClassPeriods>[2]
+    const cwBreaksT  = (config as any).classwiseBreaks as Parameters<typeof buildClassPeriods>[2]
     const sectionPeriodsT = buildClassPeriods(sn, periods, cwBreaksT)
     const sectionTimesT   = calcSectionTimes(sn, cwBreaksT, config, classPeriods) ?? periodTimes
+    const offDaysT        = getSectionOffDays(sn, (config as any).dayOffRules)
     return (
       <div>
         <SectionHeader name={sn} classTeacher={ctName} meta="Transposed view" />
@@ -440,9 +479,15 @@ export function TimetablePage() {
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:100, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Period</th>
-              {usedDays.map(day => (
-                <th key={day} style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"center", minWidth:90, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>{DAY_SHORT[day]??day.slice(0,3)}</th>
-              ))}
+              {usedDays.map(day => {
+                const isOff = offDaysT.has(day)
+                return (
+                  <th key={day} style={{ background: isOff ? "#4B5563" : "#1e293b", color: isOff ? "#9CA3AF" : "#fff", padding:"8px 12px", textAlign:"center", minWidth:90, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>
+                    {DAY_SHORT[day]??day.slice(0,3)}
+                    {isOff && <div style={{ fontSize:8, fontWeight:400, color:"#9CA3AF", marginTop:2 }}>off</div>}
+                  </th>
+                )
+              })}
             </tr></thead>
             <tbody>
               {sectionPeriodsT.map((p, pi) => {
@@ -455,6 +500,12 @@ export function TimetablePage() {
                       {times && <div style={{ fontSize:9, color:"#8B87AD" }}>{times.start} → {times.end}</div>}
                     </td>
                     {usedDays.map(day => {
+                      const isDayOff = offDaysT.has(day)
+                      if (isDayOff) {
+                        return (
+                          <td key={day} style={{ background:"#F3F4F6", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D1D5DB", fontSize:10, fontStyle:"italic", padding:4 }}>—</td>
+                        )
+                      }
                       if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
                       const cell = sd[day]?.[p.id]
                       const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
