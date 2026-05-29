@@ -611,9 +611,11 @@ export function TimetablePage() {
 
   // ── Keyboard shortcuts (Esc, Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo) ──
   // Use a ref so the effect doesn't re-register on every render
+  const undoPillRef = useRef<HTMLDivElement>(null)
   const kbRef = useRef({ classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
+    setShowUndoRedo,
   })
   kbRef.current = { classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
@@ -661,6 +663,21 @@ export function TimetablePage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, []) // intentionally empty — we use kbRef for fresh values
+
+  // ── Dismiss undo/redo pill on Escape or click outside the pill ────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowUndoRedo(false) }
+    const onMouse = (e: MouseEvent) => {
+      if (undoPillRef.current && !undoPillRef.current.contains(e.target as Node))
+        setShowUndoRedo(false)
+    }
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onMouse)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onMouse)
+    }
+  }, []) // stable: setShowUndoRedo is a stable setter, undoPillRef is a stable ref
 
   // ── isDragging — true while any drag is active ───────────
   const isDragging = !!poolDragItem || !!dragItem
@@ -2045,7 +2062,7 @@ export function TimetablePage() {
         </div>
 
         {/* Timetable content */}
-        <div onClick={() => setShowUndoRedo(false)}
+        <div
           style={{ flex:1, overflowY: viewMode === "calendar" ? "hidden" : "auto", padding:20, display: viewMode === "calendar" ? "flex" : "block", flexDirection: "column" as const, position:"relative" as const }}>
 
           {/* ── Floating undo/redo pill — appears on change, hides on click/Escape ── */}
@@ -2056,7 +2073,7 @@ export function TimetablePage() {
               pointerEvents:"none",
               marginBottom:8,
             }}>
-              <div onClick={e => e.stopPropagation()}
+              <div ref={undoPillRef}
                 style={{
                 display:"inline-flex", alignItems:"center", gap:2,
                 background:"rgba(255,255,255,0.88)", backdropFilter:"blur(8px)",
