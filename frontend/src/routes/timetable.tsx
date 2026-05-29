@@ -484,6 +484,41 @@ export function TimetablePage() {
     setTeacherTT(ntt)
   }
 
+  // ── Auto-assign helpers for pool drops ──────────────────────
+  /** Pick the best available teacher for a given subject+section+day+period.
+   *  Mirrors the eligibility + availability logic from the scheduling engine. */
+  const pickBestTeacher = (sectionName: string, subjectName: string, day: string, periodId: string): string => {
+    const sectionKey = `${sectionName}::${subjectName}`
+    const sec = sections.find(s => s.name === sectionName)
+    const gradeKey = (sec as any)?.grade ? `${(sec as any).grade}::${subjectName}` : ''
+
+    const isEligible = (st: typeof staff[0]): boolean => {
+      const subs: string[] = (st as any).subjects ?? []
+      if (!subs.length) return false
+      if (subs.some(s => s.includes('::')))
+        return subs.some(s => s === sectionKey || (gradeKey !== '' && s === gradeKey))
+      return subs.includes(subjectName)
+    }
+
+    const isBusy = (name: string): boolean =>
+      sections.some(s => classTT[s.name]?.[day]?.[periodId]?.teacher === name)
+
+    let candidates = staff.filter(st => isEligible(st) && !isBusy(st.name))
+    if (!candidates.length)
+      candidates = staff.filter(st => ((st as any).subjects ?? [] as string[]).includes(subjectName) && !isBusy(st.name))
+    if (!candidates.length) return ""
+
+    const loadToday = (st: typeof staff[0]) =>
+      sections.reduce((n, s) =>
+        n + Object.values(classTT[s.name]?.[day] ?? {})
+          .filter((c: any) => c?.teacher === st.name).length, 0)
+    return candidates.reduce((best, st) => loadToday(st) < loadToday(best) ? st : best).name
+  }
+
+  /** Return the section's home-room property, falling back to "" */
+  const pickHomeRoom = (sectionName: string): string =>
+    (sections.find(s => s.name === sectionName) as any)?.room ?? ""
+
   // ── DnD handlers ──
   const handleDragStart = (e: React.DragEvent, item: {section:string;day:string;periodId:string}) => {
     setDragItem(item)
@@ -501,10 +536,12 @@ export function TimetablePage() {
       }
       const existingSubject = classTT[section]?.[day]?.[periodId]?.subject
       if (!existingSubject) {
+        const teacher = pickBestTeacher(section, poolDragItem.subject, day, periodId)
+        const room    = pickHomeRoom(section)
         const newTT = { ...classTT }
         newTT[section] = { ...newTT[section] }
         newTT[section][day] = { ...(newTT[section][day] ?? {}) }
-        newTT[section][day][periodId] = { subject: poolDragItem.subject }
+        newTT[section][day][periodId] = { subject: poolDragItem.subject, teacher, room }
         setClassTT(newTT)
       }
       setPoolDragItem(null)
@@ -1278,12 +1315,14 @@ export function TimetablePage() {
           if (editMode) setEditTarget({ section, day, periodId })
         }}
         onCellFill={(section, day, periodId, suggestedSubject) => {
-          // Direct save — no modal; only fill truly empty cells
+          // Direct save — no modal; auto-assign teacher + home room
           if (!classTT[section]?.[day]?.[periodId]?.subject) {
+            const teacher = pickBestTeacher(section, suggestedSubject, day, periodId)
+            const room    = pickHomeRoom(section)
             const newTT = { ...classTT }
             newTT[section] = { ...newTT[section] }
             newTT[section][day] = { ...(newTT[section][day] ?? {}) }
-            newTT[section][day][periodId] = { subject: suggestedSubject }
+            newTT[section][day][periodId] = { subject: suggestedSubject, teacher, room }
             setClassTT(newTT)
           }
         }}
