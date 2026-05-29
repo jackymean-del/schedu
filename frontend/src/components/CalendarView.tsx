@@ -38,6 +38,7 @@ export interface CalendarViewProps {
   showTeacher: boolean
   showRoom: boolean
   onCellClick?: (section: string, day: string, periodId: string) => void
+  onCellSwap?: (from: {section:string, day:string, periodId:string}, to: {section:string, day:string, periodId:string}) => void
   absentHighlights?: Array<{ teacher: string; day: string }>
   /** Optional: solver-emitted reasons for empty cells.
    *  When present, empty cells get a clickable ? icon → reasons popover. */
@@ -284,7 +285,7 @@ export function CalendarView({
   staff, sections, subjects, substitutions,
   viewMode, selectedEntity,
   showTeacher, showRoom,
-  onCellClick, absentHighlights, blockedSlots,
+  onCellClick, onCellSwap, absentHighlights, blockedSlots,
   dynamicLearningGroups, rooms,
 }: CalendarViewProps) {
 
@@ -303,6 +304,10 @@ export function CalendarView({
   const [calMode, setCalMode] = useState<CalMode>("week")
   // Calendar manages its own transpose — defaults to true (transposed = periods as columns)
   const [transposed, setTransposed] = useState(true)
+
+  // Drag-and-drop state for cell swapping
+  const [dragFrom, setDragFrom] = useState<{section:string, day:string, periodId:string} | null>(null)
+  const [dragOverCell, setDragOverCell] = useState<string|null>(null)
 
   const today = new Date()
   const classPeriods = periods.filter(p => p.type === "class")
@@ -441,12 +446,17 @@ export function CalendarView({
       : sections
 
     return (
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>
+      <div style={{ flex: 1, overflow: "auto" }}>
         <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" as const }}>
-          <thead>
+          <colgroup>
+            <col style={{ width: '72px' }} />
+            <col style={{ width: '62px' }} />
+            {visibleDays.map(d => <col key={DOW_KEY[d.getDay()]} />)}
+          </colgroup>
+          <thead style={{ position: 'sticky' as const, top: 0, zIndex: 5 }}>
             <tr>
-              <th style={{ width: 78, background: "#7C6FE0", color: "#fff", padding: "8px 6px", fontSize: 10, fontWeight: 800, border: "1px solid #9B8EF5", letterSpacing: "0.06em" }}>Class</th>
-              <th style={{ width: 68, background: "#7C6FE0", color: "#fff", padding: "8px 6px", fontSize: 10, fontWeight: 700, border: "1px solid #9B8EF5" }}>Time</th>
+              <th style={{ width: 72, background: "#7C6FE0", color: "#fff", padding: "8px 6px", fontSize: 10, fontWeight: 800, border: "1px solid #9B8EF5", letterSpacing: "0.06em" }}>Class</th>
+              <th style={{ width: 62, background: "#7C6FE0", color: "#fff", padding: "8px 6px", fontSize: 10, fontWeight: 700, border: "1px solid #9B8EF5" }}>Time</th>
               {visibleDays.map(d => {
                 const dayKey = DOW_KEY[d.getDay()]
                 const todayFlag = isToday(d)
@@ -457,7 +467,7 @@ export function CalendarView({
                       background: todayFlag ? "#D4920E" : "#7C6FE0",
                       color: "#fff", border: "1px solid #9B8EF5",
                       padding: "8px 10px", fontSize: 11, fontWeight: 700,
-                      textAlign: "center" as const, minWidth: 110,
+                      textAlign: "center" as const,
                       outline: absentFlag ? "2px solid #F5A623" : "none",
                       outlineOffset: -2,
                     }}
@@ -474,7 +484,7 @@ export function CalendarView({
           <tbody>
             {visibleClasses.flatMap((sec, sIdx) => {
               const classBg = sIdx % 2 === 0 ? "#FAFAFE" : "#FFFFFF"
-              return periods.map((p, pi) => {
+              const periodRows = periods.map((p, pi) => {
                 const times = periodTimes.get(p.id)
                 const isBreak = p.type !== "class"
                 const breakBg = p.type === "lunch" ? "#FEF3C7" : p.type === "fixed-start" ? "#EDE9FF" : p.type === "fixed-end" ? "#EDE9FF" : "#FEFCE8"
@@ -521,8 +531,16 @@ export function CalendarView({
                       const subKey = `${sec.name}|${dayKey}|${p.id}`
                       const isSub = !!substitutions[subKey]
                       const subTeacher = substitutions[subKey]
+                      const cellDragKey = `${sec.name}|${dayKey}|${p.id}`
+                      const isDragOver = dragOverCell === cellDragKey
                       return (
-                        <td key={dayKey} style={{ border: "1px solid #E8E4FF", padding: 3, verticalAlign: "top" as const, background: teacherAbsent ? "#FFFBEB" : undefined, position: "relative" as const }}>
+                        <td key={dayKey}
+                          draggable={!!cell?.subject}
+                          onDragStart={cell?.subject ? () => setDragFrom({section: sec.name, day: dayKey, periodId: p.id}) : undefined}
+                          onDragOver={e => { e.preventDefault(); setDragOverCell(cellDragKey) }}
+                          onDragLeave={() => setDragOverCell(null)}
+                          onDrop={() => { setDragOverCell(null); if (dragFrom) { onCellSwap?.(dragFrom, {section: sec.name, day: dayKey, periodId: p.id}); setDragFrom(null) } }}
+                          style={{ border: isDragOver ? "2px dashed #7C6FE0" : "1px solid #E8E4FF", padding: 3, verticalAlign: "top" as const, background: teacherAbsent ? "#FFFBEB" : isDragOver ? "#EDE9FF" : undefined, position: "relative" as const, cursor: cell?.subject ? "grab" : "default" }}>
                           {/* DLG icon overlay — top-right when cell is part of a DLG */}
                           {cell?.subject && (() => {
                             const dlgs = dlgMap.get(`${sec.name}|${dayKey}|${p.id}`)
@@ -563,6 +581,15 @@ export function CalendarView({
                   </tr>
                 )
               })
+              // Insert divider row after this class (except after the last one)
+              if (sIdx < visibleClasses.length - 1) {
+                periodRows.push(
+                  <tr key={`divider-${sec.name}`}>
+                    <td colSpan={2 + visibleDays.length} style={{ height: 3, background: '#7C6FE0', padding: 0, border: 'none' }} />
+                  </tr>
+                )
+              }
+              return periodRows
             })}
           </tbody>
         </table>
@@ -580,18 +607,33 @@ export function CalendarView({
       : sections
 
     return (
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
+      <div style={{ flex: 1, overflow: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" as const }}>
+          <colgroup>
+            <col style={{ width: '72px' }} />
+            <col style={{ width: '62px' }} />
+            {periods.map(p => p.type !== 'class'
+              ? <col key={p.id} style={{ width: '46px' }} />
+              : <col key={p.id} />
+            )}
+          </colgroup>
+          <thead style={{ position: 'sticky' as const, top: 0, zIndex: 5 }}>
             <tr>
-              <th style={{ width: 78, background: "#7C6FE0", color: "#fff", border: "1px solid #9B8EF5", padding: "8px 6px", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em" }}>Class</th>
-              <th style={{ width: 90, background: "#7C6FE0", color: "#fff", border: "1px solid #9B8EF5", padding: "8px 6px", fontSize: 10, fontWeight: 700 }}>Day</th>
+              <th style={{ background: "#7C6FE0", color: "#fff", border: "1px solid #9B8EF5", padding: "8px 6px", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em" }}>Class</th>
+              <th style={{ background: "#7C6FE0", color: "#fff", border: "1px solid #9B8EF5", padding: "8px 6px", fontSize: 10, fontWeight: 700 }}>Day</th>
               {periods.map(p => {
                 const times = periodTimes.get(p.id)
                 const isBreak = p.type !== "class"
-                const bg = isBreak ? "#9B8EF5" : "#7C6FE0"
+                if (isBreak) {
+                  return (
+                    <th key={p.id} style={{ background: '#9B8EF5', color: '#FEF3C7', border: '1px solid #9B8EF5', padding: '4px 2px', fontSize: 9, fontWeight: 700, textAlign: 'center' as const }}>
+                      <div>{p.type === 'lunch' ? '🍽' : '☕'}</div>
+                      {times && <div style={{ fontSize: 7, opacity: 0.85, fontFamily: "'DM Mono', monospace" }}>{fmtTime(times.start, timeFormat)}</div>}
+                    </th>
+                  )
+                }
                 return (
-                  <th key={p.id} style={{ background: bg, color: isBreak ? "#FEF3C7" : "#fff", border: "1px solid #9B8EF5", padding: "6px 8px", fontSize: 10, fontWeight: 700, minWidth: isBreak ? 56 : 110, textAlign: "center" as const }}>
+                  <th key={p.id} style={{ background: '#7C6FE0', color: '#fff', border: '1px solid #9B8EF5', padding: '6px 4px', fontSize: 10, fontWeight: 700, textAlign: 'center' as const }}>
                     <div>{p.name}</div>
                     {times && <div style={{ fontSize: 8, opacity: 0.75, fontWeight: 400 }}>{fmtTime(times.start, timeFormat)}</div>}
                   </th>
@@ -602,7 +644,7 @@ export function CalendarView({
           <tbody>
             {visibleClasses.flatMap((sec, sIdx) => {
               const classBg = sIdx % 2 === 0 ? "#FAFAFE" : "#FFFFFF"
-              return visibleDays.map((d, di) => {
+              const dayRows = visibleDays.map((d, di) => {
                 const dayKey = DOW_KEY[d.getDay()]
                 const todayFlag = isToday(d)
                 const absentFlag = absentHighlights?.some(h => h.day === dayKey)
@@ -643,7 +685,7 @@ export function CalendarView({
                         const breakColor = p.type === "lunch" ? "#92400E" : "#854D0E"
                         return (
                           <td key={p.id} style={{ border: "1px solid #E8E4FF", textAlign: "center" as const, fontSize: 9, color: breakColor, fontStyle: "italic", padding: 4, background: breakBg }}>
-                            {p.name}
+                            {p.type === 'lunch' ? '🍽' : '☕'}
                           </td>
                         )
                       }
@@ -652,8 +694,16 @@ export function CalendarView({
                       const subKey = `${sec.name}|${dayKey}|${p.id}`
                       const isSub = !!substitutions[subKey]
                       const subTeacher = substitutions[subKey]
+                      const cellDragKey = `${sec.name}|${dayKey}|${p.id}`
+                      const isDragOver = dragOverCell === cellDragKey
                       return (
-                        <td key={p.id} style={{ border: "1px solid #E8E4FF", padding: 3, verticalAlign: "top" as const, background: teacherAbsent ? "#FFFBEB" : undefined, position: "relative" as const }}>
+                        <td key={p.id}
+                          draggable={!!cell?.subject}
+                          onDragStart={cell?.subject ? () => setDragFrom({section: sec.name, day: dayKey, periodId: p.id}) : undefined}
+                          onDragOver={e => { e.preventDefault(); setDragOverCell(cellDragKey) }}
+                          onDragLeave={() => setDragOverCell(null)}
+                          onDrop={() => { setDragOverCell(null); if (dragFrom) { onCellSwap?.(dragFrom, {section: sec.name, day: dayKey, periodId: p.id}); setDragFrom(null) } }}
+                          style={{ border: isDragOver ? "2px dashed #7C6FE0" : "1px solid #E8E4FF", padding: 3, verticalAlign: "top" as const, background: teacherAbsent ? "#FFFBEB" : isDragOver ? "#EDE9FF" : undefined, position: "relative" as const, cursor: cell?.subject ? "grab" : "default" }}>
                           {/* DLG icon overlay — top-right when cell is part of a DLG */}
                           {cell?.subject && (() => {
                             const dlgs = dlgMap.get(`${sec.name}|${dayKey}|${p.id}`)
@@ -694,6 +744,15 @@ export function CalendarView({
                   </tr>
                 )
               })
+              // Insert divider row after this class (except after the last one)
+              if (sIdx < visibleClasses.length - 1) {
+                dayRows.push(
+                  <tr key={`divider-${sec.name}`}>
+                    <td colSpan={2 + periods.length} style={{ height: 3, background: '#7C6FE0', padding: 0, border: 'none' }} />
+                  </tr>
+                )
+              }
+              return dayRows
             })}
           </tbody>
         </table>
@@ -710,7 +769,7 @@ export function CalendarView({
     const todayFlag = isToday(date)
 
     return (
-      <div style={{ flex: 1, overflowY: "auto", maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ flex: 1, overflow: "auto", maxWidth: 600, margin: "0 auto" }}>
         {!isWorkDay && (
           <div style={{ padding: 40, textAlign: "center" as const, color: "#FFFFFF", fontSize: 14 }}>
             <div style={{ fontSize: 32 }}>🏖️</div>
@@ -719,7 +778,7 @@ export function CalendarView({
         )}
         {isWorkDay && (
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead>
+            <thead style={{ position: 'sticky' as const, top: 0, zIndex: 5 }}>
               <tr>
                 <th style={{ width: 90, background: "#7C6FE0", color: "#FFFFFF", border: "1px solid #374151", padding: "8px 6px", fontSize: 10, fontWeight: 600 }}>Time</th>
                 <th style={{
@@ -792,9 +851,9 @@ export function CalendarView({
     if (!isWorkDay) return renderDayNormal(date)
 
     return (
-      <div style={{ flex: 1, overflowX: "auto", overflowY: "auto" }}>
+      <div style={{ flex: 1, overflow: "auto" }}>
         <table style={{ borderCollapse: "collapse" }}>
-          <thead>
+          <thead style={{ position: 'sticky' as const, top: 0, zIndex: 5 }}>
             <tr>
               {periods.map(p => {
                 const times = periodTimes.get(p.id)

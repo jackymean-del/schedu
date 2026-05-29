@@ -359,7 +359,7 @@ export function TimetablePage() {
     showTeacher, showRoom, editMode,
     timetableStatus, setTimetableStatus,
     setShowTeacher, setShowRoom, setEditMode,
-    setPeriods, setTeacherTT, setSubstitutions,
+    setPeriods, setClassTT, setTeacherTT, setSubstitutions,
   } = store
 
   const [editTarget, setEditTarget] = useState<{section:string;day:string;periodId:string}|null>(null)
@@ -1197,6 +1197,41 @@ export function TimetablePage() {
         rooms={(store as any).rooms ?? []}
         onCellClick={(section, day, periodId) => {
           if (editMode) setEditTarget({ section, day, periodId })
+        }}
+        onCellSwap={(from, to) => {
+          // Get the two cells
+          const fromCell = classTT[from.section]?.[from.day]?.[from.periodId]
+          const toCell = classTT[to.section]?.[to.day]?.[to.periodId]
+
+          const fromTeacher = fromCell?.teacher
+          const toTeacher = toCell?.teacher
+
+          // Check fromCell teacher conflict at destination slot
+          const fromConflict = fromTeacher && sections.some(sec =>
+            sec.name !== from.section &&
+            sec.name !== to.section &&
+            classTT[sec.name]?.[to.day]?.[to.periodId]?.teacher === fromTeacher
+          )
+          const toConflict = toTeacher && sections.some(sec =>
+            sec.name !== from.section &&
+            sec.name !== to.section &&
+            classTT[sec.name]?.[from.day]?.[from.periodId]?.teacher === toTeacher
+          )
+
+          if (fromConflict || toConflict) return // conflict — don't swap
+
+          // Perform the swap
+          const newTT = { ...classTT }
+          newTT[from.section] = { ...newTT[from.section] }
+          newTT[from.section][from.day] = { ...newTT[from.section][from.day] }
+          newTT[to.section] = { ...newTT[to.section] }
+          newTT[to.section][to.day] = { ...newTT[to.section][to.day] }
+
+          const temp = newTT[from.section][from.day][from.periodId]
+          newTT[from.section][from.day][from.periodId] = newTT[to.section][to.day][to.periodId]
+          newTT[to.section][to.day][to.periodId] = temp
+
+          setClassTT(newTT)
         }}
         absentHighlights={absentHL ? [absentHL] : []}
       />
