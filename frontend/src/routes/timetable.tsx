@@ -728,7 +728,7 @@ export function TimetablePage() {
       const newTT = { ...classTT }
       newTT[section] = { ...newTT[section] }
       newTT[section][day] = { ...(newTT[section][day] ?? {}) }
-      newTT[section][day][periodId] = { subject: poolDragItem.subject, teacher: teacher || null, room }
+      newTT[section][day][periodId] = { subject: poolDragItem.subject, teacher: teacher || "", room }
       commitTT(newTT)
       setPoolDragItem(null)
       return
