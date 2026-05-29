@@ -291,7 +291,7 @@ function DetailPanel({d,tf,onClose,onEdit}:{
           {!isBreak && (
             <div style={{
               display:"inline-block", borderRadius:4, padding:"2px 9px",
-              background:col.bg, color:col.text,
+              background:col.bg, color:col.accent,
               fontSize:10, fontWeight:700, marginBottom:6,
             }}>{block.subject}</div>
           )}
@@ -1112,7 +1112,7 @@ export function CalendarView({
                     {evts.slice(0,3).map((ev,i)=>(
                       <div key={i} style={{
                         borderRadius:3, padding:"1px 4px",
-                        background:ev.col.bg, color:ev.col.text,
+                        background:ev.col.bg, color:ev.col.accent,
                         fontSize:8, fontWeight:700,
                         overflow:"hidden", textOverflow:"ellipsis" as const, whiteSpace:"nowrap" as const,
                       }}>{ev.subject}</div>
