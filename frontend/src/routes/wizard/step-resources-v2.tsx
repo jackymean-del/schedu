@@ -335,13 +335,25 @@ export function StepResourcesV2() {
   }
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
+  // Convert any legacy kebab-case roomType values that were saved by older code
+  // e.g. 'computer-lab' → 'Computer Lab', 'staff-room' → 'Staff Room'
+  const KEBAB_TO_ROOM_TYPE: Record<string, string> = {
+    'classroom': 'Classroom', 'lab': 'Lab', 'computer-lab': 'Computer Lab',
+    'library': 'Library', 'hall': 'Hall', 'gym': 'Gym',
+    'staff-room': 'Staff Room', 'staff room': 'Staff Room', 'other': 'Other',
+  }
+  function normalizeRoomType(raw: string | undefined): string {
+    if (!raw) return 'Classroom'
+    return KEBAB_TO_ROOM_TYPE[raw.toLowerCase()] ?? raw
+  }
+
   const [rooms, setRoomsLocal] = useState<RoomExt[]>(() => {
     const stored = store.rooms ?? []
     if (Array.isArray(stored) && stored.length > 0) {
       return stored.map((r: any) => ({
         id:              r.id ?? makeId(),
         name:            r.actualName ?? r.name ?? r.generatedName ?? 'Room',
-        type:            r.roomType ?? r.type ?? 'Classroom',
+        type:            normalizeRoomType(r.roomType ?? r.type),
         capacity:        r.capacity ?? 40,
         building:        r.building ?? 'Main Block',
         floor:           r.floor ?? 'Ground',
@@ -357,7 +369,7 @@ export function StepResourcesV2() {
     setRoomsLocal(next)
     store.setRooms?.(next.map(r => ({
       id: r.id, generatedName: r.name, actualName: r.name,
-      roomType: r.type.toLowerCase().replace(/ /g, '-') || 'classroom',
+      roomType: r.type,   // store as Title Case — no kebab conversion
       capacity: r.capacity, subjectMappings: r.subjectMappings,
       notes: r.notes, scope: r.scope,
     })))
@@ -366,7 +378,7 @@ export function StepResourcesV2() {
   useEffect(() => {
     store.setRooms?.(rooms.map(r => ({
       id: r.id, generatedName: r.name, actualName: r.name,
-      roomType: r.type.toLowerCase().replace(/ /g, '-') || 'classroom',
+      roomType: r.type,   // store as Title Case — no kebab conversion
       capacity: r.capacity, subjectMappings: r.subjectMappings,
       notes: r.notes, scope: r.scope,
     })))
