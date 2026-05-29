@@ -549,11 +549,10 @@ export function TimetablePage() {
   // Entity options per view
   const getEntityList = (): string[] => {
     switch (viewMode) {
-      case "class":    return ["ALL", ...sections.map(s => s.name)]
-      case "teacher":  return ["ALL", ...staff.map(s => s.name)]
-      case "subject":  return ["ALL", ...subjects.map(s => s.name)]
-      case "room":     return ["ALL", ...allRooms]
-      case "calendar": return ["ALL", ...sections.map(s => s.name), ...staff.map(s => s.name)]
+      case "class":   return ["ALL", ...sections.map(s => s.name)]
+      case "teacher": return ["ALL", ...staff.map(s => s.name)]
+      case "subject": return ["ALL", ...subjects.map(s => s.name)]
+      case "room":    return ["ALL", ...allRooms]
     }
   }
 
