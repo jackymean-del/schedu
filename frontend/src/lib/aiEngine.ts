@@ -97,16 +97,42 @@ function isTeacherBusy(
 }
 
 // ─── Find Available Teacher ───────────────────────────────
+// Priority ladder (each step only reached if the previous yields nothing):
+//  1. Subject-match  + not double-booked  + under maxPeriodsPerWeek  → least-loaded first
+//  2. Subject-match  + not double-booked  (at/over limit — spread the overload evenly)
+//  3. Any staff      + not double-booked  + under maxPeriodsPerWeek
+//  4. Any staff      + not double-booked  (unavoidable double-book — least loaded)
+//  5. Any staff (last resort — generates a conflict)
 function findTeacher(
   subjectName: string, day: string, periodId: string,
-  staff: Staff[], classTT: ClassTimetable
+  staff: Staff[], classTT: ClassTimetable,
+  teacherLoad: Record<string, number>
 ): string {
-  const candidates = staff.filter(s => s.subjects.includes(subjectName))
-  const available = candidates.filter(s => !isTeacherBusy(s.name, day, periodId, classTT))
-  if (available.length) return available[0].name
-  if (candidates.length) return candidates[0].name
-  const free = staff.filter(s => !isTeacherBusy(s.name, day, periodId, classTT))
-  return free[0]?.name ?? (staff[0]?.name ?? '')
+  const notBusy  = (s: Staff) => !isTeacherBusy(s.name, day, periodId, classTT)
+  const underCap = (s: Staff) => (teacherLoad[s.name] ?? 0) < s.maxPeriodsPerWeek
+  const byLoad   = (a: Staff, b: Staff) =>
+    (teacherLoad[a.name] ?? 0) - (teacherLoad[b.name] ?? 0)
+
+  const subMatch = staff.filter(s => s.subjects.includes(subjectName))
+
+  // 1. Ideal: subject match + free slot + room in budget
+  const ideal = subMatch.filter(s => notBusy(s) && underCap(s))
+  if (ideal.length) return ideal.sort(byLoad)[0].name
+
+  // 2. Subject match + free slot (spread overload as evenly as possible)
+  const subFree = subMatch.filter(notBusy)
+  if (subFree.length) return subFree.sort(byLoad)[0].name
+
+  // 3. Any staff + free slot + under capacity
+  const anyUnder = staff.filter(s => notBusy(s) && underCap(s))
+  if (anyUnder.length) return anyUnder.sort(byLoad)[0].name
+
+  // 4. Any staff + free slot
+  const anyFree = staff.filter(notBusy)
+  if (anyFree.length) return anyFree.sort(byLoad)[0].name
+
+  // 5. Last resort — will register as a double-booking conflict
+  return [...staff].sort(byLoad)[0]?.name ?? ''
 }
 
 // ─── Main AI Generate ─────────────────────────────────────
@@ -126,6 +152,15 @@ export function generateTimetable(
 
   const classPeriods = periods.filter(p => p.type === 'class')
 
+  // ── Teacher load tracker: running count of periods assigned this generation ──
+  // Used by findTeacher to avoid exceeding maxPeriodsPerWeek.
+  const teacherLoad: Record<string, number> = {}
+  staff.forEach(s => { teacherLoad[s.name] = 0 })
+
+  // ── Subject-per-section-per-day tracker: avoid repeating a subject on the same day ──
+  const subjectDayCount: Record<string, number> = {}
+  // key = `${sectionName}|${day}|${subjectName}`
+
   sections.forEach((sec, si) => {
     classTT[sec.name] = {}
     workDays.forEach((day, di) => {
@@ -143,23 +178,41 @@ export function generateTimetable(
             room: sec.room,
             isClassTeacher: true,
           }
+          // Count this period toward the class teacher's load
+          teacherLoad[ctName] = (teacherLoad[ctName] ?? 0) + 1
           return
         }
 
-        // Rotate subjects for variety
-        const subIdx = (si * 7 + di * 3 + pi * 2) % Math.max(1, subjects.length)
-        const subject = subjects[subIdx] ?? subjects[0]
+        // ── Pick a subject, rotating for variety but avoiding same-day repeats ──
+        const totalSubs = Math.max(1, subjects.length)
+        let subject = subjects[(si * 7 + di * 3 + pi * 2) % totalSubs] ?? subjects[0]
         if (!subject) {
           classTT[sec.name][day][p.id] = { subject: '', teacher: '', room: '' }
           return
         }
 
-        const teacher = findTeacher(subject.name, day, p.id, staff, classTT)
+        // Try to avoid the same subject appearing more than twice in a single day
+        // for this section — rotate through alternatives if needed
+        const dayKey = (sub: Subject) => `${sec.name}|${day}|${sub.name}`
+        const maxSameDay = (subject as any).maxPeriodsPerDay ?? 2
+        if ((subjectDayCount[dayKey(subject)] ?? 0) >= maxSameDay) {
+          const alt = subjects.find(s =>
+            s.name !== subject!.name &&
+            (subjectDayCount[`${sec.name}|${day}|${s.name}`] ?? 0) < ((s as any).maxPeriodsPerDay ?? 2)
+          )
+          if (alt) subject = alt
+        }
+
+        const teacher = findTeacher(subject.name, day, p.id, staff, classTT, teacherLoad)
         classTT[sec.name][day][p.id] = {
           subject: subject.name,
           teacher,
           room: sec.room,
         }
+
+        // Track load and subject-day usage
+        if (teacher) teacherLoad[teacher] = (teacherLoad[teacher] ?? 0) + 1
+        subjectDayCount[dayKey(subject)] = (subjectDayCount[dayKey(subject)] ?? 0) + 1
       })
     })
   })
@@ -175,7 +228,7 @@ export function generateTimetable(
   })
 
   rebuildTeacherTT(classTT, teacherTT, workDays)
-  const conflicts = detectConflicts(classTT, classPeriods, workDays)
+  const conflicts = detectConflicts(classTT, classPeriods, workDays, staff)
 
   return { classTT, teacherTT, conflicts }
 }
@@ -262,9 +315,12 @@ export function shiftPeriod(
 export function detectConflicts(
   classTT: ClassTimetable,
   classPeriods: Period[],
-  workDays: string[]
+  workDays: string[],
+  staff?: Staff[]
 ): Conflict[] {
   const conflicts: Conflict[] = []
+
+  // ── 1. Double-booking: same teacher in two sections at the same slot ──
   classPeriods.forEach(p => {
     workDays.forEach(day => {
       const teacherMap: Record<string, string> = {}
@@ -286,6 +342,31 @@ export function detectConflicts(
       })
     })
   })
+
+  // ── 2. Overload: teacher assigned more periods than maxPeriodsPerWeek ──
+  if (staff?.length) {
+    const totalLoad: Record<string, number> = {}
+    Object.values(classTT).forEach(sectionData => {
+      Object.values(sectionData).forEach(dayData => {
+        Object.values(dayData).forEach(cell => {
+          if (cell?.teacher) totalLoad[cell.teacher] = (totalLoad[cell.teacher] ?? 0) + 1
+        })
+      })
+    })
+    staff.forEach(st => {
+      const load = totalLoad[st.name] ?? 0
+      if (load > st.maxPeriodsPerWeek) {
+        conflicts.push({
+          type: 'overload',
+          message: `${st.name} is overloaded: ${load}/${st.maxPeriodsPerWeek} periods assigned`,
+          teacher: st.name,
+          day: '',
+          period: '',
+        })
+      }
+    })
+  }
+
   return conflicts
 }
 
