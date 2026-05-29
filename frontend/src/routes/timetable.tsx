@@ -492,10 +492,21 @@ export function TimetablePage() {
   const handleDrop = (e: React.DragEvent, section:string, day:string, periodId:string) => {
     e.preventDefault()
     setDragOverCell(null)
-    // Pool drag takes priority
+    // Pool drag takes priority — save directly without opening modal
     if (poolDragItem) {
-      setPoolSuggestSubject(poolDragItem.subject)
-      setEditTarget({ section, day, periodId })
+      // Guard: only allow dropping on the chip's own section
+      if (poolDragItem.section !== section) {
+        setPoolDragItem(null)
+        return
+      }
+      const existingSubject = classTT[section]?.[day]?.[periodId]?.subject
+      if (!existingSubject) {
+        const newTT = { ...classTT }
+        newTT[section] = { ...newTT[section] }
+        newTT[section][day] = { ...(newTT[section][day] ?? {}) }
+        newTT[section][day][periodId] = { subject: poolDragItem.subject }
+        setClassTT(newTT)
+      }
       setPoolDragItem(null)
       return
     }
@@ -1267,8 +1278,14 @@ export function TimetablePage() {
           if (editMode) setEditTarget({ section, day, periodId })
         }}
         onCellFill={(section, day, periodId, suggestedSubject) => {
-          setPoolSuggestSubject(suggestedSubject)
-          setEditTarget({ section, day, periodId })
+          // Direct save — no modal; only fill truly empty cells
+          if (!classTT[section]?.[day]?.[periodId]?.subject) {
+            const newTT = { ...classTT }
+            newTT[section] = { ...newTT[section] }
+            newTT[section][day] = { ...(newTT[section][day] ?? {}) }
+            newTT[section][day][periodId] = { subject: suggestedSubject }
+            setClassTT(newTT)
+          }
         }}
         onCellSwap={(from, to) => {
           // Get the two cells
@@ -1347,7 +1364,7 @@ export function TimetablePage() {
 
       {/* Hint */}
       <div style={{ padding:"7px 12px", background:"#F5F2FF", borderBottom:"1px solid #E8E4FF", fontSize:10, color:"#7C6FE0", lineHeight:1.4 }}>
-        Drag a chip onto any empty cell · Edit modal opens pre-filled
+        Drag a chip onto an empty cell to fill it instantly
       </div>
 
       {/* Body — scrollable list */}
@@ -1536,15 +1553,6 @@ export function TimetablePage() {
           )
         })}
 
-        {uncoveredPeriods.length > 0 && (
-          <>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", margin:"14px 0 8px" }}>Uncovered</div>
-            <div style={{ padding:"6px 8px", background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:7, fontSize:11, color:"#c2410c", fontWeight:600, textAlign:"center" as const }}>
-              {uncoveredPeriods.length} empty slots
-              <div style={{ fontSize:9, fontWeight:400, color:"#D4920E", marginTop:2 }}>scroll down → Fill</div>
-            </div>
-          </>
-        )}
       </div>
 
       {/* ── Main area ─────────────────────────────────────── */}

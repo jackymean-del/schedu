@@ -605,6 +605,22 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   //   The quota is used as a "soft preference" in the subject scoring below —
   //   subjects still below their daily budget get a priority bonus so the
   //   solver fills budgeted days first, spreading empty slots evenly.
+
+  // ── Heavy-subject adjacency helper ───────────────────────
+  //   "Heavy" subjects are cognitively demanding — placing two of them
+  //   back-to-back is tiring for students. The scorer applies a strong
+  //   penalty when the previous filled period was also a heavy subject.
+  const HEAVY_KEYWORDS = [
+    'math', 'maths', 'mathematics',
+    'science', 'physics', 'chemistry', 'biology', 'biotech',
+    'computer', 'informatics',
+    'accounts', 'accountancy', 'economics', 'statistics',
+  ]
+  const isHeavySubject = (name: string): boolean => {
+    const n = name.toLowerCase()
+    return HEAVY_KEYWORDS.some(kw => n === kw || n.startsWith(kw + ' ') || n.includes(' ' + kw))
+  }
+
   const subjectDayQuota: Record<string, Record<string, Record<string, number>>> = {}
   sections.forEach((sec, si) => {
     subjectDayQuota[sec.name] = {}
@@ -872,6 +888,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         //
         //   Tie-break: a small rotation ensures variety when multiple subjects
         //   have the same day-budget status.
+        // Check previous period for heavy-subject adjacency
+        const prevClassPeriod = classPeriods[pi - 1]
+        const prevSubject = prevClassPeriod
+          ? classTT[sec.name]?.[day]?.[prevClassPeriod.id]?.subject ?? ''
+          : ''
+        const prevIsHeavy = prevSubject ? isHeavySubject(prevSubject) : false
+
         const scoredSubs = availableSubs.map((sub, idx) => {
           const quota = subjectDayQuota[sec.name]?.[sub.name]?.[day] ?? 0
           const todayDone = Object.values(classTT[sec.name][day] ?? {})
@@ -879,7 +902,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           const dayScore = todayDone < quota ? 25 : todayDone === quota ? 0 : -10
           // Rotation tie-break: keeps subject variety when several score equally
           const rotScore = ((si * 11 + di * 7 + pi * 3) + idx * 3) % 7
-          return { sub, score: dayScore + rotScore }
+          // Avoid placing a heavy subject immediately after another heavy subject
+          const adjacentHeavyPenalty = (prevIsHeavy && isHeavySubject(sub.name)) ? -22 : 0
+          return { sub, score: dayScore + rotScore + adjacentHeavyPenalty }
         }).sort((a, b) => b.score - a.score)
         const chosenSub = scoredSubs[0]?.sub ?? availableSubs[0]
 

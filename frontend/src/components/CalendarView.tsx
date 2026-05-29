@@ -500,20 +500,23 @@ export function CalendarView({
                         style={{
                           background: "linear-gradient(180deg, #EDE9FF 0%, #F5F2FF 100%)",
                           border: "1px solid #D8D2FF",
-                          borderBottom: sIdx < visibleClasses.length - 1 ? "3px solid #7C6FE0" : "1px solid #D8D2FF",
                           padding: "10px 6px", verticalAlign: "middle" as const, textAlign: "center" as const,
                         }}>
                         <div style={{ fontSize: 13, fontWeight: 900, color: "#13111E", letterSpacing: "0.04em" }}>{sec.name}</div>
                         <div style={{ fontSize: 9, fontWeight: 600, color: "#7C6FE0", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginTop: 3 }}>Class</div>
                       </td>
                     )}
-                    {/* Time column */}
+                    {/* Time column — break rows show no heading (shown cell-wise instead) */}
                     <td style={{ border: "1px solid #E8E4FF", padding: "4px 6px", verticalAlign: "top" as const, background: isBreak ? breakBg : "#FAFAFE" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: isBreak ? breakColor : "#4B5275" }}>{p.name}</div>
-                      {times && (
+                      {!isBreak && (
                         <>
-                          <div style={{ fontSize: 8, color: "#8B87AD", fontFamily: "'DM Mono', monospace" }}>{fmtTime(times.start, timeFormat)}</div>
-                          <div style={{ fontSize: 8, color: "#B8B4D4", fontFamily: "'DM Mono', monospace" }}>{fmtTime(times.end, timeFormat)}</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#4B5275" }}>{p.name}</div>
+                          {times && (
+                            <>
+                              <div style={{ fontSize: 8, color: "#8B87AD", fontFamily: "'DM Mono', monospace" }}>{fmtTime(times.start, timeFormat)}</div>
+                              <div style={{ fontSize: 8, color: "#B8B4D4", fontFamily: "'DM Mono', monospace" }}>{fmtTime(times.end, timeFormat)}</div>
+                            </>
+                          )}
                         </>
                       )}
                     </td>
@@ -544,7 +547,8 @@ export function CalendarView({
                           onDrop={e => {
                             setDragOverCell(null)
                             const poolSubject = e.dataTransfer.getData('application/pool-subject')
-                            if (poolSubject && !cell?.subject) {
+                            const poolSection = e.dataTransfer.getData('application/pool-section')
+                            if (poolSubject && !cell?.subject && (!poolSection || poolSection === sec.name)) {
                               onCellFill?.(sec.name, dayKey, p.id, poolSubject)
                               setDragFrom(null)
                             } else if (dragFrom) {
@@ -635,11 +639,9 @@ export function CalendarView({
                 const times = periodTimes.get(p.id)
                 const isBreak = p.type !== "class"
                 if (isBreak) {
+                  // No heading for break columns — content shown cell-wise
                   return (
-                    <th key={p.id} style={{ background: '#9B8EF5', color: '#FEF3C7', border: '1px solid #9B8EF5', padding: '4px 2px', fontSize: 9, fontWeight: 700, textAlign: 'center' as const }}>
-                      <div>{p.type === 'lunch' ? '🍽' : '☕'}</div>
-                      {times && <div style={{ fontSize: 7, opacity: 0.85, fontFamily: "'DM Mono', monospace" }}>{fmtTime(times.start, timeFormat)}</div>}
-                    </th>
+                    <th key={p.id} style={{ background: '#9B8EF5', border: '1px solid #9B8EF5', padding: '2px', width: 30, minWidth: 22 }} />
                   )
                 }
                 return (
@@ -667,7 +669,6 @@ export function CalendarView({
                         style={{
                           background: "linear-gradient(180deg, #EDE9FF 0%, #F5F2FF 100%)",
                           border: "1px solid #D8D2FF",
-                          borderBottom: sIdx < visibleClasses.length - 1 ? "3px solid #7C6FE0" : "1px solid #D8D2FF",
                           padding: "10px 6px", verticalAlign: "middle" as const, textAlign: "center" as const,
                         }}>
                         <div style={{ fontSize: 13, fontWeight: 900, color: "#13111E", letterSpacing: "0.04em" }}>{sec.name}</div>
@@ -715,7 +716,8 @@ export function CalendarView({
                           onDrop={e => {
                             setDragOverCell(null)
                             const poolSubject = e.dataTransfer.getData('application/pool-subject')
-                            if (poolSubject && !cell?.subject) {
+                            const poolSection = e.dataTransfer.getData('application/pool-section')
+                            if (poolSubject && !cell?.subject && (!poolSection || poolSection === sec.name)) {
                               onCellFill?.(sec.name, dayKey, p.id, poolSubject)
                               setDragFrom(null)
                             } else if (dragFrom) {
