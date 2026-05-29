@@ -1077,7 +1077,7 @@ export function CalendarView({
               const iS  = isSameDay(day,curDate)
               const abs = absentHighlights?.some(h=>h.day===dk)
               // Collect up to 3 events from the first few periods
-              const evts: {subject:string;col:{bg:string;text:string}}[] = []
+              const evts: {subject:string;col:{bg:string;accent:string}}[] = []
               if (isW&&isM) {
                 classPeriods.slice(0,4).forEach(p=>{
                   sections.filter(sec=>{
