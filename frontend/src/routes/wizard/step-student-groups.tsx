@@ -1383,6 +1383,18 @@ function EmptyState({ msg }: { msg: string }) {
   return <div style={{ padding: '20px 0', textAlign: 'center', color: '#B8B4D4', fontSize: 12 }}>{msg}</div>
 }
 
+/** Build a human-readable label: "Psychology · XI-Arts" or "IP · XI-Sci-A +1" */
+function groupDisplayName(grp: any): string {
+  const subject: string = grp.subject ?? ''
+  const sections: string[] = grp.sectionNames ?? []
+  // Shorten long subject names to keep the header concise
+  const subjectShort = subject.length > 22 ? subject.slice(0, 20) + '…' : subject
+  if (sections.length === 0) return subjectShort
+  if (sections.length === 1) return `${subjectShort} · ${sections[0]}`
+  if (sections.length === 2) return `${subjectShort} · ${sections[0]}, ${sections[1]}`
+  return `${subjectShort} · ${sections[0]} +${sections.length - 1}`
+}
+
 function GroupCard({ grp, colorDot, teacher, teacherConflict }: {
   grp: any; colorDot: string; teacher?: string; teacherConflict?: boolean
 }) {
@@ -1393,8 +1405,8 @@ function GroupCard({ grp, colorDot, teacher, teacherConflict }: {
     <div style={{ borderRadius: 10, border: `1px solid ${overCapacity ? '#FECACA' : teacherConflict ? '#FED7AA' : '#E8E4FF'}`, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 4px rgba(124,111,224,0.07)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'linear-gradient(135deg, #F5F2FF, #FAFAFE)', borderBottom: '1px solid #F0EDFF' }}>
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: colorDot, flexShrink: 0 }} />
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#13111E', fontFamily: "'DM Mono', monospace", flex: 1 }}>{grp.id.split('_')[0]}_{grp.id.split('_')[1]}</span>
-        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: behMeta.bg, color: behMeta.fg, border: `1px solid ${behMeta.border}` }}>{behMeta.short}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#13111E', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{groupDisplayName(grp)}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: behMeta.bg, color: behMeta.fg, border: `1px solid ${behMeta.border}`, flexShrink: 0 }}>{behMeta.short}</span>
       </div>
       <div style={{ padding: '10px 12px' }}>
         <div style={{ fontSize: 11, color: '#4B5275', marginBottom: 4 }}><strong style={{ color: '#13111E' }}>Subject:</strong> {grp.subject}</div>
