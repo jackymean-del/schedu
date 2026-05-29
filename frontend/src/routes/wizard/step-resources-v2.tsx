@@ -176,11 +176,12 @@ export function StepResourcesV2() {
   const [generating, setGenerating] = useState(false)
 
   // ── Global AI assign state ────────────────────────────────────────────────
-  const [aiLoading,         setAiLoading]         = useState(false)
-  const [aiStatus,          setAiStatus]          = useState('')
-  const [aiSnapshot,        setAiSnapshot]        = useState<AISnapshot | null>(null)
-  const [facultyAiApplied,  setFacultyAiApplied]  = useState(false)
-  const [roomsAiApplied,    setRoomsAiApplied]    = useState(false)
+  const [aiLoading,          setAiLoading]          = useState(false)
+  const [aiStatus,           setAiStatus]           = useState('')
+  const [aiSnapshot,         setAiSnapshot]         = useState<AISnapshot | null>(null)
+  const [facultyAiApplied,   setFacultyAiApplied]   = useState(false)
+  const [roomsAiApplied,     setRoomsAiApplied]     = useState(false)
+  const [subjectsAiApplied,  setSubjectsAiApplied]  = useState(false)
   const aiAbortRef = useRef(false)
 
   function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
@@ -219,6 +220,7 @@ export function StepResourcesV2() {
   async function handleSubjectsAIAssign(board: CurriculumBoard) {
     if (aiLoading) return
     setAiLoading(true)
+    setSubjectsAiApplied(false)
     setAiSnapshot({ subjects, sections, staff, rooms })
     setAiStatus(`Calculating ${board} subject allocations…`)
     await sleep(480)
@@ -226,7 +228,8 @@ export function StepResourcesV2() {
     setSubjects(result.subjects)
     setAiStatus('✓ Subject slots assigned')
     setAiLoading(false)
-    setTimeout(() => setAiStatus(''), 3000)
+    setSubjectsAiApplied(true)
+    setTimeout(() => { setAiStatus(''); setSubjectsAiApplied(false) }, 3500)
   }
 
   async function handleFacultyAIAssign() {
@@ -610,9 +613,10 @@ export function StepResourcesV2() {
                   subjects={subjects} setSubjects={setSubjects}
                   sections={sections} board={config.board}
                   onGlobalAIAssign={handleSubjectsAIAssign}
-                  globalAILoading={aiLoading}
+                  globalAILoading={aiLoading && activeTab === 'subjects'}
                   globalAIStatus={aiStatus}
                   globalAIHasSnapshot={!!aiSnapshot}
+                  globalAIApplied={subjectsAiApplied}
                   onGlobalAIUndo={handleGlobalAIUndo}
                   onScopeClick={(sub, rect) =>
                     setScopeTarget((sub as any).id === '__bulk__'

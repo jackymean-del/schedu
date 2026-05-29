@@ -992,6 +992,7 @@ export function SubjectsPanel({
   globalAILoading = false,
   globalAIStatus  = '',
   globalAIHasSnapshot = false,
+  globalAIApplied = false,
   onGlobalAIUndo,
   onScopeClick,
 }: {
@@ -1003,6 +1004,7 @@ export function SubjectsPanel({
   globalAILoading?:     boolean
   globalAIStatus?:      string
   globalAIHasSnapshot?: boolean
+  globalAIApplied?:     boolean
   onGlobalAIUndo?:      () => void
   onScopeClick?:        (sub: Subject, rect: DOMRect) => void
 }) {
@@ -1320,34 +1322,34 @@ export function SubjectsPanel({
           )}
 
           <button
-            onClick={triggerAIAssign}
+            onClick={isAiLoading ? undefined : triggerAIAssign}
             disabled={isAiLoading}
             title={hasGlobalAI
-              ? `AI-assign ALL resources: subjects → teachers → rooms — ${board} standards`
+              ? `AI-assign subjects to relevant classes — ${board} standards`
               : `Auto-assign ${unassignedCount} unassigned subject${unassignedCount !== 1 ? 's' : ''} to relevant classes`
             }
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: isAiLoading ? '#B8B0EE' : P,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: globalAIApplied ? '#16a34a' : isAiLoading ? '#9b8fef' : P,
               color: '#fff', border: 'none', borderRadius: 7,
-              padding: '6px 16px', fontSize: 12, fontWeight: 700,
-              cursor: isAiLoading ? 'default' : 'pointer',
+              padding: '6px 14px', fontSize: 11.5, fontWeight: 700,
+              cursor: isAiLoading ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
-              boxShadow: isAiLoading ? 'none' : '0 2px 6px rgba(124,111,224,0.28)',
+              boxShadow: '0 2px 6px rgba(124,111,224,0.28)',
               whiteSpace: 'nowrap', flexShrink: 0, height: 34,
               boxSizing: 'border-box' as const,
-              transition: 'background 0.15s',
-              minWidth: 180,
-              justifyContent: 'center',
+              opacity: isAiLoading ? 0.85 : 1,
+              transition: 'background 0.2s',
             }}
-            onMouseEnter={e => { if (!isAiLoading) e.currentTarget.style.background = P_D }}
-            onMouseLeave={e => { if (!isAiLoading) e.currentTarget.style.background = P }}
           >
             {isAiLoading
-              ? <><span style={{ display: 'inline-block', animation: 'spin 0.8s linear infinite' }}>⟳</span> AI Assigning…</>
-              : <>⚡ AI Assign ({board}){hasGlobalAI ? ' — All' : ''}</>
+              ? <><span style={{ display:'inline-block', width:10, height:10, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Applying…</>
+              : globalAIApplied
+                ? <>✓ Applied</>
+                : <>⚡ AI Fix</>
             }
           </button>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       </div>
 
