@@ -443,6 +443,7 @@ export function TimetablePage() {
   // ── Undo / redo history ──────────────────────────────────
   const [classTTHistory, setClassTTHistory] = useState<typeof classTT[]>([])
   const [classTTFuture,  setClassTTFuture]  = useState<typeof classTT[]>([])
+  const [showUndoRedo,   setShowUndoRedo]   = useState(false)
 
   // ── Pool panel filters ───────────────────────────────────
   const [poolFilterClass,   setPoolFilterClass]   = useState("ALL")
@@ -602,6 +603,7 @@ export function TimetablePage() {
     setClassTTHistory(h => [...h.slice(-49), classTT])
     setClassTTFuture([])
     setClassTT(newTT)
+    setShowUndoRedo(true)
     const ntt = { ...teacherTT }
     rebuildTeacherTT(newTT, ntt, config.workDays)
     setTeacherTT(ntt)
@@ -616,13 +618,15 @@ export function TimetablePage() {
   kbRef.current = { classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
+    setShowUndoRedo,
   }
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const r = kbRef.current
-      // Escape — dismiss drag and modals
+      // Escape — dismiss drag, modals, and undo/redo pill
       if (e.key === 'Escape') {
         r.setDragItem(null); r.setPoolDragItem(null); r.setDragOverCell(null); r.setEditTarget(null)
+        r.setShowUndoRedo(false)
         return
       }
       const ctrl = e.ctrlKey || e.metaKey
@@ -634,6 +638,7 @@ export function TimetablePage() {
         r.setClassTTHistory(r.classTTHistory.slice(0, -1))
         r.setClassTTFuture([r.classTT, ...r.classTTFuture.slice(0, 49)])
         r.setClassTT(prev)
+        r.setShowUndoRedo(true)
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(prev, ntt, r.workDays)
         r.setTeacherTT(ntt)
@@ -647,6 +652,7 @@ export function TimetablePage() {
         r.setClassTTHistory([...r.classTTHistory.slice(-49), r.classTT])
         r.setClassTTFuture(r.classTTFuture.slice(1))
         r.setClassTT(next)
+        r.setShowUndoRedo(true)
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(next, ntt, r.workDays)
         r.setTeacherTT(ntt)
@@ -2039,32 +2045,37 @@ export function TimetablePage() {
         </div>
 
         {/* Timetable content */}
-        <div style={{ flex:1, overflowY: viewMode === "calendar" ? "hidden" : "auto", padding:20, display: viewMode === "calendar" ? "flex" : "block", flexDirection: "column" as const, position:"relative" as const }}>
+        <div onClick={() => setShowUndoRedo(false)}
+          style={{ flex:1, overflowY: viewMode === "calendar" ? "hidden" : "auto", padding:20, display: viewMode === "calendar" ? "flex" : "block", flexDirection: "column" as const, position:"relative" as const }}>
 
-          {/* ── Floating undo/redo pill — appears only when history exists ── */}
-          {(classTTHistory.length > 0 || classTTFuture.length > 0) && viewMode !== "calendar" && (
+          {/* ── Floating undo/redo pill — appears on change, hides on click/Escape ── */}
+          {showUndoRedo && (classTTHistory.length > 0 || classTTFuture.length > 0) && viewMode !== "calendar" && (
             <div style={{
               position:"sticky" as const, top:0, zIndex:40,
               display:"flex", justifyContent:"center",
               pointerEvents:"none",
               marginBottom:8,
             }}>
-              <div style={{
+              <div onClick={e => e.stopPropagation()}
+                style={{
                 display:"inline-flex", alignItems:"center", gap:2,
-                background:"rgba(255,255,255,0.82)", backdropFilter:"blur(8px)",
+                background:"rgba(255,255,255,0.88)", backdropFilter:"blur(8px)",
                 border:"1px solid rgba(124,111,224,0.25)", borderRadius:20,
                 boxShadow:"0 2px 12px rgba(124,111,224,0.15)",
                 padding:"4px 6px",
                 pointerEvents:"auto",
-                opacity: 0.88,
+                opacity: 0.92,
                 transition:"opacity 0.2s",
               }}>
                 <button onClick={() => {
                   if (!classTTHistory.length) return
                   const prev = classTTHistory[classTTHistory.length - 1]
+                  const newHistory = classTTHistory.slice(0,-1)
                   setClassTTFuture(f => [classTT, ...f.slice(0,49)])
-                  setClassTTHistory(classTTHistory.slice(0,-1))
+                  setClassTTHistory(newHistory)
                   setClassTT(prev)
+                  // keep pill visible only while more history remains
+                  if (!newHistory.length && !classTTFuture.length) setShowUndoRedo(false)
                   const ntt = { ...teacherTT }; rebuildTeacherTT(prev, ntt, config.workDays); setTeacherTT(ntt)
                 }} disabled={!classTTHistory.length}
                   title="Undo (Ctrl+Z)"
@@ -2079,9 +2090,11 @@ export function TimetablePage() {
                 <button onClick={() => {
                   if (!classTTFuture.length) return
                   const next = classTTFuture[0]
+                  const newFuture = classTTFuture.slice(1)
                   setClassTTHistory(h => [...h.slice(-49), classTT])
-                  setClassTTFuture(classTTFuture.slice(1))
+                  setClassTTFuture(newFuture)
                   setClassTT(next)
+                  if (!newFuture.length && !classTTHistory.length) setShowUndoRedo(false)
                   const ntt = { ...teacherTT }; rebuildTeacherTT(next, ntt, config.workDays); setTeacherTT(ntt)
                 }} disabled={!classTTFuture.length}
                   title="Redo (Ctrl+Y)"
