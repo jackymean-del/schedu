@@ -533,22 +533,23 @@ function Block({
       {/* Drag handle icon — shown on hover of draggable cells */}
       {editMode && !!onDragStart && !!block.subject && !isDraggingThis && hovered && (
         <div style={{
-          position:"absolute" as const, top:2, left:2, width:18, height:18,
-          borderRadius:4, background:"rgba(124,111,224,0.15)", border:"1.5px solid rgba(124,111,224,0.4)",
-          display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, color:"#7C6FE0",
-          fontWeight:600, cursor:"grab", zIndex:9, lineHeight:1,
-        }} title="Drag to move" draggable>✋</div>
+          position:"absolute" as const, top:3, left:3, width:16, height:16,
+          borderRadius:3, background:"rgba(180,160,140,0.3)", border:"1px solid rgba(180,160,140,0.5)",
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#8B7355",
+          fontWeight:700, cursor:"grab", zIndex:9, lineHeight:1,
+        }} title="Drag to move" draggable>⠿</div>
       )}
       {/* Drop target indicator — shown on droppable cells during drag */}
       {dragItem && isDroppable && (
         <div style={{
           position:"absolute" as const, top:"50%", left:"50%", transform:"translate(-50%, -50%)",
-          width:28, height:28, borderRadius:"50%", border:"2px solid #7C6FE0",
+          width:28, height:28, borderRadius:"50%", border:"2px solid #22C55E",
           display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none",
-          fontSize:16, color:"#7C6FE0", fontWeight:300,
+          fontSize:14, color:"#fff", fontWeight:600,
           animation: "pulse 1.2s ease-in-out infinite",
-          background:"rgba(124,111,224,0.1)",
-        }}>+</div>
+          background:"#22C55E",
+          boxShadow: "0 2px 8px rgba(34,197,94,0.3)",
+        }}>✓</div>
       )}
     </div>
   )
