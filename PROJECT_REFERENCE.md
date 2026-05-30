@@ -240,6 +240,40 @@ timetable uses a **fixed global time grid** with a sub-header row
 (`B-NUR-KG | B-1 | B-2,6,7 | B-3-5,8-10`) labeling each break band. Our amber chip
 under partial-break headers mirrors that.
 
+### ★ Unified time-slot column model (STAGGERED breaks)
+When class groups lunch at **different** points, a single "Period N" occurs at
+several wall-clock times. The teacher/subject/room views build a **unified column
+grid** so each distinct (period, start-time) is its own column — matching the real
+bell exactly.
+
+**Worked example (Demo TT 01 — three tracks):**
+| Track | Lunch | P5 | P6 | P7 | P8 |
+|-------|-------|----|----|----|----|
+| Nur–V (8 cls) | after P4, 12:05–12:35 | 12:35 | 1:15 | 1:55 | 2:35–3:15 |
+| VI–X (5 cls) | after P5, 12:45–12:55 | 12:05 | 12:55 | 1:35 | 2:15 |
+| XI–XII (2 cls) | after P6, 1:25–1:35 | 12:05 | 12:45 | 1:35 | 2:15 |
+
+Resulting teacher columns: `P5@12:05` (VI–XII teaching, Nur–V on lunch overlay),
+`P5@12:35` (Nur–V), `P6@12:45` (XI–XII), `P6@12:55` (VI–X), `P6@1:15` (Nur–V)…
+
+**Helpers (`timetable.tsx`):**
+| Function | Purpose |
+|----------|---------|
+| `sectionScheduleMins(sec, classPeriods, cwBreaks, config)` | Wall-clock **minutes** for every period+break of one section. The canonical correct timing. |
+| `isFullBreakDef(break, allClassKeys)` | Is a break universal (all groups)? |
+| `buildUnifiedColumns(sectionNames, classPeriods, periods, cwBreaks, config)` | → `{ columns, schedules, repByGroup }`. Columns = distinct (periodId, startMin) teaching slots + full-break columns; partial breaks overlaid, not columned. Falls back to plain `periods` when no staggering. |
+| `resolveUniCell(section, col, schedules, cwBreaks)` | Per-cell → `teaching` \| `lunch` (overlapping partial break) \| `free`. |
+
+**Cell resolution rule:** a section shows *teaching* in column C only if its own
+schedule places `C.periodId` at `C.startMin`; otherwise *lunch* if a partial break
+overlaps `[C.start,C.end)`, else *free*. Drag/drop: a free cell is a valid target
+only when the dragged section's group actually has that slot at that start time.
+
+**All 6 views** (teacher/subject/room × normal/transposed) use this model. The
+class-section view is unchanged — it was always correct (`buildClassPeriods` +
+`calcSectionTimes`). Calendar view positions teaching blocks via per-section
+`buildSecPeriods + calcTimes` (already correct); break blocks gate on `isFullBreak`.
+
 ---
 
 ## 7. Drag & drop system
