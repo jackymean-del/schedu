@@ -530,13 +530,22 @@ function Block({
           title="Delete cell"
         >×</button>
       )}
-      {/* Droppable indicator — show + symbol on empty droppable cells */}
-      {isDroppable && !block.subject && (
+      {/* Droppable indicator — show down arrow on droppable cells (like Traditional view) */}
+      {isDroppable && (
         <div style={{
-          position:"absolute" as const, top:"50%", left:"50%", transform:"translate(-50%, -50%)",
-          fontSize:18, color:"#A5B4FC", fontWeight:300, opacity:0.6, pointerEvents:"none",
-          animation: "pulse 2s ease-in-out infinite",
-        }}>+</div>
+          position:"absolute" as const, top:"50%", left:"50%",
+          fontSize:16, color:"#A5B4FC", fontWeight:400, pointerEvents:"none",
+          animation: "dropArrow 1.2s ease-in-out infinite",
+        }}>↓</div>
+      )}
+      {/* Drag handle icon — shown on draggable cells */}
+      {editMode && !!onDragStart && !!block.subject && !isDraggingThis && hovered && (
+        <div style={{
+          position:"absolute" as const, top:2, left:2, width:14, height:14,
+          borderRadius:3, background:"rgba(124,111,224,0.3)", display:"flex",
+          alignItems:"center", justifyContent:"center", fontSize:8, color:"#7C6FE0",
+          fontWeight:700, cursor:"grab", zIndex:9,
+        }} title="Drag to move" draggable>⋮⋮</div>
       )}
     </div>
   )
