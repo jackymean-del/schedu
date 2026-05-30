@@ -446,11 +446,27 @@ function Block({
   const fsSub    = compact ? (width<22?0:8) : (width<28?0:width<55?9.5:11)
   const fsMeta   = compact ? 7 : 9.5
 
+  // ── FIXED: highlight ALL class-period cells (not just empty ones) during drag
   const isDraggingThis = dragItem?.section === block.sectionName && dragItem?.day === dayKey && dragItem?.periodId === block.periodId
   const isDragOverThis = dragOverCell?.section === block.sectionName && dragOverCell?.day === dayKey && dragOverCell?.periodId === block.periodId
-  // Droppable cells: any empty cell when dragging (can swap into empty slots)
-  const isDroppable = !!dragItem && !isDraggingThis && !block.subject
+  const isClassPeriod  = block.periodType === "class"
+  const isDroppable    = !!dragItem && editMode && isClassPeriod && !isDraggingThis
   const [hovered, setHovered] = useState(false)
+
+  // Background & border during drag
+  const bgColor    = isDraggingThis ? "rgba(124,111,224,0.25)"
+                   : isDragOverThis ? "rgba(124,111,224,0.22)"
+                   : isDroppable    ? "rgba(209,213,255,0.55)"
+                   : col.bg
+  const leftBorder = isDraggingThis ? "#7C6FE0"
+                   : isDragOverThis ? "#4F46E5"
+                   : isDroppable    ? "#818CF8"
+                   : col.accent
+  const outlineStyle = isDragOverThis ? "2px solid #4F46E5"
+                     : isDroppable    ? "1.5px dashed #818CF8"
+                     : block.absent  ? "2px solid #F59E0B"
+                     : block.isSub   ? "1.5px dashed #F59E0B"
+                     : "none"
 
   return (
     <div
@@ -459,6 +475,7 @@ function Block({
       onMouseLeave={()=>{setHovered(false); onLeave()}}
       onDragStart={e=>onDragStart?.(e, block.sectionName, dayKey, block.periodId)}
       onDragOver={e=>{e.preventDefault(); onDragOver?.(e, block.sectionName, dayKey, block.periodId)}}
+      onDragEnter={e=>e.preventDefault()}
       onDrop={e=>{e.preventDefault(); e.stopPropagation(); onDrop?.(e, block.sectionName, dayKey, block.periodId)}}
       onDoubleClick={()=>onEdit?.(block.sectionName, dayKey, block.periodId)}
       onClick={()=>onClick(block)}
@@ -466,19 +483,24 @@ function Block({
         position:"absolute" as const,
         left: left+1, width: Math.max(width-2, 2),
         top: compact?2:3, bottom: compact?2:3,
-        background: isDraggingThis ? "rgba(124,111,224,0.3)" : isDragOverThis ? "rgba(124,111,224,0.25)" : dragItem && isDroppable ? "#C7D2FE" : col.bg,
-        borderLeft: `3px solid ${isDraggingThis ? "#7C6FE0" : isDragOverThis ? "#4F46E5" : dragItem && isDroppable ? "#7C6FE0" : col.accent}`,
+        background: bgColor,
+        borderLeft: `3px solid ${leftBorder}`,
         borderRadius: "0 5px 5px 0",
-        overflow:"hidden", cursor: editMode && !!onDragStart && !!block.subject ? "move" : dragItem && isDroppable ? "copy" : "pointer",
+        overflow:"hidden",
+        cursor: editMode && !!block.subject && !isDraggingThis ? "grab" : "default",
         padding: width<26?"1px 2px": compact?"2px 5px":"3px 7px",
         display:"flex", flexDirection:"column" as const, justifyContent:"center",
-        outline: isDragOverThis ? "2px solid #4F46E5" : dragItem && isDroppable ? "2px dashed #7C6FE0" : block.absent?"2px solid #F59E0B":block.isSub?"1.5px dashed #F59E0B":"none",
+        outline: outlineStyle,
         userSelect:"none" as const,
-        boxShadow: isDraggingThis ? "0 8px 16px rgba(124,111,224,0.25)" : isDragOverThis ? "0 6px 16px rgba(124,111,224,0.35)" : dragItem && isDroppable ? "0 0 12px rgba(124,111,224,0.25)" : "0 1px 3px rgba(0,0,0,0.06)",
-        transition: "all 0.12s ease",
-        opacity: isDraggingThis ? 0.9 : dragItem && isDroppable ? 0.95 : 1,
+        boxShadow: isDraggingThis ? "0 6px 14px rgba(124,111,224,0.3)"
+                 : isDragOverThis ? "0 4px 12px rgba(79,70,229,0.35)"
+                 : isDroppable    ? "0 0 0 1px rgba(129,140,248,0.3)"
+                 : "0 1px 3px rgba(0,0,0,0.06)",
+        transition: "background 0.1s, box-shadow 0.1s, outline 0.1s",
+        opacity: isDraggingThis ? 0.55 : 1,
+        transform: isDragOverThis ? "scale(1.01)" : "none",
       }}>
-      {/* Subject name — in accent color */}
+      {/* Subject name */}
       {fsSub > 0 && (
         <div style={{
           fontSize:fsSub, fontWeight:700, lineHeight:1.2, color: col.accent,
@@ -517,39 +539,60 @@ function Block({
         <span style={{ position:"absolute" as const, top:3, right:4,
           width:5, height:5, borderRadius:"50%", background:"#F59E0B" }} />
       )}
-      {/* Delete button — shown on hover in edit mode */}
-      {editMode && hovered && onDelete && !!block.subject && !isDroppable && (
+
+      {/* ── 4-way drag handle — shown on hover of draggable cells in edit mode ── */}
+      {editMode && !!block.subject && !isDraggingThis && hovered && !dragItem && (
+        <div
+          style={{
+            position:"absolute" as const, top:"50%", right:4,
+            transform:"translateY(-50%)",
+            width:18, height:18, borderRadius:3,
+            background:"rgba(100,116,139,0.18)", border:"1px solid rgba(100,116,139,0.35)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            cursor:"grab", zIndex:10, pointerEvents:"none",
+            color:"#475569", lineHeight:1,
+          }}
+          title="Drag to swap"
+        >
+          {/* SVG 4-way move icon (matches Word table handle) */}
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+            <path d="M5 0 L4 2 L6 2 Z"/>
+            <path d="M5 10 L4 8 L6 8 Z"/>
+            <path d="M0 5 L2 4 L2 6 Z"/>
+            <path d="M10 5 L8 4 L8 6 Z"/>
+            <circle cx="5" cy="5" r="1"/>
+          </svg>
+        </div>
+      )}
+
+      {/* ── Green + circle — shown on ALL droppable cells when a drag is active ── */}
+      {isDroppable && (
+        <div
+          style={{
+            position:"absolute" as const, bottom:4, right:4,
+            width:22, height:22, borderRadius:"50%",
+            background:"#16A34A", border:"2px solid #fff",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            pointerEvents:"none", zIndex:10,
+            fontSize:14, color:"#fff", fontWeight:300, lineHeight:1,
+            boxShadow:"0 2px 6px rgba(22,163,74,0.5)",
+            animation: isDragOverThis ? "none" : "pulse 1.2s ease-in-out infinite",
+          }}
+        >+</div>
+      )}
+
+      {/* Delete button — hover in edit mode (only when not dragging) */}
+      {editMode && hovered && onDelete && !!block.subject && !dragItem && (
         <button
           onClick={e=>{e.stopPropagation(); onDelete(block.sectionName, dayKey, block.periodId)}}
           style={{
-            position:"absolute" as const, top:2, right:2, width:18, height:18,
+            position:"absolute" as const, top:2, right:2, width:16, height:16,
             borderRadius:"50%", background:"#ef4444", color:"#fff", border:"none",
-            fontSize:11, fontWeight:700, cursor:"pointer", display:"flex",
-            alignItems:"center", justifyContent:"center", lineHeight:1, zIndex:10,
+            fontSize:10, fontWeight:700, cursor:"pointer", display:"flex",
+            alignItems:"center", justifyContent:"center", lineHeight:1, zIndex:11,
           }}
           title="Delete cell"
         >×</button>
-      )}
-      {/* Drag handle icon — shown on hover of draggable cells */}
-      {editMode && !!onDragStart && !!block.subject && !isDraggingThis && hovered && (
-        <div style={{
-          position:"absolute" as const, top:3, left:3, width:16, height:16,
-          borderRadius:3, background:"rgba(180,160,140,0.3)", border:"1px solid rgba(180,160,140,0.5)",
-          display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#8B7355",
-          fontWeight:700, cursor:"grab", zIndex:9, lineHeight:1,
-        }} title="Drag to move" draggable>⠿</div>
-      )}
-      {/* Drop target indicator — shown on droppable cells during drag */}
-      {dragItem && isDroppable && (
-        <div style={{
-          position:"absolute" as const, top:"50%", left:"50%", transform:"translate(-50%, -50%)",
-          width:28, height:28, borderRadius:"50%", border:"2px solid #22C55E",
-          display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none",
-          fontSize:14, color:"#fff", fontWeight:600,
-          animation: "pulse 1.2s ease-in-out infinite",
-          background:"#22C55E",
-          boxShadow: "0 2px 8px rgba(34,197,94,0.3)",
-        }}>✓</div>
       )}
     </div>
   )
