@@ -1353,9 +1353,33 @@ export function TimetablePage() {
     // A teacher who only teaches Nursery must NOT see Primary's lunch column.
     const cwBreaksTT = (config as any).classwiseBreaks as Parameters<typeof buildTeacherPeriods>[2]
     const teacherPeriods = buildTeacherPeriods(tdata.classes, periods, cwBreaksTT)
-    // Compute times from teacher-specific period sequence so breaks from other
-    // class groups don't shift every period's start/end time.
-    const teacherTimes = calcTimes(teacherPeriods, config)
+
+    // ── Section-aware header times ─────────────────────────────
+    // Problem: calcTimes(teacherPeriods) accumulates ALL breaks from ALL sections.
+    // e.g. XI-Com-A lunch gets pushed to 2:05 PM because VII-C's 10-min break
+    //      is also accumulated before it, but XI-Com-A doesn't have that break.
+    // Fix: for each break column, use the REPRESENTATIVE SECTION'S actual times.
+    //      For class period columns, use the first section's times.
+    const teacherTimes = (() => {
+      const base = calcTimes(teacherPeriods, config)
+      if (!cwBreaksTT?.length) return base
+      const result = new Map(base)
+      // Override break column times using each break's representative section
+      cwBreaksTT.forEach(brk => {
+        if (!teacherPeriods.some(p => p.id === brk.id)) return
+        // Find the first teacher section that has this break
+        const repSec = brk.classes.length === 0
+          ? tdata.classes[0]
+          : tdata.classes.find(tc => brk.classes.includes(getSectionClassKey(tc)))
+        if (!repSec) return
+        // Build that section's full period sequence and compute its times
+        const secPeriods = buildClassPeriods(repSec, periods, cwBreaksTT)
+        const secTimes   = calcTimes(secPeriods, config)
+        const correct    = secTimes.get(brk.id)
+        if (correct) result.set(brk.id, correct)
+      })
+      return result
+    })()
 
     return (
       <div>
@@ -1514,8 +1538,25 @@ export function TimetablePage() {
     // ── Teacher-specific periods (same logic as normal view)
     const cwBreaksTTT = (config as any).classwiseBreaks as Parameters<typeof buildTeacherPeriods>[2]
     const teacherPeriodsT = buildTeacherPeriods(tdata.classes, periods, cwBreaksTTT)
-    // Teacher-specific times so Primary's P5 starts at 11:55 AM, not 12:25 AM
-    const teacherTimesT = calcTimes(teacherPeriodsT, config)
+    // Section-aware header times (same logic as normal view):
+    // Each break column uses the representative section's actual times.
+    const teacherTimesT = (() => {
+      const base = calcTimes(teacherPeriodsT, config)
+      if (!cwBreaksTTT?.length) return base
+      const result = new Map(base)
+      cwBreaksTTT.forEach(brk => {
+        if (!teacherPeriodsT.some(p => p.id === brk.id)) return
+        const repSec = brk.classes.length === 0
+          ? tdata.classes[0]
+          : tdata.classes.find(tc => brk.classes.includes(getSectionClassKey(tc)))
+        if (!repSec) return
+        const secPeriods = buildClassPeriods(repSec, periods, cwBreaksTTT)
+        const secTimes   = calcTimes(secPeriods, config)
+        const correct    = secTimes.get(brk.id)
+        if (correct) result.set(brk.id, correct)
+      })
+      return result
+    })()
 
     return (
       <div>
