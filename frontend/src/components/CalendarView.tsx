@@ -759,7 +759,7 @@ export function CalendarView({
   )
 
   // ── Shared time ruler within a day section ────────────────────────────
-  const renderDayRuler = (dayKey:string) => (
+  const renderDayRuler = (dayKey:string, dayDate?:Date) => (
     <div style={{ width:dayWidth, flexShrink:0, position:"relative" as const }}>
       {/* Day label row */}
       <div style={{
@@ -767,7 +767,10 @@ export function CalendarView({
         fontSize:12, fontWeight:800, color:"#374151",
         borderBottom:"1px solid #E5EBF5",
       }}>
-        {DAY_FULL[dayKey]??dayKey}
+        <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:1 }}>
+          <span>{DAY_FULL[dayKey]??dayKey}</span>
+          {dayDate && <span style={{ fontSize:10, fontWeight:600, color:"#64748b" }}>{dayDate.getDate()}</span>}
+        </div>
       </div>
       {/* Time ticks row */}
       <div style={{ height:RULER_TIME_H, position:"relative" as const }}>
@@ -804,6 +807,16 @@ export function CalendarView({
     const rowH  = compact ? ROW_H_CP : ROW_H_TL
     const panelOpen = !!activeD
 
+    // Calculate dates for each workday in the current week
+    const weekStart = getWeekStart(curDate)
+    const weekDayDates = workDays.map(dayKey => {
+      const dow = Object.keys(DOW_KEY).find(k => DOW_KEY[parseInt(k)] === dayKey)
+      if (!dow) return weekStart
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + (parseInt(dow) || 7) - 1)
+      return d
+    })
+
     return (
       <div style={{ flex:1, overflow:"hidden", display:"flex", position:"relative" as const }}>
         {/* ── Main scroll area ── */}
@@ -834,7 +847,7 @@ export function CalendarView({
                   borderLeft: di>0?`${DAY_GAP}px solid #CBD5E1`:"none",
                   flexShrink:0,
                 }}>
-                  {renderDayRuler(day)}
+                  {renderDayRuler(day, weekDayDates[di])}
                 </div>
               ))}
             </div>
@@ -1206,7 +1219,7 @@ export function CalendarView({
           <>
             <div style={{ display:"flex",alignItems:"center",gap:3 }}>
               <button onClick={()=>navWeek(-1)} style={{ width:26,height:26,border:"1px solid #E5EBF5",borderRadius:5,background:"#fff",cursor:"pointer",fontSize:14,color:"#94A3B8",display:"flex",alignItems:"center",justifyContent:"center" }}>‹</button>
-              <button onClick={()=>setCurDate(new Date())} style={{ padding:"3px 10px",border:"1px solid #E5EBF5",borderRadius:5,background:"#fff",cursor:"pointer",fontSize:10,color:"#94A3B8" }}>Today</button>
+              <button onClick={()=>{const t=new Date();setCurDate(t)}} style={{ padding:"3px 10px",border:"1px solid #E5EBF5",borderRadius:5,background:"#fff",cursor:"pointer",fontSize:10,color:"#94A3B8" }}>Today</button>
               <button onClick={()=>navWeek(1)}  style={{ width:26,height:26,border:"1px solid #E5EBF5",borderRadius:5,background:"#fff",cursor:"pointer",fontSize:14,color:"#94A3B8",display:"flex",alignItems:"center",justifyContent:"center" }}>›</button>
             </div>
             <div style={{ fontSize:12,fontWeight:600,color:"#374151" }}>
