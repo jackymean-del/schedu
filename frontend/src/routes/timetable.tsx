@@ -1302,6 +1302,9 @@ export function TimetablePage() {
     const total = Object.values(sch).reduce((a,d) => a + Object.values(d).filter(x=>x?.subject).length, 0)
     const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
     const pct = Math.min(150, Math.round(total/max*100))
+    // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
+    const draggedCellTeacher = dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.teacher : null
+    const isSameTeacherDrag  = isDragging && draggedCellTeacher === tn
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
     const assignedStr = (st?.subjects ?? []).filter(s => s.includes("::")).map(s => { const [cls,sub]=s.split("::"); return `${cls}: ${sub}` }).join(" · ") || (st?.subjects??[]).join(", ") || "—"
 
@@ -1384,16 +1387,19 @@ export function TimetablePage() {
                     if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                     // ── Class period ───────────────────────────────────
                     const cell = sch[day]?.[p.id]
-                    // Derive section name for DnD: filled cell has sectionName; free cell can accept pool if teacher teaches that section
                     const ttSecName = cell?.sectionName ?? (poolDragItem && tdata.classes.includes(poolDragItem.section) ? poolDragItem.section : "")
                     const ttCellKey = ttSecName ? `${ttSecName}|${day}|${p.id}` : `__tt|${day}|${p.id}`
-                    const ttDragOver = dragOverCell === ttCellKey && !!ttSecName
-                    const ttIsTarget = isDragging && !!ttSecName && (poolDragItem?.section === ttSecName || dragItem?.section === ttSecName)
-                    const ttDragProps = ttSecName ? {
+                    const ttDragOver = dragOverCell === ttCellKey
+                    // For pool drag keep original logic; for cell drag: same teacher → all his slots droppable
+                    const ttIsTarget = isDragging && (
+                      poolDragItem ? (!!ttSecName && poolDragItem.section === ttSecName)
+                                   : isSameTeacherDrag   // same teacher → all his slots are droppable
+                    )
+                    const ttDragProps = {
                       onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttCellKey) },
-                      onDrop:     (e: React.DragEvent) => handleDrop(e, ttSecName, day, p.id, tn),
+                      onDrop:     (e: React.DragEvent) => { if (ttSecName) handleDrop(e, ttSecName, day, p.id, tn) },
                       onDragLeave: () => setDragOverCell(null),
-                    } : {}
+                    }
                     if (!cell?.subject) {
                       if ((cell as any)?.isLunch || (cell as any)?.type === "lunch") return (
                         <td key={p.id} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D4920E", fontSize:9, fontStyle:"italic", padding:6 }}>
@@ -1465,6 +1471,9 @@ export function TimetablePage() {
     const total = Object.values(sch).reduce((a,d) => a + Object.values(d).filter(x=>x?.subject).length, 0)
     const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
     const pct = Math.min(150, Math.round(total/max*100))
+    // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
+    const draggedCellTeacher = dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.teacher : null
+    const isSameTeacherDrag  = isDragging && draggedCellTeacher === tn
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
 
     // ── Teacher-specific periods (same logic as normal view)
@@ -1550,13 +1559,16 @@ export function TimetablePage() {
                       const cell = sch[day]?.[p.id]
                       const ttTSecName = cell?.sectionName ?? (poolDragItem && tdata.classes.includes(poolDragItem.section) ? poolDragItem.section : "")
                       const ttTKey = ttTSecName ? `${ttTSecName}|${day}|${p.id}` : `__ttt|${day}|${p.id}`
-                      const ttTDragOver = dragOverCell === ttTKey && !!ttTSecName
-                      const ttTIsTarget = isDragging && !!ttTSecName && (poolDragItem?.section === ttTSecName || dragItem?.section === ttTSecName)
-                      const ttTDragProps = ttTSecName ? {
+                      const ttTDragOver = dragOverCell === ttTKey
+                      const ttTIsTarget = isDragging && (
+                        poolDragItem ? (!!ttTSecName && poolDragItem.section === ttTSecName)
+                                     : isSameTeacherDrag   // same teacher → all his slots droppable
+                      )
+                      const ttTDragProps = {
                         onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttTKey) },
-                        onDrop:     (e: React.DragEvent) => handleDrop(e, ttTSecName, day, p.id, tn),
+                        onDrop:     (e: React.DragEvent) => { if (ttTSecName) handleDrop(e, ttTSecName, day, p.id, tn) },
                         onDragLeave: () => setDragOverCell(null),
-                      } : {}
+                      }
                       if (!cell?.subject) {
                         if ((cell as any)?.isLunch || (cell as any)?.type === "lunch") return (
                           <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D4920E", fontSize:9, fontStyle:"italic", padding:6 }}>Lunch Break</td>
