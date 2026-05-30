@@ -870,10 +870,11 @@ export function CalendarView({
           />
         )
       })}
-      {/* Drop zone overlay — ONLY rendered when a drag is active, on top of blocks */}
+      {/* Drop zone overlay — ONLY rendered when a drag is active, same section only */}
       {dragSrc && blocks.map(b=>{
         if (b.periodType!=="class") return null
-        if (b.key === dragSrcKey) return null        // skip source cell
+        if (b.key === dragSrcKey) return null                  // skip source cell
+        if (b.sectionName !== dragSrc.section) return null     // same section only
         const bLeft  = (b.startMin-dayStartMin)*pxPerMin
         const bWidth = (b.endMin-b.startMin)*pxPerMin
         const isOver = dragOverKey === b.key
