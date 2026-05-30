@@ -569,24 +569,22 @@ function DropZone({
   if (width <= 0 || block.periodType !== "class") return null
 
   const isConflict = !!conflict
-  const [showTip, setShowTip] = useState(false)
 
-  // Colors
+  // Warm green for safe, warm red for conflict
   const bg     = isConflict
-    ? (isOver ? "rgba(239,68,68,0.18)"  : "rgba(239,68,68,0.08)")
-    : (isOver ? "rgba(99,102,241,0.22)" : "rgba(165,180,252,0.10)")
+    ? (isOver ? "#FEE2E2" : "#FFF1F2")
+    : (isOver ? "#DCFCE7" : "#F0FDF4")
   const border = isConflict
-    ? (isOver ? "2px solid #EF4444"     : "1.5px dashed #FCA5A5")
-    : (isOver ? "2px solid #6366F1"     : "1.5px dashed #818CF8")
+    ? (isOver ? "2px solid #EF4444"  : "1.5px dashed #FCA5A5")
+    : (isOver ? "2px solid #16A34A" : "1.5px dashed #86EFAC")
 
   return (
     <div
       onDragOver={e=>{e.preventDefault(); e.stopPropagation(); onDragOver(block.sectionName, dayKey, block.periodId)}}
-      onDragEnter={e=>{e.preventDefault(); e.stopPropagation(); setShowTip(true)}}
-      onDragLeave={()=>{ onDragLeave(); setShowTip(false) }}
+      onDragEnter={e=>{e.preventDefault(); e.stopPropagation()}}
+      onDragLeave={onDragLeave}
       onDrop={e=>{
         e.preventDefault(); e.stopPropagation()
-        setShowTip(false)
         if (!isConflict) onDrop(block.sectionName, dayKey, block.periodId)
       }}
       style={{
@@ -599,26 +597,21 @@ function DropZone({
         cursor: isConflict ? "not-allowed" : "copy",
         overflow:"visible" as const,
       }}>
-      {/* Conflict / safe badge — shown when hovering */}
-      {isOver && (
+      {/* Conflict tooltip on hover */}
+      {isOver && isConflict && (
         <div style={{
           position:"absolute" as const,
           bottom:"calc(100% + 6px)", left:"50%", transform:"translateX(-50%)",
-          background: isConflict ? "#DC2626" : "#16A34A",
-          color:"#fff", borderRadius:6, padding:"4px 8px",
+          background:"#DC2626", color:"#fff", borderRadius:6, padding:"4px 9px",
           fontSize:10, fontWeight:600, whiteSpace:"pre" as const,
-          boxShadow:"0 2px 8px rgba(0,0,0,0.18)",
-          zIndex:50, pointerEvents:"none" as const,
-          minWidth:120, textAlign:"center" as const,
-          lineHeight:1.4,
+          boxShadow:"0 2px 8px rgba(0,0,0,0.2)", zIndex:50,
+          pointerEvents:"none" as const, textAlign:"center" as const, lineHeight:1.5,
         }}>
-          {isConflict ? `⚠ Conflict\n${conflict}` : "✓ Safe to drop"}
-          {/* Caret */}
+          {`⚠ ${conflict}`}
           <div style={{
             position:"absolute" as const, top:"100%", left:"50%",
             transform:"translateX(-50%)",
-            border:"5px solid transparent",
-            borderTopColor: isConflict ? "#DC2626" : "#16A34A",
+            border:"5px solid transparent", borderTopColor:"#DC2626",
           }} />
         </div>
       )}

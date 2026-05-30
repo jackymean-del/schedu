@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useTimetableStore } from "@/store/timetableStore"
 import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
@@ -331,14 +331,14 @@ function BreakCell({ p }: { p:Period }) {
 type CellOption = { subject: string; teacher: string; room: string }
 function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher, showTeacher, showRoom,
   onClick, dragOver, onDragOver, onDrop, onDragLeave, absentHighlight, options,
-  isDraggable, onDragStart, onDelete, editMode, isDropTarget,
+  isDraggable, onDragStart, onDelete, editMode, isDropTarget, hasConflict,
 }:{
   subject?:string; teacher?:string; room?:string; isClassTeacher?:boolean; isSub?:boolean; subTeacher?:string;
   showTeacher:boolean; showRoom:boolean; onClick?:()=>void;
   dragOver?:boolean; onDragOver?:(e:React.DragEvent)=>void; onDrop?:(e:React.DragEvent)=>void; onDragLeave?:()=>void;
   absentHighlight?:boolean; options?: CellOption[];
   isDraggable?:boolean; onDragStart?:(e:React.DragEvent)=>void; onDelete?:()=>void; editMode?:boolean;
-  isDropTarget?:boolean;
+  isDropTarget?:boolean; hasConflict?:boolean;
 }) {
   const [hovered, setHovered] = useState(false)
   const sharedTdProps = {
@@ -348,11 +348,25 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
     onMouseEnter: () => setHovered(true),
     onMouseLeave: () => setHovered(false),
   }
+  // Warm colors for drag state
+  const dropBg     = hasConflict ? "#FEE2E2" : "#DCFCE7"
+  const dropBorder = hasConflict ? "#FCA5A5" : "#86EFAC"
+  const dropBorderActive = hasConflict ? "#EF4444" : "#16A34A"
+
   if (!subject) return (
-    <td style={{ border: dragOver?"2px dashed #7C6FE0": isDropTarget?"2px dashed #a5b4fc":"1px solid #E8E4FF", padding:2, position:"relative" as const, background: dragOver?"#EDE9FF": isDropTarget?"#F0EDFF":undefined }}
-      {...sharedTdProps}>
-      <div onClick={onClick} style={{ height:44, background: dragOver?"#EDE9FF": isDropTarget?"#EDE9FF80":"#FAFAFE", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", color: dragOver||isDropTarget?"#7C6FE0":"#cbd5e1", fontSize:10, cursor: dragOver?"copy":isDropTarget?"copy":"default", border:"none", transition:"all 0.12s" }}>
-        {dragOver ? "Drop here" : isDropTarget ? "↓" : "—"}
+    <td style={{
+      border: dragOver ? `2px solid ${dropBorderActive}` : isDropTarget ? `1.5px dashed ${dropBorder}` : "1px solid #E8E4FF",
+      padding:2, position:"relative" as const,
+      background: dragOver ? dropBg : isDropTarget ? (hasConflict?"#FFF1F1":"#F0FDF4") : undefined,
+    }} {...sharedTdProps}>
+      <div onClick={onClick} style={{
+        height:44, borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center",
+        fontSize:10, border:"none", transition:"all 0.12s",
+        background: dragOver ? dropBg : isDropTarget ? (hasConflict?"#FEE2E280":"#DCFCE780") : "#FAFAFE",
+        color: dragOver||isDropTarget ? (hasConflict?"#DC2626":"#16A34A") : "#cbd5e1",
+        cursor: isDropTarget ? (hasConflict?"not-allowed":"copy") : "default",
+      }}>
+        {isDropTarget ? (hasConflict?"✕":"—") : "—"}
       </div>
     </td>
   )
@@ -387,8 +401,11 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   const effectiveRoom    = room    || options?.[0]?.room
   const colorClass = getSubjectColor(subject)
   return (
-    <td style={{ border: dragOver?"2px dashed #7C6FE0": isDropTarget?"1.5px dashed #a5b4fc":"1px solid #E8E4FF", padding:2, position:"relative" as const, background: dragOver?"#EDE9FF": isDropTarget?"#F8F7FF":undefined }}
-      {...sharedTdProps}>
+    <td style={{
+      border: dragOver ? `2px solid ${dropBorderActive}` : isDropTarget ? `1.5px dashed ${dropBorder}` : "1px solid #E8E4FF",
+      padding:2, position:"relative" as const,
+      background: dragOver ? dropBg : isDropTarget ? (hasConflict?"#FFF1F1":"#F0FDF4") : undefined,
+    }} {...sharedTdProps}>
       <div className={colorClass}
         draggable={isDraggable}
         onDragStart={isDraggable ? onDragStart : undefined}
@@ -827,6 +844,25 @@ export function TimetablePage() {
   // ── isDragging — true while any drag is active ───────────
   const isDragging = !!poolDragItem || !!dragItem
 
+  // ── checkSwapConflict: would swapping dragItem into (section,day,periodId) cause a teacher clash?
+  const checkSwapConflict = useCallback((section:string, day:string, periodId:string): boolean => {
+    if (!dragItem) return false
+    const fromCell = classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]
+    const toCell   = classTT[section]?.[day]?.[periodId]
+    if (!fromCell?.teacher && !toCell?.teacher) return false
+    // fromTeacher would move to (day, periodId) — busy elsewhere?
+    if (fromCell?.teacher && sections.some(s =>
+      s.name !== section && s.name !== dragItem.section &&
+      classTT[s.name]?.[day]?.[periodId]?.teacher === fromCell.teacher
+    )) return true
+    // toTeacher would move to (dragItem.day, dragItem.periodId) — busy elsewhere?
+    if (toCell?.teacher && sections.some(s =>
+      s.name !== section && s.name !== dragItem.section &&
+      classTT[s.name]?.[dragItem.day]?.[dragItem.periodId]?.teacher === toCell.teacher
+    )) return true
+    return false
+  }, [dragItem, classTT, sections])
+
   // ── Auto-sync pool filters when the active view/entity changes ──
   useEffect(() => {
     if (viewMode === 'teacher' && selectedEntity !== 'ALL') {
@@ -1042,6 +1078,7 @@ export function TimetablePage() {
                           absentHighlight={highlight}
                           dragOver={dragOverCell === cellKey}
                           isDropTarget={isDragging && (poolDragItem?.section === sn || dragItem?.section === sn)}
+                          hasConflict={isDragging && dragItem?.section === sn ? checkSwapConflict(sn, day, p.id) : false}
                           onDragOver={() => setDragOverCell(cellKey)}
                           onDrop={e => handleDrop(e, sn, day, p.id)}
                           onDragLeave={() => setDragOverCell(null)}
@@ -1152,6 +1189,7 @@ export function TimetablePage() {
                           absentHighlight={highlight}
                           dragOver={dragOverCell === cellKeyT}
                           isDropTarget={isDragging && (poolDragItem?.section === sn || dragItem?.section === sn)}
+                          hasConflict={isDragging && dragItem?.section === sn ? checkSwapConflict(sn, day, p.id) : false}
                           onDragOver={() => setDragOverCell(cellKeyT)}
                           onDrop={e => handleDrop(e, sn, day, p.id)}
                           onDragLeave={() => setDragOverCell(null)}
