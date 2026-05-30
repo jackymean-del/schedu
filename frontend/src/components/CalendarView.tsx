@@ -781,7 +781,7 @@ export function CalendarView({
       })
     })
     // ── ONE virtual free block per truly-free period ──
-    // (period where this teacher teaches nobody — safe green drop target)
+    // Set teacher:tName so the DropZone filter only shows these on THIS teacher's rows
     periods.forEach(p=>{
       if(p.type!=="class") return
       if(taughtPeriodIds.has(p.id)) return     // teacher is busy here → skip
@@ -791,7 +791,7 @@ export function CalendarView({
         periodName:p.name, periodType:"class",
         startMin:t.start, endMin:t.end,
         sectionName:"",   // virtual — use dragSrc.section when dropped
-        subject:"", teacher:"", room:"",
+        subject:"", teacher:tName, room:"",   // teacher stamped for filter
         isSub:false, isClassTeacher:false, absent:false,
       })
     })
@@ -836,6 +836,7 @@ export function CalendarView({
       })
     })
     // ── ONE virtual free block per truly-free period ──
+    // Set room:roomName so the DropZone filter only shows these on THIS room's rows
     periods.forEach(p=>{
       if(p.type!=="class") return
       if(occupiedPeriodIds.has(p.id)) return    // room in use → skip
@@ -845,7 +846,7 @@ export function CalendarView({
         periodName:p.name, periodType:"class",
         startMin:t.start, endMin:t.end,
         sectionName:"",   // virtual — use dragSrc.section when dropped
-        subject:"", teacher:"", room:"",
+        subject:"", teacher:"", room:roomName,  // room stamped for filter
         isSub:false, isClassTeacher:false, absent:false,
       })
     })
@@ -1034,27 +1035,24 @@ export function CalendarView({
         if (b.periodType!=="class") return null
         if (b.key === dragSrcKey) return null   // skip the source cell itself
 
-        // ── Filter by viewMode so the right cells get highlighted ──
+        // ── Filter by viewMode: only highlight cells of the same entity ──
+        // Virtual free blocks carry entity stamp (teacher/room) so this filter
+        // correctly scopes highlights to a single teacher/room row only.
         const srcCell    = classTT[dragSrc.section]?.[dragSrc.day]?.[dragSrc.periodId]
         const srcTeacher = srcCell?.teacher
         const srcRoom    = srcCell?.room
         const srcSubject = srcCell?.subject
-        const isFreeSlot = !b.subject  // blank period — valid drop target in any view
         if (viewMode === "class") {
-          // Class view: only same section (filled or free)
           if (b.sectionName !== dragSrc.section) return null
         } else if (viewMode === "teacher") {
-          // Teacher view: same-teacher filled slots OR free slots (move to free period)
-          if (!srcTeacher) return null
-          if (!isFreeSlot && b.teacher !== srcTeacher) return null
+          // b.teacher is stamped on both taught and virtual-free blocks
+          if (!srcTeacher || b.teacher !== srcTeacher) return null
         } else if (viewMode === "room") {
-          // Room view: same-room filled slots OR free slots for this room
-          if (!srcRoom) return null
-          if (!isFreeSlot && b.room !== srcRoom) return null
+          // b.room is stamped on both occupied and virtual-free blocks
+          if (!srcRoom || b.room !== srcRoom) return null
         } else if (viewMode === "subject") {
-          // Subject view: same-subject filled slots OR free slots
-          if (!srcSubject) return null
-          if (!isFreeSlot && b.subject !== srcSubject) return null
+          // Subject view: only taught blocks (no virtual-free for subject view)
+          if (!srcSubject || b.subject !== srcSubject) return null
         }
 
         const bLeft   = (b.startMin-dayStartMin)*pxPerMin
