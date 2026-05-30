@@ -678,6 +678,27 @@ export function DashboardPage() {
     window.location.href = '/wizard'
   }
 
+  // ── Snapshot repair ───────────────────────────────────────────
+  // Called when user clicks "Restore Data" on a timetable card.
+  // Saves the CURRENT store state (which still contains the classTT/staff/
+  // sections/periods from the timetable that was last open) as a snapshot
+  // for this timetable ID. This lets users recover if a new timetable's
+  // config overwrote the active timetable's settings.
+  const handleRepairSnapshot = (t: TTEntry) => {
+    // Snap whatever is currently in the store as this timetable's data
+    saveTTSnapshot(t.id)
+    // Mark it as the active timetable
+    setActiveTTId(t.id)
+    alert(
+      `✅ "${t.name}" data has been secured.\n\n` +
+      `Your generated timetable, staff, classes and subjects are preserved.\n\n` +
+      `Please open the timetable and go through Step 2 (Bell Timing) and ` +
+      `Step 3 (Class-wise Breaks) to restore the correct lunch break configuration.`
+    )
+    // Refresh list UI
+    setTTList(prev => [...prev])
+  }
+
   const handleDelete = (id: string) => {
     const next = ttList.filter(t => t.id !== id)
     setTTList(next)
@@ -1155,7 +1176,7 @@ export function DashboardPage() {
                     {/* Action buttons */}
                     {tt.status === 'active' && (
                       <>
-                        <TtBtn onClick={() => { window.location.href = '/timetable' }}>Edit</TtBtn>
+                        <TtBtn onClick={() => handleContinue(tt)}>Open</TtBtn>
                         <TtBtn onClick={() => {}}>Export</TtBtn>
                       </>
                     )}
@@ -1166,6 +1187,13 @@ export function DashboardPage() {
                     )}
                     {tt.status === 'archived' && (
                       <TtBtn onClick={() => { window.location.href = '/timetable' }}>View</TtBtn>
+                    )}
+                    {/* Restore Data — shown when this timetable's data may have been
+                        overwritten by another timetable's config (no snapshot yet) */}
+                    {!localStorage.getItem(TT_SNAPSHOT_PFX + tt.id) && (
+                      <TtBtn onClick={() => handleRepairSnapshot(tt)}>
+                        🔧 Restore data
+                      </TtBtn>
                     )}
 
                     {/* Delete button — all rows */}
