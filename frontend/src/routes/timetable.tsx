@@ -261,6 +261,34 @@ function isFullLunchColumn(
   })
 }
 
+// ── Conflict warning modal (shared with Calendar view) ────────
+function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }) {
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed" as const, inset:0, background:"rgba(0,0,0,0.45)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999,
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:"#fff", borderRadius:14, padding:"22px 26px",
+        maxWidth:340, boxShadow:"0 12px 40px rgba(0,0,0,0.22)", margin:"0 16px",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+          <span style={{ fontSize:22 }}>⚠️</span>
+          <span style={{ fontSize:15, fontWeight:800, color:"#DC2626" }}>Cannot Drop Here</span>
+        </div>
+        <div style={{ fontSize:13, color:"#374151", lineHeight:1.65, whiteSpace:"pre-line" as const }}>
+          {message}
+        </div>
+        <button onClick={onClose} style={{
+          marginTop:18, width:"100%", padding:"9px", background:"#7C6FE0",
+          color:"#fff", border:"none", borderRadius:8,
+          fontSize:13, fontWeight:700, cursor:"pointer",
+        }}>Got it</button>
+      </div>
+    </div>
+  )
+}
+
 // ── Period header — draggable column header in edit mode ──────
 function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDimmed,
   onDragStart, onDragEnd, onDragOver, onDrop }: {
@@ -338,7 +366,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   dragOver?:boolean; onDragOver?:(e:React.DragEvent)=>void; onDrop?:(e:React.DragEvent)=>void; onDragLeave?:()=>void;
   absentHighlight?:boolean; options?: CellOption[];
   isDraggable?:boolean; onDragStart?:(e:React.DragEvent)=>void; onDelete?:()=>void; editMode?:boolean;
-  isDropTarget?:boolean; hasConflict?:boolean;
+  isDropTarget?:boolean; hasConflict?:string|null;
 }) {
   const [hovered, setHovered] = useState(false)
   const sharedTdProps = {
@@ -349,9 +377,10 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
     onMouseLeave: () => setHovered(false),
   }
   // Warm colors for drag state
-  const dropBg     = hasConflict ? "#FEE2E2" : "#DCFCE7"
-  const dropBorder = hasConflict ? "#FCA5A5" : "#86EFAC"
-  const dropBorderActive = hasConflict ? "#EF4444" : "#16A34A"
+  const isConflict = !!hasConflict
+  const dropBg     = isConflict ? "#FEE2E2" : "#DCFCE7"
+  const dropBorder = isConflict ? "#FCA5A5" : "#86EFAC"
+  const dropBorderActive = isConflict ? "#EF4444" : "#16A34A"
 
   if (!subject) return (
     <td style={{
@@ -840,23 +869,40 @@ export function TimetablePage() {
   // ── isDragging — true while any drag is active ───────────
   const isDragging = !!poolDragItem || !!dragItem
 
-  // ── checkSwapConflict: would swapping dragItem into (section,day,periodId) cause a teacher clash?
-  const checkSwapConflict = useCallback((section:string, day:string, periodId:string): boolean => {
-    if (!dragItem) return false
+  // ── conflictWarning modal state ───────────────────────────
+  const [conflictWarning, setConflictWarning] = useState<string|null>(null)
+
+  // ── checkSwapConflict: returns conflict reason string or null if safe ──
+  const checkSwapConflict = useCallback((section:string, day:string, periodId:string): string|null => {
+    if (!dragItem) return null
     const fromCell = classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]
     const toCell   = classTT[section]?.[day]?.[periodId]
-    if (!fromCell?.teacher && !toCell?.teacher) return false
-    // fromTeacher would move to (day, periodId) — busy elsewhere?
-    if (fromCell?.teacher && sections.some(s =>
-      s.name !== section && s.name !== dragItem.section &&
-      classTT[s.name]?.[day]?.[periodId]?.teacher === fromCell.teacher
-    )) return true
-    // toTeacher would move to (dragItem.day, dragItem.periodId) — busy elsewhere?
-    if (toCell?.teacher && sections.some(s =>
-      s.name !== section && s.name !== dragItem.section &&
-      classTT[s.name]?.[dragItem.day]?.[dragItem.periodId]?.teacher === toCell.teacher
-    )) return true
-    return false
+    const fromTeacher = fromCell?.teacher?.trim()
+    const toTeacher   = toCell?.teacher?.trim()
+
+    // Class-teacher protection
+    if (fromCell?.isClassTeacher && toTeacher && toTeacher !== fromTeacher)
+      return `${fromTeacher} is the Class Teacher for ${dragItem.section}.\nCannot replace a Class Teacher's period with a different teacher.`
+    if (toCell?.isClassTeacher && fromTeacher && fromTeacher !== toTeacher)
+      return `${toTeacher} is the Class Teacher for ${section}.\nCannot swap into a Class Teacher's designated period.`
+
+    // Teacher clash at target slot
+    if (fromTeacher) {
+      const clash = sections.find(s =>
+        s.name !== section && s.name !== dragItem.section &&
+        classTT[s.name]?.[day]?.[periodId]?.teacher === fromTeacher
+      )
+      if (clash) return `${fromTeacher} is already teaching ${clash.name} at this time slot.`
+    }
+    // Teacher clash at source slot
+    if (toTeacher) {
+      const clash = sections.find(s =>
+        s.name !== section && s.name !== dragItem.section &&
+        classTT[s.name]?.[dragItem.day]?.[dragItem.periodId]?.teacher === toTeacher
+      )
+      if (clash) return `${toTeacher} is already teaching ${clash.name} in the original time slot.`
+    }
+    return null
   }, [dragItem, classTT, sections])
 
   // ── Auto-sync pool filters when the active view/entity changes ──
@@ -925,7 +971,9 @@ export function TimetablePage() {
       s.name !== from.section && classTT[s.name]?.[from.day]?.[from.periodId]?.teacher === toCell.teacher
     )
     if (fromTeacherBusy || toTeacherBusy) {
-      alert(`Cannot swap: teacher conflict detected.`)
+      const fromMsg = fromTeacherBusy ? `${fromCell.teacher} is already teaching another class at the target time slot.` : ""
+      const toMsg   = toTeacherBusy   ? `${toCell?.teacher} is already teaching another class at the source time slot.` : ""
+      setConflictWarning([fromMsg, toMsg].filter(Boolean).join('\n'))
       return
     }
     const newTT2 = { ...classTT }
@@ -1074,9 +1122,13 @@ export function TimetablePage() {
                           absentHighlight={highlight}
                           dragOver={dragOverCell === cellKey}
                           isDropTarget={isDragging && (poolDragItem?.section === sn || dragItem?.section === sn)}
-                          hasConflict={isDragging && dragItem?.section === sn ? checkSwapConflict(sn, day, p.id) : false}
+                          hasConflict={isDragging && dragItem?.section === sn ? checkSwapConflict(sn, day, p.id) : null}
                           onDragOver={() => setDragOverCell(cellKey)}
-                          onDrop={e => handleDrop(e, sn, day, p.id)}
+                          onDrop={e => {
+                            const cf = checkSwapConflict(sn, day, p.id)
+                            if (cf) { e.preventDefault(); setDragItem(null); setDragOverCell(null); setConflictWarning(cf); return }
+                            handleDrop(e, sn, day, p.id)
+                          }}
                           onDragLeave={() => setDragOverCell(null)}
                           onClick={() => editMode && !cell?.subject ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
                           isDraggable={editMode && !!cell?.subject}
@@ -1185,9 +1237,13 @@ export function TimetablePage() {
                           absentHighlight={highlight}
                           dragOver={dragOverCell === cellKeyT}
                           isDropTarget={isDragging && (poolDragItem?.section === sn || dragItem?.section === sn)}
-                          hasConflict={isDragging && dragItem?.section === sn ? checkSwapConflict(sn, day, p.id) : false}
+                          hasConflict={isDragging && dragItem?.section === sn ? checkSwapConflict(sn, day, p.id) : null}
                           onDragOver={() => setDragOverCell(cellKeyT)}
-                          onDrop={e => handleDrop(e, sn, day, p.id)}
+                          onDrop={e => {
+                            const cf = checkSwapConflict(sn, day, p.id)
+                            if (cf) { e.preventDefault(); setDragItem(null); setDragOverCell(null); setConflictWarning(cf); return }
+                            handleDrop(e, sn, day, p.id)
+                          }}
                           onDragLeave={() => setDragOverCell(null)}
                           onClick={() => editMode && !cell?.subject ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
                           isDraggable={editMode && !!cell?.subject}
@@ -2931,6 +2987,11 @@ export function TimetablePage() {
           </div>
         )
       })()}
+
+      {/* ── Conflict warning modal ── */}
+      {conflictWarning && (
+        <ConflictModal message={conflictWarning} onClose={()=>setConflictWarning(null)} />
+      )}
 
       {/* ── Publish confirmation overlay ── */}
       {publishConfirm && (

@@ -518,8 +518,38 @@ function Block({
 }
 
 // ─────────────────────────────────────────────
-// Conflict detection — checks teacher clashes after a swap
-// Returns null if safe, or a string describing the conflict
+// Conflict warning modal
+// ─────────────────────────────────────────────
+function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }) {
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed" as const, inset:0, background:"rgba(0,0,0,0.45)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999,
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:"#fff", borderRadius:14, padding:"22px 26px",
+        maxWidth:340, boxShadow:"0 12px 40px rgba(0,0,0,0.22)", margin:"0 16px",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+          <span style={{ fontSize:22 }}>⚠️</span>
+          <span style={{ fontSize:15, fontWeight:800, color:"#DC2626" }}>Cannot Drop Here</span>
+        </div>
+        <div style={{ fontSize:13, color:"#374151", lineHeight:1.65, whiteSpace:"pre-line" as const }}>
+          {message}
+        </div>
+        <button onClick={onClose} style={{
+          marginTop:18, width:"100%", padding:"9px", background:"#7C6FE0",
+          color:"#fff", border:"none", borderRadius:8,
+          fontSize:13, fontWeight:700, cursor:"pointer",
+        }}>Got it</button>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Conflict detection — checks teacher clashes + class-teacher protection
+// Returns null if safe, or a human-readable reason string
 // ─────────────────────────────────────────────
 function getSwapConflict(
   classTT: ClassTimetable,
@@ -532,20 +562,31 @@ function getSwapConflict(
   const tgtTeacher = tgtCell?.teacher?.trim()
   const msgs: string[] = []
 
-  // After swap: srcTeacher will occupy (tgtDay, tgtPeriodId) → check for clash
+  // Class-teacher protection: source cell is a class-teacher assignment
+  if (srcCell?.isClassTeacher && tgtTeacher && tgtTeacher !== srcTeacher) {
+    msgs.push(`${srcTeacher} is the Class Teacher for ${srcSection}.\nCannot replace a Class Teacher's period with a different teacher.`)
+    return msgs.join('\n')
+  }
+  // Class-teacher protection: target cell is a class-teacher assignment
+  if (tgtCell?.isClassTeacher && srcTeacher && srcTeacher !== tgtTeacher) {
+    msgs.push(`${tgtTeacher} is the Class Teacher for ${srcSection}.\nCannot swap into a Class Teacher's designated period.`)
+    return msgs.join('\n')
+  }
+
+  // After swap: srcTeacher will occupy (tgtDay, tgtPeriodId) → clash with another section?
   if (srcTeacher) {
     const clash = Object.entries(classTT).find(([sec, days]) =>
       sec !== srcSection && days[tgtDay]?.[tgtPeriodId]?.teacher === srcTeacher
     )
-    if (clash) msgs.push(`${srcTeacher} already in ${clash[0]}`)
+    if (clash) msgs.push(`${srcTeacher} is already teaching ${clash[0]} at this time slot.`)
   }
 
-  // After swap: tgtTeacher will occupy (srcDay, srcPeriodId) → check for clash
+  // After swap: tgtTeacher will occupy (srcDay, srcPeriodId) → clash with another section?
   if (tgtTeacher) {
     const clash = Object.entries(classTT).find(([sec, days]) =>
       sec !== srcSection && days[srcDay]?.[srcPeriodId]?.teacher === tgtTeacher
     )
-    if (clash) msgs.push(`${tgtTeacher} already in ${clash[0]}`)
+    if (clash) msgs.push(`${tgtTeacher} is already teaching ${clash[0]} in the original time slot.`)
   }
 
   return msgs.length ? msgs.join('\n') : null
@@ -553,34 +594,38 @@ function getSwapConflict(
 
 // ─────────────────────────────────────────────
 // Drop zone overlay — rendered on top of blocks ONLY during active drag
-// Shows safe (purple) or conflict (red) state with reason tooltip
+// Green = safe, Red = conflict. Solid border for visibility.
 // ─────────────────────────────────────────────
 function DropZone({
   block, left, width, rowH, compact, dayKey, isOver, conflict,
-  onDragOver, onDragLeave, onDrop,
+  onDragOver, onDragLeave, onDrop, onConflictDrop,
 }: {
   block:TimeBlock; left:number; width:number; rowH:number; compact:boolean; dayKey:string
   isOver:boolean
-  conflict: string | null  // null = safe, string = conflict reason
+  conflict: string | null
   onDragOver:(sec:string,day:string,pid:string)=>void
   onDragLeave:()=>void
   onDrop:(sec:string,day:string,pid:string)=>void
+  onConflictDrop:(reason:string)=>void  // called when user tries to drop on conflict cell
 }) {
   if (width <= 0 || block.periodType !== "class") return null
 
   const isConflict = !!conflict
-  const hasFill    = !!block.subject  // filled cell — show outline only, no bg
+  const hasFill    = !!block.subject  // filled cell: outline only. empty: fill + outline.
 
-  // Warm green = safe, warm red = conflict
-  // Filled cells: border outline only. Empty cells: light fill + border.
+  // Warm green (safe) / warm red (conflict)
+  const safeIdle    = "#D1FAE5"; const safeActive    = "#6EE7B7"; const safeBorder    = "#10B981"
+  const conflictIdle= "#FEE2E2"; const conflictActive= "#FECACA"; const conflictBorder= "#EF4444"
+
   const bgColor = hasFill
     ? "transparent"
     : isConflict
-      ? (isOver ? "#FEE2E2" : "#FFF1F2")
-      : (isOver ? "#DCFCE7" : "#F0FDF4")
-  const borderStyle = isConflict
-    ? (isOver ? "2px solid #EF4444"  : "1.5px dashed #FCA5A5")
-    : (isOver ? "2px solid #16A34A" : "1.5px dashed #86EFAC")
+      ? (isOver ? conflictActive : conflictIdle)
+      : (isOver ? safeActive    : safeIdle)
+
+  const border = isConflict
+    ? `2px solid ${conflictBorder}`
+    : `2px solid ${safeBorder}`
 
   return (
     <div
@@ -589,39 +634,21 @@ function DropZone({
       onDragLeave={onDragLeave}
       onDrop={e=>{
         e.preventDefault(); e.stopPropagation()
-        if (!isConflict) onDrop(block.sectionName, dayKey, block.periodId)
+        if (isConflict) { onConflictDrop(conflict!) }
+        else onDrop(block.sectionName, dayKey, block.periodId)
       }}
       style={{
         position:"absolute" as const,
         left:left+1, width:Math.max(width-2,2),
         top:compact?2:3, bottom:compact?2:3,
         borderRadius:"0 5px 5px 0",
-        zIndex:20,
-        background: bgColor,
-        border: borderStyle,
-        transition:"all 0.08s ease",
+        zIndex:20, background:bgColor, border,
+        transition:"background 0.08s ease",
         cursor: isConflict ? "not-allowed" : "copy",
         overflow:"visible" as const,
-      }}>
-      {/* Conflict tooltip — only on hover over conflict cell */}
-      {isOver && isConflict && (
-        <div style={{
-          position:"absolute" as const,
-          bottom:"calc(100% + 6px)", left:"50%", transform:"translateX(-50%)",
-          background:"#DC2626", color:"#fff", borderRadius:6, padding:"4px 9px",
-          fontSize:10, fontWeight:600, whiteSpace:"pre" as const,
-          boxShadow:"0 2px 8px rgba(0,0,0,0.2)", zIndex:50,
-          pointerEvents:"none" as const, textAlign:"center" as const, lineHeight:1.5,
-        }}>
-          {`⚠ ${conflict}`}
-          <div style={{
-            position:"absolute" as const, top:"100%", left:"50%",
-            transform:"translateX(-50%)",
-            border:"5px solid transparent", borderTopColor:"#DC2626",
-          }} />
-        </div>
-      )}
-    </div>
+        boxShadow: isOver ? `0 0 0 2px ${isConflict ? conflictBorder : safeBorder}` : "none",
+      }}
+    />
   )
 }
 
@@ -642,10 +669,11 @@ export function CalendarView({
   const [tooltip,    setTooltip]    = useState<{lines:string[];x:number;y:number}|null>(null)
   const [activeD,    setActiveD]    = useState<ActiveDetail|null>(null)
   // drag state: only src key + hover key — lightweight strings, not objects
-  const [dragSrcKey,  setDragSrcKey]  = useState<string|null>(null)  // block.key being dragged
-  const [dragSrc,     setDragSrc]     = useState<{section:string;day:string;periodId:string}|null>(null)
-  const [dragOverKey, setDragOverKey] = useState<string|null>(null)  // key of hovered drop zone
-  const [dragOverDst, setDragOverDst] = useState<{section:string;day:string;periodId:string}|null>(null)
+  const [dragSrcKey,      setDragSrcKey]      = useState<string|null>(null)
+  const [dragSrc,         setDragSrc]         = useState<{section:string;day:string;periodId:string}|null>(null)
+  const [dragOverKey,     setDragOverKey]     = useState<string|null>(null)
+  const [dragOverDst,     setDragOverDst]     = useState<{section:string;day:string;periodId:string}|null>(null)
+  const [conflictWarning, setConflictWarning] = useState<string|null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   const clearDrag = useCallback(()=>{
@@ -961,6 +989,7 @@ export function CalendarView({
             isOver={isOver} conflict={conflict}
             onDragOver={(sec,d,p)=>{ setDragOverKey(b.key); setDragOverDst({section:sec,day:d,periodId:p}) }}
             onDragLeave={()=>{ if(dragOverKey===b.key){ setDragOverKey(null); setDragOverDst(null) } }}
+            onConflictDrop={(reason)=>{ clearDrag(); setConflictWarning(reason) }}
             onDrop={(sec,d,p)=>{
               if(dragSrc && onCellSwap && (dragSrc.section!==sec||dragSrc.day!==d||dragSrc.periodId!==p)) {
                 onCellSwap(dragSrc, {section:sec, day:d, periodId:p})
@@ -1496,6 +1525,11 @@ export function CalendarView({
 
       {/* Global tooltip */}
       <Tooltip tip={tooltip} />
+
+      {/* Conflict warning modal */}
+      {conflictWarning && (
+        <ConflictModal message={conflictWarning} onClose={()=>setConflictWarning(null)} />
+      )}
     </div>
   )
 }
