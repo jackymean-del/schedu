@@ -616,31 +616,22 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
   )
 }
 
-// ── Inter-teacher swap insight modal ─────────────────────────
-function SwapInsightModal({ message, onClose }:{ message:string; onClose:()=>void }) {
+// ── Inter-teacher swap insight — inline banner (non-blocking) ──
+function InsightBanner({ message, onClose }:{ message:string; onClose:()=>void }) {
   return (
-    <div onClick={onClose} style={{
-      position:"fixed" as const, inset:0, background:"rgba(0,0,0,0.35)",
-      display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999,
+    <div style={{
+      background:"#ECFDF5", border:"1px solid #6EE7B7", borderRadius:8,
+      padding:"10px 14px", marginBottom:12,
+      display:"flex", alignItems:"center", gap:10, flexShrink:0,
     }}>
-      <div onClick={e=>e.stopPropagation()} style={{
-        background:"#fff", borderRadius:14, padding:"22px 26px",
-        maxWidth:360, boxShadow:"0 12px 40px rgba(0,0,0,0.18)", margin:"0 16px",
-        borderTop:"4px solid #10B981",
-      }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-          <span style={{ fontSize:20 }}>↕️</span>
-          <span style={{ fontSize:15, fontWeight:800, color:"#065f46" }}>Timetable Swapped</span>
-        </div>
-        <div style={{ fontSize:13, color:"#374151", lineHeight:1.7, whiteSpace:"pre-line" as const }}>
-          {message}
-        </div>
-        <button onClick={onClose} style={{
-          marginTop:18, width:"100%", padding:"9px", background:"#10B981",
-          color:"#fff", border:"none", borderRadius:8,
-          fontSize:13, fontWeight:700, cursor:"pointer",
-        }}>Got it</button>
+      <span style={{ fontSize:16, flexShrink:0 }}>↕️</span>
+      <div style={{ flex:1, fontSize:12.5, color:"#065f46", lineHeight:1.55 }}>
+        <span style={{ fontWeight:700 }}>Timetable swapped — </span>{message}
       </div>
+      <button onClick={onClose}
+        style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer",
+          fontSize:17, color:"#10B981", lineHeight:1, padding:"0 2px", opacity:0.8 }}
+        title="Dismiss">×</button>
     </div>
   )
 }
@@ -1252,12 +1243,19 @@ export function TimetablePage() {
     const fromTeacher = fromCell?.teacher?.trim()
     const toTeacher   = toCell?.teacher?.trim()
 
+    // Human-readable slot labels for error messages
+    const srcDay  = DAY_SHORT[dragItem.day] ?? dragItem.day
+    const dstDay  = DAY_SHORT[day] ?? day
+    const srcPeriod = classPeriods.find(p => p.id === dragItem.periodId)?.name ?? dragItem.periodId
+    const dstPeriod = classPeriods.find(p => p.id === periodId)?.name ?? periodId
+
     // Class-teacher protection (source cell)
     if (fromCell?.isClassTeacher && toTeacher && toTeacher !== fromTeacher)
-      return `${fromTeacher} is the Class Teacher for ${dragItem.section}.\nCannot replace a Class Teacher's period with a different teacher.`
+      return `${fromTeacher} is the Class Teacher for ${dragItem.section}. Class Teacher periods are protected and cannot be moved to a slot occupied by a different teacher.`
+
     // Class-teacher protection (target cell)
     if (toCell?.isClassTeacher && fromTeacher && fromTeacher !== toTeacher)
-      return `${toTeacher} is the Class Teacher for ${section}.\nCannot swap into a Class Teacher's designated period.`
+      return `${toTeacher} is the Class Teacher for ${section}. You cannot drop into a Class Teacher's protected slot.`
 
     // Teacher clash: fromTeacher would be in (day, periodId) — already teaching another section there?
     if (fromTeacher) {
@@ -1265,7 +1263,7 @@ export function TimetablePage() {
         s.name !== section && s.name !== dragItem.section &&
         classTT[s.name]?.[day]?.[periodId]?.teacher === fromTeacher
       )
-      if (clash) return `${fromTeacher} is already teaching ${clash.name} at this slot.`
+      if (clash) return `${fromTeacher} is already teaching ${clash.name} at ${dstDay} (${dstPeriod}). A teacher cannot be in two classrooms at the same time.`
     }
 
     // moveOnly: skip all reverse-swap checks — destination teacher is simply displaced.
@@ -1277,24 +1275,23 @@ export function TimetablePage() {
         s.name !== section && s.name !== dragItem.section &&
         classTT[s.name]?.[dragItem.day]?.[dragItem.periodId]?.teacher === toTeacher
       )
-      if (clash) return `${toTeacher} is already teaching ${clash.name} in the original slot.`
+      if (clash) return `Cannot swap — ${toTeacher} already has ${clash.name} scheduled at ${srcDay} (${srcPeriod}), which is where this period would move to. That would double-book ${toTeacher} at the same time.`
     }
 
     // Teacher view: cross-section swap — check if target section already has ANOTHER teacher in source slot
     if (section !== dragItem.section) {
       const targetSectionSourceSlot = classTT[section]?.[dragItem.day]?.[dragItem.periodId]
       if (targetSectionSourceSlot?.teacher && targetSectionSourceSlot.teacher !== fromTeacher) {
-        return `${section} already has ${targetSectionSourceSlot.teacher} in the source time slot.\nSwapping would displace that assignment.`
+        return `${section} already has ${targetSectionSourceSlot.teacher} assigned at ${srcDay} (${srcPeriod}). Dropping here would displace their existing class.`
       }
-      // Check if source section already has another teacher in target slot
       const sourceSectionTargetSlot = classTT[dragItem.section]?.[day]?.[periodId]
       if (sourceSectionTargetSlot?.teacher && sourceSectionTargetSlot.teacher !== fromTeacher) {
-        return `${dragItem.section} already has ${sourceSectionTargetSlot.teacher} in this slot.\nSwapping would displace that assignment.`
+        return `${dragItem.section} already has ${sourceSectionTargetSlot.teacher} assigned at ${dstDay} (${dstPeriod}). Dropping here would displace their existing class.`
       }
     }
 
     return null
-  }, [dragItem, classTT, sections])
+  }, [dragItem, classTT, sections, classPeriods])
 
   // ── Auto-sync pool filters when the active view/entity changes ──
   useEffect(() => {
@@ -1826,9 +1823,8 @@ export function TimetablePage() {
                           const srcDay = DAY_SHORT[dragItem.day] ?? dragItem.day
                           const dstDay = DAY_SHORT[day] ?? day
                           const insight =
-                            `${ttDestCell.teacher} was teaching ${ttDestCell.subject} for ${ttDropSec} on ${dstDay} (${dstPeriod}).\n` +
-                            `That slot has been swapped to ${srcDay} (${srcPeriod}).\n\n` +
-                            `Both timetables have been updated automatically.`
+                            `${ttDestCell.teacher}'s ${ttDestCell.subject} for ${ttDropSec}: ` +
+                            `${dstDay} (${dstPeriod}) ↔ ${srcDay} (${srcPeriod}). Both timetables updated.`
                           handleDrop(e, ttDropSec, day, col.periodId, tn, false)  // full swap
                           setSwapInsight(insight)
                         } else {
@@ -3002,6 +2998,11 @@ export function TimetablePage() {
           onClick={() => { if (showExportMenu) setShowExportMenu(false) }}
         >
 
+          {/* ── Inter-teacher swap insight banner (non-blocking) ── */}
+          {swapInsight && mainMode === "traditional" && (
+            <InsightBanner message={swapInsight} onClose={() => setSwapInsight(null)} />
+          )}
+
           {/* ═══ Calendar mode ═══ */}
           {mainMode === "calendar" && renderCalendarView(selectedEntity)}
 
@@ -3400,11 +3401,6 @@ export function TimetablePage() {
       {/* ── Conflict warning modal ── */}
       {conflictWarning && (
         <ConflictModal message={conflictWarning} onClose={()=>setConflictWarning(null)} />
-      )}
-
-      {/* ── Inter-teacher swap insight modal ── */}
-      {swapInsight && (
-        <SwapInsightModal message={swapInsight} onClose={()=>setSwapInsight(null)} />
       )}
 
       {/* ── Publish confirmation overlay ── */}
