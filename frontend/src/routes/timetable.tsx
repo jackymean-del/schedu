@@ -616,6 +616,35 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
   )
 }
 
+// ── Inter-teacher swap insight modal ─────────────────────────
+function SwapInsightModal({ message, onClose }:{ message:string; onClose:()=>void }) {
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed" as const, inset:0, background:"rgba(0,0,0,0.35)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999,
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:"#fff", borderRadius:14, padding:"22px 26px",
+        maxWidth:360, boxShadow:"0 12px 40px rgba(0,0,0,0.18)", margin:"0 16px",
+        borderTop:"4px solid #10B981",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+          <span style={{ fontSize:20 }}>↕️</span>
+          <span style={{ fontSize:15, fontWeight:800, color:"#065f46" }}>Timetable Swapped</span>
+        </div>
+        <div style={{ fontSize:13, color:"#374151", lineHeight:1.7, whiteSpace:"pre-line" as const }}>
+          {message}
+        </div>
+        <button onClick={onClose} style={{
+          marginTop:18, width:"100%", padding:"9px", background:"#10B981",
+          color:"#fff", border:"none", borderRadius:8,
+          fontSize:13, fontWeight:700, cursor:"pointer",
+        }}>Got it</button>
+      </div>
+    </div>
+  )
+}
+
 // ── Period header — draggable column header in edit mode ──────
 function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDimmed,
   onDragStart, onDragEnd, onDragOver, onDrop, breakGroupLabel }: {
@@ -1187,6 +1216,8 @@ export function TimetablePage() {
 
   // ── conflictWarning modal state ───────────────────────────
   const [conflictWarning, setConflictWarning] = useState<string|null>(null)
+  // ── inter-teacher swap insight modal state ────────────────
+  const [swapInsight, setSwapInsight] = useState<string|null>(null)
 
   // ── Global dragend listener — clears ALL drag state when drag ends for any reason ──
   // Prevents frozen state when user drops outside a target, presses Escape during drag,
@@ -1758,12 +1789,18 @@ export function TimetablePage() {
                                    : (taughtCell ? isSameTeacherDrag : dragSlotHere)
                     )
                     const ttDropSec = taughtSec || poolSec || (dragSlotHere && dragItem ? dragItem.section : "")
-                    // Teaching cell: full two-way swap check (Teacher A swaps with Teacher A).
-                    const ttConflict     = ttIsTarget && ttDropSec && taughtCell  ? checkSwapConflict(ttDropSec, day, col.periodId, false) : null
-                    // Free / lunch cell: move-only check — only verify the dragging teacher isn't
-                    // double-booked at the destination. Don't check the displaced teacher's back-conflicts.
-                    const ttFreeConflict = ttIsTarget && ttDropSec && !taughtCell ? checkSwapConflict(ttDropSec, day, col.periodId, true)  : null
-                    const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttCellKey) }
+                    // Detect inter-teacher swap: destination slot for the dragged section has ANOTHER teacher.
+                    // In that case we do a full two-way swap (both timetables update) instead of move-only.
+                    const ttDestCell  = !taughtCell && ttDropSec ? classTT[ttDropSec]?.[day]?.[col.periodId] : undefined
+                    const ttInterSwap = !!ttDestCell?.teacher && ttDestCell.teacher !== tn
+                    // Teaching cell: full two-way swap check (same teacher swaps own periods).
+                    const ttConflict     = ttIsTarget && ttDropSec && taughtCell
+                      ? checkSwapConflict(ttDropSec, day, col.periodId, false) : null
+                    // Free / lunch cell: moveOnly=false for inter-teacher swap (check back-conflicts for the
+                    // other teacher), moveOnly=true for truly free slots (no back-conflicts to check).
+                    const ttFreeConflict = ttIsTarget && ttDropSec && !taughtCell
+                      ? checkSwapConflict(ttDropSec, day, col.periodId, !ttInterSwap) : null
+                    const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttCellKey) }
                     const onDragLeave = () => setDragOverCell(null)
                     const ttDragProps = {
                       onDragOver,
@@ -1775,14 +1812,28 @@ export function TimetablePage() {
                       },
                       onDragLeave,
                     }
-                    // Free / lunch cells always use moveOnly — displaces any existing teacher without back-swap
+                    // Free / lunch drop: inter-teacher swap OR simple move-only
                     const ttFreeDragProps = {
                       onDragOver,
                       onDrop: (e: React.DragEvent) => {
                         e.preventDefault()
                         if (!ttDropSec || !dragItem) return
                         if (ttFreeConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttFreeConflict); return }
-                        handleDrop(e, ttDropSec, day, col.periodId, tn, true)
+                        if (ttInterSwap && ttDestCell) {
+                          // Build insight before the swap so we capture the pre-swap state
+                          const srcPeriod = classPeriods.find(p=>p.id===dragItem.periodId)?.name ?? dragItem.periodId
+                          const dstPeriod = col.name
+                          const srcDay = DAY_SHORT[dragItem.day] ?? dragItem.day
+                          const dstDay = DAY_SHORT[day] ?? day
+                          const insight =
+                            `${ttDestCell.teacher} was teaching ${ttDestCell.subject} for ${ttDropSec} on ${dstDay} (${dstPeriod}).\n` +
+                            `That slot has been swapped to ${srcDay} (${srcPeriod}).\n\n` +
+                            `Both timetables have been updated automatically.`
+                          handleDrop(e, ttDropSec, day, col.periodId, tn, false)  // full swap
+                          setSwapInsight(insight)
+                        } else {
+                          handleDrop(e, ttDropSec, day, col.periodId, tn, true)   // move-only
+                        }
                       },
                       onDragLeave,
                     }
@@ -1917,8 +1968,12 @@ export function TimetablePage() {
                                      : (taughtCell ? isSameTeacherDrag : dragSlotHere)
                       )
                       const ttTDropSec = taughtSec || poolSec || (dragSlotHere && dragItem ? dragItem.section : "")
-                      const ttTConflict     = ttTIsTarget && ttTDropSec && taughtCell  ? checkSwapConflict(ttTDropSec, day, col.periodId, false) : null
-                      const ttTFreeConflict = ttTIsTarget && ttTDropSec && !taughtCell ? checkSwapConflict(ttTDropSec, day, col.periodId, true)  : null
+                      const ttTDestCell  = !taughtCell && ttTDropSec ? classTT[ttTDropSec]?.[day]?.[col.periodId] : undefined
+                      const ttTInterSwap = !!ttTDestCell?.teacher && ttTDestCell.teacher !== tn
+                      const ttTConflict     = ttTIsTarget && ttTDropSec && taughtCell
+                        ? checkSwapConflict(ttTDropSec, day, col.periodId, false) : null
+                      const ttTFreeConflict = ttTIsTarget && ttTDropSec && !taughtCell
+                        ? checkSwapConflict(ttTDropSec, day, col.periodId, !ttTInterSwap) : null
                       const onTDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttTKey) }
                       const onTDragLeave = () => setDragOverCell(null)
                       const ttTDragProps = {
@@ -1937,7 +1992,20 @@ export function TimetablePage() {
                           e.preventDefault()
                           if (!ttTDropSec || !dragItem) return
                           if (ttTFreeConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttTFreeConflict); return }
-                          handleDrop(e, ttTDropSec, day, col.periodId, tn, true)
+                          if (ttTInterSwap && ttTDestCell) {
+                            const srcPeriod = classPeriods.find(p=>p.id===dragItem.periodId)?.name ?? dragItem.periodId
+                            const dstPeriod = col.name
+                            const srcDay = DAY_SHORT[dragItem.day] ?? dragItem.day
+                            const dstDay = DAY_SHORT[day] ?? day
+                            const insight =
+                              `${ttTDestCell.teacher} was teaching ${ttTDestCell.subject} for ${ttTDropSec} on ${dstDay} (${dstPeriod}).\n` +
+                              `That slot has been swapped to ${srcDay} (${srcPeriod}).\n\n` +
+                              `Both timetables have been updated automatically.`
+                            handleDrop(e, ttTDropSec, day, col.periodId, tn, false)
+                            setSwapInsight(insight)
+                          } else {
+                            handleDrop(e, ttTDropSec, day, col.periodId, tn, true)
+                          }
                         },
                         onDragLeave: onTDragLeave,
                       }
@@ -3332,6 +3400,11 @@ export function TimetablePage() {
       {/* ── Conflict warning modal ── */}
       {conflictWarning && (
         <ConflictModal message={conflictWarning} onClose={()=>setConflictWarning(null)} />
+      )}
+
+      {/* ── Inter-teacher swap insight modal ── */}
+      {swapInsight && (
+        <SwapInsightModal message={swapInsight} onClose={()=>setSwapInsight(null)} />
       )}
 
       {/* ── Publish confirmation overlay ── */}
