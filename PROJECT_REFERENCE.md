@@ -4,7 +4,7 @@
 > timetable subsystem, and the hard-won design rules behind the recent work.
 > Keep this file updated whenever a structural decision or non-obvious rule is added.
 >
-> Last updated: 2026-05-31
+> Last updated: 2026-05-31 (unified time-slot column model + display refinements)
 
 ---
 
@@ -167,112 +167,117 @@ Example (MPSK real school):
 | Function | Purpose |
 |----------|---------|
 | `getSectionClassKey(name)` | "Nursery-A" → "nur", "XI-Com-A" → "xi". Maps a section to its class key. |
-| `buildClassPeriods(section, periods, cwBreaks)` | Builds a **section-specific** period sequence — interleaves only the breaks that apply to that section. |
-| `buildTeacherPeriods(classes, periods, cwBreaks)` | Builds a teacher's merged period sequence — includes breaks for any class they teach. |
-| `calcSectionTimes(section, cwBreaks, config, classPeriods)` | Per-section wall-clock times. |
+| `buildClassPeriods(section, periods, cwBreaks)` | Builds a **section-specific** period sequence — interleaves only the breaks that apply to that section. (Used by the class-section view.) |
+| `calcSectionTimes(section, cwBreaks, config, classPeriods)` | Per-section wall-clock **string** times (class-section view). |
+| `sectionScheduleMins(section, classPeriods, cwBreaks, config)` | Per-section wall-clock **minutes** for every period+break — the canonical engine behind the unified model (§6). |
 | `sectionHasBreak(section, breakId, cwBreaks)` | Does this section have this specific break? |
-| `isFullLunchColumn(p, days, sch, classes, cwBreaks)` | Is a column a full lunch for ALL of a teacher's classes? |
-| `resolveHeaderPeriod(p, classPeriods, cwBreaks, isPartial)` | For a partial break, returns the **concurrent class period** so the header shows a period name, not a break name. |
 
 ### ⚠️ The time-accumulation trap
-`calcTimes(periods)` walks the array adding each duration sequentially. When a
-teacher's merged sequence contains **multiple staggered breaks**, those durations
-**accumulate**, pushing every later period too late.
+`calcTimes(periods)` walks the array adding each duration sequentially. If you build
+a **merged** teacher/subject/room sequence and run `calcTimes` over it, the multiple
+staggered break durations **accumulate**, pushing every later period too late.
 
 > Example bug: XI lunch (10m) + VII lunch (10m) both accumulate → P8 shows
 > **2:55–3:35** instead of the correct **2:35–3:15**.
 
-**Fix pattern (already applied):** compute each column's time from a
-**representative section's actual schedule**, not from the merged sequence:
-```ts
-const baseSection = tdata.classes[0]
-const baseTimes = calcTimes(buildClassPeriods(baseSection, periods, cwBreaks), config)
-classPeriods.forEach(cp => { const t = baseTimes.get(cp.id); if (t) result.set(cp.id, t) })
-// break columns use each break's representative section similarly
-```
+**The fix is structural, not a patch:** never build a merged sequence. Compute
+per-section times with `sectionScheduleMins` and assemble distinct columns via
+`buildUnifiedColumns` (§6). Earlier "representative-section override" patches and
+the `buildTeacherPeriods` merged sequence have been **removed** — don't bring them
+back.
 
 ---
 
-## 6. ★ Teacher / Room / Subject HEADER RULE (canonical)
+## 6. ★ Teacher timetable + the unified time-slot column model
 
-> **Display a break name (Break, Lunch Break, …) in a slot header ONLY when ALL
-> applicable classes are on that break simultaneously. Otherwise display a Period
-> name.**
+This is the most intricate part of the app. Read it fully before editing any
+teacher/room/subject render code. Reverse-engineered from real **MPSK PDFs**, then
+refined across several rounds of user feedback.
 
-### Rules
-1. If even one class group has a teaching period in a slot → header is a **Period name**.
-2. Period names **may repeat** — expected when class groups follow different bells.
-3. Applicable classes are shown under each header (amber chip).
-4. Teacher timetable = teacher availability/teaching slots, not per-class breaks.
-5. Per slot: all-on-break → break name; otherwise → period name.
-6. **Never** mixed headers like "Lunch / Period 4". One header per slot.
+### 6.1 The staggered-break problem
+Different class groups take lunch at **different** points in the day, so a single
+"Period N" happens at **several wall-clock times**. Worked example
+(Demo TT 01 — three tracks):
 
-### Examples
-| Scenario | Header |
-|----------|--------|
-| I–XII all on Lunch | `Lunch Break` |
-| I–XII all on Break | `Break` |
-| I–V Lunch, VI–X Period 4 | `Period 4` |
-| I–V Break, VI–X Period 3 | `Period 3` |
-
-### Implementation
-- **Traditional teacher view** (`renderTeacherTT` / `…Transposed`): partial lunch
-  columns call `resolveHeaderPeriod()` → show concurrent period name + correct
-  times + amber chip of which classes are on break. Full lunch → `BreakCell`.
-- **Body cells** in a partial-break column show one of three states:
-  - **A.** `🍱 Lunch Break [section]` — the teacher's own class is on break.
-  - **B.** the class assignment — teacher teaches a *different* group running
-    concurrently with the break.
-  - **C.** `Free`.
-- **Subject view:** break header only if ALL sections teaching this subject are on
-  break; else period name.
-- **Room view:** break header only if ALL sections using this room are on break;
-  else period name.
-- **Calendar view** (`buildTeacherBlocks` / `buildRoomBlocks` / `buildSubjectBlocks`):
-  `isFullBreak(periodId)` gate — only **full** (school-wide) breaks render as solid
-  break blocks; partial breaks are skipped, so in-session teaching blocks fill the
-  time. Full breaks positioned via `repSecTimes()` (representative-section
-  wall-clock) to dodge the accumulation trap.
-
-### Reference source
-The structure was reverse-engineered from real MPSK PDFs. The real teacher
-timetable uses a **fixed global time grid** with a sub-header row
-(`B-NUR-KG | B-1 | B-2,6,7 | B-3-5,8-10`) labeling each break band. Our amber chip
-under partial-break headers mirrors that.
-
-### ★ Unified time-slot column model (STAGGERED breaks)
-When class groups lunch at **different** points, a single "Period N" occurs at
-several wall-clock times. The teacher/subject/room views build a **unified column
-grid** so each distinct (period, start-time) is its own column — matching the real
-bell exactly.
-
-**Worked example (Demo TT 01 — three tracks):**
 | Track | Lunch | P5 | P6 | P7 | P8 |
 |-------|-------|----|----|----|----|
 | Nur–V (8 cls) | after P4, 12:05–12:35 | 12:35 | 1:15 | 1:55 | 2:35–3:15 |
 | VI–X (5 cls) | after P5, 12:45–12:55 | 12:05 | 12:55 | 1:35 | 2:15 |
 | XI–XII (2 cls) | after P6, 1:25–1:35 | 12:05 | 12:45 | 1:35 | 2:15 |
 
-Resulting teacher columns: `P5@12:05` (VI–XII teaching, Nur–V on lunch overlay),
-`P5@12:35` (Nur–V), `P6@12:45` (XI–XII), `P6@12:55` (VI–X), `P6@1:15` (Nur–V)…
+The **class-section timetable** handles this fine per-section
+(`buildClassPeriods` + `calcSectionTimes`) and is left untouched — it was always
+correct. The teacher/room/subject views are where it gets hard, because one row
+must merge multiple tracks.
+
+### 6.2 Unified columns — TEACHER views only
+The teacher views (`renderTeacherTT` + `…Transposed`) build a **unified column
+grid**: each distinct **(periodId, start-time)** becomes its own column.
+
+Resulting teacher columns for the example:
+`Assembly · Morning Break · P1 · P2 · P3 · P4 · P5@12:05 · P5@12:35 · P6@12:45 ·
+P6@12:55 · P6@1:15 · P7@1:35 · P7@1:55 · P8@2:15 · P8@2:35 · Dispersal`.
 
 **Helpers (`timetable.tsx`):**
 | Function | Purpose |
 |----------|---------|
-| `sectionScheduleMins(sec, classPeriods, cwBreaks, config)` | Wall-clock **minutes** for every period+break of one section. The canonical correct timing. |
+| `sectionScheduleMins(sec, classPeriods, cwBreaks, config)` | Wall-clock **minutes** for every period+break of one section. The canonical correct timing — never accumulate breaks any other way. |
 | `isFullBreakDef(break, allClassKeys)` | Is a break universal (all groups)? |
-| `buildUnifiedColumns(sectionNames, classPeriods, periods, cwBreaks, config)` | → `{ columns, schedules, repByGroup }`. Columns = distinct (periodId, startMin) teaching slots + full-break columns; partial breaks overlaid, not columned. Falls back to plain `periods` when no staggering. |
+| `buildUnifiedColumns(sectionNames, classPeriods, periods, cwBreaks, config)` | → `{ columns, schedules, repByGroup }`. Columns = distinct (periodId, startMin) teaching slots + full-break columns. Falls back to plain `periods` when no staggering. |
 | `resolveUniCell(section, col, schedules, cwBreaks)` | Per-cell → `teaching` \| `lunch` (overlapping partial break) \| `free`. |
+| `buildOwningInfo(allSectionNames, classPeriods, cwBreaks, config)` | School-wide: `isSplit(periodId)` (does this period occur at >1 time?) + `owningLabel(periodId, startMin)` (compressed class names TEACHING in that slot). |
 
-**Cell resolution rule:** a section shows *teaching* in column C only if its own
-schedule places `C.periodId` at `C.startMin`; otherwise *lunch* if a partial break
-overlaps `[C.start,C.end)`, else *free*. Drag/drop: a free cell is a valid target
-only when the dragged section's group actually has that slot at that start time.
+### 6.3 The header / chip rule (canonical)
+- A teaching column's header **always** shows the **period name** (`Period 5`),
+  never a break name. Period names repeat — expected.
+- A small **chip** appears under the period name **only for SPLIT periods**
+  (those that occur at >1 time school-wide). It lists the **teaching classes**
+  that own that time slot — e.g. `P5@12:05 → "VI to XII"`, `P5@12:35 → "I to V"`.
+- **Never** a mixed "Lunch / Period 4" header. One header per slot.
+- Full school-wide breaks (Assembly, Morning Break) get their own break columns.
 
-**All 6 views** (teacher/subject/room × normal/transposed) use this model. The
-class-section view is unchanged — it was always correct (`buildClassPeriods` +
-`calcSectionTimes`). Calendar view positions teaching blocks via per-section
-`buildSecPeriods + calcTimes` (already correct); break blocks gate on `isFullBreak`.
+### 6.4 Cell content
+- **Teaching cell**: line 1 = full **class-section** (e.g. `I-A`), line 2 = subject.
+  (`taughtCell.sectionName` is stamped with the section name; `taughtSec` keeps the
+  full section for drag/delete.)
+- **Lunch overlay cell** (teacher not teaching, but one of their classes is on a
+  partial break overlapping this slot): shows `Lunch Break` + **compressed class
+  names** (no section letters, no 🍱 icon).
+- **Free cell**: empty, droppable.
+
+### 6.5 ROOM & SUBJECT views — SIMPLE columns
+Per user decision, room/subject views do **NOT** use the unified model. They use
+**plain `classPeriods` columns** (P1–P8 only): no Assembly/Break/Lunch/Dispersal
+columns, no duplicate staggered columns. Times from `periodTimes`. Cells list the
+section(s) using that room / teaching that subject. Applies to normal + transposed.
+
+### 6.6 Class-name display helpers
+| Function | Example |
+|----------|---------|
+| `getClassDisplayName(section)` | `"I-A"→"I"`, `"XI-Com-A"→"XI-Com"`, `"Nursery-A"→"Nursery"` |
+| `compressClassNames(sections)` | `["I-A","II-B","III-A","IV-C","V-A"]→"I to V"`; streamed grades kept (`"XI-Com, XI-Sci"`) |
+| `GRADE_ORDER` | canonical grade sequence used for range compression |
+
+### 6.7 ⚠️ Data-source gotcha (caused the "blank teacher timetable" bug)
+`rebuildTeacherTT` (lib/aiEngine.ts) keys `teacherTT[t].schedule` by **periodId**,
+which **collapses staggered same-id periods** (two `p5` at different times merge,
+one becomes a "conflict"). Consequently `tdata.classes` can be **incomplete**
+(it dropped sections like XI-Com-A). **Never iterate `tdata.classes`** for teacher
+rendering — derive the teacher's sections by scanning `classTT` directly:
+```ts
+const teacherSecNames = sections.map(s=>s.name).filter(name =>
+  config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {})
+    .some((c:any)=>c?.teacher===tn)))
+```
+The period count (`34/32`) is likewise counted from `classTT`, not the lossy
+`tdata.schedule`.
+
+### 6.8 Calendar view
+Positions teaching blocks via per-section `buildSecPeriods + calcTimes` (already
+correct). Break blocks gate on `isFullBreak(periodId)` — only full school-wide
+breaks render as solid blocks; partial breaks are skipped so in-session teaching
+blocks fill the time. Full breaks positioned via `repSecTimes()` to dodge the
+accumulation trap.
 
 ---
 
@@ -357,13 +362,20 @@ Other keys: `schedu-tt-list` (the list), `schedu-active-tt` (active id).
 | `types/index.ts` | Full Schedu + legacy type definitions. |
 
 ### Notable functions in `timetable.tsx`
-`calcTimes`, `getSectionClassKey`, `calcSectionTimes`, `buildClassPeriods`,
-`buildTeacherPeriods`, `sectionHasBreak`, `isFullLunchColumn`, `LunchCell`,
-`resolveHeaderPeriod`, `dragTdStyle`, `dragInnerStyle`, `ConflictModal`,
-`PeriodCol`, `BreakCell`, `SubjectCell`, `TeacherCell`, and the render functions:
-`renderClassTT(+Transposed)`, `renderTeacherTT(+Transposed)`,
-`renderSubjectTT(+Transposed)`, `renderRoomTT(+Transposed)`,
-`renderCalendarView`, `renderPoolPanel`.
+**Timing / unified model (see §6):** `calcTimes`, `getSectionClassKey`,
+`calcSectionTimes`, `buildClassPeriods`, `sectionScheduleMins`, `isFullBreakDef`,
+`buildUnifiedColumns`, `resolveUniCell`, `buildOwningInfo`, `getClassDisplayName`,
+`compressClassNames`, `GRADE_ORDER`.
+**Cells / chrome:** `LunchCell`, `PeriodCol` (accepts `breakGroupLabel` chip),
+`BreakCell`, `SubjectCell`, `TeacherCell`, `dragTdStyle`, `dragInnerStyle`,
+`ConflictModal`.
+**Render functions:** `renderClassTT(+Transposed)`, `renderTeacherTT(+Transposed)`
+(unified columns), `renderSubjectTT(+Transposed)` & `renderRoomTT(+Transposed)`
+(simple `classPeriods` columns), `renderCalendarView`, `renderPoolPanel`.
+
+> Deprecated/no longer used for layout: `buildTeacherPeriods`,
+> `isFullLunchColumn`, `resolveHeaderPeriod` were the earlier merged-sequence
+> approach — superseded by the unified-column model in §6. Don't reintroduce them.
 
 ---
 
@@ -386,27 +398,43 @@ v2 exists. Key ones:
 
 1. **`border-collapse` hides borders** → use `outline` for drag highlights on filled
    cells (see §7).
-2. **Never trust `calcTimes` on a merged teacher/subject/room sequence** for column
-   times — staggered breaks accumulate. Use a representative section (see §5).
-3. **`teacherTT` is derived** — never edit it directly. Edit `classTT` → `commitTT()`.
-4. **Header rule is canonical** (§6) — partial breaks show period names, never break
-   names; never mixed headers.
-5. **Calendar free blocks must carry an entity stamp** or drag highlights leak across
+2. **Never accumulate staggered breaks via `calcTimes` on a merged sequence** —
+   every period's time inflates. Use `sectionScheduleMins` (per-section, canonical)
+   or `buildUnifiedColumns` (see §6).
+3. **Never iterate `tdata.classes` for teacher rendering** — it's lossy/incomplete
+   (collapsed staggered periods). Derive sections from `classTT` (§6.7). This was
+   the root cause of the "blank teacher timetable" bug.
+4. **`teacherTT` is derived** — never edit it directly. Edit `classTT` → `commitTT()`.
+5. **Header rule is canonical** (§6.3): teaching columns show period names; the
+   class-name chip appears only on SPLIT periods and lists TEACHING classes; never
+   mixed headers.
+6. **Cell vs chip naming**: teaching cells show the full **class-section** (`I-A`);
+   headings/chips/lunch-overlays show **compressed class names** (`I to V`). No
+   lunch/break emoji in cells.
+7. **Room & subject views use SIMPLE `classPeriods` columns** — no break columns,
+   no staggered splits. Only teacher views use the unified model.
+8. **Calendar free blocks must carry an entity stamp** or drag highlights leak across
    teachers/rooms.
-6. **Per-TT snapshots** must include every config field or switching timetables loses
+9. **Per-TT snapshots** must include every config field or switching timetables loses
    data (§8).
-7. **Build + typecheck before commit:** `npm run build` and `npx tsc --noEmit` from
-   `frontend/`.
-8. **Commit message footer:**
-   `Co-Authored-By: Claude <noreply@anthropic.com>` (model name as appropriate).
-9. **Windows line endings:** git will warn `LF will be replaced by CRLF` — harmless.
+10. **Build + typecheck before commit:** `npm run build` and `npx tsc --noEmit` from
+    `frontend/`.
+11. **Commit message footer:**
+    `Co-Authored-By: Claude <noreply@anthropic.com>` (model name as appropriate).
+12. **Windows line endings:** git will warn `LF will be replaced by CRLF` — harmless.
 
 ---
 
 ## 12. Recent work log (timetable focus)
 
+Newest first.
+
 | Commit | What |
 |--------|------|
+| `d260d3c` | Display refinements: full class-section in cells; chip shows TEACHING classes on split periods only; removed 🍱 icons; room/subject reverted to simple period columns. |
+| `45b3df8` | Fixed blank teacher cells (derive sections from `classTT`, not lossy `tdata.classes`); class-name labels; cell content order. |
+| `9e1107c` | Docs: unified time-slot column model. |
+| `26b3358` | **Unified time-slot column model** for teacher/subject/room (staggered breaks → distinct (period,time) columns). |
 | `6cbcd6e` | Header rule applied to all views + calendar (partial break → period name). |
 | `8bc569b` | Teacher class-period times match class/section timetable. |
 | `97d71b4` | Teacher timetable structure matched to real-school PDF (3-state break cells). |

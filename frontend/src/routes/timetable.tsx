@@ -213,51 +213,6 @@ function buildClassPeriods(
   return result
 }
 
-// ── Build teacher-specific period sequence ─────────────────
-/**
- * Filters the global periods array to only include break periods that
- * apply to at least one section this teacher teaches.
- *
- *   Teacher → Nursery only   → sees Nursery's lunch break (after P4)
- *   Teacher → Primary only   → sees Primary's lunch break (after P6)
- *   Teacher → Nursery+Primary → sees both lunch breaks
- *
- * Fixed-start / fixed-end / class periods are always kept.
- * When no class-wise breaks are configured the global array is returned unchanged.
- */
-function buildTeacherPeriods(
-  teacherClasses: string[],
-  allPeriods: Period[],
-  classwiseBreaks: Array<{id:string; name:string; type:string; classes:string[]; afterPeriod:number; duration:number}> | undefined,
-): Period[] {
-  if (!classwiseBreaks?.length) return allPeriods
-  const classKeys = new Set(teacherClasses.map(getSectionClassKey))
-  const relevantBreakIds = new Set<string>()
-  classwiseBreaks.forEach(brk => {
-    if (brk.classes.length === 0 || brk.classes.some(c => classKeys.has(c)))
-      relevantBreakIds.add(brk.id)
-  })
-  return allPeriods.filter(p =>
-    p.type === 'class' || p.type === 'fixed-start' || p.type === 'fixed-end' ||
-    relevantBreakIds.has(p.id)
-  )
-}
-
-/**
- * Returns true if a given section has the specified break in its
- * class-wise break configuration (i.e. this break applies to this class).
- */
-function sectionHasBreak(
-  sectionName: string,
-  breakId: string,
-  cwBreaks: Array<{id:string; classes:string[]}> | undefined,
-): boolean {
-  if (!cwBreaks?.length) return true
-  const brk = cwBreaks.find(b => b.id === breakId)
-  if (!brk || brk.classes.length === 0) return true // applies to all
-  return brk.classes.includes(getSectionClassKey(sectionName))
-}
-
 // ═══════════════════════════════════════════════════════════════════════
 //  UNIFIED TIME-SLOT COLUMN MODEL  (for Teacher / Room / Subject views)
 //
@@ -458,45 +413,7 @@ function resolveUniCell(
   return { kind:'free' }
 }
 
-/**
- * Returns true when this period column should be rendered as a FULLY
- * merged "Lunch Break" column (all working-day cells are lunch).
- *
- * Rule: a lunch period is a "full lunch" for teacher T only when EVERY
- * section that T teaches has their lunch at this break position.
- *
- * Example:
- *   Teacher teaches VIII-D (lunch after P4) AND XII-Arts (lunch after P6).
- *   → break after P4: VIII-D ✓ but XII-Arts ✗  → NOT full lunch
- *   → break after P6: XII-Arts ✓ but VIII-D ✗  → NOT full lunch
- *   Only a break whose classes list contains ALL of T's class keys is full.
- *
- * When classwiseBreaks is unconfigured or the break isn't in the config,
- * falls back to p.type === "lunch" (old behaviour).
- */
-function isFullLunchColumn(
-  p: Period,
-  usedDays: string[],
-  sch: Record<string, Record<string, any>>,
-  teacherClasses?: string[],
-  cwBreaks?: Array<{id:string; classes:string[]}>,
-): boolean {
-  if (p.type !== 'class') {
-    if (p.type !== 'lunch') return false
-    if (!cwBreaks?.length || !teacherClasses?.length) return true // no config → full lunch
-    const brk = cwBreaks.find(b => b.id === p.id)
-    if (!brk || brk.classes.length === 0) return true // applies to all classes
-    const teacherKeys = teacherClasses.map(getSectionClassKey)
-    return teacherKeys.every(key => brk.classes.includes(key))
-  }
-  // Class period: only "full lunch" if every day explicitly marks it as lunch
-  return usedDays.length > 0 && usedDays.every(day => {
-    const cell = sch[day]?.[p.id]
-    return cell && ((cell as any).isLunch === true || (cell as any).type === 'lunch')
-  })
-}
-
-// ── Shared lunch break cell — always shows class name for clarity ──
+// ── Shared lunch break cell — shows compressed class names (no icon) ──
 function LunchCell({ id, secName }: { id: string; secName?: string }) {
   return (
     <td key={id} style={{ background:"#FFFBEB", border:"1px solid #E8E4FF", padding:"4px 6px", textAlign:"center" as const, verticalAlign:"middle" as const }}>
@@ -504,27 +421,6 @@ function LunchCell({ id, secName }: { id: string; secName?: string }) {
       {secName && <div style={{ fontSize:9, color:"#D4920E", opacity:0.8, fontWeight:500 }}>{secName}</div>}
     </td>
   )
-}
-
-// ── Header rule helper: for a partial-break period, return the concurrent class
-//    period so the column shows a PERIOD NAME (not a break name).
-//    Rule: show break name ONLY when ALL applicable classes are on that break.
-//    If even one class has a teaching period, show the period name instead.
-function resolveHeaderPeriod(
-  p: Period,
-  classPeriods: Period[],
-  cwBreaks: Array<{id:string; classes:string[]; afterPeriod:number; duration:number}> | undefined,
-  isPartialBreak: boolean,
-): { period: Period; concurrent: Period | null } {
-  if (!isPartialBreak || p.type !== 'lunch') return { period: p, concurrent: null }
-  const brk = cwBreaks?.find(b => b.id === p.id)
-  const concurrent = brk ? (classPeriods[brk.afterPeriod] ?? null) : null
-  if (!concurrent) return { period: p, concurrent: null }
-  // Return a synthetic period with the concurrent period's display but original id
-  return {
-    period: { ...concurrent, id: p.id },
-    concurrent,
-  }
 }
 
 // ── Drag highlight helpers ─────────────────────────────────────
