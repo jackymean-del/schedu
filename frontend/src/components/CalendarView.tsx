@@ -474,11 +474,14 @@ function Block({
         cursor: editMode && !!block.subject ? (isSrcBlock ? "grabbing" : "grab") : "pointer",
         padding: width<26?"1px 2px":compact?"2px 5px":"3px 7px",
         display:"flex", flexDirection:"column" as const, justifyContent:"center",
-        outline: block.absent?"2px solid #F59E0B":block.isSub?"1.5px dashed #F59E0B":"none",
+        outline: isSrcBlock ? "2px dashed #94A3B8" : block.absent?"2px solid #F59E0B":block.isSub?"1.5px dashed #F59E0B":"none",
+        outlineOffset: isSrcBlock ? "-2px" : undefined,
         userSelect:"none" as const,
         boxShadow:"0 1px 3px rgba(0,0,0,0.06)",
-        opacity: isSrcBlock ? 0.4 : 1,
-        transition:"opacity 0.1s",
+        // Pluck effect — source block dims + grayscales when being dragged
+        opacity: isSrcBlock ? 0.15 : 1,
+        filter: isSrcBlock ? "grayscale(80%)" : undefined,
+        transition:"opacity 0.08s ease, filter 0.08s ease",
       }}>
       {fsSub > 0 && (
         <div style={{ fontSize:fsSub, fontWeight:700, lineHeight:1.2, color:col.accent,
@@ -668,7 +671,26 @@ function DropZone({
         overflow:"visible" as const,
         boxShadow: isOver ? `0 0 0 2px ${isConflict ? "#EF4444" : "#10B981"}` : "none",
       }}
-    />
+    >
+      {/* +/✕ badge — only on the cell currently under the cursor */}
+      {isOver && width >= 24 && (
+        <div style={{
+          position:"absolute" as const, top:"50%", left:"50%",
+          transform:"translate(-50%,-50%)",
+          width:26, height:26, borderRadius:"50%",
+          background: isConflict ? "#EF4444" : "#10B981", color:"#fff",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize: isConflict ? 12 : 19, fontWeight:900, lineHeight:1,
+          pointerEvents:"none" as const, zIndex:6,
+          animation: isConflict ? undefined : "tt-drop-plus 0.65s ease-in-out infinite",
+          boxShadow: isConflict
+            ? "0 0 0 3px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.4)"
+            : "0 0 0 3px rgba(16,185,129,0.25), 0 2px 8px rgba(16,185,129,0.4)",
+        }}>
+          {isConflict ? "✕" : "+"}
+        </div>
+      )}
+    </div>
   )
 }
 

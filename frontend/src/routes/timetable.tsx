@@ -2293,14 +2293,18 @@ export function TimetablePage() {
                     if (!hits.length) return (
                       <td key={p.id} {...subDragProps}
                         style={{ ...dragTdStyle(subIsTarget, !!subConflict, false), position:"relative" as const }}>
-                        <div style={dragInnerStyle(subIsTarget, !!subConflict)} />
+                        <div style={{ ...dragInnerStyle(subIsTarget, !!subConflict), position:"relative" as const }}>
+                          {subIsTarget && dragOverCell===subCellKey && <DropIndicator hasConflict={!!subConflict} />}
+                        </div>
                       </td>
                     )
+                    const subIsSrc = !!(dragItem?.section===subSecName && dragItem?.day===day && dragItem?.periodId===p.id)
                     const colorClass = getSubjectColor(subName)
                     return (
                       <td key={p.id} {...subDragProps}
                         style={{ ...dragTdStyle(subIsTarget, !!subConflict, true), position:"relative" as const }}>
-                        <div className={colorClass}
+                        {subIsTarget && dragOverCell===subCellKey && <DropIndicator hasConflict={!!subConflict} />}
+                        <div className={`${colorClass}${subIsSrc ? " tt-drag-src" : ""}`}
                           draggable={editMode && !!subSecName}
                           onDragStart={editMode && subSecName ? e => handleDragStart(e, {section:subSecName, day, periodId:p.id}) : undefined}
                           style={{ borderRadius:5, padding:"4px 7px", minHeight:44, cursor:editMode&&subSecName?"grab":"default" }}>
@@ -2377,14 +2381,18 @@ export function TimetablePage() {
                       if (!hits.length) return (
                         <td key={p.id} {...subTDragProps}
                           style={{ ...dragTdStyle(subTIsTarget, !!subTConflict, false), position:"relative" as const }}>
-                          <div style={dragInnerStyle(subTIsTarget, !!subTConflict)} />
+                          <div style={{ ...dragInnerStyle(subTIsTarget, !!subTConflict), position:"relative" as const }}>
+                            {subTIsTarget && dragOverCell===subTKey && <DropIndicator hasConflict={!!subTConflict} />}
+                          </div>
                         </td>
                       )
+                      const subTIsSrc = !!(dragItem?.section===subTSecName && dragItem?.day===day && dragItem?.periodId===p.id)
                       const colorClass = getSubjectColor(subName)
                       return (
                         <td key={p.id} {...subTDragProps}
                           style={{ ...dragTdStyle(subTIsTarget, !!subTConflict, true), position:"relative" as const }}>
-                          <div className={colorClass}
+                          {subTIsTarget && dragOverCell===subTKey && <DropIndicator hasConflict={!!subTConflict} />}
+                          <div className={`${colorClass}${subTIsSrc ? " tt-drag-src" : ""}`}
                             draggable={editMode && !!subTSecName}
                             onDragStart={editMode && subTSecName ? e => handleDragStart(e, {section:subTSecName, day, periodId:p.id}) : undefined}
                             style={{ borderRadius:5, padding:"4px 7px", minHeight:38, cursor:editMode&&subTSecName?"grab":"default" }}>
@@ -2462,14 +2470,18 @@ export function TimetablePage() {
                     if (!hit) return (
                       <td key={p.id} {...rmDragProps}
                         style={{ ...dragTdStyle(rmIsTarget, !!rmConflict, false), position:"relative" as const }}>
-                        <div style={dragInnerStyle(rmIsTarget, !!rmConflict)} />
+                        <div style={{ ...dragInnerStyle(rmIsTarget, !!rmConflict), position:"relative" as const }}>
+                          {rmIsTarget && dragOverCell===rmKey && <DropIndicator hasConflict={!!rmConflict} />}
+                        </div>
                       </td>
                     )
+                    const rmIsSrc = !!(dragItem?.section===rmSecName && dragItem?.day===day && dragItem?.periodId===p.id)
                     const colorClass = getSubjectColor(hit.cell.subject)
                     return (
                       <td key={p.id} {...rmDragProps}
                         style={{ ...dragTdStyle(rmIsTarget, !!rmConflict, true), position:"relative" as const }}>
-                        <div className={colorClass}
+                        {rmIsTarget && dragOverCell===rmKey && <DropIndicator hasConflict={!!rmConflict} />}
+                        <div className={`${colorClass}${rmIsSrc ? " tt-drag-src" : ""}`}
                           draggable={editMode && !!rmSecName}
                           onDragStart={editMode && rmSecName ? e => handleDragStart(e, {section:rmSecName, day, periodId:p.id}) : undefined}
                           style={{ borderRadius:5, padding:"4px 7px", minHeight:44, cursor:editMode&&rmSecName?"grab":"default" }}>
@@ -2542,14 +2554,18 @@ export function TimetablePage() {
                       if (!hit) return (
                         <td key={p.id} {...rmTDragProps}
                           style={{ ...dragTdStyle(rmTIsTarget, !!rmTConflict, false), position:"relative" as const }}>
-                          <div style={dragInnerStyle(rmTIsTarget, !!rmTConflict)} />
+                          <div style={{ ...dragInnerStyle(rmTIsTarget, !!rmTConflict), position:"relative" as const }}>
+                            {rmTIsTarget && dragOverCell===rmTKey && <DropIndicator hasConflict={!!rmTConflict} />}
+                          </div>
                         </td>
                       )
+                      const rmTIsSrc = !!(dragItem?.section===rmTSecName && dragItem?.day===day && dragItem?.periodId===p.id)
                       const colorClass = getSubjectColor(hit.cell.subject)
                       return (
                         <td key={p.id} {...rmTDragProps}
                           style={{ ...dragTdStyle(rmTIsTarget, !!rmTConflict, true), position:"relative" as const }}>
-                          <div className={colorClass}
+                          {rmTIsTarget && dragOverCell===rmTKey && <DropIndicator hasConflict={!!rmTConflict} />}
+                          <div className={`${colorClass}${rmTIsSrc ? " tt-drag-src" : ""}`}
                             draggable={editMode && !!rmTSecName}
                             onDragStart={editMode && rmTSecName ? e => handleDragStart(e, {section:rmTSecName, day, periodId:p.id}) : undefined}
                             style={{ borderRadius:5, padding:"4px 7px", minHeight:38, cursor:editMode&&rmTSecName?"grab":"default" }}>
@@ -2655,6 +2671,22 @@ export function TimetablePage() {
             classTT[sec.name]?.[from.day]?.[from.periodId]?.teacher === toTeacher
           )
           if (fromConflict || toConflict) return
+          // Bell-schedule guard — destination must be a teaching slot for `to.section`
+          {
+            const cwB = (config as any).classwiseBreaks as CwBreakLite[] | undefined
+            const destSched = sectionScheduleMins(to.section, classPeriods, cwB, config)
+            const destSlot  = destSched.get(to.periodId)
+            if (!destSlot) { setConflictWarning(`${to.section} has no teaching slot here in its bell schedule.`); return }
+            const sKey = getSectionClassKey(to.section)
+            const sBreaks = (cwB ?? []).filter(b => b.classes.length === 0 || b.classes.includes(sKey))
+            for (const b of sBreaks) {
+              const bs = destSched.get(b.id)
+              if (bs && bs.startMin < destSlot.endMin && bs.endMin > destSlot.startMin) {
+                setConflictWarning(`${to.section} is on ${b.name ?? 'break'} during this slot. Cannot schedule a teaching period here.`)
+                return
+              }
+            }
+          }
           const newTT = { ...classTT }
           newTT[from.section] = { ...newTT[from.section] }
           newTT[from.section][from.day] = { ...newTT[from.section][from.day] }
