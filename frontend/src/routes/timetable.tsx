@@ -1202,8 +1202,19 @@ export function TimetablePage() {
   }, []) // stable setters, empty deps OK
 
   // ── checkSwapConflict: returns conflict reason string or null if safe ──
-  // Works for class view (same section) AND teacher view (cross-section swaps)
-  const checkSwapConflict = useCallback((section:string, day:string, periodId:string): string|null => {
+  // Works for class view (same section) AND teacher view (cross-section swaps).
+  //
+  // moveOnly=true  →  used for teacher-view FREE / LUNCH cell drops.
+  //   The destination teacher is NOT swapped back to the source slot; they just
+  //   lose the slot. So we must NOT check "would the destination teacher conflict
+  //   at the source slot?" — that check is irrelevant and was the root cause of
+  //   spurious "Teacher 20 is already teaching II-C" errors.
+  //   Only check that the DRAGGING teacher (fromTeacher) is not double-booked
+  //   at the destination, plus class-teacher protection.
+  //
+  // moveOnly=false (default) → full two-way swap check used for class view
+  //   and teacher-view teaching-cell drops (Teacher A swaps with Teacher A).
+  const checkSwapConflict = useCallback((section:string, day:string, periodId:string, moveOnly=false): string|null => {
     if (!dragItem || !section) return null
     const fromCell    = classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]
     const toCell      = classTT[section]?.[day]?.[periodId]
@@ -1225,6 +1236,9 @@ export function TimetablePage() {
       )
       if (clash) return `${fromTeacher} is already teaching ${clash.name} at this slot.`
     }
+
+    // moveOnly: skip all reverse-swap checks — destination teacher is simply displaced.
+    if (moveOnly) return null
 
     // Teacher clash: toTeacher would be in (dragItem.day, dragItem.periodId) — already teaching there?
     if (toTeacher && toTeacher !== fromTeacher) {
@@ -1744,28 +1758,35 @@ export function TimetablePage() {
                                    : (taughtCell ? isSameTeacherDrag : dragSlotHere)
                     )
                     const ttDropSec = taughtSec || poolSec || (dragSlotHere && dragItem ? dragItem.section : "")
-                    const ttConflict = ttIsTarget && ttDropSec ? checkSwapConflict(ttDropSec, day, col.periodId) : null
+                    // Teaching cell: full two-way swap check (Teacher A swaps with Teacher A).
+                    const ttConflict     = ttIsTarget && ttDropSec && taughtCell  ? checkSwapConflict(ttDropSec, day, col.periodId, false) : null
+                    // Free / lunch cell: move-only check — only verify the dragging teacher isn't
+                    // double-booked at the destination. Don't check the displaced teacher's back-conflicts.
+                    const ttFreeConflict = ttIsTarget && ttDropSec && !taughtCell ? checkSwapConflict(ttDropSec, day, col.periodId, true)  : null
+                    const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttCellKey) }
+                    const onDragLeave = () => setDragOverCell(null)
                     const ttDragProps = {
-                      onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttCellKey) },
+                      onDragOver,
                       onDrop: (e: React.DragEvent) => {
                         e.preventDefault()
                         if (!ttDropSec || !dragItem) return
                         if (ttConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttConflict); return }
                         handleDrop(e, ttDropSec, day, col.periodId, tn)
                       },
-                      onDragLeave: () => setDragOverCell(null),
+                      onDragLeave,
                     }
-                    // Lunch-cell drop props: same as above but moveOnly — don't swap destination back
-                    const ttLunchDragProps = {
-                      ...ttDragProps,
+                    // Free / lunch cells always use moveOnly — displaces any existing teacher without back-swap
+                    const ttFreeDragProps = {
+                      onDragOver,
                       onDrop: (e: React.DragEvent) => {
                         e.preventDefault()
                         if (!ttDropSec || !dragItem) return
-                        if (ttConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttConflict); return }
+                        if (ttFreeConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttFreeConflict); return }
                         handleDrop(e, ttDropSec, day, col.periodId, tn, true)
                       },
+                      onDragLeave,
                     }
-                    // The teacher is teaching here → coloured cell
+                    // The teacher is teaching here → coloured cell (full swap semantics)
                     if (taughtCell) {
                       const colorClass = getSubjectColor(taughtCell.subject.split(" (")[0])
                       return (
@@ -1784,22 +1805,21 @@ export function TimetablePage() {
                       )
                     }
                     // Not teaching → check which sections school-wide are on lunch in this slot.
-                    // Use ttAllSchedules (all class groups) so the indicator is complete, not just teacher's sections.
                     const lunchSrcs = col.mergedFrom ?? [col]
                     const lunchSecs = sections.map(s => s.name).filter(S =>
                       lunchSrcs.some(src => resolveUniCell(S, src, ttAllSchedules, cwBreaksTT).kind === 'lunch')
                     )
                     if (lunchSecs.length) return (
                       <LunchCell key={col.key} id={col.key} secName={compressClassNames(lunchSecs)}
-                        isTarget={ttIsTarget} hasConflict={!!ttConflict}
+                        isTarget={ttIsTarget} hasConflict={!!ttFreeConflict}
                         isUnavailable={isDragging && !ttIsTarget}
-                        dragProps={ttLunchDragProps} />
+                        dragProps={ttFreeDragProps} />
                     )
-                    // Free / droppable
+                    // Free / droppable (move-only)
                     return (
-                      <td key={col.key} {...ttDragProps}
-                        style={{ ...dragTdStyle(ttIsTarget, !!ttConflict, false, isSameTeacherDrag && !ttIsTarget), position:"relative" as const }}>
-                        <div style={dragInnerStyle(ttIsTarget, !!ttConflict)} />
+                      <td key={col.key} {...ttFreeDragProps}
+                        style={{ ...dragTdStyle(ttIsTarget, !!ttFreeConflict, false, isSameTeacherDrag && !ttIsTarget), position:"relative" as const }}>
+                        <div style={dragInnerStyle(ttIsTarget, !!ttFreeConflict)} />
                       </td>
                     )
                   })}
@@ -1897,25 +1917,29 @@ export function TimetablePage() {
                                      : (taughtCell ? isSameTeacherDrag : dragSlotHere)
                       )
                       const ttTDropSec = taughtSec || poolSec || (dragSlotHere && dragItem ? dragItem.section : "")
-                      const ttTConflict = ttTIsTarget && ttTDropSec ? checkSwapConflict(ttTDropSec, day, col.periodId) : null
+                      const ttTConflict     = ttTIsTarget && ttTDropSec && taughtCell  ? checkSwapConflict(ttTDropSec, day, col.periodId, false) : null
+                      const ttTFreeConflict = ttTIsTarget && ttTDropSec && !taughtCell ? checkSwapConflict(ttTDropSec, day, col.periodId, true)  : null
+                      const onTDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttTKey) }
+                      const onTDragLeave = () => setDragOverCell(null)
                       const ttTDragProps = {
-                        onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttTKey) },
+                        onDragOver: onTDragOver,
                         onDrop: (e: React.DragEvent) => {
                           e.preventDefault()
                           if (!ttTDropSec || !dragItem) return
                           if (ttTConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttTConflict); return }
                           handleDrop(e, ttTDropSec, day, col.periodId, tn)
                         },
-                        onDragLeave: () => setDragOverCell(null),
+                        onDragLeave: onTDragLeave,
                       }
-                      const ttTLunchDragProps = {
-                        ...ttTDragProps,
+                      const ttTFreeDragProps = {
+                        onDragOver: onTDragOver,
                         onDrop: (e: React.DragEvent) => {
                           e.preventDefault()
                           if (!ttTDropSec || !dragItem) return
-                          if (ttTConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttTConflict); return }
+                          if (ttTFreeConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(ttTFreeConflict); return }
                           handleDrop(e, ttTDropSec, day, col.periodId, tn, true)
                         },
+                        onDragLeave: onTDragLeave,
                       }
                       if (taughtCell) {
                         const colorClass = getSubjectColor(taughtCell.subject.split(" (")[0])
@@ -1935,21 +1959,20 @@ export function TimetablePage() {
                         )
                       }
                       // For merged columns, check lunch across ALL original splits.
-                      // Use tttAllSchedules (school-wide) so the indicator shows every class on break.
                       const lunchSrcsTT = col.mergedFrom ?? [col]
                       const lunchSecs = sections.map(s => s.name).filter(S =>
                         lunchSrcsTT.some(src => resolveUniCell(S, src, tttAllSchedules, cwBreaksTTT).kind === 'lunch')
                       )
                       if (lunchSecs.length) return (
                         <LunchCell key={col.key} id={ttTKey} secName={compressClassNames(lunchSecs)}
-                          isTarget={ttTIsTarget} hasConflict={!!ttTConflict}
+                          isTarget={ttTIsTarget} hasConflict={!!ttTFreeConflict}
                           isUnavailable={isDragging && !ttTIsTarget}
-                          dragProps={ttTLunchDragProps} />
+                          dragProps={ttTFreeDragProps} />
                       )
                       return (
-                        <td key={col.key} {...ttTDragProps}
-                          style={{ ...dragTdStyle(ttTIsTarget, !!ttTConflict, false, isSameTeacherDrag && !ttTIsTarget), position:"relative" as const }}>
-                          <div style={dragInnerStyle(ttTIsTarget, !!ttTConflict)} />
+                        <td key={col.key} {...ttTFreeDragProps}
+                          style={{ ...dragTdStyle(ttTIsTarget, !!ttTFreeConflict, false, isSameTeacherDrag && !ttTIsTarget), position:"relative" as const }}>
+                          <div style={dragInnerStyle(ttTIsTarget, !!ttTFreeConflict)} />
                         </td>
                       )
                     })}
