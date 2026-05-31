@@ -245,11 +245,26 @@ P6@12:55 · P6@1:15 · P7@1:35 · P7@1:55 · P8@2:15 · P8@2:35 · Dispersal`.
   names** (no section letters, no 🍱 icon).
 - **Free cell**: empty, droppable.
 
-### 6.5 ROOM & SUBJECT views — SIMPLE columns
-Per user decision, room/subject views do **NOT** use the unified model. They use
-**plain `classPeriods` columns** (P1–P8 only): no Assembly/Break/Lunch/Dispersal
-columns, no duplicate staggered columns. Times from `periodTimes`. Cells list the
-section(s) using that room / teaching that subject. Applies to normal + transposed.
+### 6.5 ROOM & SUBJECT views — UNIFIED columns (updated)
+Room/subject views now use the **same unified column model** as the teacher view
+(`unifiedAllCols = buildUnifiedColumns` over ALL sections). This was changed
+because the old simple-column approach used `periodTimes = calcTimes(periods)`,
+which walks the canonical `periods` array containing every staggered lunch in
+sequence → `calcTimes` **accumulated** them (P5 shown at 12:35 instead of 12:05,
+P8 ending past 3:15). The time-accumulation trap (§5).
+Now: distinct `(periodId, startMin)` teaching columns + full-break columns, with
+owning-class chips on split periods. Cell occupant is found by matching the
+section's own schedule slot (`allSectionSchedules[key].get(periodId).startMin ===
+col.startMin`). Subject view shows ALL sections teaching the subject in that exact
+slot. Applies to normal + transposed.
+
+> ⚠️ **Key-function parity (critical):** `CalendarView.secKey()` MUST stay
+> identical to `routes/timetable.tsx getSectionClassKey()` — `classwiseBreaks[].
+> classes` arrays are keyed by the latter. A divergence silently drops all
+> partial breaks in the calendar (e.g. `"VI-A"→"via"` never matches `"vi"`),
+> producing non-staggered, wrong break timing. Also: the calendar's `dayEndMin`
+> must be the MAX end across section schedules (`buildSecPeriods`), not the bare
+> `periods` sum, or late staggered periods get clipped.
 
 ### 6.6 Class-name display helpers
 | Function | Example |
