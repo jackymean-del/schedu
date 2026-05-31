@@ -61,24 +61,71 @@ function getClassDisplayName(sectionName: string): string {
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
 
 // ── Compress a list of sections into readable class names / ranges ──
-//   ["I-A","I-B","II-A","III-C","IV-A","V-B"] → "I to V"
-//   ["XI-Com-A","XI-Sci-B"]                   → "XI-Com, XI-Sci"
-//   ["VI-A","VIII-B"]                          → "VI, VIII"
+//   ["I-A","I-B","II-A","III-C","IV-A","V-B"]               → "I to V"
+//   ["XI-Sci","XI-Com","XI-Arts","XII-Sci","XII-Com"]        → "XI to XII"
+//   ["XI-Sci","XI-Com"]                                      → "XI (Sci, Com)"
+//   ["VI-A","VIII-B"]                                        → "VI, VIII"
 function compressClassNames(sectionNames: string[]): string {
   const names = [...new Set(sectionNames.map(getClassDisplayName))]
-  // Split into pure grades (in GRADE_ORDER) vs streamed/other
-  const pureGrades = names.filter(n => GRADE_ORDER.includes(n))
-  const others     = names.filter(n => !GRADE_ORDER.includes(n))
-  const idxs = pureGrades.map(g => GRADE_ORDER.indexOf(g)).sort((a,b)=>a-b)
-  const ranges: string[] = []
-  let i = 0
-  while (i < idxs.length) {
-    let j = i
-    while (j+1 < idxs.length && idxs[j+1] === idxs[j]+1) j++
-    ranges.push(i === j ? GRADE_ORDER[idxs[i]] : `${GRADE_ORDER[idxs[i]]} to ${GRADE_ORDER[idxs[j]]}`)
-    i = j + 1
+
+  // Separate pure grades, streamed grades (e.g. "XI-Sci"), and unknowns
+  const pureGrades: string[] = []
+  const streamedMap = new Map<string, string[]>() // base grade → stream labels
+  const unknowns: string[] = []
+
+  for (const n of names) {
+    if (GRADE_ORDER.includes(n)) {
+      pureGrades.push(n)
+    } else {
+      const dash = n.indexOf('-')
+      const base = dash > 0 ? n.slice(0, dash) : ''
+      if (base && GRADE_ORDER.includes(base)) {
+        const arr = streamedMap.get(base) ?? []
+        arr.push(n.slice(dash + 1))
+        streamedMap.set(base, arr)
+      } else {
+        unknowns.push(n)
+      }
+    }
   }
-  return [...ranges, ...others].join(', ')
+
+  // Compress pure grades into consecutive ranges
+  const idxs = pureGrades.map(g => GRADE_ORDER.indexOf(g)).sort((a,b)=>a-b)
+  const pureRanges: string[] = []
+  let pi = 0
+  while (pi < idxs.length) {
+    let pj = pi
+    while (pj+1 < idxs.length && idxs[pj+1] === idxs[pj]+1) pj++
+    pureRanges.push(pi === pj ? GRADE_ORDER[idxs[pi]] : `${GRADE_ORDER[idxs[pi]]} to ${GRADE_ORDER[idxs[pj]]}`)
+    pi = pj + 1
+  }
+
+  // Compress streamed grades: consecutive bases with identical stream sets → range
+  const streamedBases = [...streamedMap.keys()].sort((a,b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
+  const streamedParts: string[] = []
+  let si = 0
+  while (si < streamedBases.length) {
+    const base = streamedBases[si]
+    const streams = [...streamedMap.get(base)!].sort()
+    let sj = si + 1
+    while (sj < streamedBases.length) {
+      const nb = streamedBases[sj]
+      const ns = [...streamedMap.get(nb)!].sort()
+      const consecutive = GRADE_ORDER.indexOf(nb) === GRADE_ORDER.indexOf(streamedBases[sj-1]) + 1
+      const same = streams.length === ns.length && streams.every((s,k) => s === ns[k])
+      if (consecutive && same) { sj++ } else { break }
+    }
+    if (sj - si === 1) {
+      // Single grade: "XI-Sci" or "XI (Sci, Com)"
+      streamedParts.push(streams.length === 1 ? `${base}-${streams[0]}` : `${base} (${streams.join(', ')})`)
+    } else {
+      // Multiple consecutive grades with identical streams → just show range
+      streamedParts.push(`${base} to ${streamedBases[sj-1]}`)
+    }
+    si = sj
+  }
+
+  return [...pureRanges, ...streamedParts, ...unknowns].join(', ')
 }
 
 // ── Off-day set for a section ───────────────────────────────
@@ -484,9 +531,17 @@ function mergeTeacherIdleColumns(
 }
 
 // ── Shared lunch break cell — shows compressed class names (no icon) ──
-function LunchCell({ id, secName }: { id: string; secName?: string }) {
+// Accepts optional drag-highlight props so it participates in drag/drop like free cells.
+function LunchCell({ id, secName, isTarget, hasConflict, dragProps }: {
+  id: string; secName?: string;
+  isTarget?: boolean; hasConflict?: boolean;
+  dragProps?: { onDragOver:(e:React.DragEvent)=>void; onDrop:(e:React.DragEvent)=>void; onDragLeave:()=>void }
+}) {
+  const bg     = isTarget ? (hasConflict ? DRAG_CONFLICT_FILL : DRAG_SAFE_FILL)     : "#FFFBEB"
+  const border = isTarget ? (hasConflict ? `2px solid ${DRAG_CONFLICT_BORDER}` : `2px solid ${DRAG_SAFE_BORDER}`) : "1px solid #E8E4FF"
   return (
-    <td key={id} style={{ background:"#FFFBEB", border:"1px solid #E8E4FF", padding:"4px 6px", textAlign:"center" as const, verticalAlign:"middle" as const }}>
+    <td key={id} {...(isTarget ? dragProps : undefined)}
+      style={{ background:bg, border, padding:"4px 6px", textAlign:"center" as const, verticalAlign:"middle" as const, cursor: isTarget ? "copy" : "default" }}>
       <div style={{ fontSize:9, fontStyle:"italic", color:"#D4920E", fontWeight:600, lineHeight:1.4 }}>Lunch Break</div>
       {secName && <div style={{ fontSize:9, color:"#D4920E", opacity:0.8, fontWeight:500 }}>{secName}</div>}
     </td>
@@ -1702,7 +1757,10 @@ export function TimetablePage() {
                     const lunchSecs = teacherSecNames.filter(S =>
                       lunchSrcs.some(src => resolveUniCell(S, src, ttSchedules, cwBreaksTT).kind === 'lunch')
                     )
-                    if (lunchSecs.length) return <LunchCell key={col.key} id={col.key} secName={compressClassNames(lunchSecs)} />
+                    if (lunchSecs.length) return (
+                      <LunchCell key={col.key} id={col.key} secName={compressClassNames(lunchSecs)}
+                        isTarget={ttIsTarget} hasConflict={!!ttConflict} dragProps={ttDragProps} />
+                    )
                     // Free / droppable
                     return (
                       <td key={col.key} {...ttDragProps}
@@ -1832,7 +1890,10 @@ export function TimetablePage() {
                       const lunchSecs = teacherSecNames.filter(S =>
                         lunchSrcsTT.some(src => resolveUniCell(S, src, tttSchedules, cwBreaksTTT).kind === 'lunch')
                       )
-                      if (lunchSecs.length) return <LunchCell key={col.key} id={ttTKey} secName={compressClassNames(lunchSecs)} />
+                      if (lunchSecs.length) return (
+                        <LunchCell key={col.key} id={ttTKey} secName={compressClassNames(lunchSecs)}
+                          isTarget={ttTIsTarget} hasConflict={!!ttTConflict} dragProps={ttTDragProps} />
+                      )
                       return (
                         <td key={col.key} {...ttTDragProps}
                           style={{ ...dragTdStyle(ttTIsTarget, !!ttTConflict, false), position:"relative" as const }}>
