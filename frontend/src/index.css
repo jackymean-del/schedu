@@ -35,9 +35,21 @@ body {
 .ring-ring        { outline-color: #1a7f5a; }
 
 /* ── Button hover states ── */
-button { cursor: pointer; transition: all 0.15s ease; }
-button:hover { opacity: 0.88; }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
+/* No `transition: all` — it delays every click by 150ms.
+   Use `active` for instant click feedback; opt-in transitions per component. */
+button {
+  cursor: pointer;
+  touch-action: manipulation;          /* removes 300ms tap delay on touch */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button:active  { filter: brightness(0.88); }
+button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+/* Opt-in smooth transition only for buttons that need it */
+.btn-smooth { transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, opacity 0.08s ease; }
+.btn-smooth:hover { opacity: 0.92; }
+.btn-smooth:active { opacity: 0.78; }
 
 /* Green primary button */
 .bg-emerald-600         { background-color: #7C6FE0 !important; }
@@ -51,9 +63,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .hover\:border-emerald-400:hover { border-color: #9B8EF5 !important; }
 .hover\:shadow-md:hover      { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
 .hover\:-translate-y-1:hover { transform: translateY(-4px) !important; }
-.transition-all { transition: all 0.15s ease !important; }
-.transition-shadow { transition: box-shadow 0.15s ease !important; }
-.transition-colors { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important; }
+.transition-all    { transition: background-color 0.08s ease, border-color 0.08s ease, opacity 0.08s ease !important; }
+.transition-shadow { transition: box-shadow 0.08s ease !important; }
+.transition-colors { transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease !important; }
 
 /* ── Card styles ── */
 .rounded-lg  { border-radius: 0.5rem; }
@@ -149,6 +161,20 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Timetable ── */
 .tt-box { border-radius: 0.75rem; overflow: hidden; }
+
+/* Cell action buttons: always present in DOM, visible only on td:hover.
+   Replaces useState(hovered) which caused cascading re-renders. */
+.tt-cell-actions { opacity: 0; transition: opacity 0.06s ease; pointer-events: none; }
+td:hover .tt-cell-actions { opacity: 1; pointer-events: auto; }
+
+/* PeriodCol drag icon: CSS-only hover, no JS state needed */
+.period-col-drag { opacity: 0.4; transition: opacity 0.06s ease, font-size 0.06s ease; }
+th:hover .period-col-drag { opacity: 1; }
+
+/* Nav / toolbar buttons: instant active feedback */
+.nav-btn { transition: background-color 0.06s ease; }
+.nav-btn:hover { background-color: rgba(0,0,0,0.05); }
+.nav-btn:active { background-color: rgba(0,0,0,0.12); }
 
 /* ── Print ── */
 @media print {

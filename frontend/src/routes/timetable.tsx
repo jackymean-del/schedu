@@ -579,7 +579,7 @@ function mergeTeacherIdleColumns(
 // isTarget    → valid drop zone (green fill)
 // hasConflict → cannot drop (red fill)
 // isUnavailable → dragging but this slot is not a valid target (red outline, yellow bg)
-function LunchCell({ id, secName, isTarget, hasConflict, isUnavailable, dragProps }: {
+const LunchCell = React.memo(function LunchCell({ id, secName, isTarget, hasConflict, isUnavailable, dragProps }: {
   id: string; secName?: string;
   isTarget?: boolean; hasConflict?: boolean; isUnavailable?: boolean;
   dragProps?: { onDragOver:(e:React.DragEvent)=>void; onDrop:(e:React.DragEvent)=>void; onDragLeave:()=>void }
@@ -601,7 +601,7 @@ function LunchCell({ id, secName, isTarget, hasConflict, isUnavailable, dragProp
       {secName && <div style={{ fontSize:9, color:"#D4920E", opacity:0.8, fontWeight:500 }}>{secName}</div>}
     </td>
   )
-}
+})
 
 // ── Drag highlight helpers ─────────────────────────────────────
 // RULE: blank cells → colour fill only (no border change)
@@ -662,7 +662,7 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
 }
 
 // ── Inter-teacher swap insight — inline banner (non-blocking) ──
-function InsightBanner({ message, onClose }:{ message:string; onClose:()=>void }) {
+const InsightBanner = React.memo(function InsightBanner({ message, onClose }:{ message:string; onClose:()=>void }) {
   return (
     <div style={{
       background:"#ECFDF5", border:"1px solid #6EE7B7", borderRadius:8,
@@ -679,7 +679,7 @@ function InsightBanner({ message, onClose }:{ message:string; onClose:()=>void }
         title="Dismiss">×</button>
     </div>
   )
-}
+})
 
 // ── Period header — draggable column header in edit mode ──────
 function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDimmed,
@@ -691,7 +691,8 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
   onDragOver?: (e: React.DragEvent) => void; onDrop?: () => void;
   breakGroupLabel?: string;  // e.g. "VII-C, XI-Com-A" for partial lunch columns
 }) {
-  const [hov, setHov] = useState(false)
+  // No JS hover state — drag icon visibility handled by CSS `.period-col-drag`
+  // on `th:hover`. Eliminates re-renders on every mouse-enter/leave.
   const isBreak = p.type !== "class"
   const canDrag = !!(editMode && !isBreak)
   const bg = isSwapped  ? "#fefce8"
@@ -705,8 +706,6 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
   return (
     <th
       draggable={canDrag}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
       onDragStart={canDrag ? e => { e.dataTransfer.effectAllowed = "move"; onDragStart?.() } : undefined}
       onDragEnd={canDrag ? onDragEnd : undefined}
       onDragOver={canDrag ? onDragOver : undefined}
@@ -720,7 +719,6 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
         cursor: canDrag ? "grab" : "default",
         opacity: isDimmed ? 0.35 : isDragSrc ? 0.52 : 1,
         userSelect:"none" as const,
-        transition:"background 0.12s, opacity 0.15s, box-shadow 0.12s",
         boxShadow: isDragOver
           ? "inset 0 0 0 3px #A78BFA, 0 0 14px rgba(124,111,224,0.4)"
           : isSwapped ? "0 0 0 2px #fbbf2466, 0 2px 8px rgba(234,179,8,0.18)"
@@ -730,24 +728,22 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
       {times && <><div style={{ fontSize:8, fontWeight:600, opacity:0.9, whiteSpace:"nowrap" }}>{times.start}</div><div style={{ fontSize:8, fontWeight:400, opacity:0.6, whiteSpace:"nowrap" }}>→ {times.end}</div></>}
       {breakGroupLabel && <div style={{ fontSize:7, fontWeight:600, color:"#475569", background:"#EEF2FF", borderRadius:3, padding:"1px 4px", marginTop:2, letterSpacing:"0.2px", whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.3 }}>{breakGroupLabel}</div>}
       {canDrag && (
-        <div style={{
-          fontSize: hov || isDragSrc ? 14 : 10,
-          color: isDragOver?"rgba(255,255,255,0.95)":isDragSrc?"#4338ca":hov?"#7C6FE0":"#C4BFEA",
-          marginTop:2, lineHeight:1, transition:"font-size 0.1s, color 0.1s", letterSpacing:"-1px",
-        }} title="Drag to swap column">↔</div>
+        <div className="period-col-drag"
+          style={{ fontSize:11, color: isDragOver?"rgba(255,255,255,0.95)":isDragSrc?"#4338ca":"#7C6FE0",
+            marginTop:2, lineHeight:1, letterSpacing:"-1px" }} title="Drag to swap column">↔</div>
       )}
     </th>
   )
 }
 
 // ── Break cell ─────────────────────────────────────────────
-function BreakCell({ p }: { p:Period }) {
+const BreakCell = React.memo(function BreakCell({ p }: { p:Period }) {
   const bg = p.type==="fixed-start"?"#eff6ff":p.type==="lunch"?"#fffbeb":p.type==="break"?"#fefce8":p.type==="fixed-end"?"#f0fdf4":"#FAFAFE"
   const color = p.type==="fixed-start"?"#3b82f6":p.type==="lunch"?"#D4920E":p.type==="break"?"#ca8a04":"#7C6FE0"
   return (
     <td style={{ background:bg, color, fontSize:9, fontWeight:600, textAlign:"center", padding:"4px 2px", border:"1px solid #E8E4FF", fontStyle:"italic", whiteSpace:"nowrap" }}>{p.name}</td>
   )
-}
+})
 
 // ── Subject color cell ─────────────────────────────────────
 type CellOption = { subject: string; teacher: string; room: string }
@@ -762,13 +758,11 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   isDraggable?:boolean; onDragStart?:(e:React.DragEvent)=>void; onDelete?:()=>void; editMode?:boolean;
   isDropTarget?:boolean; hasConflict?:string|null;
 }) {
-  const [hovered, setHovered] = useState(false)
+  // No JS hover state — action buttons shown via CSS `.tt-cell-actions` on `td:hover`
   const sharedTdProps = {
     onDragOver: (e:React.DragEvent) => { e.preventDefault(); onDragOver?.(e) },
     onDrop,
     onDragLeave,
-    onMouseEnter: () => setHovered(true),
-    onMouseLeave: () => setHovered(false),
   }
   const isConflict = !!hasConflict
 
@@ -797,8 +791,9 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
             )
           })}
         </div>
-        {editMode && hovered && onDelete && (
+        {editMode && onDelete && (
           <button onClick={e => { e.stopPropagation(); onDelete() }}
+            className="tt-cell-actions"
             style={{ position:"absolute" as const, top:3, right:3, width:16, height:16, borderRadius:"50%", border:"none", background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, lineHeight:1 }}>✕</button>
         )}
       </td>
@@ -826,8 +821,8 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         )}
         {showRoom && effectiveRoom && <div style={{ fontSize:8, opacity:0.55, marginTop:1 }}>{effectiveRoom}</div>}
       </div>
-      {editMode && hovered && (
-        <div style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
+      {editMode && (
+        <div className="tt-cell-actions" style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
           {onDelete && (
             <button onClick={e => { e.stopPropagation(); onDelete() }}
               title="Clear period"
@@ -850,13 +845,11 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
   onDragStart?: (e: React.DragEvent) => void;
   onDelete?: () => void;
 }) {
-  const [hovered, setHovered] = useState(false)
-  // filled cell (has subject): outline only. empty: fill only.
+  // No JS hover state — action buttons shown via CSS `.tt-cell-actions` on `td:hover`
   const hasFill = !!cell?.subject
   return (
     <td style={{ ...dragTdStyle(isDropTarget, !!hasConflict, hasFill), position:"relative" as const }}
-      {...dragProps}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      {...dragProps}>
       <div className={colorClass}
         draggable={editMode && !!onDragStart}
         onDragStart={editMode ? onDragStart : undefined}
@@ -867,8 +860,8 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
         {cell.isClassTeacher && <div style={{ fontSize:8, color:"#7C6FE0" }}>★ Class Teacher</div>}
         {showRoom && cell.room && <div style={{ fontSize:8, opacity:0.55 }}>{cell.room}</div>}
       </div>
-      {editMode && hovered && (
-        <div style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
+      {editMode && (
+        <div className="tt-cell-actions" style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
           {onDelete && (
             <button onClick={e => { e.stopPropagation(); onDelete() }}
               title="Clear period"
@@ -914,6 +907,16 @@ export function TimetablePage() {
   const [uncoveredOpen, setUncoveredOpen] = useState(false)
   const [dragItem, setDragItem] = useState<{section:string;day:string;periodId:string}|null>(null)
   const [dragOverCell, setDragOverCell] = useState<string|null>(null) // key = "sec|day|pid"
+  // RAF-throttled hover setter: prevents 60fps state updates during drag
+  const _rafDragOver = useRef<number>(0)
+  const setDragOverCellRaf = useCallback((key: string) => {
+    cancelAnimationFrame(_rafDragOver.current)
+    _rafDragOver.current = requestAnimationFrame(() => setDragOverCell(key))
+  }, [])
+  const clearDragOverCell = useCallback(() => {
+    cancelAnimationFrame(_rafDragOver.current)
+    setDragOverCell(null)
+  }, [])
   const [publishConfirm, setPublishConfirm] = useState(false)
 
   // ── Column drag-and-drop state (period column / row swap) ──
@@ -960,17 +963,82 @@ export function TimetablePage() {
 
   const org = ORG_CONFIGS[config.orgType ?? "school"]
   const country = getCountry(config.countryCode ?? "IN")
-  const periodTimes = calcTimes(periods, config)
-  const classPeriods = periods.filter(p => p.type === "class")
+
+  // ── Memoized derived values — avoid recomputation on every render ──────────
+  // These are recomputed only when their actual data dependencies change,
+  // NOT on drag-state changes (dragOverCell / dragItem), which fire 60fps.
+  const periodTimes  = useMemo(() => calcTimes(periods, config),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [periods, config.startTime, config.timeFormat])
+
+  const classPeriods = useMemo(() => periods.filter(p => p.type === "class"), [periods])
+
+  const cwBreaksGlobal = useMemo(
+    () => (config as any).classwiseBreaks as CwBreakLite[] | undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [(config as any).classwiseBreaks]
+  )
+
+  // School-wide per-class-group timing schedules — used by teacher-view helpers.
+  // Expensive O(groups × periods × breaks). Stable between drops.
+  const allSectionSchedules = useMemo(() => {
+    const map = new Map<string, Map<string, SlotMins>>()
+    sections.forEach(s => {
+      const k = getSectionClassKey(s.name)
+      if (!map.has(k)) map.set(k, sectionScheduleMins(s.name, classPeriods, cwBreaksGlobal, config))
+    })
+    return map
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections, classPeriods, cwBreaksGlobal, config.startTime])
+
+  // School-wide period-split / owning-label info for column header chips.
+  const globalOwningInfo = useMemo(
+    () => buildOwningInfo(sections.map(s=>s.name), classPeriods, cwBreaksGlobal, config),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sections, classPeriods, cwBreaksGlobal, config.startTime]
+  )
+
+  // Per-teacher unified columns + schedules — the most expensive computation.
+  // Keyed by teacher name. Recomputes only when classTT / sections / periods change.
+  const teacherTTCache = useMemo(() => {
+    const cache = new Map<string, {
+      cols: UniCol[]; schedules: Map<string, Map<string, SlotMins>>; secNames: string[]
+    }>()
+    staff.forEach(st => {
+      const tn = st.name
+      const secNames = sections.map(s => s.name).filter(name =>
+        config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {}).some((c:any) => c?.teacher === tn))
+      )
+      const { columns: raw, schedules } =
+        buildUnifiedColumns(secNames, classPeriods, periods, cwBreaksGlobal, config)
+      const cols = mergeTeacherIdleColumns(raw, secNames, schedules, classTT, tn, config.workDays, config)
+      cache.set(tn, { cols, schedules, secNames })
+    })
+    return cache
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staff, sections, classTT, classPeriods, periods, cwBreaksGlobal, config])
+
+  // Uncovered periods — recomputes only when class timetable / periods change.
+  const uncoveredPeriodsAll = useMemo(() =>
+    sections.flatMap(sec =>
+      config.workDays.flatMap(day =>
+        classPeriods
+          .filter(p => !classTT[sec.name]?.[day]?.[p.id]?.subject)
+          .map(p => ({ section: sec.name, day, periodId: p.id, periodName: p.name, time: periodTimes.get(p.id) }))
+      )
+    ),
+    [sections, config.workDays, classPeriods, classTT, periodTimes]
+  )
 
   // Resolve class teacher ID → name
   const resolveTeacher = (idOrName: string) =>
     staff.find(s => s.id === idOrName || s.name === idOrName)?.name ?? idOrName
 
   // All rooms used in the timetable
-  const allRooms = Array.from(new Set(
-    sections.map(s => (s as any).room).filter(Boolean)
-  )) as string[]
+  const allRooms = useMemo(() =>
+    Array.from(new Set(sections.map(s => (s as any).room).filter(Boolean))) as string[],
+    [sections]
+  )
 
   // Entity options per view
   const getEntityList = (): string[] => {
@@ -982,14 +1050,8 @@ export function TimetablePage() {
     }
   }
 
-  // Collect uncovered (empty) periods across all classes
-  const uncoveredPeriods = sections.flatMap(sec =>
-    config.workDays.flatMap(day =>
-      classPeriods
-        .filter(p => !classTT[sec.name]?.[day]?.[p.id]?.subject)
-        .map(p => ({ section: sec.name, day, periodId: p.id, periodName: p.name, time: periodTimes.get(p.id) }))
-    )
-  )
+  // uncoveredPeriods is memoized as uncoveredPeriodsAll above
+  const uncoveredPeriods = uncoveredPeriodsAll
 
   // ── Period Pool: subject deficits — view-mode-aware ──────
   // Teacher view + specific teacher → only that teacher's sections.
@@ -1763,30 +1825,14 @@ export function TimetablePage() {
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
     const assignedStr = (st?.subjects ?? []).filter(s => s.includes("::")).map(s => { const [cls,sub]=s.split("::"); return `${cls}: ${sub}` }).join(" · ") || (st?.subjects??[]).join(", ") || "—"
 
-    // ── Teacher's sections — derive from classTT (tdata.classes is unreliable;
-    //    rebuildTeacherTT collapses staggered same-id periods so some sections
-    //    can be dropped). Scanning classTT guarantees EVERY assignment is found.
-    const teacherSecNames = sections.map(s=>s.name).filter(name =>
-      config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {}).some((c:any)=>c?.teacher===tn))
-    )
-    // ── Unified time-slot columns ─────────────────────────────────────────
-    // Handles STAGGERED breaks: a "Period 5" can appear at multiple times when
-    // class groups lunch at different points. Each distinct (period, startTime)
-    // becomes its own column; partial breaks are overlaid into teaching cells.
-    const cwBreaksTT = (config as any).classwiseBreaks as CwBreakLite[] | undefined
-    const { columns: ttColsRaw, schedules: ttSchedules } =
-      buildUnifiedColumns(teacherSecNames, classPeriods, periods, cwBreaksTT, config)
-    // Merge split columns where this teacher has no teaching in any split
-    const ttCols = mergeTeacherIdleColumns(ttColsRaw, teacherSecNames, ttSchedules, classTT, tn, usedDays, config)
-    // School-wide owning-class info (for the heading chip on split periods)
-    const ttOwn = buildOwningInfo(sections.map(s=>s.name), classPeriods, cwBreaksTT, config)
-    // School-wide schedules — one entry per distinct class group key — for lunch detection.
-    // We need ALL sections (not just teacher's) so the lunch indicator shows every class on break.
-    const ttAllSchedules = new Map<string, Map<string, SlotMins>>()
-    sections.forEach(s => {
-      const k = getSectionClassKey(s.name)
-      if (!ttAllSchedules.has(k)) ttAllSchedules.set(k, sectionScheduleMins(s.name, classPeriods, cwBreaksTT, config))
-    })
+    // ── Use pre-computed teacher cache (avoids recomputation on drag re-renders) ──
+    const cwBreaksTT   = cwBreaksGlobal
+    const ttCached     = teacherTTCache.get(tn)
+    const teacherSecNames = ttCached?.secNames ?? []
+    const ttCols          = ttCached?.cols ?? []
+    const ttSchedules     = ttCached?.schedules ?? new Map()
+    const ttOwn           = globalOwningInfo
+    const ttAllSchedules  = allSectionSchedules
 
     return (
       <div>
@@ -1877,7 +1923,7 @@ export function TimetablePage() {
                     // other teacher), moveOnly=true for truly free slots (no back-conflicts to check).
                     const ttFreeConflict = ttIsTarget && ttDropSec && !taughtCell
                       ? checkSwapConflict(ttDropSec, day, col.periodId, !ttInterSwap) : null
-                    const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttCellKey) }
+                    const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCellRaf(ttCellKey) }
                     const onDragLeave = () => setDragOverCell(null)
                     const ttDragProps = {
                       onDragOver,
@@ -1976,23 +2022,14 @@ export function TimetablePage() {
     const isSameTeacherDrag  = isDragging && draggedCellTeacher === tn
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
 
-    // Teacher's sections from classTT (reliable — see normal view note)
-    const teacherSecNames = sections.map(s=>s.name).filter(name =>
-      config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {}).some((c:any)=>c?.teacher===tn))
-    )
-    // ── Unified time-slot rows (same model as normal teacher view) ─────────
-    const cwBreaksTTT = (config as any).classwiseBreaks as CwBreakLite[] | undefined
-    const { columns: tttColsRaw, schedules: tttSchedules } =
-      buildUnifiedColumns(teacherSecNames, classPeriods, periods, cwBreaksTTT, config)
-    // Merge split rows where this teacher has no teaching in any split
-    const tttCols = mergeTeacherIdleColumns(tttColsRaw, teacherSecNames, tttSchedules, classTT, tn, usedDays, config)
-    const tttOwn = buildOwningInfo(sections.map(s=>s.name), classPeriods, cwBreaksTTT, config)
-    // School-wide schedules for lunch detection (all class groups)
-    const tttAllSchedules = new Map<string, Map<string, SlotMins>>()
-    sections.forEach(s => {
-      const k = getSectionClassKey(s.name)
-      if (!tttAllSchedules.has(k)) tttAllSchedules.set(k, sectionScheduleMins(s.name, classPeriods, cwBreaksTTT, config))
-    })
+    // ── Use pre-computed teacher cache (same data as normal view) ──
+    const cwBreaksTTT    = cwBreaksGlobal
+    const tttCached      = teacherTTCache.get(tn)
+    const teacherSecNames = tttCached?.secNames ?? []
+    const tttCols         = tttCached?.cols ?? []
+    const tttSchedules    = tttCached?.schedules ?? new Map()
+    const tttOwn          = globalOwningInfo
+    const tttAllSchedules = allSectionSchedules
 
     return (
       <div>
@@ -2053,7 +2090,7 @@ export function TimetablePage() {
                         ? checkSwapConflict(ttTDropSec, day, col.periodId, false) : null
                       const ttTFreeConflict = ttTIsTarget && ttTDropSec && !taughtCell
                         ? checkSwapConflict(ttTDropSec, day, col.periodId, !ttTInterSwap) : null
-                      const onTDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(ttTKey) }
+                      const onTDragOver  = (e: React.DragEvent) => { e.preventDefault(); setDragOverCellRaf(ttTKey) }
                       const onTDragLeave = () => setDragOverCell(null)
                       const ttTDragProps = {
                         onDragOver: onTDragOver,
@@ -2167,14 +2204,14 @@ export function TimetablePage() {
                     const subIsTarget = isDragging && !!subSecName && (poolDragItem?.section === subSecName || dragItem?.section === subSecName)
                     const subConflict = subIsTarget ? checkSwapConflict(subSecName, day, p.id) : null
                     const subDragProps = {
-                      onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(subCellKey) },
+                      onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCellRaf(subCellKey) },
                       onDrop: (e: React.DragEvent) => {
                         e.preventDefault()
                         if (!subSecName || !dragItem) return
                         if (subConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(subConflict); return }
                         handleDrop(e, subSecName, day, p.id)
                       },
-                      onDragLeave: () => setDragOverCell(null),
+                      onDragLeave: clearDragOverCell,
                     }
                     if (!hits.length) return (
                       <td key={p.id} {...subDragProps}
@@ -2251,14 +2288,14 @@ export function TimetablePage() {
                       const subTIsTarget = isDragging && !!subTSecName && (poolDragItem?.section === subTSecName || dragItem?.section === subTSecName)
                       const subTConflict = subTIsTarget ? checkSwapConflict(subTSecName, day, p.id) : null
                       const subTDragProps = {
-                        onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(subTKey) },
+                        onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCellRaf(subTKey) },
                         onDrop: (e: React.DragEvent) => {
                           e.preventDefault()
                           if (!subTSecName || !dragItem) return
                           if (subTConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(subTConflict); return }
                           handleDrop(e, subTSecName, day, p.id)
                         },
-                        onDragLeave: () => setDragOverCell(null),
+                        onDragLeave: clearDragOverCell,
                       }
                       if (!hits.length) return (
                         <td key={p.id} {...subTDragProps}
@@ -2336,14 +2373,14 @@ export function TimetablePage() {
                     const rmDropSec = rmSecName || (isSameRoomDrag && dragItem ? dragItem.section : "")
                     const rmConflict = rmIsTarget ? checkSwapConflict(rmDropSec, day, p.id) : null
                     const rmDragProps = {
-                      onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(rmKey) },
+                      onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCellRaf(rmKey) },
                       onDrop: (e: React.DragEvent) => {
                         e.preventDefault()
                         if (!rmDropSec || !dragItem) return
                         if (rmConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(rmConflict); return }
                         handleDrop(e, rmDropSec, day, p.id)
                       },
-                      onDragLeave: () => setDragOverCell(null),
+                      onDragLeave: clearDragOverCell,
                     }
                     if (!hit) return (
                       <td key={p.id} {...rmDragProps}
@@ -2416,14 +2453,14 @@ export function TimetablePage() {
                       const rmTDropSec  = rmTSecName || (isSameRoomDrag && dragItem ? dragItem.section : "")
                       const rmTConflict = rmTIsTarget ? checkSwapConflict(rmTDropSec, day, p.id) : null
                       const rmTDragProps = {
-                        onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCell(rmTKey) },
+                        onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverCellRaf(rmTKey) },
                         onDrop: (e: React.DragEvent) => {
                           e.preventDefault()
                           if (!rmTDropSec || !dragItem) return
                           if (rmTConflict) { setDragItem(null); setDragOverCell(null); setConflictWarning(rmTConflict); return }
                           handleDrop(e, rmTDropSec, day, p.id)
                         },
-                        onDragLeave: () => setDragOverCell(null),
+                        onDragLeave: clearDragOverCell,
                       }
                       if (!hit) return (
                         <td key={p.id} {...rmTDragProps}
