@@ -440,6 +440,14 @@ function Block({
             {block.periodName}
           </div>
         )}
+        {/* Class label for partial lunch blocks (sectionName carries the range) */}
+        {block.sectionName && width >= 40 && (
+          <div style={{ fontSize:Math.min(7, width/8), fontWeight:600, color:bs.text, opacity:0.85,
+            textAlign:"center" as const, padding:"0 2px", whiteSpace:"nowrap" as const,
+            overflow:"hidden", textOverflow:"ellipsis" as const, maxWidth:"100%" }}>
+            {block.sectionName}
+          </div>
+        )}
         {!compact && width >= 58 && (
           <div style={{ fontSize:7, color:bs.text, opacity:0.7, fontFamily:"monospace", marginTop:1 }}>
             {fmtTime(block.startMin,"24h")}–{fmtTime(block.endMin,"24h")}
@@ -870,6 +878,36 @@ export function CalendarView({
     return [...cols.values()].sort((a,b)=>a.start-b.start)
   },[periods,classwiseBreaks,groupSchedules,dayStartMin,isFullBreak])
 
+  // Partial (staggered) lunch break windows — non-full, non-short breaks with
+  // their exact wall-clock window and a compressed class label. Used to render
+  // lunch blocks in the teacher/room/subject TIMELINE where the entity is free.
+  const partialLunchWindows = useMemo(()=>{
+    const out: {start:number; end:number; name:string; label:string}[] = []
+    ;(classwiseBreaks ?? []).forEach(b=>{
+      if (isFullBreak(b.id)) return
+      if ((b as any).type === "short-break") return
+      const repKey = b.classes.find(k=>groupSchedules.has(k))
+      const slot = repKey ? groupSchedules.get(repKey)?.get(b.id) : undefined
+      if (slot) out.push({ start:slot.start, end:slot.end, name:b.name, label:compressKeys(b.classes) })
+    })
+    return out
+  },[classwiseBreaks,groupSchedules,isFullBreak])
+
+  // Append lunch break blocks for an entity's free windows (mutates `blocks`).
+  const addLunchBlocks = useCallback((blocks:TimeBlock[], dayKey:string, stamp:{teacher?:string; room?:string})=>{
+    partialLunchWindows.forEach((w,i)=>{
+      const busy = blocks.some(b=>b.periodType==="class" && b.subject && b.startMin < w.end && b.endMin > w.start)
+      if (busy) return
+      blocks.push({
+        key:`__lunch|${stamp.teacher??stamp.room??""}|${i}|${dayKey}`,
+        periodId:`__lunch${i}`, periodName:w.name, periodType:"lunch",
+        startMin:w.start, endMin:w.end, sectionName:w.label,  // label shown as subtitle
+        subject:"", teacher:stamp.teacher??"", room:stamp.room??"",
+        isSub:false, isClassTeacher:false, absent:false,
+      })
+    })
+  },[partialLunchWindows])
+
   // ── Block builders ───────────────────────────────────────────────────
   const buildClassBlocks = useCallback((secName:string, dayKey:string): TimeBlock[] => {
     const ps=buildSecPeriods(secName,periods,classwiseBreaks)
@@ -949,8 +987,9 @@ export function CalendarView({
         isSub:false, isClassTeacher:false, absent:false,
       })
     })
+    addLunchBlocks(blocks, dayKey, {teacher:tName})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,absentHighlights,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,absentHighlights,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks])
 
   const buildRoomBlocks = useCallback((roomName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1004,8 +1043,9 @@ export function CalendarView({
         isSub:false, isClassTeacher:false, absent:false,
       })
     })
+    addLunchBlocks(blocks, dayKey, {room:roomName})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks])
 
   const buildSubjectBlocks = useCallback((subjectName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1045,8 +1085,9 @@ export function CalendarView({
         })
       })
     })
+    addLunchBlocks(blocks, dayKey, {})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,addLunchBlocks])
 
   // ── Get blocks for entity × day ──────────────────────────────────────
   const getEntityBlocks = useCallback((entityId:string, dayKey:string): TimeBlock[] => {
