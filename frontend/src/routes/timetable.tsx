@@ -60,6 +60,26 @@ function getClassDisplayName(sectionName: string): string {
 // Canonical grade order for range compression
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
 
+// ── Short-name helpers (mirror CalendarView so the "Short" toggle matches) ──
+function genShortSubject(name: string): string {
+  if (!name) return ""
+  const words = name.trim().split(/\s+/)
+  if (words.length >= 3) return words.map(w => w[0].toUpperCase()).join("")  // "Physical Education" → "PE"
+  if (words.length === 2) return `${words[0].slice(0,4)} ${words[1].slice(0,3)}`
+  return name.slice(0, 8)
+}
+function shortSubjectName(name: string, subjects: any[]): string {
+  if (!name) return ""
+  const s = subjects.find(x => x.name === name)
+  return s?.shortName?.trim() ? s.shortName : genShortSubject(name)
+}
+function shortStaffName(name: string, staff: any[]): string {
+  if (!name) return ""
+  const p = staff.find(x => x.name === name)
+  return p?.shortName?.trim() ? p.shortName : name.split(/\s+/)[0].slice(0, 9)
+}
+function shortRoomName(name: string): string { return name ? name.slice(0, 9) : "" }
+
 // ── Compress a list of sections into readable class names / ranges ──
 //   ["I-A","I-B","II-A","III-C","IV-A","V-B"]               → "I to V"
 //   ["XI-Sci","XI-Com","XI-Arts","XII-Sci","XII-Com"]        → "XI to XII"
@@ -805,6 +825,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   onClick, dragOver, onDragOver, onDrop, onDragLeave, absentHighlight, options,
   isDraggable, onDragStart, onDelete, editMode, isDropTarget, hasConflict,
   isSrc,  // true when this cell is actively being dragged (pluck/fade effect)
+  shortNames, subjectsList, staffList,  // "Short" toggle context
 }:{
   subject?:string; teacher?:string; room?:string; isClassTeacher?:boolean; isSub?:boolean; subTeacher?:string;
   showTeacher:boolean; showRoom:boolean; onClick?:()=>void;
@@ -812,7 +833,12 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   absentHighlight?:boolean; options?: CellOption[];
   isDraggable?:boolean; onDragStart?:(e:React.DragEvent)=>void; onDelete?:()=>void; editMode?:boolean;
   isDropTarget?:boolean; hasConflict?:string|null; isSrc?:boolean;
+  shortNames?:boolean; subjectsList?:any[]; staffList?:any[];
 }) {
+  // Short-name display transforms (keep full names for color lookup)
+  const dSub = (s?:string) => shortNames && s ? shortSubjectName(s, subjectsList ?? []) : (s ?? "")
+  const dTch = (t?:string) => shortNames && t ? shortStaffName(t, staffList ?? []) : (t ?? "")
+  const dRm  = (r?:string) => shortNames && r ? shortRoomName(r) : (r ?? "")
   // No JS hover state — action buttons shown via CSS `.tt-cell-actions` on `td:hover`
   const sharedTdProps = {
     onDragOver: (e:React.DragEvent) => { e.preventDefault(); onDragOver?.(e) },
@@ -840,9 +866,9 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
             return (
               <div key={i} style={{ marginBottom: i < options.length-1 ? 3 : 0, borderBottom: i < options.length-1 ? "1px dashed #E8E4FF" : "none", paddingBottom: i < options.length-1 ? 3 : 0 }}>
                 <div className={oc} style={{ borderRadius:3, padding:"2px 4px" }}>
-                  <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{opt.subject}</div>
-                  {showTeacher && opt.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{opt.teacher}</div>}
-                  {showRoom && opt.room && <div style={{ fontSize:8, opacity:0.55 }}>{opt.room}</div>}
+                  <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{dSub(opt.subject)}</div>
+                  {showTeacher && opt.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{dTch(opt.teacher)}</div>}
+                  {showRoom && opt.room && <div style={{ fontSize:8, opacity:0.55 }}>{dRm(opt.room)}</div>}
                 </div>
               </div>
             )
@@ -870,14 +896,14 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         style={{ borderRadius:5, padding:"4px 7px", minHeight:44, cursor:isDraggable?(isDropTarget?"default":"grab"):onClick?"pointer":"default", outline:absentHighlight?"3px solid #f59e0b":isSub?"2px dashed #f59e0b":"none", outlineOffset:absentHighlight?"-2px":undefined, position:"relative" as const }}>
         {isSub && <span style={{ position:"absolute" as const, top:2, right:3, width:6, height:6, borderRadius:"50%", background:"#f59e0b" }} title="Substituted" />}
         {absentHighlight && <span style={{ position:"absolute" as const, top:2, left:3, fontSize:8, color:"#D4920E" }}>⚠</span>}
-        <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{subject}</div>
+        <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{dSub(subject)}</div>
         {showTeacher && effectiveTeacher && (
           <div style={{ fontSize:9, opacity:0.75, marginTop:2, display:"flex", alignItems:"center", gap:3 }}>
             {isClassTeacher && <span style={{ color:"#7C6FE0" }}>★</span>}
-            {isSub ? <span style={{ color:"#D4920E" }}>🔄 {subTeacher}</span> : effectiveTeacher}
+            {isSub ? <span style={{ color:"#D4920E" }}>🔄 {dTch(subTeacher)}</span> : dTch(effectiveTeacher)}
           </div>
         )}
-        {showRoom && effectiveRoom && <div style={{ fontSize:8, opacity:0.55, marginTop:1 }}>{effectiveRoom}</div>}
+        {showRoom && effectiveRoom && <div style={{ fontSize:8, opacity:0.55, marginTop:1 }}>{dRm(effectiveRoom)}</div>}
       </div>
       {editMode && (
         <div className="tt-cell-actions" style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
@@ -897,14 +923,16 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
 }
 
 // ── Reusable drag-enabled teacher-view cell ────────────────
-function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTarget, hasConflict, dragProps, onDragStart, onDelete, isSrc }: {
+function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTarget, hasConflict, dragProps, onDragStart, onDelete, isSrc, shortNames, subjectsList }: {
   colorClass: string; cell: any; showRoom: boolean; editMode: boolean;
   dragOver: boolean; isDropTarget: boolean; hasConflict?: boolean; dragProps: any;
   onDragStart?: (e: React.DragEvent) => void;
-  onDelete?: () => void; isSrc?: boolean;
+  onDelete?: () => void; isSrc?: boolean; shortNames?: boolean; subjectsList?: any[];
 }) {
   // No JS hover state — action buttons shown via CSS `.tt-cell-actions` on `td:hover`
   const hasFill = !!cell?.subject
+  const subjBase = cell.subject ? cell.subject.replace(/\s*\(.*\)/, "") : ""
+  const subjDisp = shortNames && subjBase ? shortSubjectName(subjBase, subjectsList ?? []) : subjBase
   return (
     <td style={{ ...dragTdStyle(isDropTarget, !!hasConflict, hasFill), position:"relative" as const }}
       {...dragProps}>
@@ -915,9 +943,9 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
         style={{ borderRadius:5, padding:"4px 7px", minHeight:44, border:cell.conflict?"2px solid #fca5a5":"none", position:"relative" as const, cursor: editMode&&onDragStart?"grab":"default" }}>
         {cell.conflict && <span style={{ position:"absolute" as const, top:2, right:3, fontSize:8, color:"#dc2626" }}>⚠</span>}
         <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{cell.sectionName}</div>
-        <div style={{ fontSize:9, color:"#475569", marginTop:2 }}>{cell.subject.replace(/\s*\(.*\)/, "")}</div>
+        <div style={{ fontSize:9, color:"#475569", marginTop:2 }}>{subjDisp}</div>
         {cell.isClassTeacher && <div style={{ fontSize:8, color:"#7C6FE0" }}>★ Class Teacher</div>}
-        {showRoom && cell.room && <div style={{ fontSize:8, opacity:0.55 }}>{cell.room}</div>}
+        {showRoom && cell.room && <div style={{ fontSize:8, opacity:0.55 }}>{shortNames?shortRoomName(cell.room):cell.room}</div>}
       </div>
       {editMode && (
         <div className="tt-cell-actions" style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
@@ -1084,6 +1112,10 @@ export function TimetablePage() {
       resolveUniCell(S, col, allSectionSchedules, cwBreaksGlobal).kind === 'lunch'),
     [sections, allSectionSchedules, cwBreaksGlobal]
   )
+
+  // Short-name display helpers ("Short" toggle) for inline room/subject renders.
+  const dispSub = (s?:string) => shortNames && s ? shortSubjectName(s, subjects) : (s ?? "")
+  const dispTch = (t?:string) => shortNames && t ? shortStaffName(t, staff) : (t ?? "")
 
   // All distinct class-group keys present (for full-break detection).
   const allClassKeys = useMemo(() => new Set(sections.map(s => getSectionClassKey(s.name))), [sections])
@@ -1759,6 +1791,7 @@ export function TimetablePage() {
                           options={(cell as any)?.options as CellOption[] | undefined}
                           isClassTeacher={cell?.isClassTeacher} isSub={isSub} subTeacher={subTeacher}
                           showTeacher={showTeacher} showRoom={showRoom}
+                          shortNames={shortNames} subjectsList={subjects} staffList={staff}
                           absentHighlight={highlight}
                           dragOver={dragOverCell === cellKey}
                           isDropTarget={isDragging && (poolDragItem?.section === sn || dragItem?.section === sn)}
@@ -2071,6 +2104,7 @@ export function TimetablePage() {
                         <TeacherCell key={col.key} colorClass={colorClass} cell={taughtCell} showRoom={showRoom}
                           editMode={editMode} dragOver={dragOverCell===ttCellKey} isDropTarget={ttIsTarget}
                           hasConflict={!!ttConflict} dragProps={ttDragProps}
+                          shortNames={shortNames} subjectsList={subjects}
                           isSrc={!!(dragItem?.section===taughtSec && dragItem?.day===day && dragItem?.periodId===col.periodId)}
                           onDragStart={editMode ? e => handleDragStart(e, {section:taughtSec, day, periodId:col.periodId}) : undefined}
                           onDelete={editMode ? () => {
@@ -2239,6 +2273,7 @@ export function TimetablePage() {
                           <TeacherCell key={col.key} colorClass={colorClass} cell={taughtCell} showRoom={showRoom}
                             editMode={editMode} dragOver={dragOverCell===ttTKey} isDropTarget={ttTIsTarget}
                             hasConflict={!!ttTConflict} dragProps={ttTDragProps}
+                            shortNames={shortNames} subjectsList={subjects}
                             isSrc={!!(dragItem?.section===taughtSec && dragItem?.day===day && dragItem?.periodId===col.periodId)}
                             onDragStart={editMode ? e => handleDragStart(e, {section:taughtSec, day, periodId:col.periodId}) : undefined}
                             onDelete={editMode ? () => {
@@ -2366,7 +2401,7 @@ export function TimetablePage() {
                             return (
                               <div key={sec.name} style={{ marginBottom:2 }}>
                                 <div style={{ fontSize:10, fontWeight:700 }}>{sec.name}</div>
-                                {showTeacher && cell?.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{cell.teacher}</div>}
+                                {showTeacher && cell?.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{dispTch(cell.teacher)}</div>}
                               </div>
                             )
                           })}
@@ -2469,7 +2504,7 @@ export function TimetablePage() {
                               return (
                                 <div key={sec.name} style={{ marginBottom:2 }}>
                                   <div style={{ fontSize:10, fontWeight:700 }}>{sec.name}</div>
-                                  {showTeacher && cell?.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{cell.teacher}</div>}
+                                  {showTeacher && cell?.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{dispTch(cell.teacher)}</div>}
                                 </div>
                               )
                             })}
@@ -2572,9 +2607,9 @@ export function TimetablePage() {
                           draggable={editMode && !!rmSecName}
                           onDragStart={editMode && rmSecName ? e => handleDragStart(e, {section:rmSecName, day, periodId:col.periodId}) : undefined}
                           style={{ borderRadius:5, padding:"4px 7px", minHeight:44, cursor:editMode&&rmSecName?"grab":"default" }}>
-                          <div style={{ fontSize:10, fontWeight:700 }}>{hit.cell.subject}</div>
+                          <div style={{ fontSize:10, fontWeight:700 }}>{dispSub(hit.cell.subject)}</div>
                           <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.sec}</div>
-                          {showTeacher && hit.cell.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{hit.cell.teacher}</div>}
+                          {showTeacher && hit.cell.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{dispTch(hit.cell.teacher)}</div>}
                         </div>
                       </td>
                     )
@@ -2671,9 +2706,9 @@ export function TimetablePage() {
                             draggable={editMode && !!rmTSecName}
                             onDragStart={editMode && rmTSecName ? e => handleDragStart(e, {section:rmTSecName, day, periodId:col.periodId}) : undefined}
                             style={{ borderRadius:5, padding:"4px 7px", minHeight:38, cursor:editMode&&rmTSecName?"grab":"default" }}>
-                            <div style={{ fontSize:10, fontWeight:700 }}>{hit.cell.subject}</div>
+                            <div style={{ fontSize:10, fontWeight:700 }}>{dispSub(hit.cell.subject)}</div>
                             <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.sec}</div>
-                            {showTeacher && hit.cell.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{hit.cell.teacher}</div>}
+                            {showTeacher && hit.cell.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{dispTch(hit.cell.teacher)}</div>}
                           </div>
                         </td>
                       )
