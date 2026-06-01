@@ -757,13 +757,14 @@ export function CalendarView({
   // drag state: only src key + hover key — lightweight strings, not objects
   const [dragSrcKey,      setDragSrcKey]      = useState<string|null>(null)
   const [dragSrc,         setDragSrc]         = useState<{section:string;day:string;periodId:string}|null>(null)
+  const [dragSrcEntity,   setDragSrcEntity]   = useState<string|null>(null)  // matrix: row (entity) where drag started
   const [dragOverKey,     setDragOverKey]     = useState<string|null>(null)
   const [dragOverDst,     setDragOverDst]     = useState<{section:string;day:string;periodId:string}|null>(null)
   const [conflictWarning, setConflictWarning] = useState<string|null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   const clearDrag = useCallback(()=>{
-    setDragSrcKey(null); setDragSrc(null)
+    setDragSrcKey(null); setDragSrc(null); setDragSrcEntity(null)
     setDragOverKey(null); setDragOverDst(null)
     setTooltip(null)
   },[])
@@ -1577,11 +1578,16 @@ export function CalendarView({
                     const mKey = `${day}|${c.key}|${ent.id}`
                     const isSrcCell = dragSrcKey === mKey
                     const tgtSection = b ? b.sectionName : (entClassKey ? ent.id : (dragSrc?.section ?? ""))
-                    const dragActive = editMode && !!dragSrc && !isSrcCell
+                    // SAME-ROW ONLY: drops are confined to the row (entity) the drag
+                    // started in — you can't move a period into another teacher/room/
+                    // subject/class timetable by dragging across rows.
+                    const sameRow = dragSrcEntity === ent.id
+                    const dragActive = editMode && !!dragSrc && !isSrcCell && sameRow
                     const mIsOver = dragOverKey === mKey
                     const mConflict = (dragActive && tgtSection)
                       ? getSwapConflict(classTT, dragSrc!.section, dragSrc!.day, dragSrc!.periodId, day, c.periodId, tgtSection) : null
-                    const mDropProps = editMode ? {
+                    // Only the source row is a valid drop zone.
+                    const mDropProps = (editMode && sameRow) ? {
                       onDragOver: (e:React.DragEvent) => { e.preventDefault(); if (dragOverKey!==mKey) setDragOverKey(mKey) },
                       onDragLeave: () => { if (dragOverKey===mKey) setDragOverKey(null) },
                       onDrop: (e:React.DragEvent) => {
@@ -1590,7 +1596,7 @@ export function CalendarView({
                           if (mConflict) setConflictWarning(mConflict)
                           else if (onCellSwap) onCellSwap(dragSrc, {section:tgtSection, day, periodId:c.periodId})
                         }
-                        setDragSrc(null); setDragSrcKey(null); setDragOverKey(null)
+                        clearDrag()
                       },
                     } : {}
                     // Highlight: all valid drop targets get a soft tint during drag;
@@ -1622,8 +1628,8 @@ export function CalendarView({
                             borderLeft:leftBorder, borderRight:"1px solid #E2E8F0", borderBottom:"1px solid #E2E8F0" }}>
                           <div
                             draggable={editMode && !b.isClassTeacher}
-                            onDragStart={editMode ? (e)=>{ e.dataTransfer.effectAllowed="move"; setDragSrcKey(mKey); setDragSrc({section:b.sectionName, day, periodId:b.periodId}) } : undefined}
-                            onDragEnd={()=>{ setDragSrc(null); setDragSrcKey(null); setDragOverKey(null) }}
+                            onDragStart={editMode ? (e)=>{ e.dataTransfer.effectAllowed="move"; setDragSrcKey(mKey); setDragSrcEntity(ent.id); setDragSrc({section:b.sectionName, day, periodId:b.periodId}) } : undefined}
+                            onDragEnd={clearDrag}
                             style={{ height:"100%", borderRadius:5, background:col.bg, borderLeft:`3px solid ${col.accent}`, padding:"3px 6px",
                             display:"flex", flexDirection:"column" as const, justifyContent:"center", overflow:"hidden",
                             opacity: isSrcCell ? 0.25 : 1, filter: isSrcCell ? "grayscale(70%)" : undefined,
