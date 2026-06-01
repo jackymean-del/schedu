@@ -430,6 +430,9 @@ function Block({
           position:"absolute" as const, left:left+1, width:Math.max(width-2,1),
           top:compact?2:3, bottom:compact?2:3, background:bs.bg,
           border:`1px solid ${bs.border}`, borderRadius:4,
+          // Below draggable taught blocks (zIndex 4) so a staggered break never
+          // covers / steals the grab of an overlapping teaching card.
+          zIndex: 1,
           display:"flex", flexDirection:"column" as const,
           alignItems:"center", justifyContent:"center", overflow:"hidden", cursor:"pointer",
         }}>
@@ -510,6 +513,9 @@ function Block({
         position:"absolute" as const,
         left:left+1, width:Math.max(width-2,2),
         top:compact?2:3, bottom:compact?2:3,
+        // Draggable taught blocks must sit ABOVE break/lunch blocks so an
+        // overlapping (staggered) break can never steal the grab.
+        zIndex: 4,
         background: col.bg,
         borderLeft: `3px solid ${col.accent}`,
         borderRadius:"0 5px 5px 0",
@@ -1573,18 +1579,44 @@ export function CalendarView({
                       }}>{c.name}</td>
                     }
                     const b = bySlot.get(`${c.periodId}@${c.start}`) ?? null
+                    // ── Drag/drop wiring (matrix) ──
+                    const mKey = `${day}|${c.key}|${ent.id}`
+                    const tgtSection = b ? b.sectionName : (entClassKey ? ent.id : (dragSrc?.section ?? ""))
+                    const mIsOver = dragOverKey === mKey
+                    const mConflict = (editMode && dragSrc && tgtSection)
+                      ? getSwapConflict(classTT, dragSrc.section, dragSrc.day, dragSrc.periodId, day, c.periodId, tgtSection) : null
+                    const mDropProps = editMode ? {
+                      onDragOver: (e:React.DragEvent) => { e.preventDefault(); if (dragOverKey!==mKey) setDragOverKey(mKey) },
+                      onDragLeave: () => { if (dragOverKey===mKey) setDragOverKey(null) },
+                      onDrop: (e:React.DragEvent) => {
+                        e.preventDefault()
+                        if (dragSrc && tgtSection) {
+                          if (mConflict) setConflictWarning(mConflict)
+                          else if (onCellSwap) onCellSwap(dragSrc, {section:tgtSection, day, periodId:c.periodId})
+                        }
+                        setDragSrc(null); setDragSrcKey(null); setDragOverKey(null)
+                      },
+                    } : {}
+                    const overOutline = mIsOver ? `2.5px solid ${mConflict ? "#EF4444" : "#10B981"}` : undefined
                     // ── Teaching cell ──
                     if (b) {
                       const col = subjectColor(b.subject)
                       const subD = shortNames ? getSubjectShortName(b.subject, subjects) : b.subject
                       const tchD = b.teacher ? (shortNames ? getStaffShortName(b.teacher, staff) : b.teacher) : ""
                       const secD = b.sectionName
+                      const mSrc = dragSrcKey === mKey
                       return (
-                        <td key={`${day}|${c.key}`} onClick={()=>onClick(b, day)}
-                          style={{ width:W, minWidth:W, height:48, padding:2, cursor:"pointer",
+                        <td key={`${day}|${c.key}`} onClick={()=>onClick(b, day)} {...mDropProps}
+                          style={{ width:W, minWidth:W, height:48, padding:2, cursor: editMode ? "grab" : "pointer", position:"relative" as const,
+                            ...(overOutline ? { outline:overOutline, outlineOffset:"-2px" } : {}),
                             borderLeft:leftBorder, borderRight:"1px solid #E2E8F0", borderBottom:"1px solid #E2E8F0" }}>
-                          <div style={{ height:"100%", borderRadius:5, background:col.bg, borderLeft:`3px solid ${col.accent}`, padding:"3px 6px",
-                            display:"flex", flexDirection:"column" as const, justifyContent:"center", overflow:"hidden" }}>
+                          <div
+                            draggable={editMode && !b.isClassTeacher}
+                            onDragStart={editMode ? (e)=>{ e.dataTransfer.effectAllowed="move"; setDragSrcKey(mKey); setDragSrc({section:b.sectionName, day, periodId:b.periodId}) } : undefined}
+                            onDragEnd={()=>{ setDragSrc(null); setDragSrcKey(null); setDragOverKey(null) }}
+                            style={{ height:"100%", borderRadius:5, background:col.bg, borderLeft:`3px solid ${col.accent}`, padding:"3px 6px",
+                            display:"flex", flexDirection:"column" as const, justifyContent:"center", overflow:"hidden",
+                            opacity: mSrc ? 0.3 : 1, cursor: editMode && !b.isClassTeacher ? "grab" : "pointer" }}>
                             <div style={{ fontSize:10.5, fontWeight:700, color:col.accent, lineHeight:1.25, overflow:"hidden", textOverflow:"ellipsis" as const, whiteSpace:"nowrap" as const }}>{subD}</div>
                             {viewMode!=="class" && secD && <div style={{ fontSize:9, fontWeight:700, color:"#374151", whiteSpace:"nowrap" as const, overflow:"hidden", textOverflow:"ellipsis" as const }}>{secD}</div>}
                             {viewMode!=="teacher" && tchD && <div style={{ fontSize:9, color:"#555", whiteSpace:"nowrap" as const, overflow:"hidden", textOverflow:"ellipsis" as const }}>{b.isClassTeacher?"★ ":""}{tchD}</div>}
@@ -1617,10 +1649,11 @@ export function CalendarView({
                         </td>
                       )
                     }
-                    // ── Empty ──
-                    return <td key={`${day}|${c.key}`} style={{ width:W, minWidth:W, height:48,
-                      background: ri%2===0 ? "#fff" : "#FCFDFE",
-                      borderLeft:leftBorder, borderRight:"1px solid #E2E8F0", borderBottom:"1px solid #E2E8F0" }} />
+                    // ── Empty (droppable) ──
+                    return <td key={`${day}|${c.key}`} {...mDropProps}
+                      style={{ width:W, minWidth:W, height:48, position:"relative" as const,
+                        background: mIsOver ? (mConflict ? "#FEE2E2" : "#DCFCE7") : (ri%2===0 ? "#fff" : "#FCFDFE"),
+                        borderLeft:leftBorder, borderRight:"1px solid #E2E8F0", borderBottom:"1px solid #E2E8F0" }} />
                   })
                 })}
               </tr>
