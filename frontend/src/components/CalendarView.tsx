@@ -1434,29 +1434,31 @@ export function CalendarView({
     const fmtRange = (s:number,e:number) => `${fmtTime(s,timeFormat)}–${fmtTime(e,timeFormat)}`
 
     // Lunch overlay (class view): is THIS class group on a partial break overlapping [s,e)?
-    const lunchOverlay = (classKey:string, s:number, e:number): { name:string; mins:number } | null => {
+    // Returns the break's OWN exact start/end (not the column's time).
+    const lunchOverlay = (classKey:string, s:number, e:number): { name:string; start:number; end:number } | null => {
       const sm = groupSchedules.get(classKey); if (!sm) return null
       for (const [, slot] of sm) {
-        if (slot.type!=="class" && slot.start < e && slot.end > s) return { name:slot.name, mins:slot.end-slot.start }
+        if (slot.type!=="class" && slot.start < e && slot.end > s) return { name:slot.name, start:slot.start, end:slot.end }
       }
       return null
     }
 
     // School-wide lunch overlay (teacher/room/subject views): which class GROUPS
     // are on a partial (non-full) break overlapping this slot? Mirrors the
-    // traditional teacher view's "Lunch Break VI to X" cells.
-    const schoolLunchOverlay = (s:number, e:number): { name:string; label:string } | null => {
+    // traditional teacher view's "Lunch Break VI to X" cells. Returns the break's
+    // own exact start/end time.
+    const schoolLunchOverlay = (s:number, e:number): { name:string; label:string; start:number; end:number } | null => {
       const onBreak: string[] = []
-      let brkName = "Lunch Break"
+      let brkName = "Lunch Break", bStart = 0, bEnd = 0
       ;(classwiseBreaks ?? []).forEach(b => {
         if (isFullBreak(b.id)) return                 // full breaks are their own columns
         if ((b as any).type === "short-break") return // only lunch-type partial breaks
         const repKey = b.classes.find(k => groupSchedules.has(k))
         const slot = repKey ? groupSchedules.get(repKey)?.get(b.id) : undefined
-        if (slot && slot.start < e && slot.end > s) { onBreak.push(...b.classes); brkName = b.name }
+        if (slot && slot.start < e && slot.end > s) { onBreak.push(...b.classes); brkName = b.name; bStart = slot.start; bEnd = slot.end }
       })
       if (!onBreak.length) return null
-      return { name: brkName, label: compressKeys(onBreak) }
+      return { name: brkName, label: compressKeys(onBreak), start: bStart, end: bEnd }
     }
 
     return (
@@ -1558,7 +1560,7 @@ export function CalendarView({
                           background:"#FFFBEB", color:"#D4920E", fontSize:8.5, fontStyle:"italic", fontWeight:600, lineHeight:1.3,
                           borderLeft:leftBorder, borderRight:"1px solid #E2E8F0", borderBottom:"1px solid #E2E8F0" }}>
                           <div>{lunch.name}</div>
-                          <div style={{ fontSize:7.5, opacity:0.8 }}>{lunch.mins}m</div>
+                          <div style={{ fontSize:7.5, opacity:0.85, fontStyle:"normal" as const, whiteSpace:"nowrap" as const }}>{fmtTime(lunch.start,timeFormat)}–{fmtTime(lunch.end,timeFormat)}</div>
                         </td>
                       )
                     }
@@ -1569,8 +1571,8 @@ export function CalendarView({
                         <td key={`${day}|${c.key}`} style={{ width:W, minWidth:W, height:48, textAlign:"center" as const, verticalAlign:"middle" as const,
                           background:"#FFFBEB", color:"#D4920E", fontSize:8.5, fontStyle:"italic", fontWeight:600, lineHeight:1.3,
                           borderLeft:leftBorder, borderRight:"1px solid #E2E8F0", borderBottom:"1px solid #E2E8F0" }}>
-                          <div>{ov.name}</div>
-                          <div style={{ fontSize:7.5, opacity:0.85, fontStyle:"normal" as const }}>{ov.label}</div>
+                          <div>{ov.name} · {ov.label}</div>
+                          <div style={{ fontSize:7.5, opacity:0.85, fontStyle:"normal" as const, whiteSpace:"nowrap" as const }}>{fmtTime(ov.start,timeFormat)}–{fmtTime(ov.end,timeFormat)}</div>
                         </td>
                       )
                     }

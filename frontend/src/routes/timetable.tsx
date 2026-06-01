@@ -579,8 +579,8 @@ function mergeTeacherIdleColumns(
 // isTarget    → valid drop zone (green fill)
 // hasConflict → cannot drop (red fill)
 // isUnavailable → dragging but this slot is not a valid target (red outline, yellow bg)
-const LunchCell = React.memo(function LunchCell({ id, secName, isTarget, hasConflict, isUnavailable, dragOver, dragProps }: {
-  id: string; secName?: string;
+const LunchCell = React.memo(function LunchCell({ id, secName, time, label, isTarget, hasConflict, isUnavailable, dragOver, dragProps }: {
+  id: string; secName?: string; time?: string; label?: string;
   isTarget?: boolean; hasConflict?: boolean; isUnavailable?: boolean; dragOver?: boolean;
   dragProps?: { onDragOver:(e:React.DragEvent)=>void; onDrop:(e:React.DragEvent)=>void; onDragLeave:()=>void }
 }) {
@@ -597,8 +597,9 @@ const LunchCell = React.memo(function LunchCell({ id, secName, isTarget, hasConf
         ...(outline ? { outline, outlineOffset:"-2px", zIndex:1 } : {}),
         padding:"4px 6px", textAlign:"center" as const, verticalAlign:"middle" as const,
         cursor: isTarget ? "copy" : "default" }}>
-      <div style={{ fontSize:9, fontStyle:"italic", color:"#D4920E", fontWeight:600, lineHeight:1.4 }}>Lunch Break</div>
+      <div style={{ fontSize:9, fontStyle:"italic", color:"#D4920E", fontWeight:600, lineHeight:1.4 }}>{label ?? "Lunch Break"}</div>
       {secName && <div style={{ fontSize:9, color:"#D4920E", opacity:0.8, fontWeight:500 }}>{secName}</div>}
+      {time && <div style={{ fontSize:8, color:"#D4920E", opacity:0.75, fontWeight:500, whiteSpace:"nowrap" as const }}>{time}</div>}
       {isTarget && dragOver && <DropIndicator hasConflict={!!hasConflict} />}
     </td>
   )
@@ -1083,6 +1084,22 @@ export function TimetablePage() {
       resolveUniCell(S, col, allSectionSchedules, cwBreaksGlobal).kind === 'lunch'),
     [sections, allSectionSchedules, cwBreaksGlobal]
   )
+
+  // All distinct class-group keys present (for full-break detection).
+  const allClassKeys = useMemo(() => new Set(sections.map(s => getSectionClassKey(s.name))), [sections])
+
+  // Exact start–end time of the partial break overlapping a unified column.
+  // Returns a formatted "12:05 PM – 12:35 PM" string, or null.
+  const colLunchTime = useCallback((col: UniCol): string | null => {
+    for (const b of (cwBreaksGlobal ?? [])) {
+      if (b.classes.length === 0 || isFullBreakDef(b, allClassKeys)) continue   // full breaks have their own columns
+      const repKey = b.classes.find(k => allSectionSchedules.has(k))
+      const slot = repKey ? allSectionSchedules.get(repKey)?.get(b.id) : undefined
+      if (slot && slot.startMin < col.endMin && slot.endMin > col.startMin)
+        return `${fmtMin(slot.startMin, config)} – ${fmtMin(slot.endMin, config)}`
+    }
+    return null
+  }, [cwBreaksGlobal, allSectionSchedules, allClassKeys, config])
 
   // Per-teacher unified columns + schedules — the most expensive computation.
   // Keyed by teacher name. Recomputes only when classTT / sections / periods change.
@@ -2072,7 +2089,7 @@ export function TimetablePage() {
                       lunchSrcs.some(src => resolveUniCell(S, src, ttAllSchedules, cwBreaksTT).kind === 'lunch')
                     )
                     if (lunchSecs.length) return (
-                      <LunchCell key={col.key} id={col.key} secName={compressClassNames(lunchSecs)}
+                      <LunchCell key={col.key} id={col.key} secName={compressClassNames(lunchSecs)} time={colLunchTime(col) ?? undefined}
                         isTarget={ttIsTarget} hasConflict={!!ttFreeConflict}
                         isUnavailable={isDragging && !ttIsTarget}
                         dragOver={dragOverCell===ttCellKey}
@@ -2240,7 +2257,7 @@ export function TimetablePage() {
                         lunchSrcsTT.some(src => resolveUniCell(S, src, tttAllSchedules, cwBreaksTTT).kind === 'lunch')
                       )
                       if (lunchSecs.length) return (
-                        <LunchCell key={col.key} id={ttTKey} secName={compressClassNames(lunchSecs)}
+                        <LunchCell key={col.key} id={ttTKey} secName={compressClassNames(lunchSecs)} time={colLunchTime(col) ?? undefined}
                           isTarget={ttTIsTarget} hasConflict={!!ttTFreeConflict}
                           isUnavailable={isDragging && !ttTIsTarget}
                           dragOver={dragOverCell===ttTKey}
@@ -2323,7 +2340,7 @@ export function TimetablePage() {
                     if (!hits.length) {
                       if (!subIsTarget) {
                         const ls = colLunchSecs(col)
-                        if (ls.length) return <LunchCell key={col.key} id={col.key} secName={compressClassNames(ls)} />
+                        if (ls.length) return <LunchCell key={col.key} id={col.key} secName={compressClassNames(ls)} time={colLunchTime(col) ?? undefined} />
                       }
                       return (
                         <td key={col.key} {...subDragProps}
@@ -2426,7 +2443,7 @@ export function TimetablePage() {
                       if (!hits.length) {
                         if (!subTIsTarget) {
                           const ls = colLunchSecs(col)
-                          if (ls.length) return <LunchCell key={col.key} id={subTKey} secName={compressClassNames(ls)} />
+                          if (ls.length) return <LunchCell key={col.key} id={subTKey} secName={compressClassNames(ls)} time={colLunchTime(col) ?? undefined} />
                         }
                         return (
                           <td key={col.key} {...subTDragProps}
@@ -2534,7 +2551,7 @@ export function TimetablePage() {
                     if (!hit) {
                       if (!rmIsTarget) {
                         const ls = colLunchSecs(col)
-                        if (ls.length) return <LunchCell key={col.key} id={rmKey} secName={compressClassNames(ls)} />
+                        if (ls.length) return <LunchCell key={col.key} id={rmKey} secName={compressClassNames(ls)} time={colLunchTime(col) ?? undefined} />
                       }
                       return (
                         <td key={col.key} {...rmDragProps}
@@ -2633,7 +2650,7 @@ export function TimetablePage() {
                       if (!hit) {
                         if (!rmTIsTarget) {
                           const ls = colLunchSecs(col)
-                          if (ls.length) return <LunchCell key={col.key} id={rmTKey} secName={compressClassNames(ls)} />
+                          if (ls.length) return <LunchCell key={col.key} id={rmTKey} secName={compressClassNames(ls)} time={colLunchTime(col) ?? undefined} />
                         }
                         return (
                           <td key={col.key} {...rmTDragProps}
