@@ -836,10 +836,18 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         }
       })
 
-      // Initialize subjectCount entries for option subjects (so regular passes don't double-count)
+      // Count the block toward this section's subject quota AND cap the target to
+      // the block count, so Pass 2 never schedules the SAME subject again as an
+      // individual period. A parallel/group subject (e.g. Entrepreneurship for
+      // XI-Com-A + XI-Arts) is handled ENTIRELY by the block — the section must
+      // not also get standalone periods for it.
       if (!subjectCount[secName]) subjectCount[secName] = {}
+      if (!targetPeriods[secName]) targetPeriods[secName] = {}
       block.options.forEach(opt => {
-        if (opt.subject) subjectCount[secName][opt.subject] = (subjectCount[secName][opt.subject] ?? 0) + 1
+        if (opt.subject) {
+          subjectCount[secName][opt.subject] = (subjectCount[secName][opt.subject] ?? 0) + 1
+          targetPeriods[secName][opt.subject] = subjectCount[secName][opt.subject]
+        }
       })
     })
   })
