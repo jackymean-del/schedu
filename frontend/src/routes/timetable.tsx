@@ -80,6 +80,28 @@ function shortStaffName(name: string, staff: any[]): string {
 }
 function shortRoomName(name: string): string { return name ? name.slice(0, 9) : "" }
 
+// ── Optional / parallel-block aware teacher matching ──────────
+// Optional/group blocks store teacher:'' at the section level and keep the real
+// teacher inside `options[]`. These helpers let teacher-view logic recognise
+// such blocks (e.g. an IP group taught to XI-Sci-A + XI-Sci-B by one teacher).
+function cellHasTeacher(cell: any, tn: string): boolean {
+  if (!cell) return false
+  if (cell.teacher === tn) return true
+  return Array.isArray(cell.options) && cell.options.some((o: any) => o.teacher === tn)
+}
+function cellSubjectForTeacher(cell: any, tn: string): string {
+  if (!cell) return ""
+  if (cell.teacher === tn && cell.subject) return cell.subject
+  const opt = Array.isArray(cell.options) ? cell.options.find((o: any) => o.teacher === tn) : null
+  return opt?.subject ?? (cell.subject ?? "")
+}
+function cellRoomForTeacher(cell: any, tn: string): string {
+  if (!cell) return ""
+  if (cell.teacher === tn) return cell.room ?? ""
+  const opt = Array.isArray(cell.options) ? cell.options.find((o: any) => o.teacher === tn) : null
+  return opt?.room ?? cell.room ?? ""
+}
+
 // ── Compress a list of sections into readable class names / ranges ──
 //   ["I-A","I-B","II-A","III-C","IV-A","V-B"]               → "I to V"
 //   ["XI-Sci","XI-Com","XI-Arts","XII-Sci","XII-Com"]        → "XI to XII"
@@ -560,7 +582,7 @@ function mergeTeacherIdleColumns(
           const slot = ttSchedules.get(getSectionClassKey(S))?.get(pid)
           if (!slot || slot.startMin !== col.startMin) return false
           const c = classTT[S]?.[day]?.[pid]
-          return c?.subject && c.teacher === tn
+          return cellHasTeacher(c, tn)
         })
       )
     )
@@ -1142,7 +1164,7 @@ export function TimetablePage() {
     staff.forEach(st => {
       const tn = st.name
       const secNames = sections.map(s => s.name).filter(name =>
-        config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {}).some((c:any) => c?.teacher === tn))
+        config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {}).some((c:any) => cellHasTeacher(c, tn)))
       )
       const { columns: raw, schedules } =
         buildUnifiedColumns(secNames, classPeriods, periods, cwBreaksGlobal, config)
@@ -1954,7 +1976,7 @@ export function TimetablePage() {
     const st = staff.find(s => s.name === tn)
     // Count from classTT directly (tdata.schedule collapses staggered same-id periods)
     const total = sections.reduce((sum, s) => sum + config.workDays.reduce((sd, d) =>
-      sd + Object.values(classTT[s.name]?.[d] ?? {}).filter((c:any)=>c?.teacher===tn && c?.subject).length, 0), 0)
+      sd + Object.values(classTT[s.name]?.[d] ?? {}).filter((c:any)=>cellHasTeacher(c, tn)).length, 0), 0)
     const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
     const pct = Math.min(150, Math.round(total/max*100))
     // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
@@ -2026,18 +2048,24 @@ export function TimetablePage() {
                       const bp: Period = { id: col.periodId, name: col.name, duration: col.endMin-col.startMin, type: col.type, shiftable: false }
                       return <BreakCell key={col.key} p={bp} />
                     }
-                    // ── Teaching column: find the teacher's section in THIS exact slot ──
+                    // ── Teaching column: find the teacher's section(s) in THIS slot ──
+                    // Collect ALL sections the teacher teaches here (parallel/group
+                    // blocks share one slot across sections, e.g. IP for XI-Sci-A+B).
                     let taughtSec = "", taughtCell: any = null
+                    const groupSecs: string[] = []
                     for (const S of teacherSecNames) {
                       const slot = ttSchedules.get(getSectionClassKey(S))?.get(col.periodId)
                       if (!slot || slot.startMin !== col.startMin) continue
                       const c = classTT[S]?.[day]?.[col.periodId]
-                      if (c?.subject && c.teacher === tn) {
-                        taughtSec = S
-                        taughtCell = { ...c, sectionName: S }   // full section in cell (rule 1)
-                        break
+                      if (cellHasTeacher(c, tn)) {
+                        if (!taughtSec) {
+                          taughtSec = S
+                          taughtCell = { ...c, sectionName: S, subject: cellSubjectForTeacher(c, tn), teacher: tn, room: cellRoomForTeacher(c, tn) }
+                        }
+                        groupSecs.push(S)
                       }
                     }
+                    if (taughtCell && groupSecs.length > 1) taughtCell.sectionName = groupSecs.join(", ")
                     // Drag/drop wiring
                     const ttCellKey = `${col.key}|${day}`
                     const poolSec   = poolDragItem && teacherSecNames.includes(poolDragItem.section) ? poolDragItem.section : ""
@@ -2157,7 +2185,7 @@ export function TimetablePage() {
     const usedDays = config.workDays
     const st = staff.find(s => s.name === tn)
     const total = sections.reduce((sum, s) => sum + config.workDays.reduce((sd, d) =>
-      sd + Object.values(classTT[s.name]?.[d] ?? {}).filter((c:any)=>c?.teacher===tn && c?.subject).length, 0), 0)
+      sd + Object.values(classTT[s.name]?.[d] ?? {}).filter((c:any)=>cellHasTeacher(c, tn)).length, 0), 0)
     const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
     const pct = Math.min(150, Math.round(total/max*100))
     // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
@@ -2209,14 +2237,19 @@ export function TimetablePage() {
                       if (isBreakRow) {
                         return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{col.name}</td>
                       }
-                      // ── Teaching row: find teacher's section in THIS exact slot ──
+                      // ── Teaching row: find teacher's section(s) in THIS slot (group-aware) ──
                       let taughtSec = "", taughtCell: any = null
+                      const groupSecs: string[] = []
                       for (const S of teacherSecNames) {
                         const slot = tttSchedules.get(getSectionClassKey(S))?.get(col.periodId)
                         if (!slot || slot.startMin !== col.startMin) continue
                         const c = classTT[S]?.[day]?.[col.periodId]
-                        if (c?.subject && c.teacher === tn) { taughtSec = S; taughtCell = { ...c, sectionName: S }; break }
+                        if (cellHasTeacher(c, tn)) {
+                          if (!taughtSec) { taughtSec = S; taughtCell = { ...c, sectionName: S, subject: cellSubjectForTeacher(c, tn), teacher: tn, room: cellRoomForTeacher(c, tn) } }
+                          groupSecs.push(S)
+                        }
                       }
+                      if (taughtCell && groupSecs.length > 1) taughtCell.sectionName = groupSecs.join(", ")
                       const ttTKey = `${col.key}|${day}`
                       const poolSec = poolDragItem && teacherSecNames.includes(poolDragItem.section) ? poolDragItem.section : ""
                       // Bell-schedule-based slot eligibility (class's bell schedule, not column type).
@@ -2531,14 +2564,18 @@ export function TimetablePage() {
     // Unified columns — same staggered (period, time) structure as the teacher view.
     const rmCols = unifiedAllCols.columns
     // Find the section occupying this room in an exact (periodId, startMin) slot.
+    // Collect ALL sections occupying this room in the slot (parallel/group blocks
+    // put several sections in the same room+period → show them all on one card).
     const findRoomHit = (col: UniCol, day: string) => {
+      const secs: string[] = []
+      let cell: any = null
       for (const sec of sections) {
         const slot = allSectionSchedules.get(getSectionClassKey(sec.name))?.get(col.periodId)
         if (!slot || slot.startMin !== col.startMin) continue
-        const cell = classTT[sec.name]?.[day]?.[col.periodId]
-        if (cell?.subject && cell.room === roomName) return { sec: sec.name, cell }
+        const c = classTT[sec.name]?.[day]?.[col.periodId]
+        if (c?.subject && c.room === roomName) { secs.push(sec.name); cell = c }
       }
-      return null
+      return secs.length ? { sec: secs[0], secs, cell } : null
     }
     return (
       <div>
@@ -2608,7 +2645,7 @@ export function TimetablePage() {
                           onDragStart={editMode && rmSecName ? e => handleDragStart(e, {section:rmSecName, day, periodId:col.periodId}) : undefined}
                           style={{ borderRadius:5, padding:"4px 7px", minHeight:44, cursor:editMode&&rmSecName?"grab":"default" }}>
                           <div style={{ fontSize:10, fontWeight:700 }}>{dispSub(hit.cell.subject)}</div>
-                          <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.sec}</div>
+                          <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.secs.join(", ")}</div>
                           {showTeacher && hit.cell.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{dispTch(hit.cell.teacher)}</div>}
                         </div>
                       </td>
@@ -2660,12 +2697,16 @@ export function TimetablePage() {
                       if (isBreakRow) {
                         return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{col.name}</td>
                       }
-                      let hit: { sec:string; cell:any } | null = null
+                      let hit: { sec:string; secs:string[]; cell:any } | null = null
+                      const rmTGroup: string[] = []
                       for (const sec of sections) {
                         const slot = allSectionSchedules.get(getSectionClassKey(sec.name))?.get(col.periodId)
                         if (!slot || slot.startMin !== col.startMin) continue
                         const cell = classTT[sec.name]?.[day]?.[col.periodId]
-                        if (cell?.subject && cell.room === roomName) { hit = { sec: sec.name, cell }; break }
+                        if (cell?.subject && cell.room === roomName) {
+                          if (!hit) hit = { sec: sec.name, secs: rmTGroup, cell }
+                          rmTGroup.push(sec.name)
+                        }
                       }
                       const rmTSecName = hit?.sec ?? (poolDragItem && (sections.find(s=>s.name===poolDragItem.section) as any)?.room === roomName ? poolDragItem.section : "")
                       const rmTKey = `${col.key}|${day}`
@@ -2707,7 +2748,7 @@ export function TimetablePage() {
                             onDragStart={editMode && rmTSecName ? e => handleDragStart(e, {section:rmTSecName, day, periodId:col.periodId}) : undefined}
                             style={{ borderRadius:5, padding:"4px 7px", minHeight:38, cursor:editMode&&rmTSecName?"grab":"default" }}>
                             <div style={{ fontSize:10, fontWeight:700 }}>{dispSub(hit.cell.subject)}</div>
-                            <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.sec}</div>
+                            <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>{hit.secs.join(", ")}</div>
                             {showTeacher && hit.cell.teacher && <div style={{ fontSize:8, opacity:0.7 }}>{dispTch(hit.cell.teacher)}</div>}
                           </div>
                         </td>

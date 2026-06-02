@@ -276,6 +276,15 @@ const KEY_LABEL: Record<string,string> = {
   nur:'Nursery', lkg:'LKG', ukg:'UKG', i:'I', ii:'II', iii:'III', iv:'IV', v:'V',
   vi:'VI', vii:'VII', viii:'VIII', ix:'IX', x:'X', xi:'XI', xii:'XII',
 }
+// Optional/parallel-block aware teacher lookup (teacher lives in options[] when
+// the section-level teacher is blank — e.g. a combined IP group for XI-Sci-A+B).
+function cellTeacherInfo(cell: any, tn: string): { subject: string; room: string } | null {
+  if (!cell) return null
+  if (cell.teacher === tn && cell.subject) return { subject: cell.subject, room: cell.room ?? "" }
+  const opt = Array.isArray(cell.options) ? cell.options.find((o: any) => o.teacher === tn) : null
+  if (opt) return { subject: opt.subject ?? cell.subject ?? "", room: opt.room ?? cell.room ?? "" }
+  return null
+}
 function compressKeys(keys: string[]): string {
   const idxs = [...new Set(keys)].map(k=>KEY_ORDER.indexOf(k)).filter(i=>i>=0).sort((a,b)=>a-b)
   const out: string[] = []
@@ -959,27 +968,37 @@ export function CalendarView({
     // Key taught slots by periodId@startMin (NOT periodId) so staggered same-id
     // periods at different times are tracked independently.
     const taughtSlotKeys = new Set<string>()
+    // Merge sections that share the SAME slot (parallel/group block, e.g. IP for
+    // XI-Sci-A + XI-Sci-B) into one block listing all sections, instead of two
+    // overlapping cards.
+    const taughtBySlot = new Map<string, TimeBlock>()
     sections.forEach(sec=>{
       const ps=buildSecPeriods(sec.name,periods,classwiseBreaks)
       const tm=calcTimes(ps,dayStartMin)
       ps.forEach(p=>{
         if(p.type!=="class") return
         const cell=classTT[sec.name]?.[dayKey]?.[p.id]
-        if(cell?.teacher!==tName || !cell?.subject) return
+        const info = cellTeacherInfo(cell, tName)   // option-aware
+        if(!info) return
         const t=tm.get(p.id)!
-        taughtSlotKeys.add(`${p.id}@${t.start}`)
+        const slotKey = `${p.id}@${t.start}`
+        taughtSlotKeys.add(slotKey)
+        const existing = taughtBySlot.get(slotKey)
+        if (existing) { existing.sectionName = existing.sectionName ? `${existing.sectionName}, ${sec.name}` : sec.name; return }
         const subKey=`${sec.name}|${dayKey}|${p.id}`
         const isSub=!!substitutions[subKey]
-        blocks.push({
+        const block: TimeBlock = {
           key:`${sec.name}|${p.id}|${dayKey}`, periodId:p.id,
           periodName:p.name, periodType:p.type,
           startMin:t.start, endMin:t.end, sectionName:sec.name,
-          subject:cell.subject??"",
-          teacher:isSub?substitutions[subKey]:(cell.teacher??""),
-          room:cell.room??"",
+          subject:info.subject,
+          teacher:isSub?substitutions[subKey]:tName,
+          room:info.room,
           isSub:!!isSub, isClassTeacher:!!(cell.isClassTeacher),
           absent:!!(absentHighlights?.some(h=>h.day===dayKey&&h.teacher===tName)),
-        })
+        }
+        taughtBySlot.set(slotKey, block)
+        blocks.push(block)
       })
     })
     // ── ONE virtual free block per truly-free DISTINCT slot ──
@@ -1021,7 +1040,9 @@ export function CalendarView({
       })
     })
     // ── Occupied periods ── (only where this room is actually in use)
+    // Merge sections sharing the same slot in this room (parallel/group block).
     const occupiedSlotKeys = new Set<string>()
+    const occBySlot = new Map<string, TimeBlock>()
     sections.forEach(sec=>{
       const ps=buildSecPeriods(sec.name,periods,classwiseBreaks)
       const tm=calcTimes(ps,dayStartMin)
@@ -1030,18 +1051,25 @@ export function CalendarView({
         const cell=classTT[sec.name]?.[dayKey]?.[p.id]
         if(!cell?.subject || cell.room!==roomName) return
         const t=tm.get(p.id)!
-        occupiedSlotKeys.add(`${p.id}@${t.start}`)
+        const slotKey=`${p.id}@${t.start}`
+        occupiedSlotKeys.add(slotKey)
+        const existing = occBySlot.get(slotKey)
+        if (existing) { existing.sectionName = existing.sectionName ? `${existing.sectionName}, ${sec.name}` : sec.name; return }
         const subKey=`${sec.name}|${dayKey}|${p.id}`
         const isSub=!!substitutions[subKey]
-        blocks.push({
+        // teacher from the option array when the section-level teacher is blank
+        const optTeacher = Array.isArray((cell as any).options) ? ((cell as any).options[0]?.teacher ?? "") : ""
+        const block: TimeBlock = {
           key:`${sec.name}|${p.id}|${dayKey}`, periodId:p.id,
           periodName:p.name, periodType:p.type,
           startMin:t.start, endMin:t.end, sectionName:sec.name,
           subject:cell.subject??"",
-          teacher:isSub?substitutions[subKey]:(cell.teacher??""),
+          teacher:isSub?substitutions[subKey]:(cell.teacher || optTeacher || ""),
           room:roomName,
           isSub:!!isSub, isClassTeacher:!!(cell.isClassTeacher), absent:false,
-        })
+        }
+        occBySlot.set(slotKey, block)
+        blocks.push(block)
       })
     })
     // ── ONE virtual free block per truly-free DISTINCT slot ──
