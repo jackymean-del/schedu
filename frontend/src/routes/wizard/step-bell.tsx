@@ -891,14 +891,6 @@ function ClassPicker({
             const anyIn = gk.some(k => classes.includes(k))
             const groupStreams = streamDefs?.filter(s => s.group === gm.group) ?? []
             const hasStreams   = groupStreams.length > 0 && !!classStreamMap
-            // Only show stream chips that select a strict subset of the group's classes.
-            // If a chip covers every class in the group it's identical to the group checkbox.
-            const usefulStreams = hasStreams
-              ? groupStreams.filter(sd => {
-                  const sk = gc.filter(c => (classStreamMap![c.key] ?? []).includes(sd.stream)).map(c => c.key)
-                  return sk.length > 0 && sk.length < gc.length
-                })
-              : []
             return (
               <div key={gm.group}>
                 {/* Group header — all in group → clear; partial/none → add all */}
@@ -914,10 +906,10 @@ function ClassPicker({
                   <span style={{ fontSize: 10, color: '#9CA3AF', marginLeft: 'auto' }}>{gm.desc}</span>
                 </div>
 
-                {/* Stream chips — only shown when they select a strict subset */}
-                {usefulStreams.length > 0 && (
+                {/* Stream chips — quick-select by stream */}
+                {hasStreams && (
                   <div style={{ display: 'flex', gap: 4, padding: '4px 12px 4px 28px', flexWrap: 'wrap', borderBottom: '1px solid #F3F4F6' }}>
-                    {usefulStreams.map(sd => {
+                    {groupStreams.map(sd => {
                       const sk   = gc.filter(c => (classStreamMap![c.key] ?? []).includes(sd.stream)).map(c => c.key)
                       const sAll = sk.every(k => classes.includes(k))
                       const sAny = sk.some(k => classes.includes(k))
