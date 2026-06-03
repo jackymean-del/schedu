@@ -2158,10 +2158,10 @@ export function StepBell() {
                         const groupStreamsForClass = customStreams.filter(s => s.group === cls.group)
 
                         return (
-                          <div key={cls.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, padding: '5px 8px', borderRadius: 7, background: '#FAFAFA', border: '1px solid #F3F4F6' }}>
+                          <div key={cls.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, padding: '5px 8px', borderRadius: 7, background: '#FAFAFA', border: '1px solid #F3F4F6', flexWrap: 'nowrap' }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: grp.color, flexShrink: 0, display: 'inline-block' }} />
 
-                            {/* Label — auto-fills short when standard pattern is typed */}
+                            {/* Label — fixed width, auto-fills short */}
                             <input
                               value={cls.label}
                               onChange={e => {
@@ -2172,69 +2172,48 @@ export function StepBell() {
                                 ))
                               }}
                               placeholder="Class name"
-                              style={{ flex: 1, minWidth: 60, padding: '3px 7px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff' }}
+                              style={{ width: 120, flexShrink: 0, padding: '3px 7px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff' }}
                             />
 
                             {/* Short name */}
                             <input
                               value={cls.short}
                               onChange={e => setCustomClasses(prev => prev.map((c, i) => i === idx ? { ...c, short: e.target.value } : c))}
-                              placeholder="Short"
-                              style={{ width: 44, padding: '3px 6px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff', textAlign: 'center' }}
+                              placeholder="–"
+                              style={{ width: 36, flexShrink: 0, padding: '3px 5px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff', textAlign: 'center' }}
                             />
 
-                            {/* ── Stream multi-picker (FIRST) ── */}
-                            {groupStreamsForClass.length > 0 && (() => {
-                              const label = selStreams.length === 0 ? 'Stream'
-                                : selStreams.length === 1
-                                  ? selStreams[0]
-                                  : `${selStreams.length} streams`
-                              const labelColor = selStreams.length === 1
-                                ? (customStreams.find(s => s.stream === selStreams[0])?.color ?? '#9CA3AF')
-                                : selStreams.length > 1 ? '#7C6FE0' : '#9CA3AF'
-                              return (
-                                <div style={{ position: 'relative', flexShrink: 0 }}>
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation()
-                                      const el = (e.currentTarget as HTMLElement).nextSibling as HTMLElement | null
-                                      if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block'
-                                    }}
-                                    style={{ padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E7EB', background: '#fff', fontSize: 11, fontWeight: selStreams.length ? 600 : 400, color: labelColor, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}
-                                  >
-                                    {label}
-                                    <svg width="7" height="7" viewBox="0 0 8 8" fill="none"><path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                  </button>
-                                  {/* Dropdown */}
-                                  <div style={{ display: 'none', position: 'absolute', left: 0, top: '100%', zIndex: 600, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.1)', padding: '4px 0', minWidth: 140 }}>
-                                    {groupStreamsForClass.map(sd => {
-                                      const checked = selStreams.includes(sd.stream)
-                                      return (
-                                        <label key={sd.stream} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', cursor: 'pointer' }}>
-                                          <input type="checkbox" checked={checked}
-                                            onChange={e => {
-                                              const next = e.target.checked
-                                                ? [...selStreams, sd.stream]
-                                                : selStreams.filter(s => s !== sd.stream)
-                                              setClassStreamMap(prev => ({ ...prev, [cls.key]: next }))
-                                            }}
-                                            style={{ accentColor: sd.color, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 12, color: sd.color, fontWeight: 600 }}>{sd.stream}</span>
-                                        </label>
-                                      )
-                                    })}
-                                    {selStreams.length > 0 && (
-                                      <button onClick={() => setClassStreamMap(prev => { const n={...prev}; delete n[cls.key]; return n })}
-                                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '4px 12px', background: 'none', border: 'none', fontSize: 10, color: '#9CA3AF', cursor: 'pointer', fontFamily: 'inherit', borderTop: '1px solid #F3F4F6', marginTop: 3 }}>
-                                        Clear
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })()}
+                            {/* ── Stream chips (inline toggle, FIRST) ── */}
+                            {groupStreamsForClass.length > 0 && (
+                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flex: 1 }}>
+                                {groupStreamsForClass.map(sd => {
+                                  const on = selStreams.includes(sd.stream)
+                                  return (
+                                    <button
+                                      key={sd.stream}
+                                      onClick={() => {
+                                        const next = on
+                                          ? selStreams.filter(s => s !== sd.stream)
+                                          : [...selStreams, sd.stream]
+                                        setClassStreamMap(prev => ({ ...prev, [cls.key]: next }))
+                                      }}
+                                      style={{
+                                        padding: '2px 9px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                                        border: on ? `1.5px solid ${sd.color}` : '1px solid #E5E7EB',
+                                        background: on ? sd.bg : '#fff',
+                                        color: on ? sd.color : '#9CA3AF',
+                                        transition: 'all .12s',
+                                      }}
+                                    >{sd.stream}</button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            {/* spacer when no streams */}
+                            {groupStreamsForClass.length === 0 && <div style={{ flex: 1 }} />}
 
-                            {/* Group selector (SECOND) */}
+                            {/* Group selector */}
                             <select
                               value={cls.group}
                               onChange={e => setCustomClasses(prev => prev.map((c, i) => i === idx ? { ...c, group: e.target.value } : c))}
