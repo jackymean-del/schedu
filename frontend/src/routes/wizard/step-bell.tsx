@@ -59,6 +59,10 @@ interface CwBreakRow {
   classes:     string[]  // which class-section keys have this break
   afterPeriod: number    // insert break after this period (0 = after Assembly, 1 = after Period 1, …)
   duration:    number    // minutes
+  /** If set, this break starts right after the referenced break ends (staggered chaining). */
+  afterBreakId?: string
+  /** If set, user has specified a custom start time (HH:MM) overriding period calculation. */
+  customStartTime?: string
 }
 
 // ── Individual class-sections ─────────────────────────────────
@@ -470,11 +474,20 @@ function ClasswiseBreaksPanel({
 
   /**
    * Calculate the clock time a break starts.
-   * Accounts for the assembly (15 min) AND any preceding breaks that share at
-   * least one class with this row — so that stacked breaks (e.g. morning break
-   * before a lunch break) are correctly offset.
+   * Three modes (in priority order):
+   *   1. customStartTime set → use it directly
+   *   2. afterBreakId set → chain from referenced break's END time
+   *   3. afterPeriod → original period-count calculation
    */
-  const breakStartTime = (row: CwBreakRow): string => {
+  const breakStartTime = (row: CwBreakRow, _visited = new Set<string>()): string => {
+    if (row.customStartTime) return row.customStartTime
+    if (row.afterBreakId && !_visited.has(row.id)) {
+      const ref = cwRows.find(b => b.id === row.afterBreakId)
+      if (ref) {
+        const v2 = new Set(_visited); v2.add(row.id)
+        return addMins(breakStartTime(ref, v2), ref.duration)
+      }
+    }
     const precedingBreakMins = cwRows
       .filter(b =>
         b.id !== row.id &&
@@ -483,6 +496,20 @@ function ClasswiseBreaksPanel({
       )
       .reduce((sum, b) => sum + b.duration, 0)
     return addMins(startTime, assemblyDur + precedingBreakMins + row.afterPeriod * periodDur)
+  }
+
+  /** Encode the current timing selection for the dropdown. */
+  const timingValue = (row: CwBreakRow): string => {
+    if (row.customStartTime) return 'custom'
+    if (row.afterBreakId)    return `b:${row.afterBreakId}`
+    return `p:${row.afterPeriod}`
+  }
+
+  /** Short label for a set of class keys. */
+  const clsLabel = (keys: string[]) => {
+    if (!keys.length) return '—'
+    const shorts = keys.map(k => classEntries.find(c => c.key === k)?.short ?? k)
+    return shorts.length <= 3 ? shorts.join(', ') : `${shorts.length} classes`
   }
 
   const updateBreak = (id: string, patch: Partial<CwBreakRow>) =>
@@ -507,11 +534,11 @@ function ClasswiseBreaksPanel({
     }])
   }
 
-  // Period slot options for the dropdown
-  const periodOptions: Array<{ value: number; label: string }> = [
-    { value: 0, label: 'After Assembly' },
+  // Base period options (string-keyed for unified select)
+  const basePeriodOptions: Array<{ value: string; label: string }> = [
+    { value: 'p:0', label: 'After Assembly' },
     ...Array.from({ length: maxPeriods }, (_, i) => ({
-      value: i + 1,
+      value: `p:${i + 1}`,
       label: `After Period ${i + 1}`,
     })),
   ]
@@ -529,8 +556,9 @@ function ClasswiseBreaksPanel({
             <Sparkles size={13} color="#7C3AED" /> Class-wise Breaks
           </div>
           <p style={{ fontSize: 12, color: '#6B7280', margin: 0, lineHeight: 1.5 }}>
-            Choose <strong>which classes</strong> have a break and <strong>after which period</strong> it falls.
-            Timing is calculated automatically — click <strong>Generate bell timing</strong> when ready.
+            Choose <strong>which classes</strong> have a break and set its <strong>break timing</strong> —
+            pick a period, chain it after another break, or enter a custom time.
+            Click <strong>Generate bell timing</strong> when ready.
           </p>
         </div>
         <button onClick={onClose} style={{
@@ -561,7 +589,7 @@ function ClasswiseBreaksPanel({
           gridTemplateColumns: '1.4fr 1.3fr 1.6fr 84px 28px',
           gap: 10, padding: '0 12px 6px',
         }}>
-          {['Break name', 'Applies to', 'After which period', 'Duration', ''].map((h, i) => (
+          {['Break name', 'Applies to', 'Break timing', 'Duration', ''].map((h, i) => (
             <div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.05em' }}>{h}</div>
           ))}
         </div>
@@ -628,11 +656,22 @@ function ClasswiseBreaksPanel({
                 )}
               </div>
 
-              {/* "After Period N" selector + time hint */}
+              {/* Break timing selector + time hint */}
               <div>
+                {/* Unified dropdown: period | after-break | custom */}
                 <select
-                  value={row.afterPeriod}
-                  onChange={e => updateBreak(row.id, { afterPeriod: Number(e.target.value) })}
+                  value={timingValue(row)}
+                  onChange={e => {
+                    const v = e.target.value
+                    if (v === 'custom') {
+                      updateBreak(row.id, { customStartTime: bStart, afterBreakId: undefined })
+                    } else if (v.startsWith('b:')) {
+                      updateBreak(row.id, { afterBreakId: v.slice(2), customStartTime: undefined })
+                    } else {
+                      const n = parseInt(v.slice(2), 10)
+                      updateBreak(row.id, { afterPeriod: n, afterBreakId: undefined, customStartTime: undefined })
+                    }
+                  }}
                   style={{
                     width: '100%', padding: '5px 7px',
                     border: '1px solid #C4B5FD', borderRadius: 6,
@@ -641,10 +680,38 @@ function ClasswiseBreaksPanel({
                     cursor: 'pointer', marginBottom: 5,
                   }}
                 >
-                  {periodOptions.map(o => (
+                  {basePeriodOptions.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
+                  {/* "After break X" options — other breaks that could be chained */}
+                  {cwRows.filter(b => b.id !== row.id && b.classes.length > 0).length > 0 && (
+                    <option disabled value="">── After another break ──</option>
+                  )}
+                  {cwRows
+                    .filter(b => b.id !== row.id && b.classes.length > 0)
+                    .map(b => (
+                      <option key={`b:${b.id}`} value={`b:${b.id}`}>
+                        After {b.name} ({clsLabel(b.classes)})
+                      </option>
+                    ))
+                  }
+                  <option disabled value="">────────────────</option>
+                  <option value="custom">Custom time…</option>
                 </select>
+
+                {/* Custom time inputs */}
+                {row.customStartTime && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <input
+                      type="time"
+                      value={row.customStartTime}
+                      onChange={e => updateBreak(row.id, { customStartTime: e.target.value })}
+                      style={{ flex: 1, padding: '3px 5px', border: '1px solid #C4B5FD', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#F8F7FF', color: '#7C3AED' }}
+                    />
+                    <span style={{ fontSize: 10, color: '#9CA3AF' }}>start</span>
+                  </div>
+                )}
+
                 {/* Calculated time hint */}
                 <div style={{ fontSize: 10, color: '#7C3AED', fontFamily: "'DM Mono',monospace" }}>
                   {fmt12(bStart, use12h)} → {fmt12(bEnd, use12h)}
