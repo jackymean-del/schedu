@@ -464,7 +464,7 @@ function ClasswiseBreaksPanel({
   allClassKeys?: string[]
   classGroups?:  typeof CLASS_GROUPS
   streamDefs?:   Array<{ stream: string; color: string; bg: string; group: string }>
-  classStreamMap?: Record<string, string>
+  classStreamMap?: Record<string, string[]>
 }) {
   const [openPicker, setOpenPicker] = useState<string | null>(null)
 
