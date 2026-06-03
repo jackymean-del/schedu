@@ -1880,7 +1880,7 @@ export function StepBell() {
                           onClick={() => {
                             const idx = customGroups.length % GROUP_PALETTE.length
                             const [color, bg] = GROUP_PALETTE[idx]
-                            setCustomGroups(prev => [...prev, { group: 'New Group', color, bg }])
+                            setCustomGroups(prev => [...prev, { group: 'New Group', color, bg, desc: '' }])
                           }}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: '1.5px dashed #D1D5DB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}
                         >
