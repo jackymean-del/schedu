@@ -74,6 +74,34 @@ function buildDefaultSections(): Section[] {
   return out
 }
 
+/**
+ * Build sections from the class list configured in Shift & Timing (Step 1).
+ * Creates `sectionsPerClass` sections per class.
+ * If a class has a stream assigned, section names include the stream code:
+ *   XI + Science + 3 sections → XI-Sci-A, XI-Sci-B, XI-Sci-C
+ * Otherwise: XI → XI-A, XI-B, XI-C
+ */
+function buildSectionsFromDefs(
+  classDefs: Array<{ key: string; label: string; short: string; group: string }>,
+  streamMap: Record<string, string> = {},
+  sectionsPerClass = 3,
+): Section[] {
+  const out: Section[] = []
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  for (const cls of classDefs) {
+    // Derive a clean grade name: "Class XI" → "XI", "Nursery" → "Nursery"
+    const grade  = cls.label.startsWith('Class ') ? cls.label.slice(6) : cls.label
+    const stream = streamMap[cls.key]
+    const code   = stream ? stream.replace(/\s+/g, '').slice(0, 3) : ''
+    for (let i = 0; i < sectionsPerClass; i++) {
+      const sec  = LETTERS[i] ?? String(i + 1)
+      const name = code ? `${grade}-${code}-${sec}` : `${grade}-${sec}`
+      out.push({ id: makeId(), name, grade, room: `Room ${100 + out.length + 1}`, classTeacher: '' } as Section)
+    }
+  }
+  return out
+}
+
 // Subject definitions: curriculum-aware with AI-recommended slots (middle-school baseline)
 // ppw = fallback; the actual value gets set when the user runs "AI Assign" from SubjectsPanel
 const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number; short?: string }> = [
@@ -408,15 +436,40 @@ export function StepResourcesV2() {
   const allReady = counts.classes > 0 && counts.subjects > 0 && counts.teachers > 0 && counts.rooms > 0
   const hasAnyData = counts.classes > 0 || counts.subjects > 0 || counts.teachers > 0 || counts.rooms > 0
 
+  // ── Helpers to get configured class defs from Step 1 ─────────────────────
+  const configuredClassDefs = (config as any).configuredClassDefs as
+    Array<{ key: string; label: string; short: string; group: string }> | undefined
+  const configuredStreamMap = (config as any).configuredClassStreamMap as
+    Record<string, string> | undefined
+
+  /** Build sections using Step-1 classes when available, otherwise fall back to default. */
+  const buildSections = (perClass = 3) =>
+    configuredClassDefs?.length
+      ? buildSectionsFromDefs(configuredClassDefs, configuredStreamMap ?? {}, perClass)
+      : buildDefaultSections()
+
+  // Auto-seed sections on first mount when the store is still empty
+  // (happens right after Save & Continue from Shift & Timing)
+  useEffect(() => {
+    if (sections.length === 0 && configuredClassDefs?.length) {
+      const auto = buildSections(3)
+      setSections(auto.map((sec: any) => ({
+        ...sec,
+        strength: DEFAULT_STRENGTH[GRADE_GROUP[(sec as any).grade] ?? 'Primary'] ?? 35,
+      })))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Generate all ──────────────────────────────────────────────────────────
   const handleGenerateAll = async () => {
     setGenerating(true)
     await new Promise(r => setTimeout(r, 700))
-    const newSections = buildDefaultSections()
+    const newSections = buildSections(3)
     const newStaff    = buildDefaultStaff(84)
     const newSubjects = buildDefaultSubjects(normalizeBoardType(config.board))
     const newRooms    = buildDefaultRooms()
-    setSections(newSections.map((sec, i) => ({
+    setSections(newSections.map((sec: any, i: number) => ({
       ...sec,
       classTeacher: newStaff[i % newStaff.length]?.name ?? '',
       strength: DEFAULT_STRENGTH[GRADE_GROUP[(sec as any).grade] ?? 'Primary'] ?? 35,
@@ -566,8 +619,10 @@ export function StepResourcesV2() {
                 AI-generate your school resources
               </h2>
               <p style={{ fontSize: 12.5, color: '#6B7280', margin: '0 0 24px', lineHeight: 1.6 }}>
-                One click generates 52 classes (Nursery–XII), 84 teachers, 38 subjects and 60 rooms —
-                with subject expertise, class teacher assignments, and room mappings pre-filled.
+                {configuredClassDefs?.length
+                  ? `One click generates ${configuredClassDefs.length * 3} sections (3 per class, ${configuredClassDefs.length} classes from Shift & Timing), teachers, subjects and rooms — with class teacher assignments pre-filled.`
+                  : 'One click generates 52 classes (Nursery–XII), 84 teachers, 38 subjects and 60 rooms — with subject expertise, class teacher assignments, and room mappings pre-filled.'
+                }
               </p>
               <button
                 onClick={handleGenerateAll}

@@ -353,7 +353,27 @@ function buildBellRowsFromCw(
 }
 
 // ── Persistence ───────────────────────────────────────────────
-const BELL_KEY = 'schedu-bell-v2'
+const BELL_KEY_BASE   = 'schedu-bell-v2'
+const ACTIVE_TT_LS    = 'schedu-active-tt'  // same key used in dashboard.tsx
+
+/** Returns a per-timetable localStorage key so each timetable has its own bell state. */
+function getBellKey(): string {
+  try {
+    const id = localStorage.getItem(ACTIVE_TT_LS)
+    return id ? `${BELL_KEY_BASE}-${id}` : BELL_KEY_BASE
+  } catch { return BELL_KEY_BASE }
+}
+
+function loadSaved(): SavedBell | null {
+  try {
+    const key  = getBellKey()
+    const data = localStorage.getItem(key)
+    if (data) return JSON.parse(data) as SavedBell
+    // Migration: fall back to the old shared key so existing data isn't lost
+    const legacy = localStorage.getItem(BELL_KEY_BASE)
+    return legacy ? JSON.parse(legacy) as SavedBell : null
+  } catch { return null }
+}
 interface SavedBell {
   shiftName: string; startTime: string; use12h: boolean
   periodDur: number; maxPeriods: number; workDays: string[]; rows: BellRow[]
@@ -381,10 +401,6 @@ interface SavedBell {
   customStreams?: Array<{ stream: string; color: string; bg: string; group: string }>
   // Maps class key → stream name
   classStreamMap?: Record<string, string>
-}
-function loadSaved(): SavedBell | null {
-  try { const s = localStorage.getItem(BELL_KEY); return s ? JSON.parse(s) as SavedBell : null }
-  catch { return null }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -998,6 +1014,8 @@ function LiveBellTimeline({
 // ══════════════════════════════════════════════════════════════
 export function StepBell() {
   const { config, setConfig, setStep, setBreaks } = useTimetableStore()
+  // Scoped to this timetable — computed once on mount so saves never bleed into another TT
+  const bellKey = useRef(getBellKey()).current
   const [_saved] = useState<SavedBell | null>(loadSaved)
 
   // Custom class list — initialized from saved state OR from the grade range set in the modal
@@ -1124,7 +1142,7 @@ export function StepBell() {
 
   // ── Persistence ───────────────────────────────────────────────
   useEffect(() => {
-    localStorage.setItem(BELL_KEY, JSON.stringify({
+    localStorage.setItem(bellKey, JSON.stringify({
       shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
@@ -1733,7 +1751,7 @@ export function StepBell() {
     // edit, the most-recent state might not yet be in localStorage.
     // Writing it here guarantees re-mount reads the correct values.
     try {
-      localStorage.setItem(BELL_KEY, JSON.stringify({
+      localStorage.setItem(bellKey, JSON.stringify({
         shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
         cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
         weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
@@ -1748,6 +1766,9 @@ export function StepBell() {
       dayOffRules: dayOffRules.length > 0 ? dayOffRules : undefined,
       // Persist class-wise break config so the timetable display shows correct per-class times
       classwiseBreaks: cwRows.length > 0 ? cwRows : undefined,
+      // Resources page reads these to seed sections for the right classes only
+      configuredClassDefs: activeClasses,
+      configuredClassStreamMap: Object.keys(classStreamMap).length > 0 ? classStreamMap : undefined,
     } as any)
     // When class-wise breaks are configured, store CANONICAL breaks (one per afterPeriod
     // position) so that buildPeriodSequenceFromCw can later reconstruct the correct period
