@@ -1938,6 +1938,43 @@ export function StepBell() {
 
   const deleteRow = (id: string) => setDisplayRows(prev => prev.filter(x => x.id !== id))
 
+  // Inline time editing state — tracks which row + field is being edited
+  const [editingTime, setEditingTime] = useState<{ rowId: string; field: 'start' | 'end' } | null>(null)
+
+  /**
+   * Commit a new start time for row[i].
+   * Strategy: absorb the delta into the PREVIOUS row's duration.
+   * If it's the very first row, adjust the global start time instead.
+   */
+  const commitStartTime = (rowId: string, newVal: string, starts: string[]) => {
+    if (!newVal) { setEditingTime(null); return }
+    const rows = displayRows
+    const i    = rows.findIndex(r => r.id === rowId)
+    if (i < 0) { setEditingTime(null); return }
+    const delta = toMins(newVal) - toMins(starts[i])
+    if (delta !== 0) {
+      if (i === 0) {
+        // First row — shift global start time
+        setStartTime(newVal)
+      } else {
+        const prev     = rows[i - 1]
+        const newDur   = Math.max(5, prev.duration + delta)
+        updateRow(prev.id, { duration: newDur })
+      }
+    }
+    setEditingTime(null)
+  }
+
+  /**
+   * Commit a new end time for a row — adjusts that row's duration.
+   */
+  const commitEndTime = (rowId: string, newVal: string, start: string) => {
+    if (!newVal) { setEditingTime(null); return }
+    const newDur = Math.max(5, toMins(newVal) - toMins(start))
+    updateRow(rowId, { duration: newDur })
+    setEditingTime(null)
+  }
+
   const insertBreak = (afterIndex: number, name: string) => {
     const type: RowType =
       /lunch/i.test(name)             ? 'lunch'
@@ -3682,22 +3719,67 @@ export function StepBell() {
                           onChange={e => updateRow(row.id, { name: e.target.value })}
                           style={{ fontWeight: isBreak ? 700 : undefined }}
                         />
-                        <div style={{
-                          fontSize: isBreak ? 13 : 12,
-                          fontFamily: "'DM Mono',monospace",
-                          color: isBreak ? tm.fg : '#374151',
-                          fontWeight: 700, padding: '4px 7px',
-                        }}>
-                          {fmt12(start, use12h)}
-                        </div>
-                        <div style={{
-                          fontSize: isBreak ? 13 : 12,
-                          fontFamily: "'DM Mono',monospace",
-                          color: isBreak ? tm.fg : '#374151',
-                          fontWeight: 700, padding: '4px 7px',
-                        }}>
-                          {fmt12(end, use12h)}
-                        </div>
+                        {/* ── Start time — click to edit ── */}
+                        {editingTime?.rowId === row.id && editingTime.field === 'start' ? (
+                          <input type="time" defaultValue={start} autoFocus
+                            onBlur={e  => commitStartTime(row.id, e.target.value, rowStartTimes)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter')  e.currentTarget.blur()
+                              if (e.key === 'Escape') setEditingTime(null)
+                            }}
+                            style={{
+                              width: 90, padding: '2px 5px', borderRadius: 5,
+                              border: `1.5px solid ${tm.border}`, outline: 'none',
+                              fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700,
+                              color: tm.fg, background: tm.bg,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingTime({ rowId: row.id, field: 'start' })}
+                            style={{
+                              fontSize: isBreak ? 13 : 12, fontFamily: "'DM Mono',monospace",
+                              color: isBreak ? tm.fg : '#374151', fontWeight: 700,
+                              padding: '4px 7px', cursor: 'text', borderRadius: 5,
+                              display: 'flex', alignItems: 'center', gap: 3,
+                            }}
+                            title="Click to edit start time"
+                          >
+                            {fmt12(start, use12h)}
+                            <span style={{ fontSize: 8, color: '#C4B5FD', opacity: 0.7 }}>✎</span>
+                          </div>
+                        )}
+
+                        {/* ── End time — click to edit ── */}
+                        {editingTime?.rowId === row.id && editingTime.field === 'end' ? (
+                          <input type="time" defaultValue={end} autoFocus
+                            onBlur={e  => commitEndTime(row.id, e.target.value, start)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter')  e.currentTarget.blur()
+                              if (e.key === 'Escape') setEditingTime(null)
+                            }}
+                            style={{
+                              width: 90, padding: '2px 5px', borderRadius: 5,
+                              border: `1.5px solid ${tm.border}`, outline: 'none',
+                              fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700,
+                              color: tm.fg, background: tm.bg,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingTime({ rowId: row.id, field: 'end' })}
+                            style={{
+                              fontSize: isBreak ? 13 : 12, fontFamily: "'DM Mono',monospace",
+                              color: isBreak ? tm.fg : '#374151', fontWeight: 700,
+                              padding: '4px 7px', cursor: 'text', borderRadius: 5,
+                              display: 'flex', alignItems: 'center', gap: 3,
+                            }}
+                            title="Click to edit end time"
+                          >
+                            {fmt12(end, use12h)}
+                            <span style={{ fontSize: 8, color: '#C4B5FD', opacity: 0.7 }}>✎</span>
+                          </div>
+                        )}
                         <NumInput className="b-dur" value={row.duration} min={5} max={240}
                           onChange={d => updateRow(row.id, { duration: d })}
                           style={row.type === 'teaching' && row.duration !== activePeriodDur
