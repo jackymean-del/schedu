@@ -435,7 +435,7 @@ function ClasswiseBreaksPanel({
       id:          makeId(),
       name:        'Break',
       type:        'short-break',
-      classes:     [...allClassKeys],
+      classes:     [],   // start empty — user picks which classes this break applies to
       afterPeriod: defaultAfter,
       duration:    10,
     }])
@@ -679,11 +679,14 @@ function ClassPicker({
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [isOpen, setOpenId])
-  const isAll  = allClassKeys.every(k => classes.includes(k))
-  const isNone = classes.length === 0
+  // Only consider classes that are currently active (ignore stale keys from old configs)
+  const activeSelected = classes.filter(k => allClassKeys.includes(k))
+  const isAll  = allClassKeys.length > 0 && allClassKeys.every(k => classes.includes(k))
+  const isNone = activeSelected.length === 0
   const label  = isAll ? 'All' : isNone ? '—'
-    : classes.length <= 3 ? classes.map(k => classEntries.find(c => c.key === k)?.short ?? k).join(', ')
-    : `${classes.length} classes`
+    : activeSelected.length <= 3
+      ? activeSelected.map(k => classEntries.find(c => c.key === k)?.short ?? k).join(', ')
+      : `${activeSelected.length} classes`
   const toggleOne = (key: string, chk: boolean) =>
     onChange(chk ? [...classes, key] : classes.filter(c => c !== key))
   const toggleGroup = (group: string, chk: boolean) => {
@@ -1012,7 +1015,22 @@ export function StepBell() {
   const [openPicker,    setOpenPicker]    = useState<string | null>(null)
   const [editingEnd,    setEditingEnd]    = useState(false)
   const [showCwPanel,   setShowCwPanel]   = useState(false)
-  const [cwRows,        setCwRows]        = useState<CwBreakRow[]>(() => _saved?.cwRows ?? [])
+  const [cwRows, setCwRows] = useState<CwBreakRow[]>(() => {
+    // Restore saved rows but strip any class keys that no longer belong to the
+    // active class list (e.g. user changed the class range since last save).
+    const initKeys = _saved?.customClasses?.length
+      ? (_saved.customClasses as Array<{key: string}>).map(c => c.key)
+      : (() => {
+          const from = (config as any).fromGrade as string | undefined
+          const to   = (config as any).toGrade   as string | undefined
+          if (from && to) return classesFromGradeRange(from, to).map(c => c.key)
+          return [...ALL_CLASS_KEYS]
+        })()
+    return (_saved?.cwRows ?? []).map(r => ({
+      ...r,
+      classes: r.classes.filter(k => initKeys.includes(k)),
+    }))
+  })
 
   // ── Persistence ───────────────────────────────────────────────
   useEffect(() => {
@@ -1280,17 +1298,19 @@ export function StepBell() {
         setCwRows(existingBreaks.map(r => {
           const idx = displayRows.indexOf(r)
           const afterPeriod = displayRows.slice(0, idx).filter(rr => rr.type === 'teaching').length
+          // Strip class keys that are no longer in the active class list
+          const validClasses = r.classes.filter(k => activeClassKeys.includes(k))
           return {
             id:          r.id,
             name:        r.name,
             type:        r.type as 'short-break' | 'lunch',
-            classes:     r.classes.length > 0 ? r.classes : [...activeClassKeys],
+            classes:     validClasses.length > 0 ? validClasses : [...activeClassKeys],
             afterPeriod,
             duration:    r.duration,
           }
         }))
       } else {
-        // Default: lunch after the midpoint period, all classes
+        // Default: lunch after the midpoint period, all active classes
         setCwRows([{
           id:          makeId(),
           name:        'Lunch Break',
@@ -1300,6 +1320,12 @@ export function StepBell() {
           duration:    30,
         }])
       }
+    } else {
+      // Panel already has rows — sanitise stale class keys every time it opens
+      setCwRows(prev => prev.map(r => ({
+        ...r,
+        classes: r.classes.filter(k => activeClassKeys.includes(k)),
+      })))
     }
     setShowCwPanel(true)
   }
