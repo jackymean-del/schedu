@@ -377,6 +377,10 @@ interface SavedBell {
   customClasses?: Array<{ key: string; label: string; short: string; group: string }>
   // Custom group definitions (name + colours)
   customGroups?: Array<{ group: string; color: string; bg: string }>
+  // Streams (Science / Commerce / Arts …)
+  customStreams?: Array<{ stream: string; color: string; bg: string; group: string }>
+  // Maps class key → stream name
+  classStreamMap?: Record<string, string>
 }
 function loadSaved(): SavedBell | null {
   try { const s = localStorage.getItem(BELL_KEY); return s ? JSON.parse(s) as SavedBell : null }
@@ -396,6 +400,7 @@ function ClasswiseBreaksPanel({
   cwRows, setCwRows, use12h, startTime, periodDur, maxPeriods,
   onGenerate, onClose, assemblyDur = 10,
   classEntries = CLASSES, allClassKeys = ALL_CLASS_KEYS, classGroups = CLASS_GROUPS,
+  streamDefs, classStreamMap,
 }: {
   cwRows:      CwBreakRow[]
   setCwRows:   React.Dispatch<React.SetStateAction<CwBreakRow[]>>
@@ -409,6 +414,8 @@ function ClasswiseBreaksPanel({
   classEntries?: typeof CLASSES
   allClassKeys?: string[]
   classGroups?:  typeof CLASS_GROUPS
+  streamDefs?:   Array<{ stream: string; color: string; bg: string; group: string }>
+  classStreamMap?: Record<string, string>
 }) {
   const [openPicker, setOpenPicker] = useState<string | null>(null)
 
@@ -562,6 +569,8 @@ function ClasswiseBreaksPanel({
                   classEntries={classEntries}
                   allClassKeys={allClassKeys}
                   classGroups={classGroups}
+                  streamDefs={streamDefs}
+                  classStreamMap={classStreamMap}
                 />
                 {row.classes.length > 0 && row.classes.length < allClassKeys.length && (
                   <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>
@@ -674,12 +683,16 @@ function ClasswiseBreaksPanel({
 function ClassPicker({
   classes, onChange, rowId, openId, setOpenId,
   classEntries = CLASSES, allClassKeys = ALL_CLASS_KEYS, classGroups = CLASS_GROUPS,
+  streamDefs, classStreamMap,
 }: {
   classes: string[]; onChange: (c: string[]) => void
   rowId: string; openId: string | null; setOpenId: (id: string | null) => void
   classEntries?: typeof CLASSES
   allClassKeys?: string[]
   classGroups?: typeof CLASS_GROUPS
+  /** Optional stream sub-grouping inside each class group */
+  streamDefs?: Array<{ stream: string; color: string; bg: string; group: string }>
+  classStreamMap?: Record<string, string>
 }) {
   const isOpen = openId === rowId
   const ref    = useRef<HTMLDivElement>(null)
@@ -737,6 +750,9 @@ function ClassPicker({
             const gk    = gc.map(c => c.key)
             const allIn = gk.every(k => classes.includes(k))
             const anyIn = gk.some(k => classes.includes(k))
+            // Streams scoped to this group (if any)
+            const groupStreams = streamDefs?.filter(s => s.group === gm.group) ?? []
+            const hasStreams   = groupStreams.length > 0 && !!classStreamMap
             return (
               <div key={gm.group}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px 3px', marginTop: 4, borderTop: '1px solid #F3F4F6', background: gm.bg }}>
@@ -747,14 +763,59 @@ function ClassPicker({
                   <span style={{ fontSize: 11, fontWeight: 700, color: gm.color, letterSpacing: '0.04em' }}>{gm.group.toUpperCase()}</span>
                   <span style={{ fontSize: 10, color: '#9CA3AF', marginLeft: 'auto' }}>{gm.desc}</span>
                 </div>
-                {gc.map(cls => (
-                  <label key={cls.key} style={{ ...PICK_ROW, paddingLeft: 28 }}>
-                    <input type="checkbox" checked={classes.includes(cls.key)}
-                      onChange={e => toggleOne(cls.key, e.target.checked)}
-                      style={{ accentColor: gm.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: '#374151' }}>{cls.label}</span>
-                  </label>
-                ))}
+                {hasStreams ? (
+                  <>
+                    {groupStreams.map(sd => {
+                      const sc  = gc.filter(c => classStreamMap![c.key] === sd.stream)
+                      if (sc.length === 0) return null
+                      const sk    = sc.map(c => c.key)
+                      const sAll  = sk.every(k => classes.includes(k))
+                      const sAny  = sk.some(k => classes.includes(k))
+                      return (
+                        <div key={sd.stream}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 12px 2px 20px', background: sd.bg + 'CC' }}>
+                            <input type="checkbox" checked={sAll}
+                              ref={el => { if (el) el.indeterminate = !sAll && sAny }}
+                              onChange={e => {
+                                const next = e.target.checked
+                                  ? [...new Set([...classes, ...sk])]
+                                  : classes.filter(k => !sk.includes(k))
+                                onChange(next)
+                              }}
+                              style={{ accentColor: sd.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: 10, fontWeight: 700, color: sd.color, letterSpacing: '0.04em' }}>{sd.stream}</span>
+                          </div>
+                          {sc.map(cls => (
+                            <label key={cls.key} style={{ ...PICK_ROW, paddingLeft: 36 }}>
+                              <input type="checkbox" checked={classes.includes(cls.key)}
+                                onChange={e => toggleOne(cls.key, e.target.checked)}
+                                style={{ accentColor: sd.color, flexShrink: 0 }} />
+                              <span style={{ fontSize: 12, color: '#374151' }}>{cls.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )
+                    })}
+                    {/* Classes with no stream assigned */}
+                    {gc.filter(c => !classStreamMap![c.key]).map(cls => (
+                      <label key={cls.key} style={{ ...PICK_ROW, paddingLeft: 28 }}>
+                        <input type="checkbox" checked={classes.includes(cls.key)}
+                          onChange={e => toggleOne(cls.key, e.target.checked)}
+                          style={{ accentColor: gm.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: '#374151' }}>{cls.label}</span>
+                      </label>
+                    ))}
+                  </>
+                ) : (
+                  gc.map(cls => (
+                    <label key={cls.key} style={{ ...PICK_ROW, paddingLeft: 28 }}>
+                      <input type="checkbox" checked={classes.includes(cls.key)}
+                        onChange={e => toggleOne(cls.key, e.target.checked)}
+                        style={{ accentColor: gm.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: '#374151' }}>{cls.label}</span>
+                    </label>
+                  ))
+                )}
               </div>
             )
           })}
@@ -948,13 +1009,22 @@ export function StepBell() {
     return CLASSES
   })
   const [showManageClasses, setShowManageClasses] = useState(false)
-  const [manageTab, setManageTab] = useState<'groups' | 'classes'>('classes')
+  const [manageTab, setManageTab] = useState<'groups' | 'streams' | 'classes'>('classes')
 
   // Custom group definitions — initialized from saved state or defaults
   const [customGroups, setCustomGroups] = useState<typeof CLASS_GROUPS>(() => {
     if (_saved?.customGroups?.length) return _saved.customGroups as typeof CLASS_GROUPS
     return CLASS_GROUPS
   })
+
+  // Stream definitions (e.g. Science, Commerce, Arts) + class→stream assignments
+  type StreamDef = { stream: string; color: string; bg: string; group: string }
+  const [customStreams, setCustomStreams] = useState<StreamDef[]>(() =>
+    (_saved?.customStreams ?? []) as StreamDef[]
+  )
+  const [classStreamMap, setClassStreamMap] = useState<Record<string, string>>(
+    () => _saved?.classStreamMap ?? {}
+  )
 
   const activeClasses    = customClasses
   const activeClassKeys  = useMemo(() => customClasses.map(c => c.key), [customClasses])
@@ -1059,11 +1129,13 @@ export function StepBell() {
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
+      customStreams, classStreamMap,
     } satisfies SavedBell))
   }, [shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
-      scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups])
+      scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
+      customStreams, classStreamMap])
 
   // ── Day keys ─────────────────────────────────────────────────
   // • day-names mode  → rotation day shorts (D1, D2, …)
@@ -1666,6 +1738,7 @@ export function StepBell() {
         cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
         weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
         scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
+        customStreams, classStreamMap,
       } satisfies SavedBell))
     } catch { /* localStorage might be full */ }
     setConfig({
@@ -1801,7 +1874,7 @@ export function StepBell() {
 
                   {/* ── Tab bar ── */}
                   <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #F3F4F6', marginBottom: 12 }}>
-                    {(['groups','classes'] as const).map(tab => (
+                    {(['groups','streams','classes'] as const).map(tab => (
                       <button key={tab} onClick={() => setManageTab(tab)} style={{
                         padding: '8px 16px', background: 'none', border: 'none',
                         fontSize: 12, fontWeight: manageTab === tab ? 700 : 500,
@@ -1902,6 +1975,116 @@ export function StepBell() {
                     </div>
                   )}
 
+                  {/* ══ STREAMS tab ══ */}
+                  {manageTab === 'streams' && (
+                    <div>
+                      <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 10px', lineHeight: 1.5 }}>
+                        Streams (e.g. Science, Commerce, Arts) are sub-groups within a group. Create streams here, then assign classes to them in the <strong>Classes</strong> tab.
+                      </p>
+
+                      {customStreams.length === 0 && (
+                        <div style={{ fontSize: 12, color: '#C4B5FD', textAlign: 'center', padding: '16px 0', border: '1.5px dashed #DDD6FE', borderRadius: 8, marginBottom: 10 }}>
+                          No streams yet — click "+ Add stream" below
+                        </div>
+                      )}
+
+                      {customStreams.map((sd, si) => {
+                        const classCount = Object.values(classStreamMap).filter(s => s === sd.stream).length
+                        return (
+                          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '7px 10px', borderRadius: 8, background: sd.bg, border: `1px solid ${sd.color}22` }}>
+                            {/* Colour swatch */}
+                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                              <div style={{ width: 18, height: 18, borderRadius: '50%', background: sd.color, cursor: 'pointer', border: '2px solid #fff', boxShadow: '0 0 0 1.5px ' + sd.color }}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  const el = e.currentTarget.nextSibling as HTMLElement | null
+                                  if (el) el.style.display = el.style.display === 'grid' ? 'none' : 'grid'
+                                }}
+                              />
+                              <div style={{ display: 'none', position: 'absolute', top: 24, left: 0, zIndex: 500, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.12)', padding: 6, gridTemplateColumns: 'repeat(5,18px)', gap: 4 }}>
+                                {GROUP_PALETTE.map(([c, b]) => (
+                                  <div key={c+b} onClick={() => setCustomStreams(prev => prev.map((s, i) => i === si ? { ...s, color: c, bg: b } : s))}
+                                    style={{ width: 18, height: 18, borderRadius: '50%', background: c, cursor: 'pointer', border: sd.color === c ? '2px solid #374151' : '2px solid transparent' }} />
+                                ))}
+                              </div>
+                            </div>
+                            {/* Stream name */}
+                            <input
+                              value={sd.stream}
+                              onChange={e => {
+                                setCustomStreams(prev => prev.map((s, i) => i === si ? { ...s, stream: e.target.value } : s))
+                              }}
+                              onBlur={e => {
+                                const newName = e.target.value.trim()
+                                const oldName = customStreams[si]?.stream ?? newName
+                                if (newName !== oldName) {
+                                  // Update classStreamMap references
+                                  setClassStreamMap(prev => {
+                                    const next: Record<string,string> = {}
+                                    for (const [k, v] of Object.entries(prev)) next[k] = v === oldName ? newName : v
+                                    return next
+                                  })
+                                }
+                              }}
+                              placeholder="Stream name"
+                              style={{ flex: 1, padding: '3px 8px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff', fontWeight: 600, color: sd.color }}
+                            />
+                            {/* Group scope */}
+                            <select
+                              value={sd.group}
+                              onChange={e => setCustomStreams(prev => prev.map((s, i) => i === si ? { ...s, group: e.target.value } : s))}
+                              style={{ padding: '3px 6px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#6B7280', flexShrink: 0 }}
+                              title="Which class group this stream belongs to"
+                            >
+                              {customGroups.map(g => <option key={g.group} value={g.group}>{g.group}</option>)}
+                            </select>
+                            {/* Class count */}
+                            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: sd.color + '20', color: sd.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              {classCount} {classCount === 1 ? 'class' : 'classes'}
+                            </span>
+                            {/* Delete */}
+                            <button
+                              onClick={() => {
+                                setCustomStreams(prev => prev.filter((_, i) => i !== si))
+                                // Clear assignments for this stream
+                                setClassStreamMap(prev => {
+                                  const next: Record<string,string> = {}
+                                  for (const [k, v] of Object.entries(prev)) if (v !== sd.stream) next[k] = v
+                                  return next
+                                })
+                              }}
+                              title="Delete stream"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FCA5A5', padding: 3, display: 'flex', flexShrink: 0 }}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                            </button>
+                          </div>
+                        )
+                      })}
+
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                        <button
+                          onClick={() => {
+                            const idx   = customStreams.length % GROUP_PALETTE.length
+                            const [color, bg] = GROUP_PALETTE[idx]
+                            const grp   = customGroups[customGroups.length - 1]?.group ?? ''
+                            setCustomStreams(prev => [...prev, { stream: 'New Stream', color, bg, group: grp, desc: '' } as any])
+                          }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: '1.5px dashed #D1D5DB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          Add stream
+                        </button>
+                        <button
+                          onClick={() => { setCustomStreams([]); setClassStreamMap({}) }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#9CA3AF', cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          Clear all streams
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ══ CLASSES tab ══ */}
                   {manageTab === 'classes' && (
                     <div>
@@ -1932,6 +2115,27 @@ export function StepBell() {
                             >
                               {customGroups.map(g => <option key={g.group} value={g.group}>{g.group}</option>)}
                             </select>
+                            {/* Stream selector — only when streams exist for this class's group */}
+                            {customStreams.filter(s => s.group === cls.group).length > 0 && (
+                              <select
+                                value={classStreamMap[cls.key] ?? ''}
+                                onChange={e => {
+                                  const val = e.target.value
+                                  setClassStreamMap(prev => {
+                                    const next = { ...prev }
+                                    if (val) next[cls.key] = val; else delete next[cls.key]
+                                    return next
+                                  })
+                                }}
+                                style={{ padding: '3px 6px', border: '1px solid #E5E7EB', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff', color: customStreams.find(s => s.stream === classStreamMap[cls.key])?.color ?? '#9CA3AF', fontWeight: classStreamMap[cls.key] ? 600 : 400 }}
+                                title="Assign to a stream"
+                              >
+                                <option value="">No stream</option>
+                                {customStreams.filter(s => s.group === cls.group).map(s => (
+                                  <option key={s.stream} value={s.stream}>{s.stream}</option>
+                                ))}
+                              </select>
+                            )}
                             {/* Delete */}
                             <button
                               onClick={() => {
@@ -2313,6 +2517,8 @@ export function StepBell() {
                           classEntries={activeClasses}
                           allClassKeys={activeClassKeys}
                           classGroups={activeClassGroups}
+                          streamDefs={customStreams}
+                          classStreamMap={classStreamMap}
                         />
 
                         {/* Inline class chips for quick glance */}
@@ -2626,7 +2832,7 @@ export function StepBell() {
                         <ClassPicker classes={rule.classes}
                           onChange={cls => setDayOffRules(prev => prev.map(r => r.id === rule.id ? { ...r, classes: cls } : r))}
                           rowId={`dor2-${rule.id}`} openId={openPicker} setOpenId={setOpenPicker}
-                          classEntries={activeClasses} allClassKeys={activeClassKeys} classGroups={activeClassGroups} />
+                          classEntries={activeClasses} allClassKeys={activeClassKeys} classGroups={activeClassGroups} streamDefs={customStreams} classStreamMap={classStreamMap} />
                         <button onClick={() => setDayOffRules(prev => prev.filter(r => r.id !== rule.id))}
                           style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#FCA5A5', padding: 3, display: 'flex', flexShrink: 0 }}>
                           <Trash2 size={13} />
@@ -2720,6 +2926,8 @@ export function StepBell() {
                 classEntries={activeClasses}
                 allClassKeys={activeClassKeys}
                 classGroups={activeClassGroups}
+                streamDefs={customStreams}
+                classStreamMap={classStreamMap}
               />
             )}
 
@@ -3061,7 +3269,7 @@ export function StepBell() {
                         </div>
                         <ClassPicker classes={row.classes} onChange={cls => updateRow(row.id, { classes: cls })}
                           rowId={row.id} openId={openPicker} setOpenId={setOpenPicker}
-                          classEntries={activeClasses} allClassKeys={activeClassKeys} classGroups={activeClassGroups} />
+                          classEntries={activeClasses} allClassKeys={activeClassKeys} classGroups={activeClassGroups} streamDefs={customStreams} classStreamMap={classStreamMap} />
                         <button className="b-del" onClick={() => deleteRow(row.id)} style={{
                           background: 'none', border: 'none', cursor: 'pointer', color: '#FCA5A5',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3, opacity: 0,
