@@ -647,32 +647,38 @@ function EditTimetableModal({
   // Use '' as the "not yet set" sentinel — shows a blank "— select —" option
   const [fromGrade, setFromGrade] = useState(tt.fromGrade ?? '')
   const [toGrade,   setToGrade]   = useState(tt.toGrade   ?? '')
-  const [classes,   setClasses]   = useState(tt.approxClasses)
-  const [subjects,  setSubjects]  = useState(tt.approxSubjects  ?? BOARD_SUBJECTS[(tt.board as BoardKey) ?? 'CBSE'])
-  const [teachers,  setTeachers]  = useState(tt.approxTeachers)
-  const [rooms,     setRooms]     = useState(tt.approxRooms ?? 60)
+  // Use string so fields can be left blank ("create manually")
+  const [classes,  setClasses]  = useState(String(tt.approxClasses))
+  const [subjects, setSubjects] = useState(tt.approxSubjects != null ? String(tt.approxSubjects) : '')
+  const [teachers, setTeachers] = useState(String(tt.approxTeachers))
+  const [rooms,    setRooms]    = useState(tt.approxRooms    != null ? String(tt.approxRooms)    : '')
 
-  // Keep subjects in sync when board changes
-  const handleBoard = (b: BoardKey) => { setBoard(b); setSubjects(BOARD_SUBJECTS[b]) }
+  // When board changes, only auto-fill subjects if it's still blank or was the previous board's default
+  const handleBoard = (b: BoardKey) => {
+    setBoard(b)
+    if (!subjects || subjects === String(BOARD_SUBJECTS[board])) setSubjects(String(BOARD_SUBJECTS[b]))
+  }
 
   const fmt = (iso: string) => {
     const d = new Date(iso + 'T00:00:00')
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
+  const parseCount = (s: string) => { const n = parseInt(s); return isNaN(n) || n < 1 ? undefined : n }
+
   const handleSave = () => {
     onSave({
       ...tt,
-      name:            name.trim() || tt.name,
+      name:           name.trim() || tt.name,
       startDate,
       endDate,
       board,
-      fromGrade:       fromGrade  || undefined,
-      toGrade:         toGrade    || undefined,
-      approxClasses:   classes,
-      approxSubjects:  subjects,
-      approxTeachers:  teachers,
-      approxRooms:     rooms,
+      fromGrade:      fromGrade  || undefined,
+      toGrade:        toGrade    || undefined,
+      approxClasses:  parseCount(classes)  ?? tt.approxClasses,
+      approxSubjects: parseCount(subjects),
+      approxTeachers: parseCount(teachers) ?? tt.approxTeachers,
+      approxRooms:    parseCount(rooms),
     })
   }
 
@@ -807,29 +813,52 @@ function EditTimetableModal({
 
         {/* Approximate counts — all 4 */}
         <div style={{ marginBottom: 20 }}>
-          <label style={{ ...lbl, marginBottom: 8 }}>
-            Approximate counts
-            <span style={{ fontSize: 12, fontWeight: 400, color: '#9CA3AF', marginLeft: 6 }}>(AI targets)</span>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+            <label style={{ ...lbl, marginBottom: 0 }}>Approximate counts</label>
+          </div>
+          {/* Hint */}
+          <div style={{
+            background: '#F5F3FF', border: '1px solid #DDD8FF', borderRadius: 8,
+            padding: '9px 12px', marginBottom: 12,
+            fontSize: 12.5, color: '#5B52A8', lineHeight: 1.5,
+          }}>
+            Enter a count and <strong>schedU</strong> will auto-create initial resources for you.{' '}
+            <span style={{ color: '#9590BF' }}>Leave blank if you'd like to create them yourself.</span>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {([
-              { label: 'Classes',  value: classes,  set: setClasses  },
-              { label: 'Subjects', value: subjects, set: setSubjects },
-              { label: 'Teachers', value: teachers, set: setTeachers },
-              { label: 'Rooms',    value: rooms,    set: setRooms    },
+              { label: 'Classes',  value: classes,  set: setClasses,  req: true  },
+              { label: 'Subjects', value: subjects, set: setSubjects, req: false },
+              { label: 'Teachers', value: teachers, set: setTeachers, req: true  },
+              { label: 'Rooms',    value: rooms,    set: setRooms,    req: false },
             ] as const).map(f => (
               <div key={f.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 5 }}>{f.label}</div>
+                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 5, fontWeight: 500 }}>
+                  {f.label}
+                  {!f.req && <span style={{ color: '#C0BBDD', fontWeight: 400 }}> *</span>}
+                </div>
                 <input
-                  type="number" min={1} value={f.value}
-                  onChange={e => f.set(Number(e.target.value))}
-                  style={numInp}
+                  type="number" min={1}
+                  value={f.value}
+                  placeholder="—"
+                  onChange={e => f.set(e.target.value)}
+                  style={{
+                    ...numInp,
+                    color: f.value ? '#13111E' : '#C4C0DC',
+                    borderColor: f.value ? '#E5E7EB' : '#EDE9FF',
+                  }}
                   onFocus={e => (e.currentTarget.style.borderColor = '#7C6FE0')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#E5E7EB')}
+                  onBlur={e => (e.currentTarget.style.borderColor = f.value ? '#E5E7EB' : '#EDE9FF')}
                 />
+                {!f.value && (
+                  <div style={{ fontSize: 10, color: '#B0ABCC', marginTop: 4 }}>manual</div>
+                )}
               </div>
             ))}
           </div>
+          <p style={{ fontSize: 11, color: '#B0ABCC', marginTop: 8 }}>
+            * blank = you'll add these manually in the wizard
+          </p>
         </div>
 
         {/* Footer */}
