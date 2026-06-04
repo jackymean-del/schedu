@@ -261,25 +261,30 @@ function AddRow({ onAdd, existingStreams }: {
 }
 
 // ─── Section row ──────────────────────────────────────────────────────────────
-function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams }: {
+function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams, indent }: {
   sec: SectionExt
   onUpdate: (p: Partial<SectionExt>) => void
   onDelete: () => void
   onScopeClick?: (sec: SectionExt, rect: DOMRect) => void
   existingStreams: string[]
+  indent?: boolean          // true when this row sits under a stream sub-header
 }) {
+  const grade = sec.grade ?? getGrade(sec.name)
+  // Prefer stored stream; fall back to name-parsed stream so legacy rows auto-fill
+  const inferredStream = sec.stream ?? getStreamFromName(sec.name, grade) ?? null
+
   const [editingName,   setEditingName]   = useState(false)
   const [editingStream, setEditingStream] = useState(false)
   const [tmpName,   setTmpName]   = useState(sec.name)
-  const [tmpStream, setTmpStream] = useState(sec.stream ?? '')
+  const [tmpStream, setTmpStream] = useState(inferredStream ?? '')
   const nameRef   = useRef<HTMLInputElement>(null)
   const streamRef = useRef<HTMLInputElement>(null)
   const streamListId = useRef('row-stream-' + sec.id).current
 
   useEffect(() => { if (editingName)   nameRef.current?.focus()   }, [editingName])
   useEffect(() => { if (editingStream) streamRef.current?.focus() }, [editingStream])
-  useEffect(() => { setTmpName(sec.name) },      [sec.name])
-  useEffect(() => { setTmpStream(sec.stream ?? '') }, [sec.stream])
+  useEffect(() => { setTmpName(sec.name) },           [sec.name])
+  useEffect(() => { setTmpStream(inferredStream ?? '') }, [inferredStream])
 
   function commitName() {
     onUpdate({ name: tmpName.trim() || sec.name, grade: getGrade(tmpName.trim() || sec.name) })
@@ -297,7 +302,7 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams }: 
       onMouseLeave={e => (e.currentTarget.style.background = '')}
     >
       {/* Class name + stream pill */}
-      <td style={TD}>
+      <td style={{ ...TD, paddingLeft: indent ? 44 : undefined }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           {editingName ? (
             <input ref={nameRef} value={tmpName} onChange={e => setTmpName(e.target.value)}
@@ -313,7 +318,7 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams }: 
             >{sec.name}</span>
           )}
 
-          {/* Stream pill — always visible, click to edit */}
+          {/* Stream pill — shows inferred name for legacy classes, explicit name for new */}
           {editingStream ? (
             <div style={{ position: 'relative' }}>
               <input
@@ -321,7 +326,7 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams }: 
                 value={tmpStream}
                 onChange={e => setTmpStream(e.target.value)}
                 onBlur={commitStream}
-                onKeyDown={e => { if (e.key === 'Enter') commitStream(); if (e.key === 'Escape') { setTmpStream(sec.stream ?? ''); setEditingStream(false) } }}
+                onKeyDown={e => { if (e.key === 'Enter') commitStream(); if (e.key === 'Escape') { setTmpStream(inferredStream ?? ''); setEditingStream(false) } }}
                 list={streamListId}
                 placeholder="Stream name…"
                 style={{ ...inp, fontSize: 11, width: 130, padding: '3px 7px' }}
@@ -330,20 +335,26 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams }: 
                 {existingStreams.map(s => <option key={s} value={s} />)}
               </datalist>
             </div>
-          ) : sec.stream ? (
+          ) : inferredStream ? (
+            // Solid pill if explicitly stored; dashed outline if only inferred from name
             <span
-              onClick={() => setEditingStream(true)}
-              title="Click to change stream"
+              onClick={() => { setTmpStream(inferredStream); setEditingStream(true) }}
+              title={sec.stream ? 'Click to change stream' : 'Stream inferred from class name — click to confirm or rename'}
               style={{
-                fontSize: 10.5, fontWeight: 600, color: P,
-                background: '#EDEAFF', border: `1px solid ${P_B}`,
+                fontSize: 10.5, fontWeight: 600,
+                color:      sec.stream ? P        : '#7C78AA',
+                background: sec.stream ? '#EDEAFF' : '#F4F2FF',
+                border:     sec.stream ? `1px solid ${P_B}` : '1px dashed #C4BAFF',
                 borderRadius: 20, padding: '2px 9px',
                 cursor: 'pointer', whiteSpace: 'nowrap',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#EDEAFF'; e.currentTarget.style.borderColor = P_B }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = sec.stream ? '#EDEAFF' : '#F4F2FF'
+                e.currentTarget.style.borderColor = sec.stream ? P_B : '#C4BAFF'
+              }}
             >
-              {sec.stream}
+              {inferredStream}
             </span>
           ) : (
             <span
@@ -395,6 +406,36 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams }: 
   )
 }
 
+// ─── Inline stream name editor (used inside stream header row) ────────────────
+function StreamNameInput({ initial, onCommit, onCancel }: {
+  initial: string
+  onCommit: (v: string) => void
+  onCancel: () => void
+}) {
+  const [val, setVal] = useState(initial)
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => { ref.current?.focus(); ref.current?.select() }, [])
+  return (
+    <input
+      ref={ref}
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => onCommit(val)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { e.preventDefault(); onCommit(val) }
+        if (e.key === 'Escape') { e.preventDefault(); onCancel() }
+      }}
+      placeholder="Full stream name…"
+      style={{
+        fontSize: 12, fontWeight: 700, color: '#6B64A8',
+        border: '1.5px solid #C4BAFF', borderRadius: 6,
+        padding: '2px 8px', outline: 'none', background: '#fff',
+        fontFamily: 'inherit', width: 160,
+      }}
+    />
+  )
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function ClassesPanel({ sections, setSections, onScopeClick }: {
   sections: Section[]
@@ -431,6 +472,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
   const [sortAZ, setSortAZ] = useState(false)
   const [collapsedGrades,  setCollapsedGrades]  = useState<Set<string>>(new Set())
   const [collapsedStreams,  setCollapsedStreams]  = useState<Set<string>>(new Set())
+  const [editingStreamKey, setEditingStreamKey] = useState<string | null>(null) // "grade:stream"
 
   // All unique stream names in use — used for autocomplete everywhere
   const existingStreams = useMemo(() =>
@@ -456,6 +498,21 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
       if (next.has(key)) next.delete(key); else next.add(key)
       return next
     })
+  }
+
+  // Rename a stream: update sec.stream on every section in that grade+stream group
+  function renameStream(grade: string, oldStream: string, newName: string) {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed === oldStream) { setEditingStreamKey(null); return }
+    undoHistory.push(sections)
+    setSections(sections.map(s => {
+      const sec = s as SectionExt
+      const g = sec.grade ?? getGrade(s.name)
+      const st = sec.stream ?? getStreamFromName(s.name, g) ?? ''
+      if (g === grade && st === oldStream) return { ...s, stream: trimmed } as Section
+      return s
+    }))
+    setEditingStreamKey(null)
   }
 
   // grouped: grade → stream ('' if none) → sections
@@ -688,12 +745,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                       return (
                         <React.Fragment key={stream}>
                           {/* ── Stream row ── */}
-                          <tr
-                            onClick={() => toggleStream(grade, stream)}
-                            style={{ cursor: 'pointer', userSelect: 'none' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#F0EDFF')}
-                            onMouseLeave={e => (e.currentTarget.style.background = '')}
-                          >
+                          <tr style={{ userSelect: 'none' }}>
                             <td colSpan={3} style={{
                               padding: '8px 14px 8px 36px',
                               background: '#F7F5FF',
@@ -701,12 +753,33 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                               borderLeft: '3px solid #C4BAFF',
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                <span style={{ color: '#9590BF', flexShrink: 0, transition: 'transform 0.18s', transform: streamCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', display: 'flex' }}>
+                                {/* Collapse chevron */}
+                                <span
+                                  onClick={() => toggleStream(grade, stream)}
+                                  style={{ color: '#9590BF', flexShrink: 0, transition: 'transform 0.18s', transform: streamCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', display: 'flex', cursor: 'pointer' }}
+                                >
                                   <ChevronDown size={13} strokeWidth={2.5} />
                                 </span>
-                                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.01em', color: '#6B64A8' }}>
-                                  {stream}
-                                </span>
+
+                                {/* Inline-editable stream name */}
+                                {editingStreamKey === streamKey ? (
+                                  <StreamNameInput
+                                    initial={stream}
+                                    onCommit={v => renameStream(grade, stream, v)}
+                                    onCancel={() => setEditingStreamKey(null)}
+                                  />
+                                ) : (
+                                  <span
+                                    onClick={() => setEditingStreamKey(streamKey)}
+                                    title="Click to rename this stream"
+                                    style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.01em', color: '#6B64A8', cursor: 'text', borderRadius: 4, padding: '1px 4px' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = '#EDE9FF')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                  >
+                                    {stream}
+                                  </span>
+                                )}
+
                                 <span style={{ fontSize: 11, fontWeight: 500, color: '#ADA8CC' }}>
                                   · {secs.length} class{secs.length !== 1 ? 'es' : ''}
                                 </span>
@@ -720,6 +793,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                               onDelete={() => remove(sec.id)}
                               onScopeClick={onScopeClick ? (s, rect) => onScopeClick(s as Section, rect) : undefined}
                               existingStreams={existingStreams}
+                              indent
                             />
                           ))}
                         </React.Fragment>
