@@ -2213,7 +2213,7 @@ export function StepBell() {
         id: r.id, name: r.name, duration: r.duration, type: r.type as any, shiftable: r.type === 'short-break',
       })))
     }
-    setStep(2)
+    setStep(3)
   }
 
   // ── Render ────────────────────────────────────────────────────
@@ -4045,10 +4045,10 @@ export function StepBell() {
 
       {/* Footer nav */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, paddingTop: 16, borderTop: '1px solid #E5E7EB' }}>
-        <button className="b-nav-sec" onClick={() => window.location.href = '/dashboard'} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>
-          <ChevronLeft size={14} /> Back
+        <button className="b-nav-sec" onClick={() => setStep(1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <ChevronLeft size={14} /> Resources
         </button>
-        <span style={{ fontSize: 13, color: '#9CA3AF' }}>Step 1 of 5</span>
+        <span style={{ fontSize: 13, color: '#9CA3AF' }}>Step 2 of 5</span>
         <button className="b-nav-pri" onClick={handleNext} disabled={workDays.length === 0} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: workDays.length > 0 ? '#13111E' : '#E5E7EB', color: workDays.length > 0 ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 700, cursor: workDays.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
           Save & Continue <ChevronRight size={14} />
         </button>

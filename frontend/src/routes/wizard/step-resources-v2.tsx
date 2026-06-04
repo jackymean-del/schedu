@@ -776,7 +776,7 @@ export function StepResourcesV2() {
           zIndex: 10,
         }}>
           <button
-            onClick={() => setStep(1)}
+            onClick={() => window.location.href = '/dashboard'}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '6px 14px', borderRadius: 7,
@@ -788,11 +788,11 @@ export function StepResourcesV2() {
             onMouseEnter={e => (e.currentTarget.style.background = P_L)}
             onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
           >
-            <ChevronLeft size={13} /> Step 1
+            <ChevronLeft size={13} /> Dashboard
           </button>
 
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500 }}>Step 2 of 5</span>
+            <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500 }}>Step 1 of 5</span>
             {!allReady && (
               <span style={{ fontSize: 11.5, color: '#EA580C', marginLeft: 10, fontWeight: 600 }}>
                 · All 4 resource types required before proceeding
@@ -806,7 +806,7 @@ export function StepResourcesV2() {
           </div>
 
           <button
-            onClick={() => setStep(3)}
+            onClick={() => setStep(2)}
             disabled={!allReady}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,

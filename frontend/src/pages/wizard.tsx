@@ -29,11 +29,11 @@ import { Step6Generate }     from '@/routes/wizard/step6-generate'
 import { CheckCircle2 }      from 'lucide-react'
 
 // ── Step registry ─────────────────────────────────────────────
-const STEPS = [StepBell, StepResourcesV2, StepAllocation, StepStudentGroups, Step6Generate]
+const STEPS = [StepResourcesV2, StepBell, StepAllocation, StepStudentGroups, Step6Generate]
 
 const STEP_META = [
+  { label: 'Resources',         sub: 'Classes, subjects, teachers & rooms'  },
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
-  { label: 'Resources',         sub: 'Courses, teachers, subjects & rooms'  },
   { label: 'Allocation',        sub: 'Period × subject + teacher assignment' },
   { label: 'Student groups',    sub: 'Preferences, grouping rules & AI'     },
   { label: 'Review & generate', sub: 'AI builds your timetable'             },

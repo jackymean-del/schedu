@@ -3,8 +3,8 @@ import { Topbar } from "@/components/layout/Topbar"
 import { useTimetableStore } from "@/store/timetableStore"
 
 const STEP_LABELS = [
-  'Shifts & Timing',
   'Resources',
+  'Shifts & Timing',
   'Allocation',
   'Student Groups',
   'Generate',
