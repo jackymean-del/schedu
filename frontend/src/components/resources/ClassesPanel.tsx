@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Section } from '@/types'
-import { Layers, X, CalendarRange, ChevronDown, ChevronRight } from 'lucide-react'
+import { Layers, X, CalendarRange, ChevronDown } from 'lucide-react'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -44,6 +44,23 @@ function getStream(name: string, grade: string): string | null {
   const parts = withoutGrade.split('-')
   if (parts.length >= 2) return parts.slice(0, -1).join('-')
   return null
+}
+
+// Expand common stream abbreviations to full names
+const STREAM_NAMES: Record<string, string> = {
+  sci: 'Science', science: 'Science',
+  com: 'Commerce', commerce: 'Commerce',
+  arts: 'Arts', art: 'Arts',
+  hum: 'Humanities', humanities: 'Humanities',
+  spa: 'Spanish', span: 'Spanish',
+  gen: 'General',
+  pcm: 'PCM', pcb: 'PCB',
+  math: 'Mathematics', bio: 'Biology',
+  med: 'Medical', eng: 'Engineering',
+  voc: 'Vocational', it: 'IT',
+}
+function expandStream(s: string): string {
+  return STREAM_NAMES[s.toLowerCase()] ?? s
 }
 
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
@@ -495,8 +512,8 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                         borderBottom: '1px solid #DDD8FF',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ color: P, flexShrink: 0, transition: 'transform 0.18s', transform: gradeCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'flex' }}>
-                            {gradeCollapsed ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronDown size={16} strokeWidth={2.5} />}
+                          <span style={{ color: P, flexShrink: 0, transition: 'transform 0.18s', transform: gradeCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', display: 'flex' }}>
+                            <ChevronDown size={16} strokeWidth={2.5} />
                           </span>
                           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.04em', color: P_D, textTransform: 'uppercase' }}>
                             Grade {grade}
@@ -550,11 +567,11 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                               borderLeft: '3px solid #C4BAFF',
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                <span style={{ color: '#9590BF', flexShrink: 0, transition: 'transform 0.18s', transform: streamCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'flex' }}>
-                                  {streamCollapsed ? <ChevronRight size={13} strokeWidth={2.5} /> : <ChevronDown size={13} strokeWidth={2.5} />}
+                                <span style={{ color: '#9590BF', flexShrink: 0, transition: 'transform 0.18s', transform: streamCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', display: 'flex' }}>
+                                  <ChevronDown size={13} strokeWidth={2.5} />
                                 </span>
-                                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B64A8' }}>
-                                  {stream}
+                                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.01em', color: '#6B64A8' }}>
+                                  {expandStream(stream)}
                                 </span>
                                 <span style={{ fontSize: 11, fontWeight: 500, color: '#ADA8CC' }}>
                                   · {secs.length} class{secs.length !== 1 ? 'es' : ''}
