@@ -406,89 +406,94 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams, in
   )
 }
 
-// ─── Streams bar — shows all active streams as renameable chips ───────────────
-function StreamsBar({ streams, onRename }: {
-  streams: string[]           // current unique stream names
-  onRename: (oldName: string, newName: string) => void
+// ─── Stream setup banner ───────────────────────────────────────────────────────
+// Auto-appears when any stream name looks abbreviated (≤ 5 chars).
+// Shows all streams as labelled text inputs — user types full names, clicks Apply.
+function StreamSetupBanner({ streams, onApply }: {
+  streams: string[]
+  onApply: (map: Record<string, string>) => void
 }) {
-  const [editing, setEditing] = useState<string | null>(null)  // which stream is open
-  if (streams.length === 0) return null
+  const abbreviated = streams.filter(s => s.length <= 5)
+  const [vals, setVals] = useState<Record<string, string>>(() =>
+    Object.fromEntries(streams.map(s => [s, s]))
+  )
+  // Keep vals in sync if streams change (new stream added, etc.)
+  useEffect(() => {
+    setVals(prev => {
+      const next = { ...prev }
+      streams.forEach(s => { if (!(s in next)) next[s] = s })
+      return next
+    })
+  }, [streams])
+
+  if (abbreviated.length === 0) return null
+
+  const allFilled = abbreviated.every(s => (vals[s] ?? '').trim().length > 0)
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
-      padding: '8px 12px',
-      background: 'linear-gradient(90deg, #F0EDFF 0%, #F7F5FF 100%)',
-      borderBottom: '1px solid #E4E0FF',
       flexShrink: 0,
+      background: '#FFFBEB', border: '1px solid #FDE68A',
+      borderRadius: 10, margin: '0 0 8px 0',
+      padding: '12px 16px',
     }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#9590BF', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>
-        Streams
-      </span>
-      {streams.map(s => (
-        <StreamChipEditor key={s} name={s} isOpen={editing === s}
-          onOpen={() => setEditing(s)}
-          onClose={() => setEditing(null)}
-          onRename={newName => { onRename(s, newName); setEditing(null) }}
-        />
-      ))}
-      <span style={{ fontSize: 11, color: '#ADA8CC', marginLeft: 4 }}>
-        · click a stream to rename
-      </span>
-    </div>
-  )
-}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 15 }}>✏️</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>
+            Enter full stream names
+          </div>
+          <div style={{ fontSize: 11.5, color: '#B45309', marginTop: 1 }}>
+            Short names detected — type the full name for each stream below.
+          </div>
+        </div>
+      </div>
 
-function StreamChipEditor({ name, isOpen, onOpen, onClose, onRename }: {
-  name: string
-  isOpen: boolean
-  onOpen: () => void
-  onClose: () => void
-  onRename: (v: string) => void
-}) {
-  const [val, setVal] = useState(name)
-  const ref = useRef<HTMLInputElement>(null)
-  useEffect(() => { if (isOpen) { setVal(name); ref.current?.focus(); ref.current?.select() } }, [isOpen, name])
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+        {abbreviated.map(s => (
+          <label key={s} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: '#92400E',
+              textTransform: 'uppercase', letterSpacing: '0.07em',
+            }}>
+              "{s}" full name
+            </span>
+            <input
+              value={vals[s] ?? s}
+              onChange={e => setVals(v => ({ ...v, [s]: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter' && allFilled) onApply(vals) }}
+              placeholder={`e.g. ${s === 'Sci' ? 'Science' : s === 'Com' ? 'Commerce' : s === 'Hum' ? 'Humanities' : s === 'Arts' ? 'Arts' : 'Full name…'}`}
+              style={{
+                padding: '6px 12px', border: '1.5px solid #FDE68A', borderRadius: 7,
+                fontSize: 13, fontWeight: 600, color: '#111028',
+                background: '#fff', outline: 'none', fontFamily: 'inherit',
+                width: 160,
+                transition: 'border-color 0.15s',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#F59E0B')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#FDE68A')}
+            />
+          </label>
+        ))}
+      </div>
 
-  if (isOpen) return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      <input
-        ref={ref}
-        value={val}
-        onChange={e => setVal(e.target.value)}
-        onBlur={() => { if (val.trim()) onRename(val.trim()); else onClose() }}
-        onKeyDown={e => {
-          if (e.key === 'Enter') { e.preventDefault(); if (val.trim()) onRename(val.trim()); else onClose() }
-          if (e.key === 'Escape') { e.preventDefault(); onClose() }
-        }}
+      <button
+        onClick={() => onApply(vals)}
+        disabled={!allFilled}
         style={{
-          fontSize: 12, fontWeight: 600, color: P_D,
-          border: `1.5px solid ${P}`, borderRadius: 20,
-          padding: '3px 12px', outline: 'none',
-          background: '#fff', fontFamily: 'inherit', width: 160,
-          boxShadow: `0 0 0 3px ${P_B}`,
+          padding: '7px 20px', borderRadius: 7, border: 'none',
+          background: allFilled ? '#D97706' : '#FDE68A',
+          color: allFilled ? '#fff' : '#B45309',
+          fontSize: 13, fontWeight: 700, cursor: allFilled ? 'pointer' : 'not-allowed',
+          fontFamily: 'inherit',
+          transition: 'background 0.13s',
         }}
-      />
-      <button onClick={() => { if (val.trim()) onRename(val.trim()) }}
-        style={{ background: P, color: '#fff', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-        ✓
+        onMouseEnter={e => { if (allFilled) e.currentTarget.style.background = '#B45309' }}
+        onMouseLeave={e => { if (allFilled) e.currentTarget.style.background = '#D97706' }}
+      >
+        Apply stream names
       </button>
     </div>
-  )
-
-  return (
-    <button onClick={onOpen} style={{
-      fontSize: 11.5, fontWeight: 600, color: P_D,
-      background: '#EDE9FF', border: `1px solid ${P_B}`,
-      borderRadius: 20, padding: '3px 11px',
-      cursor: 'pointer', fontFamily: 'inherit',
-      transition: 'all 0.12s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#EDE9FF'; e.currentTarget.style.borderColor = P_B }}
-    >
-      ✏ {name}
-    </button>
   )
 }
 
@@ -759,10 +764,21 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
         />
       )}
 
-      {/* Streams bar — rename abbreviated stream names to full names */}
-      {existingStreams.length > 0 && (
-        <StreamsBar streams={existingStreams} onRename={renameStreamGlobal} />
-      )}
+      {/* Stream setup banner — auto-shown when any stream name looks abbreviated */}
+      <StreamSetupBanner
+        streams={existingStreams}
+        onApply={map => {
+          undoHistory.push(sections)
+          setSections(sections.map(s => {
+            const sec = s as SectionExt
+            const g   = sec.grade ?? getGrade(s.name)
+            const st  = sec.stream ?? getStreamFromName(s.name, g) ?? ''
+            const full = map[st]
+            if (full && full.trim() !== st) return { ...s, stream: full.trim() } as Section
+            return s
+          }) as Section[])
+        }}
+      />
 
       {/* Table */}
       <div style={TABLE_CARD}>
