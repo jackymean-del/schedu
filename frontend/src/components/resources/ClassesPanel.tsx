@@ -605,30 +605,27 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
     [sections]
   )
 
-  // One-time: auto-expand well-known stream abbreviations (Sci→Science, Com→Commerce…)
-  // Runs when sections first populate; skips sections that already have an explicit stream.
-  const autoExpandDone = useRef(false)
+  // Auto-expand well-known stream abbreviations whenever they appear
+  // (covers both explicit short sec.stream values and name-embedded ones)
   useEffect(() => {
-    if (autoExpandDone.current || sections.length === 0) return
+    if (sections.length === 0) return
     const needsWork = sections.some(s => {
       const sec = s as SectionExt
-      if (sec.stream) return false
       const g  = sec.grade ?? getGrade(s.name)
-      const st = getStreamFromName(s.name, g)
+      const st = sec.stream ?? getStreamFromName(s.name, g)
       return st ? Boolean(STREAM_EXPANSIONS[st.toLowerCase()]) : false
     })
-    if (!needsWork) { autoExpandDone.current = true; return }
+    if (!needsWork) return
     setSections(sections.map(s => {
       const sec = s as SectionExt
-      if (sec.stream) return s                            // keep explicit streams
       const g  = sec.grade ?? getGrade(s.name)
-      const st = getStreamFromName(s.name, g)
+      const st = sec.stream ?? getStreamFromName(s.name, g)
       if (!st) return s
       const full = STREAM_EXPANSIONS[st.toLowerCase()]
       return full ? { ...s, stream: full } as Section : s
     }))
-    autoExpandDone.current = true
-  }, [sections, setSections])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections.map(s => (s as SectionExt).stream ?? '').join(',')])
 
   function toggleGrade(grade: string) {
     setCollapsedGrades(prev => {
