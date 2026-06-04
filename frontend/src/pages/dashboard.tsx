@@ -695,15 +695,28 @@ function EditTimetableModal({
   const [endDate,   setEndDate]   = useState(tt.endDate)
   const [board,     setBoard]     = useState<BoardKey>((tt.board as BoardKey) ?? 'CBSE')
 
-  // Grade range: snapshot (actual sections) > TTEntry metadata > ''
-  const [fromGrade, setFromGrade] = useState(snap?.fromGrade ?? tt.fromGrade ?? '')
-  const [toGrade,   setToGrade]   = useState(snap?.toGrade   ?? tt.toGrade   ?? '')
+  // Grade range: TTEntry wins — UNLESS it still holds the hardcoded 'Nursery'
+  // creation-time default that was never explicitly set by the user, in which
+  // case the snapshot (derived from actual sections) is more accurate.
+  const [fromGrade, setFromGrade] = useState(
+    tt.fromGrade && tt.fromGrade !== 'Nursery'
+      ? tt.fromGrade
+      : (snap?.fromGrade ?? tt.fromGrade ?? '')
+  )
+  const [toGrade, setToGrade] = useState(tt.toGrade ?? snap?.toGrade ?? '')
 
-  // Counts: snapshot (live data) > TTEntry metadata > '' (blank = manual)
-  const [classes,  setClasses]  = useState(String(snap?.classes  ?? tt.approxClasses))
-  const [subjects, setSubjects] = useState(snap?.subjects  != null ? String(snap.subjects)  : tt.approxSubjects != null ? String(tt.approxSubjects) : '')
-  const [teachers, setTeachers] = useState(String(snap?.teachers ?? tt.approxTeachers))
-  const [rooms,    setRooms]    = useState(snap?.rooms != null ? String(snap.rooms) : tt.approxRooms != null ? String(tt.approxRooms) : '')
+  // Counts: TTEntry always wins — it reflects the user's explicit entries.
+  // Snapshot fills only fields that were never saved (null / undefined).
+  const [classes,  setClasses]  = useState(String(tt.approxClasses))
+  const [subjects, setSubjects] = useState(
+    tt.approxSubjects != null ? String(tt.approxSubjects)
+    : snap?.subjects  != null ? String(snap.subjects) : ''
+  )
+  const [teachers, setTeachers] = useState(String(tt.approxTeachers))
+  const [rooms,    setRooms]    = useState(
+    tt.approxRooms != null ? String(tt.approxRooms)
+    : snap?.rooms   != null ? String(snap.rooms) : ''
+  )
 
   // When board changes, only auto-fill subjects if it's still blank or was the previous board's default
   const handleBoard = (b: BoardKey) => {
