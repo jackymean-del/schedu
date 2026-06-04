@@ -57,6 +57,28 @@ function getStreamFromName(name: string, grade: string): string | null {
   return null
 }
 
+// Well-known stream abbreviation → full name map.
+// Only covers unambiguous expansions; ambiguous ones (e.g. "Spa") are left
+// for the user to enter so we don't guess wrong.
+const STREAM_EXPANSIONS: Record<string, string> = {
+  sci:   'Science',
+  com:   'Commerce',
+  comm:  'Commerce',
+  arts:  'Arts',
+  art:   'Arts',
+  hum:   'Humanities',
+  gen:   'General',
+  pcm:   'PCM',
+  pcb:   'PCB',
+  bio:   'Biology',
+  voc:   'Vocational',
+  med:   'Medical',
+  eng:   'Engineering',
+  math:  'Mathematics',
+  it:    'IT',
+  lang:  'Languages',
+}
+
 // ─── BulkCreate popover ────────────────────────────────────────────────────────
 function BulkCreatePopover({ onClose, onCreate, existingStreams }: {
   onClose: () => void
@@ -582,6 +604,31 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
     )].sort(),
     [sections]
   )
+
+  // One-time: auto-expand well-known stream abbreviations (Sci→Science, Com→Commerce…)
+  // Runs when sections first populate; skips sections that already have an explicit stream.
+  const autoExpandDone = useRef(false)
+  useEffect(() => {
+    if (autoExpandDone.current || sections.length === 0) return
+    const needsWork = sections.some(s => {
+      const sec = s as SectionExt
+      if (sec.stream) return false
+      const g  = sec.grade ?? getGrade(s.name)
+      const st = getStreamFromName(s.name, g)
+      return st ? Boolean(STREAM_EXPANSIONS[st.toLowerCase()]) : false
+    })
+    if (!needsWork) { autoExpandDone.current = true; return }
+    setSections(prev => prev.map(s => {
+      const sec = s as SectionExt
+      if (sec.stream) return s                            // keep explicit streams
+      const g  = sec.grade ?? getGrade(s.name)
+      const st = getStreamFromName(s.name, g)
+      if (!st) return s
+      const full = STREAM_EXPANSIONS[st.toLowerCase()]
+      return full ? { ...s, stream: full } as Section : s
+    }))
+    autoExpandDone.current = true
+  }, [sections, setSections])
 
   function toggleGrade(grade: string) {
     setCollapsedGrades(prev => {
