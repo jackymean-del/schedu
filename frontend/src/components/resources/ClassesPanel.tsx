@@ -46,22 +46,6 @@ function getStream(name: string, grade: string): string | null {
   return null
 }
 
-// Expand common stream abbreviations to full names
-const STREAM_NAMES: Record<string, string> = {
-  sci: 'Science', science: 'Science',
-  com: 'Commerce', commerce: 'Commerce',
-  arts: 'Arts', art: 'Arts',
-  hum: 'Humanities', humanities: 'Humanities',
-  spa: 'Spanish', span: 'Spanish',
-  gen: 'General',
-  pcm: 'PCM', pcb: 'PCB',
-  math: 'Mathematics', bio: 'Biology',
-  med: 'Medical', eng: 'Engineering',
-  voc: 'Vocational', it: 'IT',
-}
-function expandStream(s: string): string {
-  return STREAM_NAMES[s.toLowerCase()] ?? s
-}
 
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
 function gradeKey(g: string) { const i = GRADE_ORDER.indexOf(g); return i >= 0 ? i : 100 + g.charCodeAt(0) }
@@ -571,7 +555,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                                   <ChevronDown size={13} strokeWidth={2.5} />
                                 </span>
                                 <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.01em', color: '#6B64A8' }}>
-                                  {expandStream(stream)}
+                                  {stream}
                                 </span>
                                 <span style={{ fontSize: 11, fontWeight: 500, color: '#ADA8CC' }}>
                                   · {secs.length} class{secs.length !== 1 ? 'es' : ''}
