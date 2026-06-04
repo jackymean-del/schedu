@@ -677,24 +677,13 @@ export function StepResourcesV2() {
 
               {/* Panels — all mounted, toggled via display */}
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'classes' ? 'flex' : 'none', flexDirection: 'column' }}>
-                {periods.length === 0 && (
-                  <div style={{
-                    padding: '6px 14px', background: '#FFF7ED',
-                    border: '1px solid #FED7AA', borderRadius: 8, marginBottom: 8,
-                    fontSize: 12, color: '#9A3412', fontWeight: 500,
-                    display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-                  }}>
-                    <span>⏱</span>
-                    <span><strong>Scope</strong> (period availability) will be available after you configure <strong>Shift & Timing</strong> in Step 2.</span>
-                  </div>
-                )}
-                <ClassesPanel
+                  <ClassesPanel
                   sections={sections} setSections={setSections}
-                  onScopeClick={periods.length > 0
-                    ? (sec, rect) => setScopeTarget((sec as any).id === '__bulk__'
-                        ? { kind: 'BulkSection', entity: sec, rect }
-                        : { kind: 'Section', entity: sec, rect })
-                    : undefined}
+                  onScopeClick={(sec, rect) =>
+                    setScopeTarget((sec as any).id === '__bulk__'
+                      ? { kind: 'BulkSection', entity: sec, rect }
+                      : { kind: 'Section', entity: sec, rect })
+                  }
                 />
               </div>
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'subjects' ? 'flex' : 'none', flexDirection: 'column' }}>
