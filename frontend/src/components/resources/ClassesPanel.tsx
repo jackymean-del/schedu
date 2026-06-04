@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Section } from '@/types'
-import { Layers, X, CalendarRange } from 'lucide-react'
+import { Layers, X, CalendarRange, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -485,19 +485,37 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                     <tr
                       onClick={() => toggleGrade(grade)}
                       style={{ cursor: 'pointer', userSelect: 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.97)')}
+                      onMouseLeave={e => (e.currentTarget.style.filter = '')}
                     >
                       <td colSpan={3} style={{
-                        padding: '4px 10px',
-                        fontSize: 9.5, fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase',
-                        color: P_D, background: 'linear-gradient(90deg, #EDE9FF 0%, #F7F5FF 60%, #FAFAFE 100%)',
-                        borderBottom: '1px solid #E4E0FF', borderTop: '1.5px solid #E4E0FF',
+                        padding: '10px 14px',
+                        background: 'linear-gradient(90deg, #EAE5FF 0%, #F3F0FF 55%, #F9F8FF 100%)',
+                        borderTop: '2px solid #D4CCFF',
+                        borderBottom: '1px solid #DDD8FF',
                       }}>
-                        <span style={{ display: 'inline-block', width: 12, fontSize: 8, color: P, marginRight: 5, transition: 'transform 0.15s', transform: gradeCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                        Grade {grade}
-                        <span style={{ color: '#B0ABCC', fontWeight: 500, fontSize: 9.5, textTransform: 'none', marginLeft: 6 }}>
-                          · {totalSecs} section{totalSecs !== 1 ? 's' : ''}
-                          {hasStreams && <> · {streamMap.size} stream{streamMap.size !== 1 ? 's' : ''}</>}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ color: P, flexShrink: 0, transition: 'transform 0.18s', transform: gradeCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'flex' }}>
+                            {gradeCollapsed ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronDown size={16} strokeWidth={2.5} />}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.04em', color: P_D, textTransform: 'uppercase' }}>
+                            Grade {grade}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 2 }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 500, color: '#9590BF' }}>
+                              · {totalSecs} section{totalSecs !== 1 ? 's' : ''}
+                            </span>
+                            {hasStreams && (
+                              <span style={{
+                                fontSize: 10.5, fontWeight: 700, color: P,
+                                background: '#EDE9FF', border: `1px solid #D4CCFF`,
+                                borderRadius: 20, padding: '1px 8px',
+                              }}>
+                                {streamMap.size} stream{streamMap.size !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                     </tr>
 
@@ -522,18 +540,26 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                           <tr
                             onClick={() => toggleStream(grade, stream)}
                             style={{ cursor: 'pointer', userSelect: 'none' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#F0EDFF')}
+                            onMouseLeave={e => (e.currentTarget.style.background = '')}
                           >
                             <td colSpan={3} style={{
-                              padding: '3px 10px 3px 26px',
-                              fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                              color: '#8B87AD', background: '#F4F2FF',
-                              borderBottom: '1px solid #EAE6FF',
+                              padding: '8px 14px 8px 36px',
+                              background: '#F7F5FF',
+                              borderBottom: '1px solid #EBE7FF',
+                              borderLeft: '3px solid #C4BAFF',
                             }}>
-                              <span style={{ display: 'inline-block', width: 10, fontSize: 7, color: '#A8A3CC', marginRight: 5, transition: 'transform 0.15s', transform: streamCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                              {stream}
-                              <span style={{ color: '#C0BBDD', fontWeight: 500, fontSize: 9, textTransform: 'none', marginLeft: 5 }}>
-                                · {secs.length} class{secs.length !== 1 ? 'es' : ''}
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                <span style={{ color: '#9590BF', flexShrink: 0, transition: 'transform 0.18s', transform: streamCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'flex' }}>
+                                  {streamCollapsed ? <ChevronRight size={13} strokeWidth={2.5} /> : <ChevronDown size={13} strokeWidth={2.5} />}
+                                </span>
+                                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B64A8' }}>
+                                  {stream}
+                                </span>
+                                <span style={{ fontSize: 11, fontWeight: 500, color: '#ADA8CC' }}>
+                                  · {secs.length} class{secs.length !== 1 ? 'es' : ''}
+                                </span>
+                              </div>
                             </td>
                           </tr>
                           {!streamCollapsed && secs.map(sec => (
