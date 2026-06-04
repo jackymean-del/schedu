@@ -429,6 +429,133 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams, in
   )
 }
 
+// ─── Create Stream popover ────────────────────────────────────────────────────
+function StreamCreatePopover({ onClose, onCreate, existingStreams }: {
+  onClose: () => void
+  onCreate: (sections: SectionExt[]) => void
+  existingStreams: string[]
+}) {
+  const [streamName, setStreamName] = useState('')
+  const [grade,      setGrade]      = useState('')
+  const [secs,       setSecs]       = useState('A, B, C')
+  const [str,        setStr]        = useState(40)
+  const ref = useRef<HTMLDivElement>(null)
+  const streamListId = useRef('sc-list-' + makeId()).current
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [onClose])
+
+  const tokens  = secs.split(',').map(t => t.trim().toUpperCase()).filter(Boolean)
+  const preview = grade.trim() && streamName.trim()
+    ? tokens.map(t => `${grade.trim()}-${t}`)
+    : []
+  const canCreate = streamName.trim() !== '' && grade.trim() !== '' && tokens.length > 0
+
+  function create() {
+    if (!canCreate) return
+    onCreate(tokens.map(t => ({
+      id: makeId(),
+      name:     `${grade.trim()}-${t}`,
+      grade:    grade.trim(),
+      stream:   streamName.trim(),
+      room: '', classTeacher: '', strength: str,
+    } as SectionExt)))
+    onClose()
+  }
+
+  const lbl2: React.CSSProperties = {
+    display: 'flex', flexDirection: 'column', gap: 5,
+    fontSize: 11, color: '#6B6891', fontWeight: 600,
+  }
+
+  return (
+    <div ref={ref} style={{
+      position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 320,
+      background: '#fff', border: '1px solid #DDD8FF',
+      borderRadius: 12, boxShadow: '0 10px 32px rgba(90,80,180,0.18)',
+      zIndex: 300, padding: '18px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#111028' }}>New Stream</div>
+          <div style={{ fontSize: 11, color: '#9896B5', marginTop: 2 }}>Define a stream and create its class sections</div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C0BBD8', padding: 2 }}>
+          <X size={14} />
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 14 }}>
+        <label style={lbl2}>
+          Stream name <span style={{ color: '#EF4444' }}>*</span>
+          <input
+            value={streamName}
+            onChange={e => setStreamName(e.target.value)}
+            placeholder="e.g. Science, Commerce, Spark…"
+            list={streamListId}
+            style={inp}
+            autoFocus
+          />
+          <datalist id={streamListId}>
+            {existingStreams.map(s => <option key={s} value={s} />)}
+          </datalist>
+        </label>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <label style={lbl2}>
+            Grade <span style={{ color: '#EF4444' }}>*</span>
+            <input value={grade} onChange={e => setGrade(e.target.value)} placeholder="e.g. XI" style={inp} />
+          </label>
+          <label style={lbl2}>
+            Strength
+            <input type="number" value={str} onChange={e => setStr(+e.target.value)} min={1} max={999}
+              style={{ ...inp, textAlign: 'center' }} />
+          </label>
+        </div>
+
+        <label style={lbl2}>
+          Sections <span style={{ fontWeight: 400, color: '#AAA6C8' }}>(comma-separated)</span>
+          <input value={secs} onChange={e => setSecs(e.target.value)} placeholder="A, B, C" style={inp} />
+        </label>
+      </div>
+
+      {preview.length > 0 && (
+        <div style={{ marginBottom: 14, padding: '10px 12px', background: '#F7F5FF', borderRadius: 8, border: '1px solid #E8E4FF' }}>
+          <div style={{ fontSize: 10, color: '#B0ABCC', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+            Preview · {preview.length} class{preview.length !== 1 ? 'es' : ''} in <strong style={{ color: P }}>{streamName.trim()}</strong>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {preview.map(p => (
+              <span key={p} style={{ background: P_L, color: P, borderRadius: 5, padding: '3px 9px', fontSize: 11, fontWeight: 600, border: `1px solid ${P_B}` }}>{p}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button onClick={create} disabled={!canCreate} style={{
+        width: '100%', padding: '9px', borderRadius: 7,
+        background: canCreate ? P : '#E8E4FF',
+        color: canCreate ? '#fff' : '#B4ADDD',
+        border: 'none', fontSize: 13, fontWeight: 700,
+        cursor: canCreate ? 'pointer' : 'not-allowed',
+        fontFamily: 'inherit',
+        boxShadow: canCreate ? '0 2px 8px rgba(124,111,224,0.28)' : 'none',
+        transition: 'background 0.12s',
+      }}
+        onMouseEnter={e => { if (canCreate) e.currentTarget.style.background = P_D }}
+        onMouseLeave={e => { if (canCreate) e.currentTarget.style.background = P }}
+      >
+        Create stream
+      </button>
+    </div>
+  )
+}
+
 // ─── Stream setup banner ───────────────────────────────────────────────────────
 // Auto-appears when any stream name looks abbreviated (≤ 5 chars).
 // Shows all streams as labelled text inputs — user types full names, clicks Apply.
@@ -565,8 +692,9 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
   onScopeClick?: (sec: Section, rect: DOMRect) => void
 }) {
   const [search, setSearch]         = useState('')
-  const [showBulk, setShowBulk]     = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
+  const [showBulk,         setShowBulk]         = useState(false)
+  const [showStreamCreate, setShowStreamCreate] = useState(false)
+  const [importOpen,       setImportOpen]       = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<Section[]>()
@@ -798,6 +926,36 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
               <Layers size={13} /> Bulk Create
             </button>
             {showBulk && <BulkCreatePopover onClose={() => setShowBulk(false)} onCreate={bulkAdd} existingStreams={existingStreams} />}
+          </div>
+
+          {/* + Stream button */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowStreamCreate(o => !o); setShowBulk(false) }}
+              style={{
+                ...outlineBtn,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: showStreamCreate ? P_L : '#fff',
+                borderColor: showStreamCreate ? P : '#DDD8FF',
+                color: showStreamCreate ? P_D : '#6B6891',
+              }}
+              title="Create a new stream and add its sections"
+              onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = showStreamCreate ? P_L : '#fff'
+                e.currentTarget.style.borderColor = showStreamCreate ? P : '#DDD8FF'
+                e.currentTarget.style.color = showStreamCreate ? P_D : '#6B6891'
+              }}
+            >
+              + Stream
+            </button>
+            {showStreamCreate && (
+              <StreamCreatePopover
+                onClose={() => setShowStreamCreate(false)}
+                onCreate={news => { bulkAdd(news); setShowStreamCreate(false) }}
+                existingStreams={existingStreams}
+              />
+            )}
           </div>
         </div>
       </div>
