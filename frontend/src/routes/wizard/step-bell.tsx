@@ -194,13 +194,14 @@ interface DayOffRule {
 
 // ── Shift (Advanced mode — multiple shifts) ───────────────────
 interface ShiftConfig {
-  id:         string
-  name:       string
-  startTime:  string   // HH:MM
-  periodDur:  number   // minutes
-  maxPeriods: number
-  use12h:     boolean
-  classes:    string[] // class keys assigned to this shift
+  id:            string
+  name:          string
+  startTime:     string   // HH:MM
+  periodDur:     number   // max period duration (minutes)
+  periodDurMin?: number   // min period duration (minutes); AI won't go below this
+  maxPeriods:    number
+  use12h:        boolean
+  classes:       string[] // class keys assigned to this shift
 }
 const DEFAULT_ROT_DAYS: RotDay[] = [
   { full: 'Day 1', short: 'D1' }, { full: 'Day 2', short: 'D2' },
@@ -1469,8 +1470,9 @@ export function StepBell() {
   const [shiftName,  setShiftName]  = useState<string>(  () => _saved?.shiftName ?? 'Main Shift')
   const [startTime,  setStartTime]  = useState<string>(  () => _saved?.startTime ?? (config.startTime ?? '09:00'))
   const [use12h,     setUse12h]     = useState<boolean>( () => _saved?.use12h ?? true)
-  const [periodDur,  setPeriodDur]  = useState<number>(  () => _saved?.periodDur ?? (config.defaultSessionDuration ?? 40))
-  const [maxPeriods, setMaxPeriods] = useState<number>(  () => _saved?.maxPeriods ?? (config.periodsPerDay ?? 8))
+  const [periodDur,    setPeriodDur]    = useState<number>(() => _saved?.periodDur    ?? (config.defaultSessionDuration ?? 40))
+  const [periodDurMin, setPeriodDurMin] = useState<number>(() => (_saved as any)?.periodDurMin ?? Math.max(10, Math.round((_saved?.periodDur ?? (config.defaultSessionDuration ?? 40)) * 0.5)))
+  const [maxPeriods,   setMaxPeriods]   = useState<number>(() => _saved?.maxPeriods   ?? (config.periodsPerDay ?? 8))
   const [workDays,   setWorkDays]   = useState<string[]>(() => {
     if (_saved?.workDays?.length) return _saved.workDays
     return config.workDays?.length ? config.workDays.map(d => d.charAt(0) + d.slice(1, 3).toLowerCase()) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
@@ -1554,13 +1556,13 @@ export function StepBell() {
   // ── Persistence ───────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem(bellKey, JSON.stringify({
-      shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
+      shiftName, startTime, use12h, periodDur, periodDurMin, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
       customStreams, classStreamMap, autoBellMode, schoolEndTime,
-    } satisfies SavedBell))
-  }, [shiftName, startTime, use12h, periodDur, maxPeriods, workDays, rows,
+    } as SavedBell))
+  }, [shiftName, startTime, use12h, periodDur, periodDurMin, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
@@ -2396,7 +2398,7 @@ export function StepBell() {
               ) : uniqueGrades.length === 0 ? (
                 <div style={{ padding: '12px 16px' }}>
                   <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                    No classes defined yet — complete Step 1 Resources first.
+                    No classes defined yet — complete Step 1 (Resources) first.
                   </span>
                 </div>
               ) : (
@@ -2671,10 +2673,17 @@ export function StepBell() {
                   )}
                   <div style={FH}>adjusts last period</div>
                 </div>
-                {/* Period */}
+                {/* Period Min */}
                 <div>
-                  <div style={FL}>Period (min)</div>
-                  <NumInput className="b-input" value={periodDur} min={10} max={120} onChange={handlePeriodDurChange}
+                  <div style={FL}>Period Min (min)</div>
+                  <NumInput className="b-input" value={periodDurMin} min={10} max={periodDur - 5}
+                    onChange={v => setPeriodDurMin(Math.min(v, periodDur - 5))}
+                    style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
+                </div>
+                {/* Period Max */}
+                <div>
+                  <div style={FL}>Period Max (min)</div>
+                  <NumInput className="b-input" value={periodDur} min={periodDurMin + 5} max={240} onChange={handlePeriodDurChange}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Max periods */}
@@ -2905,10 +2914,20 @@ export function StepBell() {
                   )}
                   <div style={FH}>adjusts last period</div>
                 </div>
-                {/* Period */}
+                {/* Period Min */}
                 <div>
-                  <div style={FL}>Period (min)</div>
-                  <NumInput className="b-input" value={activeShift.periodDur} min={10} max={120}
+                  <div style={FL}>Period Min (min)</div>
+                  <NumInput className="b-input"
+                    value={activeShift.periodDurMin ?? Math.max(10, Math.round(activeShift.periodDur * 0.5))}
+                    min={10} max={activeShift.periodDur - 5}
+                    onChange={v => updateActiveShift({ periodDurMin: Math.min(v, activeShift.periodDur - 5) })}
+                    style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
+                </div>
+                {/* Period Max */}
+                <div>
+                  <div style={FL}>Period Max (min)</div>
+                  <NumInput className="b-input" value={activeShift.periodDur}
+                    min={(activeShift.periodDurMin ?? 10) + 5} max={240}
                     onChange={handlePeriodDurChange}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
@@ -3159,7 +3178,7 @@ export function StepBell() {
                 </div>
                 <p style={{ fontSize: 11, color: '#6B7280', margin: '0 0 10px', lineHeight: 1.5 }}>
                   {autoBellMode
-                    ? 'Bell timing will be auto-generated based on your school hours. You can customise it anytime from Step 1.'
+                    ? 'Bell timing will be auto-generated based on your school hours. You can customise it anytime from Step 2.'
                     : 'Skip manual bell configuration. Enter your school end time below — the system will generate an optimised schedule with periods and breaks automatically.'}
                 </p>
                 {/* End time + regenerate when in auto mode */}
