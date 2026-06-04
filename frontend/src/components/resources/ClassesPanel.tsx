@@ -618,7 +618,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
       return st ? Boolean(STREAM_EXPANSIONS[st.toLowerCase()]) : false
     })
     if (!needsWork) { autoExpandDone.current = true; return }
-    setSections(prev => prev.map(s => {
+    setSections(sections.map(s => {
       const sec = s as SectionExt
       if (sec.stream) return s                            // keep explicit streams
       const g  = sec.grade ?? getGrade(s.name)
