@@ -210,7 +210,7 @@ const TT_SNAPSHOT_PFX = 'schedu-tt-snap-'   // + ttId → full store snapshot pe
 // Fields that differ per timetable (everything except auth/UI).
 // We save and restore all of these when switching between timetables.
 const TT_SNAPSHOT_FIELDS = [
-  'step','config','sections','staff','breaks','periods',
+  'step','config','sections','staff','subjects','breaks','periods',
   'classTT','teacherTT','substitutions','conflicts','suggestions',
   'optionalConfigs','subjectPools','participantPools','rooms',
   'facilities','teacherPools',
@@ -237,6 +237,49 @@ function restoreTTSnapshot(id: string): boolean {
     useTimetableStore.setState(snap as any)
     return true
   } catch { return false }
+}
+
+// Normalise grade tokens like "XI" → "Class XI" to match the GRADES dropdown
+function normaliseGrade(g: string): string {
+  if (!g) return ''
+  if (GRADES.includes(g)) return g
+  const withClass = 'Class ' + g
+  if (GRADES.includes(withClass)) return withClass
+  return g
+}
+
+/** Read the saved snapshot for a timetable and derive accurate metadata. */
+function derivedFromSnapshot(ttId: string): {
+  classes?: number; subjects?: number; teachers?: number; rooms?: number
+  fromGrade?: string; toGrade?: string
+} | null {
+  try {
+    const raw = localStorage.getItem(TT_SNAPSHOT_PFX + ttId)
+    if (!raw) return null
+    const snap = JSON.parse(raw) as Record<string, any>
+
+    const sections: any[] = Array.isArray(snap.sections) ? snap.sections : []
+    const staff:    any[] = Array.isArray(snap.staff)    ? snap.staff    : []
+    const subjects: any[] = Array.isArray(snap.subjects) ? snap.subjects : []
+    const rooms:    any[] = Array.isArray(snap.rooms)    ? snap.rooms    : []
+
+    // Derive grade range from actual section data
+    const grades = sections
+      .map((s: any) => normaliseGrade(s.grade || ''))
+      .filter(Boolean)
+    const sortedGrades = grades.sort((a, b) => GRADES.indexOf(a) - GRADES.indexOf(b))
+    const fromGrade = sortedGrades[0]
+    const toGrade   = sortedGrades[sortedGrades.length - 1]
+
+    return {
+      classes:   sections.length > 0 ? sections.length : undefined,
+      subjects:  subjects.length > 0 ? subjects.length : undefined,
+      teachers:  staff.length    > 0 ? staff.length    : undefined,
+      rooms:     rooms.length    > 0 ? rooms.length    : undefined,
+      fromGrade: fromGrade || undefined,
+      toGrade:   toGrade   || undefined,
+    }
+  } catch { return null }
 }
 
 const SEED_TT: TTEntry[] = [
@@ -644,18 +687,23 @@ function EditTimetableModal({
 }) {
   const BOARDS: BoardKey[] = ['CBSE', 'ICSE', 'IB', 'State', 'Custom']
 
+  // Read actual wizard data from snapshot — most accurate source of truth
+  const snap = useMemo(() => derivedFromSnapshot(tt.id), [tt.id])
+
   const [name,      setName]      = useState(tt.name)
   const [startDate, setStartDate] = useState(tt.startDate)
   const [endDate,   setEndDate]   = useState(tt.endDate)
   const [board,     setBoard]     = useState<BoardKey>((tt.board as BoardKey) ?? 'CBSE')
-  // Use '' as the "not yet set" sentinel — shows a blank "— select —" option
-  const [fromGrade, setFromGrade] = useState(tt.fromGrade ?? '')
-  const [toGrade,   setToGrade]   = useState(tt.toGrade   ?? '')
-  // Use string so fields can be left blank ("create manually")
-  const [classes,  setClasses]  = useState(String(tt.approxClasses))
-  const [subjects, setSubjects] = useState(tt.approxSubjects != null ? String(tt.approxSubjects) : '')
-  const [teachers, setTeachers] = useState(String(tt.approxTeachers))
-  const [rooms,    setRooms]    = useState(tt.approxRooms    != null ? String(tt.approxRooms)    : '')
+
+  // Grade range: snapshot (actual sections) > TTEntry metadata > ''
+  const [fromGrade, setFromGrade] = useState(snap?.fromGrade ?? tt.fromGrade ?? '')
+  const [toGrade,   setToGrade]   = useState(snap?.toGrade   ?? tt.toGrade   ?? '')
+
+  // Counts: snapshot (live data) > TTEntry metadata > '' (blank = manual)
+  const [classes,  setClasses]  = useState(String(snap?.classes  ?? tt.approxClasses))
+  const [subjects, setSubjects] = useState(snap?.subjects  != null ? String(snap.subjects)  : tt.approxSubjects != null ? String(tt.approxSubjects) : '')
+  const [teachers, setTeachers] = useState(String(snap?.teachers ?? tt.approxTeachers))
+  const [rooms,    setRooms]    = useState(snap?.rooms != null ? String(snap.rooms) : tt.approxRooms != null ? String(tt.approxRooms) : '')
 
   // When board changes, only auto-fill subjects if it's still blank or was the previous board's default
   const handleBoard = (b: BoardKey) => {
@@ -731,6 +779,11 @@ function EditTimetableModal({
             </div>
             <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>
               Update the basic setup for <strong>{tt.name}</strong>
+              {snap && (
+                <span style={{ display: 'block', fontSize: 11.5, color: '#059669', marginTop: 3, fontWeight: 500 }}>
+                  ✓ Counts and grade range loaded from your saved wizard data
+                </span>
+              )}
             </p>
           </div>
           <button onClick={onClose} style={{
