@@ -677,7 +677,22 @@ export function StepResourcesV2() {
 
               {/* Panels — all mounted, toggled via display */}
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'classes' ? 'flex' : 'none', flexDirection: 'column' }}>
-                  <ClassesPanel
+                  {periods.length === 0 && (
+                  <div style={{
+                    padding: '7px 14px', background: '#FFF7ED',
+                    border: '1px solid #FED7AA', borderRadius: 8, marginBottom: 8,
+                    fontSize: 12, color: '#9A3412', fontWeight: 500,
+                    display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                  }}>
+                    <span>⏱</span>
+                    <span>
+                      <strong>Scope</strong> lets you set day &amp; period availability per resource.
+                      The full period matrix will be available once you configure <strong>Shift &amp; Timing</strong> in Step 2.
+                      You can still set day-level availability now.
+                    </span>
+                  </div>
+                )}
+                <ClassesPanel
                   sections={sections} setSections={setSections}
                   onScopeClick={(sec, rect) =>
                     setScopeTarget((sec as any).id === '__bulk__'
