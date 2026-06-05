@@ -784,9 +784,17 @@ export const useTimetableStore = create<ScheduState>()(
         name: 'schedu-v3',
         merge: (persisted: unknown, current: ScheduState): ScheduState => {
           const p = persisted as Partial<ScheduState> | null
+          // ── Data migrations ──────────────────────────────────────────────
+          // EST = Extra Study Time (a period slot, NOT a subject).
+          // Remove any "Environmental Studies" subject that was mistakenly
+          // auto-generated in earlier versions.
+          const stripEST = (arr: any[] | undefined): any[] | undefined =>
+            arr?.filter((s: any) => s?.name !== 'Environmental Studies')
+          const cleanSubjects = stripEST((p as any)?.subjects)
           return {
             ...current,
             ...p,
+            subjects: cleanSubjects ?? current.subjects,
             config: {
               ...current.config,
               ...(p?.config ?? {}),

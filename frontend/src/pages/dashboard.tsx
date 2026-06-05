@@ -979,6 +979,23 @@ export function DashboardPage() {
   useEffect(() => {
     const activeId = getActiveTTId()
     if (activeId) saveTTSnapshot(activeId)
+
+    // ── One-time migration: strip "Environmental Studies" from every snapshot ──
+    // EST = Extra Study Time (a timetable period slot), NOT a curriculum subject.
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (!key?.startsWith(TT_SNAPSHOT_PFX)) continue
+        const raw = localStorage.getItem(key)
+        if (!raw) continue
+        const snap = JSON.parse(raw) as Record<string, any>
+        if (Array.isArray(snap.subjects)) {
+          const before = snap.subjects.length
+          snap.subjects = snap.subjects.filter((s: any) => s?.name !== 'Environmental Studies')
+          if (snap.subjects.length !== before) localStorage.setItem(key, JSON.stringify(snap))
+        }
+      }
+    } catch { /* ignore storage errors */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])  // run once on mount
 
