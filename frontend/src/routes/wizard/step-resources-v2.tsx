@@ -160,8 +160,8 @@ const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number; short?: 
   { name: 'Political Science',        cat: 'Compulsory',   ppw: 6,  short: 'POL SC'},
   { name: 'Psychology',               cat: 'Optional',     ppw: 4,  short: 'PSY'  },
   { name: 'Sociology',                cat: 'Optional',     ppw: 4,  short: 'SOC'  },
-  // ── All Sr. Secondary streams ────────────────────────────────────────────────
-  { name: 'Environmental Studies',    cat: 'Compulsory',   ppw: 1,  short: 'EST'  },
+  // ── All Sr. Secondary streams (CCA / activities) ─────────────────────────────
+  // Note: "EST" in the school timetable = Extra Study Time — a period slot, NOT a subject.
   { name: 'Physical Education',       cat: 'CCA',          ppw: 1,  short: 'PE'   },
   { name: 'Painting',                 cat: 'CCA',          ppw: 1,  short: 'PAINT'},
   { name: 'Library',                  cat: 'CCA',          ppw: 1,  short: 'LIB'  },
@@ -189,7 +189,6 @@ function buildDefaultSubjects(board: CurriculumBoard = 'CBSE', sections: Section
     'Physics','Chemistry','Biology','Botany','Zoology',
     'Accountancy','Business Studies','Entrepreneurship',
     'Political Science','History','Geography','Psychology','Sociology',
-    'Environmental Studies',
     'Applied Mathematics','Mathematics (Optional)',
     'Biotechnology','Fine Arts','Legal Studies','Statistics',
   ])

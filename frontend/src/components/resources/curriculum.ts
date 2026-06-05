@@ -370,9 +370,9 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     hint: 'Environmental Studies — CBSE: pre-primary + primary (Nursery–V); ICSE: greater emphasis through V',
   },
   'Environmental Studies': {
-    grades: ['preK','primary','srSec'],
-    slots: { preK: 3, primary: 4, srSec: 1 },
-    hint: 'EVS for Nursery–V; at XI–XII a short mandatory environmental awareness period (EST) appears in all streams',
+    grades: ['preK','primary'],
+    slots: { preK: 3, primary: 4 },
+    hint: 'Environmental Studies (EVS) — Nursery through Class V only. Note: "EST" in XI–XII timetables means Extra Study Time, not a subject.',
   },
 
   // ── Primary (I–V) ─────────────────────────────────────────────────────────────
