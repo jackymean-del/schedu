@@ -89,7 +89,7 @@ function buildClassConfigs(
     return {
       sectionName:      name,
       periodsPerWeek:   existing?.periodsPerWeek ?? defaultSlots,
-      maxPeriodsPerDay: existing?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+      maxPeriodsPerDay: Math.min(existing?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2, existing?.periodsPerWeek ?? defaultSlots),
       sessionDuration:  existing?.sessionDuration ?? sub.sessionDuration ?? 45,
     }
   })
@@ -326,7 +326,8 @@ function SectionSubRow({
 }) {
   const cfg     = (sub.classConfigs ?? []).find(c => c.sectionName === secName)
   const slots   = cfg?.periodsPerWeek ?? sub.periodsPerWeek
-  const maxDay  = cfg?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2
+  // maxPeriodsPerDay can never exceed periodsPerWeek
+  const maxDay  = Math.min(cfg?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2, slots)
   const cat     = cfg?.category ?? sub.category ?? 'Compulsory'
   const hasLab  = cfg?.requiresLab !== undefined ? cfg.requiresLab : (sub.requiresLab ?? false)
   const isHours = unit === 'hours_week' || unit === 'hours_month'
@@ -389,7 +390,7 @@ function SectionSubRow({
           className="rp-inp rp-num" data-grade-input
           onChange={e => setMaxDayText(e.target.value)}
           onFocus={() => { setMaxDayFocused(true); setMaxDayText(String(maxDay)) }}
-          onBlur={() => { const v = parseInt(maxDayText); if (!isNaN(v) && v >= 1) onUpdateMaxDay(v); setMaxDayFocused(false) }}
+          onBlur={() => { const v = parseInt(maxDayText); if (!isNaN(v) && v >= 1) onUpdateMaxDay(Math.min(v, slots)); setMaxDayFocused(false) }}
           onKeyDown={e => { e.stopPropagation(); gradeTableKeyNav(e); if (e.key === 'Enter') e.currentTarget.blur() }}
           style={secInp}
         />
@@ -441,7 +442,11 @@ function GradeSlotRow({
   const isHours = unit === 'hours_week' || unit === 'hours_month'
 
   const slots      = getClassSlots(sub, sections[0])
-  const maxDay     = (sub.classConfigs ?? []).find(c => c.sectionName === sections[0])?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2
+  // maxPeriodsPerDay can never exceed periodsPerWeek
+  const maxDay     = Math.min(
+    (sub.classConfigs ?? []).find(c => c.sectionName === sections[0])?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+    slots
+  )
   const displayVal = toDisplayValue(slots, unit, sessionMins)
   const editableHr = toEditableHours(slots, unit, sessionMins)
   // Always use local editText when focused so clearing + retyping works
@@ -520,7 +525,7 @@ function GradeSlotRow({
             className="rp-inp rp-num" data-grade-input
             onChange={e => setMaxDayText(e.target.value)}
             onFocus={() => { setMaxDayFocused(true); setMaxDayText(String(maxDay)) }}
-            onBlur={() => { const v = parseInt(maxDayText); if (!isNaN(v) && v >= 1) sections.forEach(sn => onUpdateSectionMaxDay(sn, v)); setMaxDayFocused(false) }}
+            onBlur={() => { const v = parseInt(maxDayText); if (!isNaN(v) && v >= 1) sections.forEach(sn => onUpdateSectionMaxDay(sn, Math.min(v, slots))); setMaxDayFocused(false) }}
             onKeyDown={e => { e.stopPropagation(); gradeTableKeyNav(e); if (e.key === 'Enter') e.currentTarget.blur() }}
             style={{ ...fldS, textAlign: 'center' as const, fontSize: 12 }}
           />
