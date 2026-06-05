@@ -553,9 +553,11 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
   'Economics': {
     grades: ['secondary','srSec'],
-    streams: ['commerce','arts','general'],  // Commerce + Humanities + generic science; NOT Spark (pcb)
+    streams: ['commerce','arts'],   // Commerce + Humanities ONLY
+    // Science sections that use ECO as a 5th-subject option (e.g. XI-D) should
+    // add it manually — auto-assign must not push ECO onto any science/Spark section.
     slots: { secondary: 3, srSec: 5 },
-    hint: 'Economics — Commerce core, Humanities elective, optional 5th in some science sections. NOT assigned to Spark (PCB) stream.',
+    hint: 'Economics — auto-assigned to Commerce and Humanities only. Add manually to individual science sections where it is used as a 5th subject.',
   },
   'Artificial Intelligence': {
     grades: ['secondary','srSec'],
