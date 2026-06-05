@@ -1078,6 +1078,7 @@ export function DashboardPage() {
     saveTTList(next)
     setEditingTT(null)
     // If this is the active timetable, sync new counts to the store config
+    // AND trim existing resource arrays so the Resources page reflects the new targets.
     if (getActiveTTId() === updated.id) {
       const s = useTimetableStore.getState() as any
       s.setConfig?.({
@@ -1087,6 +1088,44 @@ export function DashboardPage() {
         numSubjects: updated.approxSubjects,
         numRooms:    updated.approxRooms,
       })
+
+      // ── Trim / reset resource arrays to match the new targets ─────────────
+      // Staff
+      const tgtStaff = updated.approxTeachers
+      if (tgtStaff != null) {
+        const cur = (s.staff as any[]) ?? []
+        if (cur.length !== tgtStaff) {
+          s.setStaff?.(cur.length > tgtStaff ? cur.slice(0, tgtStaff) : [])
+        }
+      }
+
+      // Subjects
+      const tgtSub = updated.approxSubjects
+      if (tgtSub != null) {
+        const curSub = ((s.subjects ?? s.legacySubjects) as any[]) ?? []
+        if (curSub.length !== tgtSub) {
+          const fn = s.setSubjects ?? s.setLegacySubjects
+          fn?.(curSub.length > tgtSub ? curSub.slice(0, tgtSub) : [])
+        }
+      }
+
+      // Rooms
+      const tgtRooms = updated.approxRooms
+      if (tgtRooms != null) {
+        const curRooms = (s.rooms as any[]) ?? []
+        if (curRooms.length !== tgtRooms) {
+          s.setRooms?.(curRooms.length > tgtRooms ? curRooms.slice(0, tgtRooms) : [])
+        }
+      }
+
+      // Sections — reset so they re-seed from class definitions on next open
+      const tgtSec = updated.approxClasses
+      if (tgtSec != null) {
+        const curSec = (s.sections as any[]) ?? []
+        if (curSec.length !== tgtSec) {
+          s.setSections?.(curSec.length > tgtSec ? curSec.slice(0, tgtSec) : [])
+        }
+      }
     }
     // Navigate into the wizard for this timetable
     handleContinue(updated)
