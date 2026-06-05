@@ -19,7 +19,7 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type CurriculumBoard = 'CBSE' | 'ICSE' | 'IB' | 'Cambridge' | 'Custom'
 export type GradeGroup      = 'preK' | 'primary' | 'middle' | 'secondary' | 'srSec'
-export type Stream          = 'science' | 'commerce' | 'arts' | 'general'
+export type Stream          = 'science' | 'commerce' | 'arts' | 'general' | 'pcb'
 
 export const BOARD_LABELS: Record<CurriculumBoard, string> = {
   CBSE:      'CBSE',
@@ -96,7 +96,9 @@ export function getGrade(sectionName: string): string {
  */
 export function detectStream(sectionName: string): Stream {
   const n = sectionName.toLowerCase()
-  if (/\bsci\b|pcm|pcb|\bphysics\b/.test(n))           return 'science'
+  if (/\bsci\b|pcm|\bphysics\b/.test(n))                return 'science'
+  // "Spark" stream (PCB — Biology/Botany/Zoology, no Economics or Computer)
+  if (/spark|\bspa\b|\bpcb\b|\bbot\b|\bzoo\b/.test(n))  return 'pcb'
   if (/\bcom\b(?!p)|commerce|bst|acc|account/.test(n))  return 'commerce'
   if (/arts?|hum|humanities|lit/.test(n))               return 'arts'
   return 'general'
@@ -442,10 +444,10 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
   'Computer Science': {
     grades: ['primary','middle','secondary','srSec'],
-    streams: ['science','general'],
+    streams: ['science','general','commerce'],  // Science + untagged + Commerce; NOT Spark (pcb) or Humanities
     slots:    { primary: 2, middle: 3, secondary: 3, srSec: 5 },
     ibSlots:  { primary: 2, middle: 3, secondary: 4, srSec: 6 },
-    hint: 'CBSE: Class III+ basics, full CS from VI; standalone subject at XI–XII (Science/general stream)',
+    hint: 'CBSE: Class III+ basics, full CS from VI; standalone subject at XI–XII for Science and Commerce. NOT assigned to Spark (PCB) or Humanities.',
   },
 
   // ── Middle school (VI–VIII) ────────────────────────────────────────────────────
@@ -477,7 +479,7 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   // ── Secondary (IX–X) — science disciplines ────────────────────────────────────
   'Physics': {
     grades: ['secondary','srSec'],
-    streams: ['science','general'],   // science sections + untagged (general) sections; NOT commerce/arts
+    streams: ['science','general','pcb'],  // science + untagged + Spark (PCB); NOT commerce/arts
     requiresLab: true,
     slots:           { secondary: 4, srSec: 5 },
     icseSlots:       { secondary: 4, srSec: 6 },
@@ -487,7 +489,7 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
   'Chemistry': {
     grades: ['secondary','srSec'],
-    streams: ['science','general'],   // science + untagged sections; NOT commerce/arts
+    streams: ['science','general','pcb'],  // science + untagged + Spark; NOT commerce/arts
     requiresLab: true,
     slots:           { secondary: 4, srSec: 5 },
     icseSlots:       { secondary: 4, srSec: 6 },
@@ -497,7 +499,7 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
   'Biology': {
     grades: ['secondary','srSec'],
-    streams: ['science','general'],   // PCB science sections
+    streams: ['science','general','pcb'],  // PCB science sections including Spark
     requiresLab: true,
     slots:           { secondary: 4, srSec: 5 },
     icseSlots:       { secondary: 4, srSec: 6 },
@@ -507,17 +509,17 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
   'Botany': {
     grades: ['srSec'],
-    streams: ['science','general'],
+    streams: ['pcb'],    // Spark (PCB) sections ONLY
     requiresLab: true,
     slots: { srSec: 4 },
-    hint: 'Botany — SPARK (PCB) science sections at XI–XII; requires lab',
+    hint: 'Botany — Spark (PCB) sections only at XI–XII; requires lab',
   },
   'Zoology': {
     grades: ['srSec'],
-    streams: ['science','general'],
+    streams: ['pcb'],    // Spark (PCB) sections ONLY
     requiresLab: true,
     slots: { srSec: 4 },
-    hint: 'Zoology — SPARK (PCB) science sections at XI–XII; requires lab',
+    hint: 'Zoology — Spark (PCB) sections only at XI–XII; requires lab',
   },
   'Biotechnology': {
     grades: ['srSec'],
@@ -551,8 +553,9 @@ export const CURRICULUM: Record<string, SubjectRule> = {
   },
   'Economics': {
     grades: ['secondary','srSec'],
+    streams: ['commerce','arts','general'],  // Commerce + Humanities + generic science; NOT Spark (pcb)
     slots: { secondary: 3, srSec: 5 },
-    hint: 'Economics — core Commerce subject (5–6 p/w) and Humanities elective (4–5 p/w) at XI–XII',
+    hint: 'Economics — Commerce core, Humanities elective, optional 5th in some science sections. NOT assigned to Spark (PCB) stream.',
   },
   'Artificial Intelligence': {
     grades: ['secondary','srSec'],
