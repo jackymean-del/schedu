@@ -1084,13 +1084,22 @@ export function SubjectsPanel({
   const [localSnapshot,       setLocalSnapshot]       = useState<SubjectSnapshot[] | null>(null)
   const [localAiAssignedIds,  setLocalAiAssignedIds]  = useState<Set<string>>(new Set())
 
-  const [sortAZ, setSortAZ] = useState(false)
+  const [sortAZ,           setSortAZ]           = useState(false)
+  const [filterUnassigned, setFilterUnassigned] = useState(false)
+
+  // Clear the unassigned filter automatically once all are assigned
+  useEffect(() => {
+    if (filterUnassigned && unassignedCount === 0) setFilterUnassigned(false)
+  }, [filterUnassigned, unassignedCount])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    const base = !q ? subjects : subjects.filter(s => s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q))
+    let base = !q ? subjects : subjects.filter(s =>
+      s.name.toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)
+    )
+    if (filterUnassigned) base = base.filter(s => getAssignedClasses(s).length === 0)
     return sortAZ ? [...base].sort((a, b) => a.name.localeCompare(b.name)) : base
-  }, [subjects, search, sortAZ])
+  }, [subjects, search, sortAZ, filterUnassigned])
 
   const classOptions = useMemo<ChipOption[]>(() => {
     const map = new Map<string, string[]>()
@@ -1224,9 +1233,22 @@ export function SubjectsPanel({
             {subjects.length}
           </span>
           {subjects.length > 0 && unassignedCount > 0 && (
-            <span style={{ fontSize: 10, color: '#D97706', fontWeight: 700, background: '#FFFBEB', padding: '1px 6px 2px', borderRadius: 4, border: '1px solid #FDE68A' }}>
+            <button
+              onClick={() => setFilterUnassigned(p => !p)}
+              title={filterUnassigned ? 'Showing only unassigned — click to clear filter' : `Click to show only the ${unassignedCount} unassigned subject${unassignedCount !== 1 ? 's' : ''}`}
+              style={{
+                fontSize: 10, fontWeight: 700, padding: '1px 7px 2px', borderRadius: 4,
+                border: `1.5px solid ${filterUnassigned ? '#D97706' : '#FDE68A'}`,
+                background: filterUnassigned ? '#FEF3C7' : '#FFFBEB',
+                color: '#D97706', cursor: 'pointer',
+                fontFamily: 'inherit',
+                boxShadow: filterUnassigned ? 'inset 0 1px 3px rgba(217,119,6,0.15)' : 'none',
+                outline: 'none', display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              {filterUnassigned && <span style={{ fontSize: 9 }}>✕</span>}
               {unassignedCount} unassigned
-            </span>
+            </button>
           )}
         </div>
 

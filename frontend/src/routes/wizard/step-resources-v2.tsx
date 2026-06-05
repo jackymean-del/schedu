@@ -624,7 +624,7 @@ export function StepResourcesV2() {
         height: 'calc(100vh - 165px)', overflowY: 'auto',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Nav items */}
+        {/* Nav tabs — readiness dot embedded directly on each item */}
         {TAB_META.map(tab => {
           const active = activeTab === tab.key
           const count  = counts[tab.key]
@@ -634,7 +634,7 @@ export function StepResourcesV2() {
               onClick={() => setActiveTab(tab.key)}
               style={{
                 width: '100%', textAlign: 'left', border: 'none',
-                cursor: 'pointer', padding: '6px 12px',
+                cursor: 'pointer', padding: '7px 12px',
                 background: active ? '#EDE9FF' : 'transparent',
                 borderRight: `3px solid ${active ? P : 'transparent'}`,
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -643,6 +643,13 @@ export function StepResourcesV2() {
               onMouseEnter={e => { if (!active) (e.currentTarget.style.background = '#F5F3FF') }}
               onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent') }}
             >
+              {/* Readiness dot */}
+              <div style={{
+                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                background: ready ? '#22C55E' : '#D1CFF0',
+                boxShadow: ready ? '0 0 0 2px #D1FAE5' : 'none',
+                transition: 'background 0.2s',
+              }} />
               <span style={{ color: active ? P : ready ? '#8B87AD' : '#D1CFF0', display: 'flex', flexShrink: 0 }}>
                 {tab.icon}
               </span>
@@ -662,37 +669,6 @@ export function StepResourcesV2() {
             </button>
           )
         })}
-
-        {/* Readiness */}
-        <div style={{
-          margin: '10px 10px 0', padding: '8px 10px',
-          background: '#FAFAFE', borderRadius: 7, border: '1px solid #EAE6FF',
-        }}>
-          <div style={{
-            fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: '#C4C0DC', marginBottom: 6,
-          }}>
-            Readiness
-          </div>
-          {TAB_META.map(tab => {
-            const ok = counts[tab.key] > 0
-            return (
-              <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer' }}
-                onClick={() => setActiveTab(tab.key)}>
-                <div style={{
-                  width: 10, height: 10, borderRadius: '50%',
-                  background: ok ? '#22C55E' : '#E5E7EB',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  {ok && <CheckCircle2 size={6} color="#fff" />}
-                </div>
-                <span style={{ fontSize: 11, color: ok ? '#16A34A' : '#9CA3AF', fontWeight: ok ? 600 : 400 }}>
-                  {tab.label}
-                </span>
-              </div>
-            )
-          })}
-        </div>
 
         {/* Fill / Regenerate button — visible whenever classes exist */}
         {counts.classes > 0 && (
@@ -862,6 +838,90 @@ export function StepResourcesV2() {
             </div>
           )}
         </div>
+
+        {/* ── Inter-tab Save & Continue footer ────────────────────────────── */}
+        {hasAnyData && (() => {
+          const TABS: TabKey[] = ['classes','subjects','teachers','rooms']
+          const idx  = TABS.indexOf(activeTab)
+          const prev = idx > 0 ? TABS[idx - 1] : null
+          const next = idx < TABS.length - 1 ? TABS[idx + 1] : null
+          const TAB_LABELS: Record<TabKey,string> = { classes:'Classes', subjects:'Subjects', teachers:'Faculty', rooms:'Rooms' }
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 18px', borderTop: '1px solid #EAE6FF',
+              background: '#fff', flexShrink: 0,
+            }}>
+              {/* Back */}
+              {prev ? (
+                <button onClick={() => setActiveTab(prev)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '7px 16px', borderRadius: 7,
+                  border: '1.5px solid #DDD8FF', background: '#fff',
+                  color: '#5B52C4', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                  ← {TAB_LABELS[prev]}
+                </button>
+              ) : <div />}
+
+              {/* Readiness summary pills */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {TABS.map(t => {
+                  const ok = counts[t] > 0
+                  return (
+                    <button key={t} onClick={() => setActiveTab(t)} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '3px 8px', borderRadius: 12,
+                      background: t === activeTab ? P_L : ok ? '#F0FDF4' : '#F9FAFB',
+                      border: `1px solid ${t === activeTab ? '#DDD8FF' : ok ? '#BBF7D0' : '#E5E7EB'}`,
+                      color: t === activeTab ? P : ok ? '#15803D' : '#9CA3AF',
+                      fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}>
+                      <span style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: ok ? '#22C55E' : '#D1D5DB', flexShrink: 0,
+                      }} />
+                      {TAB_LABELS[t]}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Next / Proceed */}
+              {next ? (
+                <button onClick={() => setActiveTab(next)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '7px 16px', borderRadius: 7, border: 'none',
+                  background: P, color: '#fff', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 2px 8px rgba(124,111,224,0.28)',
+                }}>
+                  {TAB_LABELS[next]} →
+                </button>
+              ) : (
+                <button
+                  onClick={() => { if (allReady) setStep(2) }}
+                  disabled={!allReady}
+                  title={allReady ? 'All resources ready — proceed to Shift & Timing' : 'Complete all four resource tabs first'}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '7px 16px', borderRadius: 7, border: 'none',
+                    background: allReady ? '#16A34A' : '#E5E7EB',
+                    color: allReady ? '#fff' : '#9CA3AF',
+                    fontSize: 12, fontWeight: 700,
+                    cursor: allReady ? 'pointer' : 'default', fontFamily: 'inherit',
+                    boxShadow: allReady ? '0 2px 8px rgba(22,163,74,0.28)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {allReady ? '✓ Save & Proceed to Step 2' : 'Complete all tabs to proceed'}
+                </button>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Scope modal */}
         {scopeTarget && (
