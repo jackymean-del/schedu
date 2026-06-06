@@ -4,7 +4,7 @@ export const WIZARD_STEPS = [
   { n: 1, label: 'Resources' },
   { n: 2, label: 'Shifts & Timing' },
   { n: 3, label: 'Allocation' },
-  { n: 4, label: 'Student Groups' },
+  { n: 4, label: 'Groups & Combos' },
   { n: 5, label: 'Generate' },
 ]
 

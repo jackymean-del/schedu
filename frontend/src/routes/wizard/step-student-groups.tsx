@@ -31,7 +31,9 @@ import {
   Sparkles, Users2, ChevronRight, ChevronLeft, RefreshCw,
   BookOpen, Users, GraduationCap, Plus, Trash2, Pencil,
   CheckCircle2, XCircle, AlertCircle, Info, Zap, ArrowUpAZ,
+  Shuffle,
 } from 'lucide-react'
+import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSection'
 
 // ── types ─────────────────────────────────────────────────────
 
@@ -375,6 +377,8 @@ export function StepStudentGroups() {
     for (const grp of dynamicLearningGroups as any[]) result[grp.id] = false
     return result
   }, [dynamicLearningGroups])
+
+  const [activeTab, setActiveTab] = useState<'groups' | 'combos'>('groups')
 
   const [regenerating, setRegenerating]   = useState(false)
   const [minGroupSize, setMinGroupSize]   = useState(5)
@@ -890,18 +894,54 @@ export function StepStudentGroups() {
   return (
     <div style={{ padding: '20px 24px 40px', maxWidth: 1280, margin: '0 auto' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Users2 size={20} color="#7C6FE0" />
         </div>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Student Groups</h2>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-            <em style={{ color: '#7C6FE0' }}>AI</em> groups students who chose the same optional subject across classes, scheduling all groups in the same parallel period.
+            Define <em style={{ color: '#7C6FE0' }}>student preference groups</em> and <em style={{ color: '#D97706' }}>OR / AND subject combos</em> for parallel scheduling.
           </div>
         </div>
       </div>
+
+      {/* ── Tab bar ── */}
+      <div style={{
+        display: 'flex', gap: 4, marginBottom: 20,
+        borderBottom: '2px solid #E8E4FF', paddingBottom: 0,
+      }}>
+        {([
+          { key: 'groups', label: 'Student Groups', icon: <Users2 size={14} />, desc: 'Preference matrix & AI group formation' },
+          { key: 'combos', label: 'Subject Combos',  icon: <Shuffle size={14} />, desc: 'OR / AND subject combination rules' },
+        ] as const).map(tab => {
+          const active = activeTab === tab.key
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              title={tab.desc}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '9px 18px', border: 'none', cursor: 'pointer',
+                background: 'transparent', fontFamily: 'inherit',
+                fontSize: 13, fontWeight: active ? 700 : 500,
+                color: active ? '#7C3AED' : '#8B87AD',
+                borderBottom: active ? '3px solid #7C6FE0' : '3px solid transparent',
+                marginBottom: -2,
+                transition: 'all 0.13s',
+              }}
+            >
+              <span style={{ color: active ? '#7C6FE0' : '#C4B5FD' }}>{tab.icon}</span>
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ══ TAB 1: Student Groups ══ */}
+      {activeTab === 'groups' && <>
 
       {/* ══ PANEL 1: Student Preference Matrix ══ */}
       <Section
@@ -1210,7 +1250,7 @@ export function StepStudentGroups() {
         )}
       </Section>
 
-      {/* Navigation */}
+      {/* Navigation — Student Groups tab */}
       <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={() => setStep(3)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E8E4FF', background: '#fff', color: '#4B5275', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           <ChevronLeft size={14} /> Period allocation
@@ -1221,11 +1261,65 @@ export function StepStudentGroups() {
           {regenerating ? 'Generating…' : '✦ Generate groups'}
         </button>
         <div style={{ flex: 1 }} />
+        <button onClick={() => setActiveTab('combos')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Subject Combos <Shuffle size={13} />
+        </button>
         <button onClick={() => setStep(5)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
           Next: Review & generate <ChevronRight size={14} />
         </button>
       </div>
+
+      {/* ── Close Student Groups tab ── */}
+      </>}
+
+      {/* ══ TAB 2: Subject Combos ══ */}
+      {activeTab === 'combos' && (
+        <div>
+          {/* Explainer banner */}
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px',
+            marginBottom: 20, borderRadius: 10,
+            background: '#FFFBEB', border: '1px solid #FDE68A',
+          }}>
+            <Shuffle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>
+                OR / AND Subject Combos
+              </div>
+              <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.65 }}>
+                <strong>OR combo</strong> — one of the listed subjects runs per slot. Whichever teacher is free takes that period
+                (e.g. <em style={{ fontFamily: "'DM Mono', monospace" }}>PHY OR CHEM OR BIO</em>).<br />
+                <strong>AND combo</strong> — all subjects share one slot in parallel — students divide into groups
+                (e.g. <em style={{ fontFamily: "'DM Mono', monospace" }}>PHY AND CHEM AND BIO</em> = lab split).<br />
+                Combos defined here become pre-set constraints for the timetable generator and are also available
+                when editing individual cells.
+              </div>
+            </div>
+          </div>
+
+          <SubjectGroupsSection
+            groups={store.subjectGroups ?? []}
+            setGroups={store.setSubjectGroups}
+            allSubjectNames={(subjects as any[]).map((s: any) => s.name)}
+            allSectionNames={(sections as any[]).map((s: any) => s.name)}
+          />
+
+          {/* Navigation — Combos tab */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={() => setActiveTab('groups')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E8E4FF', background: '#fff', color: '#4B5275', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <ChevronLeft size={14} /> Student Groups
+            </button>
+            <div style={{ flex: 1 }} />
+            <button onClick={() => setStep(5)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
+              Next: Review & generate <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

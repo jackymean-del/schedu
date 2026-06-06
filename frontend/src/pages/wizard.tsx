@@ -35,7 +35,7 @@ const STEP_META = [
   { label: 'Resources',         sub: 'Classes, subjects, teachers & rooms'  },
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
   { label: 'Allocation',        sub: 'Period × subject + teacher assignment' },
-  { label: 'Student groups',    sub: 'Preferences, grouping rules & AI'     },
+  { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules' },
   { label: 'Review & generate', sub: 'AI builds your timetable'             },
 ]
 
