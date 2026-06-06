@@ -1190,7 +1190,7 @@ export function StepStudentGroups() {
 
                   {/* Add row */}
                   <tr>
-                    <td colSpan={displayCols.length + 4} style={{ padding: '7px 10px', borderBottom: '1px solid #F0EDFF', position: 'relative' }}>
+                    <td colSpan={displayCols.length + 4} style={{ padding: '7px 10px', borderBottom: '1px solid #F0EDFF' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
 
                         {/* ── Section picker button ── */}
@@ -1208,9 +1208,9 @@ export function StepStudentGroups() {
                             ref={rowPickerRef}
                             onClick={e => e.stopPropagation()}
                             style={{
-                              position: 'absolute', zIndex: 200,
-                              top: '100%', left: 0,
-                              marginTop: 4,
+                              position: 'fixed', zIndex: 200,
+                              top: (addRowBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                              left: Math.max(8, (addRowBtnRef.current?.getBoundingClientRect().left ?? 0)),
                               width: 280, background: '#fff',
                               border: '1.5px solid #DDD8FF', borderRadius: 10,
                               boxShadow: '0 8px 24px rgba(124,111,224,0.18)',
