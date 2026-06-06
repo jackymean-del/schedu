@@ -1106,10 +1106,10 @@ export function StepStudentGroups() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ flex: 1 }}>{row.sectionName}</span>
                             <button onClick={() => removeRow(row.sectionName)} title="Remove row"
-                              style={{ display: 'inline-flex', width: 18, height: 18, borderRadius: 4, border: '1px solid #FECACA', background: '#FEF2F2', color: '#FCA5A5', cursor: 'pointer', padding: 0, flexShrink: 0, alignItems: 'center', justifyContent: 'center' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FCA5A5' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.color = '#FCA5A5'; e.currentTarget.style.borderColor = '#FECACA' }}>
-                              <Trash2 size={10} />
+                              style={{ display: 'inline-flex', width: 13, height: 13, borderRadius: 3, border: 'none', background: 'transparent', color: '#C4B5FD', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 800, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C4B5FD' }}>
+                              ×
                             </button>
                           </div>
                         </td>
@@ -1209,8 +1209,8 @@ export function StepStudentGroups() {
                             onClick={e => e.stopPropagation()}
                             style={{
                               position: 'absolute', zIndex: 200,
-                              bottom: '100%', left: 0,
-                              marginBottom: 4,
+                              top: '100%', left: 0,
+                              marginTop: 4,
                               width: 280, background: '#fff',
                               border: '1.5px solid #DDD8FF', borderRadius: 10,
                               boxShadow: '0 8px 24px rgba(124,111,224,0.18)',
