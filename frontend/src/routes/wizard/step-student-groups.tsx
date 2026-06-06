@@ -336,6 +336,18 @@ export function StepStudentGroups() {
   } = store
 
   const subjectAllocations: Record<string, any> = useMemo(() => (store as any).subjectAllocations ?? {}, [store])
+
+  // Map: subject name → applicable section names (for section picker filtering in Combos tab)
+  const subjectSectionsMap = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    for (const sub of subjects as any[]) {
+      const fromConfigs = (sub.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean) as string[]
+      const fromSections: string[] = sub.sections ?? []
+      const all = [...new Set([...fromConfigs, ...fromSections])]
+      if (all.length > 0) map[sub.name] = all
+    }
+    return map
+  }, [subjects])
   const storeRooms: any[]          = useMemo(() => (store as any).rooms             ?? [], [store])
   const storeStaff: any[]          = useMemo(() => (store as any).staff             ?? [], [store])
   const teacherAllocations: any    = useMemo(() => (store as any).teacherAllocations ?? {}, [store])
@@ -1304,6 +1316,8 @@ export function StepStudentGroups() {
             setGroups={store.setSubjectGroups}
             allSubjectNames={(subjects as any[]).map((s: any) => s.name)}
             allSectionNames={(sections as any[]).map((s: any) => s.name)}
+            subjectSectionsMap={subjectSectionsMap}
+            defaultOpen
           />
 
           {/* Navigation — Combos tab */}

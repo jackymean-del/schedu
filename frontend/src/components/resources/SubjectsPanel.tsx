@@ -1485,6 +1485,13 @@ export function SubjectsPanel({
           setGroups={setSubjectGroups}
           allSubjectNames={subjects.map(s => s.name)}
           allSectionNames={sections.map(s => s.name)}
+          subjectSectionsMap={Object.fromEntries(
+            subjects.map(sub => {
+              const fromConfigs = (sub.classConfigs ?? []).map((c: SubjectClassConfig) => c.sectionName).filter(Boolean) as string[]
+              const fromSections: string[] = (sub as any).sections ?? []
+              return [sub.name, [...new Set([...fromConfigs, ...fromSections])]]
+            }).filter(([, secs]) => (secs as string[]).length > 0)
+          )}
         />
       )}
 
