@@ -1202,73 +1202,95 @@ export function StepStudentGroups() {
                           <Plus size={11} /> Add class
                         </button>
 
-                        {/* ── Picker dropdown ── */}
-                        {showRowPicker && (
-                          <div
-                            ref={rowPickerRef}
-                            onClick={e => e.stopPropagation()}
-                            style={{
-                              position: 'fixed', zIndex: 200,
-                              top: (addRowBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-                              left: Math.max(8, (addRowBtnRef.current?.getBoundingClientRect().left ?? 0)),
-                              width: 280, background: '#fff',
-                              border: '1.5px solid #DDD8FF', borderRadius: 10,
-                              boxShadow: '0 8px 24px rgba(124,111,224,0.18)',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            {/* Search */}
-                            <div style={{ padding: '8px 10px', borderBottom: '1px solid #F0EDFF' }}>
-                              <input
-                                autoFocus
-                                placeholder="Search classes…"
-                                value={rowPickerSearch}
-                                onChange={e => setRowPickerSearch(e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Escape') setShowRowPicker(false)
-                                  if (e.key === 'Enter' && sectionsToAdd.length === 0 && rowPickerSearch.trim())
-                                    addSectionRow(rowPickerSearch.trim())
-                                }}
-                                style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #E8E4FF', fontSize: 11, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                              />
-                            </div>
+                        {/* ── Picker dropdown (smart-positioned, viewport-aware) ── */}
+                        {showRowPicker && (() => {
+                          const DROPDOWN_W   = 280
+                          const DROPDOWN_MAX = 300   // max list height estimate
+                          const GAP          = 6
+                          const rect = addRowBtnRef.current?.getBoundingClientRect()
+                          const vw = window.innerWidth
+                          const vh = window.innerHeight
 
-                            {/* Section list */}
-                            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                              {sectionsToAdd.length === 0 ? (
-                                <div style={{ padding: '10px 12px', fontSize: 11, color: '#8B87AD', textAlign: 'center' }}>
-                                  {rowPickerSearch.trim()
-                                    ? <span>No match. <button onClick={() => addSectionRow(rowPickerSearch.trim())} style={{ color: '#7C6FE0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, fontFamily: 'inherit' }}>Add "{rowPickerSearch}" as custom</button></span>
-                                    : 'All sections already added'}
-                                </div>
-                              ) : sectionsToAdd.map((s: any) => (
-                                <button
-                                  key={s.name}
-                                  onClick={() => addSectionRow(s.name)}
-                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '7px 12px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = '#F5F2FF' }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                                >
-                                  <span style={{ fontSize: 12, fontWeight: 600, color: '#13111E' }}>{s.name}</span>
-                                  {s.strength > 0 && <span style={{ fontSize: 10, color: '#8B87AD' }}>{s.strength} students</span>}
-                                </button>
-                              ))}
-                            </div>
+                          // Horizontal: align to button left, clamp so it never overflows right edge
+                          const left = Math.min(Math.max(8, rect?.left ?? 0), vw - DROPDOWN_W - 8)
 
-                            {/* Custom entry footer */}
-                            {rowPickerSearch.trim() && sectionsToAdd.length > 0 && (
-                              <div style={{ padding: '6px 10px', borderTop: '1px solid #F0EDFF' }}>
-                                <button
-                                  onClick={() => addSectionRow(rowPickerSearch.trim())}
-                                  style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px dashed #C4B5FD', background: '#F5F2FF', color: '#7C6FE0', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                                >
-                                  <Plus size={10} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                                  Add "{rowPickerSearch.trim()}" as custom class
-                                </button>
+                          // Vertical: prefer opening downward; flip upward if not enough space below
+                          const spaceBelow = vh - ((rect?.bottom ?? 0) + GAP)
+                          const spaceAbove = (rect?.top ?? 0) - GAP
+                          const openUpward = spaceBelow < DROPDOWN_MAX && spaceAbove > spaceBelow
+                          const listMaxH   = Math.min(220, openUpward ? spaceAbove - 60 : spaceBelow - 60)
+
+                          const posStyle: React.CSSProperties = openUpward
+                            ? { bottom: vh - (rect?.top ?? 0) + GAP }
+                            : { top: (rect?.bottom ?? 0) + GAP }
+
+                          return (
+                            <div
+                              ref={rowPickerRef}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                position: 'fixed', zIndex: 9999,
+                                left, width: DROPDOWN_W,
+                                ...posStyle,
+                                background: '#fff',
+                                border: '1.5px solid #DDD8FF', borderRadius: 10,
+                                boxShadow: '0 8px 32px rgba(124,111,224,0.22)',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {/* Search */}
+                              <div style={{ padding: '8px 10px', borderBottom: '1px solid #F0EDFF' }}>
+                                <input
+                                  autoFocus
+                                  placeholder="Search classes…"
+                                  value={rowPickerSearch}
+                                  onChange={e => setRowPickerSearch(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Escape') setShowRowPicker(false)
+                                    if (e.key === 'Enter' && sectionsToAdd.length === 0 && rowPickerSearch.trim())
+                                      addSectionRow(rowPickerSearch.trim())
+                                  }}
+                                  style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #E8E4FF', fontSize: 11, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                />
                               </div>
-                            )}
-                          </div>
-                        )}
+
+                              {/* Section list */}
+                              <div style={{ maxHeight: listMaxH, overflowY: 'auto' }}>
+                                {sectionsToAdd.length === 0 ? (
+                                  <div style={{ padding: '10px 12px', fontSize: 11, color: '#8B87AD', textAlign: 'center' }}>
+                                    {rowPickerSearch.trim()
+                                      ? <span>No match. <button onClick={() => addSectionRow(rowPickerSearch.trim())} style={{ color: '#7C6FE0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, fontFamily: 'inherit' }}>Add "{rowPickerSearch}" as custom</button></span>
+                                      : 'All sections already added'}
+                                  </div>
+                                ) : sectionsToAdd.map((s: any) => (
+                                  <button
+                                    key={s.name}
+                                    onClick={() => addSectionRow(s.name)}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '7px 12px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#F5F2FF' }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                                  >
+                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#13111E' }}>{s.name}</span>
+                                    {s.strength > 0 && <span style={{ fontSize: 10, color: '#8B87AD' }}>{s.strength} students</span>}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Custom entry footer */}
+                              {rowPickerSearch.trim() && sectionsToAdd.length > 0 && (
+                                <div style={{ padding: '6px 10px', borderTop: '1px solid #F0EDFF' }}>
+                                  <button
+                                    onClick={() => addSectionRow(rowPickerSearch.trim())}
+                                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px dashed #C4B5FD', background: '#F5F2FF', color: '#7C6FE0', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                                  >
+                                    <Plus size={10} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                                    Add "{rowPickerSearch.trim()}" as custom class
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         {(hiddenCols.size > 0 || hiddenRows.size > 0) && (
                           <button onClick={() => { setHiddenCols(new Set()); setHiddenRows(new Set()) }}
