@@ -404,7 +404,7 @@ export function StepStudentGroups() {
   const [customRows, setCustomRows]  = useState<string[]>([])
   const [hiddenRows, setHiddenRows]  = useState<Set<string>>(new Set())
 
-  // ── Subject picker ─────────────────────────────────────────────────────────
+  // ── Column picker ──────────────────────────────────────────────────────────
   const [showColPicker, setShowColPicker] = useState(false)
   const [pickerSearch, setPickerSearch]  = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -419,6 +419,30 @@ export function StepStudentGroups() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [showColPicker])
+
+  // ── Row (class) picker ─────────────────────────────────────────────────────
+  const [showRowPicker,  setShowRowPicker]  = useState(false)
+  const [rowPickerSearch, setRowPickerSearch] = useState('')
+  const rowPickerRef  = useRef<HTMLDivElement>(null)
+  const addRowBtnRef  = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!showRowPicker) return
+    const handler = (e: MouseEvent) => {
+      if (!rowPickerRef.current?.contains(e.target as Node) && !addRowBtnRef.current?.contains(e.target as Node))
+        setShowRowPicker(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showRowPicker])
+
+  /** Sections from the store not yet shown as rows */
+  const sectionsToAdd = useMemo(() => {
+    const rowSet = new Set(allRowNames)
+    return (sections as any[])
+      .filter(s => !rowSet.has(s.name))
+      .filter(s => s.name.toLowerCase().includes(rowPickerSearch.toLowerCase()))
+  }, [sections, allRowNames, rowPickerSearch])
 
   // ── Optional subjects ─────────────────────────────────────────────────────
   const optionalSubjects = useMemo(() =>
@@ -638,6 +662,28 @@ export function StepStudentGroups() {
   }, [])
 
   // ── Row actions ───────────────────────────────────────────────────────────
+  /** Add a row for a specific section name (from picker or custom text) */
+  const addSectionRow = useCallback((name: string) => {
+    if (!name.trim() || allRowNames.includes(name)) return
+    // If it was a hidden section-row, just un-hide it
+    if (optionalSections.some((s: any) => s.name === name) && hiddenRows.has(name)) {
+      setHiddenRows(prev => { const next = new Set(prev); next.delete(name); return next })
+    } else {
+      setCustomRows(prev => [...prev, name])
+    }
+    const sub = (subjects as any[]).find(s => s.name === name)
+    const sub_strengths: Record<string, number> = Object.fromEntries(
+      allCols.map(c => [c.key, isApplicableToSection(sub, name, subjectAllocations) ? 0 : -1])
+    )
+    const sec = (sections as any[]).find(s => s.name === name)
+    const total = store.sectionCapacityOverrides?.[name] ?? sec?.strength ?? 0
+    setSectionStrengths([...(sectionStrengths as SectionStrength[]),
+      { sectionName: name, stream: guessStream(name), subjectStrengths: sub_strengths, totalStudents: total || undefined }
+    ])
+    setShowRowPicker(false); setRowPickerSearch('')
+  }, [allRowNames, optionalSections, hiddenRows, subjects, allCols, subjectAllocations, sections, store, sectionStrengths, setSectionStrengths])
+
+  /** Legacy: add a blank custom-named row (kept for edge cases) */
   const addRow = useCallback(() => {
     const newName = `New Class ${allRowNames.length + 1}`
     setCustomRows(prev => [...prev, newName])
@@ -1060,10 +1106,10 @@ export function StepStudentGroups() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ flex: 1 }}>{row.sectionName}</span>
                             <button onClick={() => removeRow(row.sectionName)} title="Remove row"
-                              style={{ display: 'inline-flex', width: 15, height: 15, borderRadius: 3, border: 'none', background: 'transparent', color: '#D1D5DB', cursor: 'pointer', padding: 0, flexShrink: 0, alignItems: 'center', justifyContent: 'center' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#D1D5DB' }}>
-                              <Trash2 size={9} />
+                              style={{ display: 'inline-flex', width: 18, height: 18, borderRadius: 4, border: '1px solid #FECACA', background: '#FEF2F2', color: '#FCA5A5', cursor: 'pointer', padding: 0, flexShrink: 0, alignItems: 'center', justifyContent: 'center' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FCA5A5' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.color = '#FCA5A5'; e.currentTarget.style.borderColor = '#FECACA' }}>
+                              <Trash2 size={10} />
                             </button>
                           </div>
                         </td>
@@ -1144,14 +1190,86 @@ export function StepStudentGroups() {
 
                   {/* Add row */}
                   <tr>
-                    <td colSpan={displayCols.length + 4} style={{ padding: '7px 10px', borderBottom: '1px solid #F0EDFF' }}>
+                    <td colSpan={displayCols.length + 4} style={{ padding: '7px 10px', borderBottom: '1px solid #F0EDFF', position: 'relative' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <button onClick={addRow}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 6, border: '1.5px dashed #C4B5FD', background: '#F5F2FF', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#EDE9FF' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = '#F5F2FF' }}>
+
+                        {/* ── Section picker button ── */}
+                        <button
+                          ref={addRowBtnRef}
+                          onClick={() => { setShowRowPicker(p => !p); setRowPickerSearch('') }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 6, border: `1.5px ${showRowPicker ? 'solid #7C6FE0' : 'dashed #C4B5FD'}`, background: showRowPicker ? '#EDE9FF' : '#F5F2FF', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
                           <Plus size={11} /> Add class
                         </button>
+
+                        {/* ── Picker dropdown ── */}
+                        {showRowPicker && (
+                          <div
+                            ref={rowPickerRef}
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                              position: 'absolute', zIndex: 200,
+                              bottom: '100%', left: 0,
+                              marginBottom: 4,
+                              width: 280, background: '#fff',
+                              border: '1.5px solid #DDD8FF', borderRadius: 10,
+                              boxShadow: '0 8px 24px rgba(124,111,224,0.18)',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {/* Search */}
+                            <div style={{ padding: '8px 10px', borderBottom: '1px solid #F0EDFF' }}>
+                              <input
+                                autoFocus
+                                placeholder="Search classes…"
+                                value={rowPickerSearch}
+                                onChange={e => setRowPickerSearch(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Escape') setShowRowPicker(false)
+                                  if (e.key === 'Enter' && sectionsToAdd.length === 0 && rowPickerSearch.trim())
+                                    addSectionRow(rowPickerSearch.trim())
+                                }}
+                                style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #E8E4FF', fontSize: 11, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                              />
+                            </div>
+
+                            {/* Section list */}
+                            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                              {sectionsToAdd.length === 0 ? (
+                                <div style={{ padding: '10px 12px', fontSize: 11, color: '#8B87AD', textAlign: 'center' }}>
+                                  {rowPickerSearch.trim()
+                                    ? <span>No match. <button onClick={() => addSectionRow(rowPickerSearch.trim())} style={{ color: '#7C6FE0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, fontFamily: 'inherit' }}>Add "{rowPickerSearch}" as custom</button></span>
+                                    : 'All sections already added'}
+                                </div>
+                              ) : sectionsToAdd.map((s: any) => (
+                                <button
+                                  key={s.name}
+                                  onClick={() => addSectionRow(s.name)}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '7px 12px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = '#F5F2FF' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                                >
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: '#13111E' }}>{s.name}</span>
+                                  {s.strength > 0 && <span style={{ fontSize: 10, color: '#8B87AD' }}>{s.strength} students</span>}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Custom entry footer */}
+                            {rowPickerSearch.trim() && sectionsToAdd.length > 0 && (
+                              <div style={{ padding: '6px 10px', borderTop: '1px solid #F0EDFF' }}>
+                                <button
+                                  onClick={() => addSectionRow(rowPickerSearch.trim())}
+                                  style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px dashed #C4B5FD', background: '#F5F2FF', color: '#7C6FE0', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                                >
+                                  <Plus size={10} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                                  Add "{rowPickerSearch.trim()}" as custom class
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {(hiddenCols.size > 0 || hiddenRows.size > 0) && (
                           <button onClick={() => { setHiddenCols(new Set()); setHiddenRows(new Set()) }}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #E8E4FF', background: '#fff', color: '#8B87AD', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
