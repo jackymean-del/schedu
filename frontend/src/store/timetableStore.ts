@@ -194,6 +194,7 @@ interface ScheduState {
   rooms: Room[]
   optionalConfigs: ClassOptionalConfig[]
   subjectPools: SubjectPool[]
+  subjectGroups: import('@/components/resources/SubjectGroupsSection').SubjectAndOrGroup[]
   schedulingMode: 'period-based' | 'duration-based'
   workingDaysPerYear: number
 
@@ -333,6 +334,7 @@ interface ScheduState {
   setRooms: (r: Room[]) => void
   setOptionalConfigs: (c: ClassOptionalConfig[]) => void
   setSubjectPools: (p: SubjectPool[]) => void
+  setSubjectGroups: (g: import('@/components/resources/SubjectGroupsSection').SubjectAndOrGroup[]) => void
   setSchedulingMode: (m: 'period-based' | 'duration-based') => void
   setWorkingDaysPerYear: (n: number) => void
 
@@ -470,6 +472,7 @@ const initialState: Omit<ScheduState,
   rooms: [],
   optionalConfigs: [],
   subjectPools: [],
+  subjectGroups: [],
   optionalBlocks: [],
   subjectCombinations: [],
   sectionStrengths: [],
@@ -633,6 +636,7 @@ export const useTimetableStore = create<ScheduState>()(
         setRooms: (rooms) => set({ rooms }),
         setOptionalConfigs: (optionalConfigs) => set({ optionalConfigs }),
         setSubjectPools: (subjectPools) => set({ subjectPools }),
+        setSubjectGroups: (subjectGroups) => set({ subjectGroups }),
         setSchedulingMode: (schedulingMode) => set({ schedulingMode }),
         setWorkingDaysPerYear: (workingDaysPerYear) => set({ workingDaysPerYear }),
 
@@ -845,6 +849,7 @@ export const useTimetableStore = create<ScheduState>()(
           rooms: state.rooms,
           optionalConfigs: state.optionalConfigs,
           subjectPools: state.subjectPools,
+          subjectGroups: state.subjectGroups,
           schedulingMode: state.schedulingMode,
           workingDaysPerYear: state.workingDaysPerYear,
           teacherAvailability: state.teacherAvailability,

@@ -23,6 +23,8 @@ import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { Subject, Section, SubjectClassConfig } from '@/types'
 import { Plus, BookOpen, ChevronDown, ChevronUp, CalendarRange, X } from 'lucide-react'
+import { SubjectGroupsSection } from './SubjectGroupsSection'
+import type { SubjectAndOrGroup } from './SubjectGroupsSection'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -1016,6 +1018,7 @@ interface SubjectSnapshot {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function SubjectsPanel({
   subjects, setSubjects, sections, board: boardProp,
+  subjectGroups = [], setSubjectGroups,
   onGlobalAIAssign,
   globalAILoading = false,
   globalAIStatus  = '',
@@ -1028,6 +1031,8 @@ export function SubjectsPanel({
   setSubjects: (s: Subject[]) => void
   sections:    Section[]
   board?:      string
+  subjectGroups?:    SubjectAndOrGroup[]
+  setSubjectGroups?: (g: SubjectAndOrGroup[]) => void
   onGlobalAIAssign?:    (board: CurriculumBoard) => Promise<void>
   globalAILoading?:     boolean
   globalAIStatus?:      string
@@ -1472,6 +1477,16 @@ export function SubjectsPanel({
           </table>
         )}
       </div>
+
+      {/* ── Subject AND/OR Groups ──────────────────────────────────────────── */}
+      {setSubjectGroups && (
+        <SubjectGroupsSection
+          groups={subjectGroups}
+          setGroups={setSubjectGroups}
+          allSubjectNames={subjects.map(s => s.name)}
+          allSectionNames={sections.map(s => s.name)}
+        />
+      )}
 
       {importOpen && (
         <ImportModal
