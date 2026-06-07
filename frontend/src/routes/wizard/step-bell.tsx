@@ -211,6 +211,78 @@ const ROW_BG: Record<RowType, string> = {
   dispersal:    '#FFF1F2',
 }
 
+// ── Age-appropriate school-hour standards ─────────────────────
+// Sources: NEP 2020, NCERT, RTE Act 2009, CBSE, WHO/UNESCO,
+//          UK DfE (School Day), US NCES, Finnish FNBE.
+const SCHOOL_HOUR_STANDARDS = {
+  'Pre-Primary': {
+    label: 'Pre-Primary (Nursery–UKG)', emoji: '🧸', ages: '3–5 yrs',
+    minHours: 3, maxHours: 4,
+    suggestedStart: '08:30', suggestedEnd: '12:30',
+    periodDurSuggested: 25, periodDurRange: [20, 30] as [number, number],
+    maxPeriodsSuggested: 5, maxPeriodsRange: [4, 6] as [number, number],
+    lunchDur: 30,
+    color: '#7C3AED', bg: '#F5F3FF', border: '#C4B5FD',
+    source: 'NEP 2020 Foundational Stage · WHO',
+    note: 'Play-based learning. Short attention spans — sessions of 20–30 min with frequent activity breaks.',
+  },
+  'Primary': {
+    label: 'Primary (Class I–V)', emoji: '📚', ages: '6–11 yrs',
+    minHours: 5, maxHours: 6,
+    suggestedStart: '08:00', suggestedEnd: '14:00',
+    periodDurSuggested: 40, periodDurRange: [35, 45] as [number, number],
+    maxPeriodsSuggested: 7, maxPeriodsRange: [6, 8] as [number, number],
+    lunchDur: 30,
+    color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE',
+    source: 'RTE Act 2009 · NEP 2020 Preparatory Stage',
+    note: 'RTE mandates 800 instructional hrs/yr (200 days × 4 hrs net teaching). Finland & UK align at 5–6 hrs.',
+  },
+  'Middle': {
+    label: 'Middle (Class VI–VIII)', emoji: '📖', ages: '11–14 yrs',
+    minHours: 6, maxHours: 7,
+    suggestedStart: '07:30', suggestedEnd: '14:30',
+    periodDurSuggested: 45, periodDurRange: [40, 50] as [number, number],
+    maxPeriodsSuggested: 8, maxPeriodsRange: [7, 9] as [number, number],
+    lunchDur: 35,
+    color: '#059669', bg: '#F0FDF4', border: '#6EE7B7',
+    source: 'RTE Act 2009 · NEP 2020 Middle Stage',
+    note: 'RTE mandates 1000 instructional hrs/yr (200 days × 5 hrs net). OECD average: 6.5 hrs school day.',
+  },
+  'Senior': {
+    label: 'Secondary (Class IX–X)', emoji: '🎯', ages: '14–16 yrs',
+    minHours: 6, maxHours: 7.5,
+    suggestedStart: '07:30', suggestedEnd: '14:30',
+    periodDurSuggested: 45, periodDurRange: [40, 55] as [number, number],
+    maxPeriodsSuggested: 8, maxPeriodsRange: [8, 9] as [number, number],
+    lunchDur: 40,
+    color: '#D97706', bg: '#FFFBEB', border: '#FDE68A',
+    source: 'NCERT · CBSE Secondary Level · NEP 2020',
+    note: 'Board-prep years. CBSE schools average 7 hrs. UK secondary: 6.5 hrs. US high school: 6–7 hrs.',
+  },
+  'Senior Secondary': {
+    label: 'Sr. Secondary (Class XI–XII)', emoji: '🎓', ages: '16–18 yrs',
+    minHours: 6.5, maxHours: 7.5,
+    suggestedStart: '07:30', suggestedEnd: '15:00',
+    periodDurSuggested: 50, periodDurRange: [45, 60] as [number, number],
+    maxPeriodsSuggested: 8, maxPeriodsRange: [8, 9] as [number, number],
+    lunchDur: 40,
+    color: '#DC2626', bg: '#FEF2F2', border: '#FECACA',
+    source: 'NCERT · CBSE Sr. Secondary · NEP 2020',
+    note: 'College-prep depth with self-study. WHO cautions against >8 hrs; cognitive load peaks at 7 hrs.',
+  },
+} as const
+type SchoolGroupKey = keyof typeof SCHOOL_HOUR_STANDARDS
+
+/**
+ * Returns the standard for the most academically demanding active group,
+ * which sets the upper bound for the whole school's schedule.
+ */
+function getDominantStandard(activeGroups: Array<{ group: string }>) {
+  const priority: SchoolGroupKey[] = ['Senior Secondary', 'Senior', 'Middle', 'Primary', 'Pre-Primary']
+  const found = priority.find(g => activeGroups.some(ag => ag.group === g))
+  return found ? SCHOOL_HOUR_STANDARDS[found] : SCHOOL_HOUR_STANDARDS['Primary']
+}
+
 // ── Rotation day type ─────────────────────────────────────────
 interface RotDay { full: string; short: string }
 
@@ -2601,26 +2673,59 @@ export function StepBell() {
   }
 
   const handleAISuggest = () => {
-    let curMins = toMins(activeStartTime)
-    const result: BellRow[] = []
+    // ── Group-aware AI suggestion ───────────────────────────────────────────
+    // Pick the dominant group's standard to drive period & break sizing.
+    const std = getDominantStandard(activeClassGroups)
+
+    // Use existing user-set period duration if it's reasonable; otherwise
+    // snap to the standard's suggestion.
+    const sugPeriodDur = (periodDur >= std.periodDurRange[0] && periodDur <= std.periodDurRange[1])
+      ? periodDur : std.periodDurSuggested
+
+    // Target school-day minutes (mid-range of the standard)
+    const targetMins = Math.round((std.minHours + std.maxHours) / 2 * 60)
+
+    // Assembly: keep existing duration if present, else 10 min
     const asmDur = displayRows.find(r => r.type === 'assembly')?.duration ?? 10
-    result.push({ id: makeId(), name: 'Assembly', type: 'assembly', duration: asmDur, classes: [...activeClassKeys] })
-    curMins += asmDur
-    result.push({ id: makeId(), name: 'Morning Break', type: 'short-break', duration: 10, classes: [...activeClassKeys] })
-    curMins += 10
-    let lunchAdded = false
-    for (let i = 0; i < maxPeriods; i++) {
-      result.push({ ...mkPeriod(i + 1, periodDur), classes: [...activeClassKeys] })
-      curMins += periodDur
-      if (!lunchAdded && curMins >= 720) {
-        result.push({ id: makeId(), name: 'Lunch Break', type: 'lunch', duration: 30, classes: [...activeClassKeys] })
-        curMins += 30; lunchAdded = true
+
+    // Morning break: 15 min for young kids, 10 min for older
+    const morBreakDur = std.maxHours <= 4 ? 15 : 10
+
+    // Lunch duration from standard
+    const lunchDurAI = std.lunchDur
+
+    // Afternoon break: short for young kids (they go home after lunch)
+    const aftBreakDur = std.maxHours <= 4 ? 0 : 10
+
+    // Dispersal row
+    const dispDur = 5
+
+    // How many periods fit?
+    const fixedMins = asmDur + morBreakDur + lunchDurAI + aftBreakDur + dispDur
+    const availMins = targetMins - fixedMins
+    const periodCount = Math.max(
+      std.maxPeriodsRange[0],
+      Math.min(std.maxPeriodsRange[1], Math.floor(availMins / sugPeriodDur)),
+    )
+
+    // Lunch goes after ~40 % of periods (between morning and afternoon)
+    const lunchAfter = Math.max(1, Math.round(periodCount * 0.45))
+
+    const result: BellRow[] = []
+    result.push({ id: makeId(), name: 'Assembly',      type: 'assembly',   duration: asmDur,     classes: [...activeClassKeys] })
+    result.push({ id: makeId(), name: 'Morning Break', type: 'short-break', duration: morBreakDur, classes: [...activeClassKeys] })
+
+    for (let i = 0; i < periodCount; i++) {
+      result.push({ ...mkPeriod(i + 1, sugPeriodDur), classes: [...activeClassKeys] })
+      if (i + 1 === lunchAfter) {
+        result.push({ id: makeId(), name: 'Lunch Break', type: 'lunch', duration: lunchDurAI, classes: [...activeClassKeys] })
       }
     }
-    if (!lunchAdded && maxPeriods > 0)
-      result.splice(2 + Math.ceil(maxPeriods / 2), 0, { id: makeId(), name: 'Lunch Break', type: 'lunch', duration: 30, classes: [...activeClassKeys] })
-    result.push({ id: makeId(), name: 'Afternoon Break', type: 'short-break', duration: 10, classes: [...activeClassKeys] })
-    result.push({ id: makeId(), name: 'Dispersal', type: 'dispersal', duration: 5, classes: [...activeClassKeys] })
+
+    if (aftBreakDur > 0)
+      result.push({ id: makeId(), name: 'Afternoon Break', type: 'short-break', duration: aftBreakDur, classes: [...activeClassKeys] })
+
+    result.push({ id: makeId(), name: 'Dispersal', type: 'dispersal', duration: dispDur, classes: [...activeClassKeys] })
     setDisplayRows(result)
   }
 
@@ -3090,6 +3195,81 @@ export function StepBell() {
                   </select>
                 </div>
               </div>
+
+              {/* ── Age-appropriate hours panel (Standard mode) ─────────── */}
+              {activeClassGroups.length > 0 && (() => {
+                const startMins = toMins(startTime)
+                const endMins   = toMins(endTime)
+                const totalHrs  = (endMins - startMins) / 60
+                return (
+                  <div style={{ marginBottom: 14 }}>
+                    {/* Section label */}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+                      Age-appropriate hours guide
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {(Object.keys(SCHOOL_HOUR_STANDARDS) as SchoolGroupKey[])
+                        .filter(gk => activeClassGroups.some(ag => ag.group === gk))
+                        .map(gk => {
+                          const s = SCHOOL_HOUR_STANDARDS[gk]
+                          const ok = totalHrs >= s.minHours && totalHrs <= s.maxHours
+                          const tooLong = totalHrs > s.maxHours
+                          const tooShort = totalHrs < s.minHours
+                          const statusColor = ok ? '#059669' : tooLong ? '#DC2626' : '#D97706'
+                          const statusBg    = ok ? '#F0FDF4' : tooLong ? '#FEF2F2' : '#FFFBEB'
+                          const statusBdr   = ok ? '#6EE7B7' : tooLong ? '#FECACA' : '#FDE68A'
+                          const statusIcon  = ok ? '✓' : tooLong ? '↑' : '↓'
+                          const statusMsg   = ok
+                            ? `${totalHrs.toFixed(1)} hrs — within range`
+                            : tooLong
+                              ? `${totalHrs.toFixed(1)} hrs — too long (max ${s.maxHours} hrs)`
+                              : `${totalHrs.toFixed(1)} hrs — too short (min ${s.minHours} hrs)`
+                          return (
+                            <div key={gk} style={{ display: 'flex', alignItems: 'center', gap: 8,
+                              background: statusBg, border: `1px solid ${statusBdr}`,
+                              borderRadius: 8, padding: '6px 10px' }}>
+                              <span style={{ fontSize: 15 }}>{s.emoji}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
+                                  {s.label}
+                                  <span style={{ fontWeight: 400, color: '#9CA3AF', marginLeft: 5 }}>({s.ages})</span>
+                                </div>
+                                <div style={{ fontSize: 10, color: '#6B7280' }}>
+                                  Recommended {s.minHours}–{s.maxHours} hrs · {s.suggestedStart}–{s.suggestedEnd}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: statusColor,
+                                  background: '#fff', border: `1px solid ${statusBdr}`,
+                                  borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                                  {statusIcon} {statusMsg}
+                                </span>
+                                {!ok && (
+                                  <button
+                                    onClick={() => {
+                                      setStartTime(s.suggestedStart)
+                                      // Also snap end time to suit this group's suggestion.
+                                      // In Standard mode, "end time" adjusts the last period duration.
+                                      handleEndTimeEdit(s.suggestedEnd)
+                                    }}
+                                    title={`Apply suggested hours: ${s.suggestedStart}–${s.suggestedEnd}`}
+                                    style={{ fontSize: 10, fontWeight: 600, color: s.color,
+                                      background: '#fff', border: `1px solid ${s.border}`,
+                                      borderRadius: 6, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                                    Apply {s.suggestedStart}–{s.suggestedEnd}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>
+                      Based on NEP 2020 · NCERT · RTE Act 2009 · CBSE · WHO/UNESCO standards
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* ── Working days — only shown in single-week cycle ── */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -3659,6 +3839,72 @@ export function StepBell() {
                       ({maxPeriods} periods · {periodDur} min each)
                     </span>
                   </div>
+
+                  {/* ── Age-appropriate end-time suggestions (Smart mode) ── */}
+                  {activeClassGroups.length > 0 && (() => {
+                    const startMins   = toMins(startTime)
+                    const endMins     = toMins(schoolEndTime)
+                    const totalHrs    = (endMins - startMins) / 60
+                    const activeStds  = (Object.keys(SCHOOL_HOUR_STANDARDS) as SchoolGroupKey[])
+                      .filter(gk => activeClassGroups.some(ag => ag.group === gk))
+                    const anyBad = activeStds.some(gk => {
+                      const s = SCHOOL_HOUR_STANDARDS[gk]
+                      return totalHrs < s.minHours || totalHrs > s.maxHours
+                    })
+                    if (!anyBad && activeStds.length === 0) return null
+                    return (
+                      <div style={{
+                        background: '#FAFAFA', border: '1px solid #E5E7EB',
+                        borderRadius: 9, padding: '10px 12px',
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 7,
+                          textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          Timing suggestions by class group
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {activeStds.map(gk => {
+                            const s = SCHOOL_HOUR_STANDARDS[gk]
+                            const ok = totalHrs >= s.minHours && totalHrs <= s.maxHours
+                            const tooLong = totalHrs > s.maxHours
+                            const statusColor = ok ? '#059669' : tooLong ? '#DC2626' : '#D97706'
+                            const statusBg    = ok ? '#F0FDF4' : tooLong ? '#FEF2F2' : '#FFFBEB'
+                            const statusBdr   = ok ? '#6EE7B7' : tooLong ? '#FECACA' : '#FDE68A'
+                            return (
+                              <div key={gk} style={{ display: 'flex', alignItems: 'center', gap: 6,
+                                background: statusBg, border: `1px solid ${statusBdr}`,
+                                borderRadius: 20, padding: '4px 10px' }}>
+                                <span style={{ fontSize: 13 }}>{s.emoji}</span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
+                                  {gk}
+                                </span>
+                                <span style={{ fontSize: 10, color: '#6B7280' }}>
+                                  {s.minHours}–{s.maxHours} hrs
+                                </span>
+                                {!ok && (
+                                  <button
+                                    onClick={() => setSchoolEndTime(s.suggestedEnd)}
+                                    style={{
+                                      fontSize: 10, fontWeight: 700, color: statusColor,
+                                      background: '#fff', border: `1px solid ${statusBdr}`,
+                                      borderRadius: 10, padding: '1px 7px', cursor: 'pointer',
+                                      fontFamily: 'inherit', whiteSpace: 'nowrap',
+                                    }}>
+                                    → {s.suggestedEnd}
+                                  </button>
+                                )}
+                                {ok && (
+                                  <span style={{ fontSize: 10, color: '#059669', fontWeight: 700 }}>✓</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 6 }}>
+                          NEP 2020 · NCERT · RTE Act · CBSE · WHO — click a suggestion to apply it
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* ── Morning break ─────────────────────────────────── */}
                   <div style={{
