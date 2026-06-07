@@ -2901,16 +2901,16 @@ export function StepBell() {
               </div>
               <div style={{ padding: '14px 16px' }}>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 110px 90px', gap: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexWrap: 'nowrap' as const, alignItems: 'flex-start', gap: 10, marginBottom: 14 }}>
                 {/* Start */}
-                <div>
+                <div style={{ flex: '0 0 108px' }}>
                   <div style={FL}>Start time</div>
                   <input className="b-input" type="time" value={startTime}
                     onChange={e => setStartTime(e.target.value)} style={{ width: '100%' }} />
                   <div style={FH}>{fmt12(startTime, use12h)}</div>
                 </div>
                 {/* End — formatted display with inline edit */}
-                <div>
+                <div style={{ flex: '0 0 116px' }}>
                   <div style={FL}>End time</div>
                   {editingEnd ? (
                     <input className="b-input" type="time" defaultValue={endTime} autoFocus
@@ -2928,26 +2928,26 @@ export function StepBell() {
                   <div style={FH}>adjusts last period</div>
                 </div>
                 {/* Period Min */}
-                <div>
-                  <div style={FL}>Period Min (min)</div>
+                <div style={{ flex: '0 0 80px' }}>
+                  <div style={FL}>P. Min (min)</div>
                   <NumInput className="b-input" value={periodDurMin} min={10} max={periodDur - 5}
                     onChange={v => setPeriodDurMin(Math.min(v, periodDur - 5))}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Period Max */}
-                <div>
-                  <div style={FL}>Period Max (min)</div>
+                <div style={{ flex: '0 0 80px' }}>
+                  <div style={FL}>P. Max (min)</div>
                   <NumInput className="b-input" value={periodDur} min={periodDurMin + 5} max={240} onChange={handlePeriodDurChange}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Max periods */}
-                <div>
-                  <div style={FL}>Max periods/day</div>
+                <div style={{ flex: '0 0 78px' }}>
+                  <div style={FL}>Max / day</div>
                   <NumInput className="b-input" value={maxPeriods} min={1} max={16} onChange={handleMaxPeriodsChange}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Format */}
-                <div>
+                <div style={{ flex: '0 0 72px' }}>
                   <div style={FL}>Format</div>
                   <select className="b-input" value={use12h ? '12H' : '24H'}
                     onChange={e => setUse12h(e.target.value === '12H')} style={{ width: '100%' }}>
@@ -3190,17 +3190,17 @@ export function StepBell() {
               {/* Card body — active shift config */}
               <div style={{ padding: '14px 16px' }}>
 
-              {/* Timing grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 110px 90px', gap: 12, marginBottom: 16 }}>
+              {/* Timing row — all 6 fields on one line */}
+              <div style={{ display: 'flex', flexWrap: 'nowrap' as const, alignItems: 'flex-start', gap: 10, marginBottom: 16 }}>
                 {/* Start */}
-                <div>
+                <div style={{ flex: '0 0 108px' }}>
                   <div style={FL}>Start time</div>
                   <input className="b-input" type="time" value={activeShift.startTime}
                     onChange={e => updateActiveShift({ startTime: e.target.value })} style={{ width: '100%' }} />
                   <div style={FH}>{fmt12(activeShift.startTime, activeShift.use12h)}</div>
                 </div>
                 {/* End (derived) */}
-                <div>
+                <div style={{ flex: '0 0 116px' }}>
                   <div style={FL}>End time</div>
                   {editingEnd ? (
                     <input className="b-input" type="time" defaultValue={endTime} autoFocus
@@ -3218,8 +3218,8 @@ export function StepBell() {
                   <div style={FH}>adjusts last period</div>
                 </div>
                 {/* Period Min */}
-                <div>
-                  <div style={FL}>Period Min (min)</div>
+                <div style={{ flex: '0 0 80px' }}>
+                  <div style={FL}>P. Min (min)</div>
                   <NumInput className="b-input"
                     value={activeShift.periodDurMin ?? Math.max(10, Math.round(activeShift.periodDur * 0.5))}
                     min={10} max={activeShift.periodDur - 5}
@@ -3227,22 +3227,22 @@ export function StepBell() {
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Period Max */}
-                <div>
-                  <div style={FL}>Period Max (min)</div>
+                <div style={{ flex: '0 0 80px' }}>
+                  <div style={FL}>P. Max (min)</div>
                   <NumInput className="b-input" value={activeShift.periodDur}
                     min={(activeShift.periodDurMin ?? 10) + 5} max={240}
                     onChange={handlePeriodDurChange}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Max periods */}
-                <div>
-                  <div style={FL}>Max periods/day</div>
+                <div style={{ flex: '0 0 78px' }}>
+                  <div style={FL}>Max / day</div>
                   <NumInput className="b-input" value={activeShift.maxPeriods} min={1} max={16}
                     onChange={handleMaxPeriodsChange}
                     style={{ width: '100%', textAlign: 'center', fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 16 }} />
                 </div>
                 {/* Format */}
-                <div>
+                <div style={{ flex: '0 0 72px' }}>
                   <div style={FL}>Format</div>
                   <select className="b-input" value={activeShift.use12h ? '12H' : '24H'}
                     onChange={e => updateActiveShift({ use12h: e.target.value === '12H' })} style={{ width: '100%' }}>
