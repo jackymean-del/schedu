@@ -480,10 +480,21 @@ function approxLunchTime(
   maxPeriods: number,
   use12h: boolean,
   replacesShortBreak = false,  // true when this group's lunch IS the short-break slot
+  concurrentPeriodDur?: number, // duration of the "concurrent" period (while Pre-Primary eats)
+  concurrentAtPeriod?: number,  // which period (1-indexed) runs concurrently with Pre-Primary lunch
 ): string {
   const sbAfter = Math.max(1, Math.ceil(maxPeriods * 0.3))
   let mins = toMins(startTime) + 10 // assembly 10 min
   mins += afterPeriod * periodDur
+  // If one period before this lunch was shorter (concurrent with Pre-Primary), subtract the diff.
+  if (
+    concurrentPeriodDur !== undefined &&
+    concurrentAtPeriod  !== undefined &&
+    concurrentAtPeriod  <= afterPeriod &&
+    concurrentPeriodDur < periodDur
+  ) {
+    mins -= (periodDur - concurrentPeriodDur)
+  }
   // Only add short-break time if the lunch comes AFTER the short break.
   // When replacesShortBreak is true the group eats AT the short-break slot, not after it.
   if (!replacesShortBreak && sbAfter <= afterPeriod) mins += 15
@@ -3859,13 +3870,36 @@ export function StepBell() {
                         <strong style={{ color: '#5B21B6' }}>How it works:</strong> Each age group gets lunch at a different period. Younger children eat earlier (they get hungry sooner), older classes eat later — the canteen serves one group at a time, no rush.
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {activeClassGroups.map(gm => {
+                        {(() => {
+                          // Compute concurrent-period info once, shared across all group rows.
+                          const sbAPShared  = Math.max(1, Math.ceil(maxPeriods * 0.3))
+                          const ppLunchAP   = effectiveLunchAP['Pre-Primary'] ?? sbAPShared
+                          const ppKeys      = activeClasses.filter(c => c.group === 'Pre-Primary').map(c => c.key)
+                          const ppEatsEarly = ppKeys.length > 0 && ppLunchAP <= sbAPShared
+                          // Effective duration of the period that OTHER classes have while Pre-Primary eats lunch.
+                          // This period starts right after the short break (sbAP + 1).
+                          const lunchDurConst = 45
+                          const effConcurrentDur = ppEatsEarly
+                            ? (concurrentMode === 'regular'     ? periodDur
+                             : concurrentMode === 'match-lunch' ? lunchDurConst
+                             :                                    concurrentDur)
+                            : periodDur
+                          return activeClassGroups.map(gm => {
                           const meta = SMART_GROUP_META[gm.group] ?? { emoji: '🏫', color: '#374151', bg: '#F9FAFB', border: '#E5E7EB' }
-                          const ap   = effectiveLunchAP[gm.group] ?? 4
-                          const sbAP = Math.max(1, Math.ceil(maxPeriods * 0.3))
+                          const ap    = effectiveLunchAP[gm.group] ?? 4
+                          const sbAP  = sbAPShared
                           const minAP = gm.group === 'Pre-Primary' ? sbAP : sbAP + 1
                           const maxAP = maxPeriods
-                          const approx = approxLunchTime(startTime, periodDur, ap, maxPeriods, use12h, gm.group === 'Pre-Primary' && ap <= sbAP)
+                          const isPrePrimary      = gm.group === 'Pre-Primary'
+                          const replacesShortBreak = isPrePrimary && ap <= sbAP
+                          // For non-Pre-Primary groups: if Pre-Primary eats early AND concurrent mode changes
+                          // period duration, the period at (sbAP + 1) is shorter → lunch comes earlier.
+                          const concPeriodDur = (!isPrePrimary && ppEatsEarly && concurrentMode !== 'regular')
+                            ? effConcurrentDur : undefined
+                          const concPeriodAt  = (!isPrePrimary && ppEatsEarly && concurrentMode !== 'regular')
+                            ? sbAP + 1 : undefined
+                          const approx = approxLunchTime(startTime, periodDur, ap, maxPeriods, use12h,
+                            replacesShortBreak, concPeriodDur, concPeriodAt)
                           return (
                             <div key={gm.group} style={{
                               display: 'flex', alignItems: 'center', gap: 10,
@@ -3906,7 +3940,8 @@ export function StepBell() {
                               </div>
                             </div>
                           )
-                        })}
+                        })
+                        })()}
                       </div>
                       {/* Canteen tip */}
                       <div style={{ marginTop: 10, fontSize: 10, color: '#9CA3AF', display: 'flex', gap: 5, alignItems: 'flex-start' }}>
