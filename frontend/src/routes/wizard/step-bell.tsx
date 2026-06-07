@@ -482,10 +482,16 @@ function approxLunchTime(
   replacesShortBreak = false,  // true when this group's lunch IS the short-break slot
   concurrentPeriodDur?: number, // duration of the "concurrent" period (while Pre-Primary eats)
   concurrentAtPeriod?: number,  // which period (1-indexed) runs concurrently with Pre-Primary lunch
+  morningBreakDur = 0,          // duration of the morning break (0 = no morning break)
+  morningBreakAfterP = 0,       // which period the morning break follows (0 = none)
 ): string {
   const sbAfter = Math.max(1, Math.ceil(maxPeriods * 0.3))
   let mins = toMins(startTime) + 10 // assembly 10 min
   mins += afterPeriod * periodDur
+  // Add morning break if it falls before (or at) this lunch slot.
+  if (morningBreakDur > 0 && morningBreakAfterP > 0 && morningBreakAfterP <= afterPeriod) {
+    mins += morningBreakDur
+  }
   // If one period before this lunch was shorter (concurrent with Pre-Primary), subtract the diff.
   if (
     concurrentPeriodDur !== undefined &&
@@ -2153,51 +2159,27 @@ export function StepBell() {
    */
   const rowStartTimes = useMemo((): string[] => {
     if (!hasPartialBreaks) return startTimes
-    // Rule: if a non-teaching row (break / dispersal) is PARTIAL — at least one
-    // active stream class is absent from it — then the row immediately after it
-    // starts at the SAME time (concurrent scheduling).  Classes not attending the
-    // break continue straight into the next row without waiting for the break to end.
     //
-    // IMPORTANT: the non-concurrent fallback MUST cascade from result[i-1] (the
-    // already-modified start), NOT from startTimes[i] (the unmodified sequential
-    // clock).  Without this, a concurrent row's earlier start doesn't propagate:
-    //   e.g. Period 3 moved to 11:30 AM (concurrent with Lunch 1) → Second Lunch
-    //   should be 11:30 + 30 = 12:00 PM, but startTimes would say 12:30 PM.
-    const result: string[] = []
-    for (let i = 0; i < displayRows.length; i++) {
-      if (i === 0) { result.push(activeStartTime); continue }
-
-      const prev      = displayRows[i - 1]
-      const prevStart = result[i - 1]
-      const cur       = displayRows[i]
-
-      // Only apply the concurrent rule for non-teaching preceding rows
-      if (prev.type !== 'teaching') {
-        // prevIsPartial: at least one cwClassKey is NOT covered by prev.classes
-        const prevIsPartial = cwClassKeys.some(k =>
-          !prev.classes.includes(k) && !prev.classes.includes(baseClassKey(k))
-        )
-
-        if (prevIsPartial) {
-          // currentHasOutsider: at least one cwClassKey is in cur but NOT in prev
-          const currentHasOutsider = cwClassKeys.some(k => {
-            const inCur  = cur.classes.includes(k) || cur.classes.includes(baseClassKey(k))
-            const inPrev = prev.classes.includes(k) || prev.classes.includes(baseClassKey(k))
-            return inCur && !inPrev
-          })
-
-          if (currentHasOutsider) {
-            result.push(prevStart)   // concurrent — same start as the partial break
-            continue
-          }
-        }
-      }
-
-      // Sequential: cascade from the modified prev start (not the raw startTimes clock)
-      result.push(addMins(prevStart, prev.duration))
-    }
-    return result
-  }, [hasPartialBreaks, displayRows, activeStartTime, startTimes, cwClassKeys])
+    // With multi-group staggered scheduling, the merged BellRow[] has rows from
+    // different class groups at different absolute times (e.g. PP P3 @12:15,
+    // non-PP P3 @11:45).  A simple "cascade duration from previous row" approach
+    // produces wrong times for every row that follows a concurrent pair: the
+    // duration of the PREVIOUS row (70 min of non-PP P3) gets added to 11:45 to
+    // give 12:55 for PP P3, when the real start is 12:15 — cascading all
+    // subsequent rows by ~40 min and snowballing to 10 PM dispersals.
+    //
+    // Correct approach: for each row, use computeStartsFiltered with a
+    // representative class key from that row.  The filtered clock only advances
+    // for rows that class participates in, so each row gets its own accurate
+    // start time regardless of what concurrent rows other groups are in.
+    // This is O(n²) but n is typically 15–30 rows, so it's negligible.
+    //
+    return displayRows.map((row, i) => {
+      const repKey = row.classes[0]
+      if (!repKey) return startTimes[i] ?? activeStartTime
+      return computeStartsFiltered(activeStartTime, displayRows, repKey)[i] ?? activeStartTime
+    })
+  }, [hasPartialBreaks, displayRows, activeStartTime, startTimes])
 
   /**
    * School end time = start of the last row (using filtered clock) + its duration.
@@ -3905,7 +3887,8 @@ export function StepBell() {
                           const concPeriodAt  = (!isPrePrimary && ppEatsEarly && concurrentMode !== 'regular')
                             ? sbAP + 1 : undefined
                           const approx = approxLunchTime(startTime, periodDur, ap, maxPeriods, use12h,
-                            replacesShortBreak, concPeriodDur, concPeriodAt)
+                            replacesShortBreak, concPeriodDur, concPeriodAt,
+                            morningBreak ? morningBreakDur : 0, morningBreak ? morningBreakPos : 0)
                           return (
                             <div key={gm.group} style={{
                               display: 'flex', alignItems: 'center', gap: 10,
