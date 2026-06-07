@@ -1737,11 +1737,16 @@ export function StepBell() {
   const daySuggestions = useMemo(() =>
     AGE_DAYOFF_SUGGESTIONS.filter(sug => {
       if (!workDays.includes(sug.day)) return false
-      if (!sug.classKeys.some(k => activeClassKeys.includes(k))) return false
-      const alreadyCovered = dayOffRules.some(
-        r => r.day === sug.day && r.classes.some(c => sug.classKeys.includes(c))
+      // Suggestion is only relevant if at least one of its classes is active in this school
+      const relevantKeys = sug.classKeys.filter(k => activeClassKeys.includes(k))
+      if (!relevantKeys.length) return false
+      // Hide only when EVERY active class in the suggestion already has a day-off rule for that day.
+      // Partial coverage (e.g. LKG+UKG covered but Nursery missing) keeps the suggestion visible.
+      const coveredKeys = new Set(
+        dayOffRules.filter(r => r.day === sug.day).flatMap(r => r.classes)
       )
-      if (alreadyCovered) return false
+      const allCovered = relevantKeys.every(k => coveredKeys.has(k))
+      if (allCovered) return false
       if (dismissedDaySugs.includes(sug.id)) return false
       return true
     }),
@@ -1749,10 +1754,13 @@ export function StepBell() {
   [workDays, activeClassKeys, dayOffRules, dismissedDaySugs])
 
   const applyDaySuggestion = (sug: DaySuggestion) => {
-    const keys = sug.classKeys.filter(k => activeClassKeys.includes(k))
+    // Only add classes not already covered by an existing rule for that day
+    const coveredKeys = new Set(
+      dayOffRules.filter(r => r.day === sug.day).flatMap(r => r.classes)
+    )
+    const keys = sug.classKeys.filter(k => activeClassKeys.includes(k) && !coveredKeys.has(k))
     if (!keys.length) return
     setDayOffRules(prev => [...prev, { id: makeId(), day: sug.day, classes: keys }])
-    // Remove from suggestions immediately — rule now covers it
     setDismissedDaySugs(prev => [...prev, sug.id])
   }
 
