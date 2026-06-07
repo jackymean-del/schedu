@@ -508,9 +508,10 @@ function smartGenerateBellConfig(
   lunchAfterPeriod: Record<string, number>,   // groupName → afterPeriod
   activeGroups:     Array<{ group: string }>,
   activeClasses:    Array<{ key: string; group: string }>,
-  morningBreak:    boolean = false,
-  morningBreakPos: number  = 1,    // 0 = after assembly, 1 = after P1, 2 = after P2 …
-  morningBreakDur: number  = 15,
+  morningBreak:        boolean = false,
+  morningBreakPos:     number  = 1,
+  morningBreakDur:     number  = 15,
+  concurrentPeriodDur?: number,   // period dur for non-eating classes during staggered lunch
 ): { rows: BellRow[]; cwRows: CwBreakRow[] } {
   const allKeys  = activeClasses.map(c => c.key)
   const sbAfterP = Math.max(1, Math.ceil(maxPeriods * 0.3))
@@ -566,7 +567,7 @@ function smartGenerateBellConfig(
   }
 
   return {
-    rows:   buildBellRowsFromCw(startTime, periodDur, maxPeriods, cwRows, allKeys),
+    rows:   buildBellRowsFromCw(startTime, periodDur, maxPeriods, cwRows, allKeys, 10, concurrentPeriodDur),
     cwRows,
   }
 }
@@ -590,12 +591,13 @@ function smartGenerateBellConfig(
  * @param asmDur         Actual assembly duration in minutes.
  */
 function buildBellRowsFromCw(
-  startTimeStr:  string,
-  periodDur:     number,
-  maxPeriods:    number,
-  cwBrks:        CwBreakRow[],
-  activeClsKeys: string[] = ALL_CLASS_KEYS,
-  asmDur:        number   = 10,
+  startTimeStr:        string,
+  periodDur:           number,
+  maxPeriods:          number,
+  cwBrks:              CwBreakRow[],
+  activeClsKeys:       string[] = ALL_CLASS_KEYS,
+  asmDur:              number   = 10,
+  concurrentPeriodDur?: number,  // if set: classes not eating use this dur during another group's lunch
 ): BellRow[] {
   type Ev = { type: RowType; name: string; startMins: number; duration: number }
   const startMins = toMins(startTimeStr)
@@ -624,6 +626,11 @@ function buildBellRowsFromCw(
 
   const breakAbsMap = new Map<string, number>(cwBrks.map(b => [b.id, breakAbsStart(b)]))
 
+  // Collect ALL lunch start times across every class (used for concurrent period detection)
+  const allLunchStartTimes = new Set<number>(
+    cwBrks.filter(b => b.type === 'lunch').map(b => breakAbsMap.get(b.id)!)
+  )
+
   // ── Build per-class event sequences ──────────────────────────────────────
   const classEvs: Array<{ key: string; evs: Ev[] }> = []
 
@@ -640,6 +647,9 @@ function buildBellRowsFromCw(
       .map(b => ({ type: b.type as RowType, name: b.name, duration: b.duration, absStart: breakAbsMap.get(b.id)! }))
       .sort((a, b) => a.absStart - b.absStart)
 
+    // This class's own lunch start times (so we don't apply concurrentPeriodDur when eating)
+    const myLunchTimes = new Set(myBreaks.filter(b => b.type === 'lunch').map(b => b.absStart))
+
     let bi = 0
 
     // Flush pre-period breaks (absStart already reached before P1)
@@ -649,7 +659,14 @@ function buildBellRowsFromCw(
     }
 
     for (let pNum = 1; pNum <= maxPeriods; pNum++) {
-      let remaining = periodDur
+      // Use concurrentPeriodDur when another class's lunch starts exactly at this period's
+      // start time — so bell boundaries align cleanly across all groups.
+      const effDur = (
+        concurrentPeriodDur !== undefined &&
+        allLunchStartTimes.has(cur) &&
+        !myLunchTimes.has(cur)
+      ) ? concurrentPeriodDur : periodDur
+      let remaining = effDur
 
       // Split the period at any break whose absStart falls WITHIN this period's window.
       // Without this, a break with customStartTime = 12:00 that lands during Period 3
@@ -758,7 +775,10 @@ interface SavedBell {
   autoBellMode?: boolean
   schoolEndTime?: string   // HH:MM end-of-school time used for auto-generation
   smartLunchMode?: 'single' | 'smart'
-  smartLunchAfterPeriod?: Record<string, number>  // group → afterPeriod override
+  smartLunchAfterPeriod?: Record<string, number>   // group → afterPeriod override
+  // Period duration for classes NOT eating during a staggered lunch slot
+  concurrentPeriodMode?: 'regular' | 'match-lunch' | 'custom'
+  concurrentPeriodDur?:  number   // minutes (used when mode is 'match-lunch' or 'custom')
   // Morning break (optional breakfast / snack break for day-boarding schools)
   morningBreak?:    boolean  // enabled?
   morningBreakPos?: number   // 0 = after assembly, 1 = after P1, 2 = after P2 …
@@ -1688,6 +1708,9 @@ export function StepBell() {
   const [smartLunchAP,     setSmartLunchAP]     = useState<Record<string, number>>(() => _saved?.smartLunchAfterPeriod ?? {})
   // Set to true after first successful generation so the "generated" banner shows
   const [smartGenDone,     setSmartGenDone]     = useState(false)
+  // Concurrent period: duration of a period for classes NOT eating during a staggered lunch
+  const [concurrentMode, setConcurrentMode] = useState<'regular' | 'match-lunch' | 'custom'>(() => _saved?.concurrentPeriodMode ?? 'regular')
+  const [concurrentDur,  setConcurrentDur]  = useState<number>(                               () => _saved?.concurrentPeriodDur  ?? 45)
   // Optional morning break (breakfast / snack break for day-boarding schools)
   const [morningBreak,    setMorningBreak]    = useState<boolean>(() => _saved?.morningBreak    ?? false)
   const [morningBreakPos, setMorningBreakPos] = useState<number>( () => _saved?.morningBreakPos ?? 1)   // 0 = assembly, 1 = P1, 2 = P2 …
@@ -1851,28 +1874,43 @@ export function StepBell() {
       customStreams, classStreamMap, autoBellMode, schoolEndTime,
       smartLunchMode, smartLunchAfterPeriod: smartLunchAP,
       morningBreak, morningBreakPos, morningBreakDur,
+      concurrentPeriodMode: concurrentMode, concurrentPeriodDur: concurrentDur,
     } as SavedBell))
   }, [shiftName, startTime, use12h, periodDur, periodDurMin, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
       customStreams, classStreamMap, autoBellMode, schoolEndTime,
-      smartLunchMode, smartLunchAP, morningBreak, morningBreakPos, morningBreakDur])
+      smartLunchMode, smartLunchAP, morningBreak, morningBreakPos, morningBreakDur,
+      concurrentMode, concurrentDur])
 
   // ── Smart lunch: effective afterPeriod per group ─────────────
-  // Computed defaults are spread per group; user overrides in smartLunchAP take precedence.
-  // Defaults stagger lunch by one period per group, starting after the shared short break.
+  // Time-aware defaults: distribute all 5 groups within a 12:00–2:00 PM lunch window.
+  // With short periods (40 min) this allows 5 distinct slots; with long periods (70 min)
+  // only 2–3 slots fit before 2 PM so groups are shared across slots.
+  // User overrides in smartLunchAP always take precedence.
   const effectiveLunchAP = useMemo(() => {
+    const asmDur   = 10
     const sbAfterP = Math.max(1, Math.ceil(maxPeriods * 0.3))
-    const defaults: Record<string, number> = {
-      'Pre-Primary':      sbAfterP + 1,
-      'Primary':          sbAfterP + 2,
-      'Middle':           Math.min(sbAfterP + 3, maxPeriods),
-      'Senior':           Math.min(sbAfterP + 4, maxPeriods),
-      'Senior Secondary': Math.min(sbAfterP + 5, maxPeriods),
-    }
+    const asmEnd   = toMins(startTime) + asmDur
+    const sbEnd    = asmEnd + sbAfterP * periodDur + 15  // minutes when short break ends
+
+    const LATEST_LUNCH = 14 * 60  // 2 PM hard cap (nobody eats lunch at 4 PM)
+    const minsAfterSb  = LATEST_LUNCH - sbEnd
+    // How many full period lengths fit between short-break-end and the 2 PM cap?
+    const maxLunchP    = Math.min(maxPeriods, sbAfterP + Math.max(1, Math.floor(minsAfterSb / periodDur)))
+    const minLunchP    = sbAfterP + 1
+    const availSlots   = Math.max(1, maxLunchP - minLunchP + 1)  // distinct period slots available
+
+    const GROUPS = ['Pre-Primary', 'Primary', 'Middle', 'Senior', 'Senior Secondary'] as const
+    const defaults: Record<string, number> = {}
+    GROUPS.forEach((g, i) => {
+      const slotIdx = GROUPS.length <= 1 ? 0
+        : Math.round(i * (availSlots - 1) / (GROUPS.length - 1))
+      defaults[g] = Math.max(minLunchP, Math.min(maxLunchP, minLunchP + slotIdx))
+    })
     return { ...defaults, ...smartLunchAP }
-  }, [maxPeriods, smartLunchAP])
+  }, [maxPeriods, periodDur, startTime, smartLunchAP])
 
   // ── Group metadata for Smart Timing UI ───────────────────────
   const SMART_GROUP_META: Record<string, { emoji: string; color: string; bg: string; border: string }> = {
@@ -2590,6 +2628,7 @@ export function StepBell() {
         customStreams, classStreamMap, autoBellMode, schoolEndTime,
         smartLunchMode, smartLunchAfterPeriod: smartLunchAP,
         morningBreak, morningBreakPos, morningBreakDur,
+        concurrentPeriodMode: concurrentMode, concurrentPeriodDur: concurrentDur,
       } satisfies SavedBell))
     } catch { /* localStorage might be full */ }
     setConfig({
@@ -3857,6 +3896,76 @@ export function StepBell() {
                     </div>
                   )}
 
+                  {/* ── Concurrent period (shown only in Smart lunch mode) ── */}
+                  {smartLunchMode === 'smart' && (
+                    <div style={{
+                      background: concurrentMode !== 'regular' ? '#F0FDF4' : '#F9FAFB',
+                      border: `1.5px solid ${concurrentMode !== 'regular' ? '#6EE7B7' : '#E5E7EB'}`,
+                      borderRadius: 9, padding: '11px 13px', transition: 'all .15s',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6, letterSpacing: 0.3, textTransform: 'uppercase' as const }}>
+                        While one group eats, others are in class
+                      </div>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 10, lineHeight: 1.6 }}>
+                        When Pre-Primary is at lunch, Primary/Middle/Senior are still in a period. How long should that period be?
+                      </div>
+                      <div style={{ display: 'flex', gap: 7 }}>
+                        {([
+                          { val: 'regular',    label: 'Regular',       sub: `${periodDur} min`, desc: 'Normal period, unaffected' },
+                          { val: 'match-lunch',label: 'Match lunch',   sub: '45 min',           desc: 'Period equals lunch duration — bells align cleanly' },
+                          { val: 'custom',     label: 'Custom',        sub: '',                 desc: 'Set your own duration' },
+                        ] as const).map(opt => {
+                          const active = concurrentMode === opt.val
+                          return (
+                            <button key={opt.val}
+                              onClick={() => setConcurrentMode(opt.val)}
+                              title={opt.desc}
+                              style={{
+                                flex: 1, padding: '8px 7px', borderRadius: 8,
+                                border: active ? '2px solid #059669' : '1.5px solid #E5E7EB',
+                                background: active ? '#F0FDF4' : '#fff',
+                                cursor: 'pointer', fontFamily: 'inherit',
+                                textAlign: 'center' as const, transition: 'all .12s', outline: 'none',
+                              }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: active ? '#065F46' : '#6B7280' }}>{opt.label}</div>
+                              {opt.sub && <div style={{ fontSize: 9, color: active ? '#059669' : '#9CA3AF', marginTop: 2 }}>{opt.sub}</div>}
+                              {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', margin: '4px auto 0' }} />}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Custom duration stepper */}
+                      {concurrentMode === 'custom' && (
+                        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, color: '#065F46', fontWeight: 600 }}>Duration</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <button onClick={() => setConcurrentDur(d => Math.max(10, d - 5))} disabled={concurrentDur <= 10}
+                              style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #6EE7B7', background: '#fff',
+                                cursor: concurrentDur <= 10 ? 'not-allowed' : 'pointer',
+                                color: concurrentDur <= 10 ? '#D1D5DB' : '#059669',
+                                fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>−</button>
+                            <span style={{ minWidth: 42, textAlign: 'center' as const, fontSize: 13, fontWeight: 700, color: '#059669', fontFamily: "'DM Mono', monospace" }}>{concurrentDur} min</span>
+                            <button onClick={() => setConcurrentDur(d => Math.min(periodDur, d + 5))} disabled={concurrentDur >= periodDur}
+                              style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #6EE7B7', background: '#fff',
+                                cursor: concurrentDur >= periodDur ? 'not-allowed' : 'pointer',
+                                color: concurrentDur >= periodDur ? '#D1D5DB' : '#059669',
+                                fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
+                          </div>
+                          <span style={{ fontSize: 10, color: '#059669' }}>max {periodDur} min (regular)</span>
+                        </div>
+                      )}
+
+                      {/* Benefit note for match-lunch */}
+                      {concurrentMode === 'match-lunch' && (
+                        <div style={{ marginTop: 8, fontSize: 10, color: '#065F46', display: 'flex', gap: 5, alignItems: 'flex-start', lineHeight: 1.5 }}>
+                          <span style={{ flexShrink: 0 }}>✓</span>
+                          <span>Bell boundaries align perfectly — when Pre-Primary's lunch ends, it rings for the next group to start lunch. Simpler to manage.</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Generate button */}
                   <button
                     onClick={() => {
@@ -3865,6 +3974,9 @@ export function StepBell() {
                         smartLunchMode, effectiveLunchAP,
                         activeClassGroups, activeClasses,
                         morningBreak, morningBreakPos, morningBreakDur,
+                        concurrentMode === 'regular' ? undefined
+                          : concurrentMode === 'match-lunch' ? 45
+                          : concurrentDur,
                       )
                       setRows(generated)
                       setCwRows(generated_cwRows)
