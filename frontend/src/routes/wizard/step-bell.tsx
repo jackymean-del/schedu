@@ -1111,6 +1111,7 @@ function ClassPicker({
 }) {
   const isOpen = openId === rowId
   const ref    = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!isOpen) return
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpenId(null) }
@@ -1152,7 +1153,7 @@ function ClassPicker({
 
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <button onClick={() => setOpenId(isOpen ? null : rowId)} style={{
+      <button ref={btnRef} onClick={() => setOpenId(isOpen ? null : rowId)} style={{
         padding: '3px 9px', borderRadius: 6, border: '1px solid #E5E7EB',
         background: isAll ? '#F0EDFF' : isNone ? '#FFF' : '#F9FAFB',
         fontSize: 11, fontWeight: 600, color: isAll ? '#7C3AED' : '#374151',
@@ -1164,12 +1165,27 @@ function ClassPicker({
           <path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
-      {isOpen && (
+      {isOpen && (() => {
+        const DROPDOWN_W = 220
+        const GAP = 4
+        const rect = btnRef.current?.getBoundingClientRect()
+        const vw = window.innerWidth, vh = window.innerHeight
+        const spaceBelow = vh - ((rect?.bottom ?? 0) + GAP)
+        const spaceAbove = (rect?.top  ?? 0) - GAP
+        const openUpward = spaceBelow < 260 && spaceAbove > spaceBelow
+        const listMaxH   = Math.min(360, openUpward ? spaceAbove - 8 : spaceBelow - 8)
+        const rawLeft    = (rect?.right ?? 0) - DROPDOWN_W
+        const left       = Math.min(Math.max(8, rawLeft), vw - DROPDOWN_W - 8)
+        const posStyle   = openUpward
+          ? { bottom: vh - (rect?.top  ?? 0) + GAP }
+          : { top:    (rect?.bottom ?? 0) + GAP }
+        return (
         <div style={{
-          position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+          position: 'fixed', left, width: DROPDOWN_W, ...posStyle,
+          maxHeight: listMaxH, overflowY: 'auto',
           background: '#fff', border: '1px solid #E5E7EB',
           borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.13)',
-          zIndex: 400, width: 220, maxHeight: 400, overflowY: 'auto', padding: '6px 0',
+          zIndex: 9999, padding: '6px 0',
         }}>
           {/* All classes */}
           <label style={PICK_ROW}>
@@ -1273,7 +1289,8 @@ function ClassPicker({
             )
           })}
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
