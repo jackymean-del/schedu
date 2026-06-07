@@ -698,7 +698,7 @@ function smartGenerateBellConfig(
   // Ensure smart-path period duration fits within 8-hour school day,
   // snapped to nearest 5 and clamped to [periodDurMin, periodDur].
   const totalBreakMins  = cwRows.reduce((s, r) => s + r.duration, 0)
-  const availForPeriods = 8 * 60 - 10 /* assembly */ - totalBreakMins
+  const availForPeriods = 8 * 60 - 10 /* assembly */ - 10 /* dispersal */ - totalBreakMins
   const rawCapped       = Math.floor(availForPeriods / maxPeriods)
   const cappedPeriodDur = snap5(Math.min(periodDur, Math.max(periodDurMin, rawCapped)))
 
@@ -707,8 +707,29 @@ function smartGenerateBellConfig(
     ? snap5(Math.max(periodDurMin, concurrentPeriodDur))
     : undefined
 
+  // ── Per-group max periods for age-appropriate early dispersal ────────────
+  // Pre-Primary (max 4h) and Primary (max 6h) have fewer periods and disperse
+  // earlier than Middle/Senior classes based on SCHOOL_HOUR_STANDARDS.
+  const classGroupMap: Record<string, string> = {}
+  activeClasses.forEach(c => { classGroupMap[c.key] = c.group })
+
+  const perGroupMaxPeriods: Record<string, number> = {}
+  for (const g of activeGroups) {
+    const std = SCHOOL_HOUR_STANDARDS[g.group as SchoolGroupKey]
+    if (!std) { perGroupMaxPeriods[g.group] = maxPeriods; continue }
+    const grpKeys = activeClasses.filter(c => c.group === g.group).map(c => c.key)
+    // Total break minutes for this group (each cwRow counted once)
+    const groupBreakMins = cwRows
+      .filter(r => r.classes.some(c => grpKeys.includes(c)))
+      .reduce((sum, r) => sum + r.duration, 0)
+    // Fit as many periods as possible within the group's max school hours
+    const targetMaxMins = std.maxHours * 60 - 10 /* assembly */ - 10 /* dispersal */ - groupBreakMins
+    const gMaxP = Math.max(1, Math.min(maxPeriods, Math.floor(targetMaxMins / cappedPeriodDur)))
+    perGroupMaxPeriods[g.group] = gMaxP
+  }
+
   return {
-    rows:   buildBellRowsFromCw(startTime, cappedPeriodDur, maxPeriods, cwRows, allKeys, 10, effectiveConcurrent, periodDurMin),
+    rows:   buildBellRowsFromCw(startTime, cappedPeriodDur, maxPeriods, cwRows, allKeys, 10, effectiveConcurrent, periodDurMin, classGroupMap, perGroupMaxPeriods),
     cwRows,
   }
 }
@@ -740,6 +761,8 @@ function buildBellRowsFromCw(
   asmDur:              number   = 10,
   concurrentPeriodDur?: number,  // if set: classes not eating use this dur during another group's lunch
   periodDurMin:        number   = 15, // minimum teaching fragment; shorter fragments are merged/dropped
+  classGroupMap?:      Record<string, string>,   // class key → group name (for per-group dispersal)
+  perGroupMaxPeriods?: Record<string, number>,   // group name → max periods (age-appropriate early dispersal)
 ): BellRow[] {
   type Ev = { type: RowType; name: string; startMins: number; duration: number }
   const startMins = toMins(startTimeStr)
@@ -780,6 +803,10 @@ function buildBellRowsFromCw(
     const evs: Ev[] = []
     let cur = startMins
 
+    // Per-group max periods for age-appropriate early dispersal
+    const clsGroup = classGroupMap?.[clsKey] ?? ''
+    const clsMaxP  = perGroupMaxPeriods?.[clsGroup] ?? maxPeriods
+
     evs.push({ type: 'assembly', name: 'Assembly', startMins: cur, duration: asmDur })
     cur += asmDur
 
@@ -800,7 +827,7 @@ function buildBellRowsFromCw(
       cur += myBreaks[bi].duration; bi++
     }
 
-    for (let pNum = 1; pNum <= maxPeriods; pNum++) {
+    for (let pNum = 1; pNum <= clsMaxP; pNum++) {
       // Use concurrentPeriodDur when another class's lunch starts exactly at this period's
       // start time — so bell boundaries align cleanly across all groups.
       const effDur = (
@@ -2095,11 +2122,9 @@ export function StepBell() {
     // defaults are computed with the ACTUAL period duration that will be used
     // in the generated schedule (not the raw P.Max state which may be trimmed).
     const lunchGroupCount  = activeClassGroups.length || 1
-    const sbDurUsed        = morningBreak ? morningBreakDur : 15
-    // When morningBreak is on there's no separate short break → 0 extra.
-    const shortBreakTotal  = morningBreak ? 0 : sbDurUsed
-    const estimatedBreaks  = sbDurUsed + shortBreakTotal + lunchGroupCount * lunchBreakDur
-    const avail8h          = 8 * 60 - asmDur - estimatedBreaks
+    const sbDurUsed        = morningBreak ? morningBreakDur : 15   // single mid-morning break
+    const estimatedBreaks  = sbDurUsed + lunchGroupCount * lunchBreakDur
+    const avail8h          = 8 * 60 - asmDur - 10 /* dispersal */ - estimatedBreaks
     const effPeriodDur     = snap5(Math.min(periodDur, Math.max(periodDurMin, Math.floor(avail8h / Math.max(1, maxPeriods)))))
 
     // When morning break is configured it acts as the mid-morning break.
@@ -3346,15 +3371,15 @@ export function StepBell() {
                     <div style={FL}>End time</div>
                     {editingEnd ? (
                       <input className="b-input" type="time" defaultValue={displayedEnd} autoFocus
-                        onChange={e => {
+                        onBlur={e => {
+                          // Fire ONCE on commit (not onChange) to avoid stale-closure multi-fire bug
                           if (autoBellMode && noRows) {
-                            // No rows yet — just update the generation target; auto-gen will fire
                             setSchoolEndTime(e.target.value)
                           } else {
                             handleEndTimeEdit(e.target.value)
                           }
+                          setEditingEnd(false)
                         }}
-                        onBlur={() => setEditingEnd(false)}
                         onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur() }}
                         style={{ width: '100%' }} />
                     ) : (
@@ -3727,8 +3752,7 @@ export function StepBell() {
                   <div style={FL}>End time</div>
                   {editingEnd ? (
                     <input className="b-input" type="time" defaultValue={endTime} autoFocus
-                      onChange={e => handleEndTimeEdit(e.target.value)}
-                      onBlur={() => setEditingEnd(false)}
+                      onBlur={e => { handleEndTimeEdit(e.target.value); setEditingEnd(false) }}
                       onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur() }}
                       style={{ width: '100%' }} />
                   ) : (
@@ -4302,10 +4326,9 @@ export function StepBell() {
 
                           // Mirror the 8h-cap from smartGenerateBellConfig so the approximate
                           // times shown here match the ACTUAL generated bell schedule.
-                          const _sbDurUsed        = morningBreak ? morningBreakDur : 15
-                          const _shortBreakTotal  = morningBreak ? 0 : _sbDurUsed
-                          const _estimatedBreaks  = _sbDurUsed + _shortBreakTotal + activeClassGroups.length * lunchBreakDur
-                          const _avail8h          = 8 * 60 - 10 - _estimatedBreaks
+                          const _sbDurUsed        = morningBreak ? morningBreakDur : 15   // single mid-morning break
+                          const _estimatedBreaks  = _sbDurUsed + activeClassGroups.length * lunchBreakDur
+                          const _avail8h          = 8 * 60 - 10 /* assembly */ - 10 /* dispersal */ - _estimatedBreaks
                           const effPeriodDur      = snap5(Math.min(periodDur, Math.max(periodDurMin, Math.floor(_avail8h / Math.max(1, maxPeriods)))))
 
                           const ppLunchAP   = effectiveLunchAP['Pre-Primary'] ?? sbAPShared
