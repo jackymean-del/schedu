@@ -2457,9 +2457,10 @@ export function StepBell() {
     if (!filterKeys.length) {
       return { viewRows: displayRows, viewStartTimes: rowStartTimes }
     }
-    // Keep rows that belong to this group (assembly/dispersal always shown)
+    // Keep rows whose classes include at least one key from the filtered group.
+    // Assembly has all class keys so it's naturally included.
+    // Dispersal rows belong to specific groups — only show the matching group's dispersal.
     const filtered = displayRows.filter(row =>
-      row.type === 'assembly' || row.type === 'dispersal' ||
       row.classes.length === 0 ||
       row.classes.some(k => filterKeys.includes(k))
     )
@@ -3467,80 +3468,6 @@ export function StepBell() {
                 </div>
               </div>
 
-              {/* ── Age-appropriate hours panel (Standard mode) ─────────── */}
-              {activeClassGroups.length > 0 && (() => {
-                const startMins = toMins(startTime)
-                const endMins   = toMins(endTime)
-                const totalHrs  = (endMins - startMins) / 60
-                return (
-                  <div style={{ marginBottom: 14 }}>
-                    {/* Section label */}
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
-                      Age-appropriate hours guide
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {(Object.keys(SCHOOL_HOUR_STANDARDS) as SchoolGroupKey[])
-                        .filter(gk => activeClassGroups.some(ag => ag.group === gk))
-                        .map(gk => {
-                          const s = SCHOOL_HOUR_STANDARDS[gk]
-                          const ok = totalHrs >= s.minHours && totalHrs <= s.maxHours
-                          const tooLong = totalHrs > s.maxHours
-                          const tooShort = totalHrs < s.minHours
-                          const statusColor = ok ? '#059669' : tooLong ? '#DC2626' : '#D97706'
-                          const statusBg    = ok ? '#F0FDF4' : tooLong ? '#FEF2F2' : '#FFFBEB'
-                          const statusBdr   = ok ? '#6EE7B7' : tooLong ? '#FECACA' : '#FDE68A'
-                          const statusIcon  = ok ? '✓' : tooLong ? '↑' : '↓'
-                          const statusMsg   = ok
-                            ? `${totalHrs.toFixed(1)} hrs — within range`
-                            : tooLong
-                              ? `${totalHrs.toFixed(1)} hrs — too long (max ${s.maxHours} hrs)`
-                              : `${totalHrs.toFixed(1)} hrs — too short (min ${s.minHours} hrs)`
-                          return (
-                            <div key={gk} style={{ display: 'flex', alignItems: 'center', gap: 8,
-                              background: statusBg, border: `1px solid ${statusBdr}`,
-                              borderRadius: 8, padding: '6px 10px' }}>
-                              <span style={{ fontSize: 15 }}>{s.emoji}</span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
-                                  {s.label}
-                                  <span style={{ fontWeight: 400, color: '#9CA3AF', marginLeft: 5 }}>({s.ages})</span>
-                                </div>
-                                <div style={{ fontSize: 10, color: '#6B7280' }}>
-                                  Recommended {s.minHours}–{s.maxHours} hrs · {s.suggestedStart}–{s.suggestedEnd}
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: statusColor,
-                                  background: '#fff', border: `1px solid ${statusBdr}`,
-                                  borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
-                                  {statusIcon} {statusMsg}
-                                </span>
-                                {!ok && (
-                                  <button
-                                    onClick={() => {
-                                      setStartTime(s.suggestedStart)
-                                      // Also snap end time to suit this group's suggestion.
-                                      // In Standard mode, "end time" adjusts the last period duration.
-                                      handleEndTimeEdit(s.suggestedEnd)
-                                    }}
-                                    title={`Apply suggested hours: ${s.suggestedStart}–${s.suggestedEnd}`}
-                                    style={{ fontSize: 10, fontWeight: 600, color: s.color,
-                                      background: '#fff', border: `1px solid ${s.border}`,
-                                      borderRadius: 6, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                                    Apply {s.suggestedStart}–{s.suggestedEnd}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>
-                      Based on NEP 2020 · NCERT · RTE Act 2009 · CBSE · WHO/UNESCO standards
-                    </div>
-                  </div>
-                )
-              })()}
 
               {/* ── Working days — only shown in single-week cycle ── */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -4089,72 +4016,6 @@ export function StepBell() {
               {autoBellMode && (
                 <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-
-                  {/* ── Age-appropriate end-time suggestions (Smart mode) ── */}
-                  {activeClassGroups.length > 0 && (() => {
-                    const startMins   = toMins(startTime)
-                    const endMins     = toMins(schoolEndTime)
-                    const totalHrs    = (endMins - startMins) / 60
-                    const activeStds  = (Object.keys(SCHOOL_HOUR_STANDARDS) as SchoolGroupKey[])
-                      .filter(gk => activeClassGroups.some(ag => ag.group === gk))
-                    const anyBad = activeStds.some(gk => {
-                      const s = SCHOOL_HOUR_STANDARDS[gk]
-                      return totalHrs < s.minHours || totalHrs > s.maxHours
-                    })
-                    if (!anyBad && activeStds.length === 0) return null
-                    return (
-                      <div style={{
-                        background: '#FAFAFA', border: '1px solid #E5E7EB',
-                        borderRadius: 9, padding: '10px 12px',
-                      }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 7,
-                          textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          Timing suggestions by class group
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {activeStds.map(gk => {
-                            const s = SCHOOL_HOUR_STANDARDS[gk]
-                            const ok = totalHrs >= s.minHours && totalHrs <= s.maxHours
-                            const tooLong = totalHrs > s.maxHours
-                            const statusColor = ok ? '#059669' : tooLong ? '#DC2626' : '#D97706'
-                            const statusBg    = ok ? '#F0FDF4' : tooLong ? '#FEF2F2' : '#FFFBEB'
-                            const statusBdr   = ok ? '#6EE7B7' : tooLong ? '#FECACA' : '#FDE68A'
-                            return (
-                              <div key={gk} style={{ display: 'flex', alignItems: 'center', gap: 6,
-                                background: statusBg, border: `1px solid ${statusBdr}`,
-                                borderRadius: 20, padding: '4px 10px' }}>
-                                <span style={{ fontSize: 13 }}>{s.emoji}</span>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
-                                  {gk}
-                                </span>
-                                <span style={{ fontSize: 10, color: '#6B7280' }}>
-                                  {s.minHours}–{s.maxHours} hrs
-                                </span>
-                                {!ok && (
-                                  <button
-                                    onClick={() => setSchoolEndTime(s.suggestedEnd)}
-                                    style={{
-                                      fontSize: 10, fontWeight: 700, color: statusColor,
-                                      background: '#fff', border: `1px solid ${statusBdr}`,
-                                      borderRadius: 10, padding: '1px 7px', cursor: 'pointer',
-                                      fontFamily: 'inherit', whiteSpace: 'nowrap',
-                                    }}>
-                                    → {s.suggestedEnd}
-                                  </button>
-                                )}
-                                {ok && (
-                                  <span style={{ fontSize: 10, color: '#059669', fontWeight: 700 }}>✓</span>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                        <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 6 }}>
-                          NEP 2020 · NCERT · RTE Act · CBSE · WHO — click a suggestion to apply it
-                        </div>
-                      </div>
-                    )
-                  })()}
 
                   {/* ── Morning break ─────────────────────────────────── */}
                   <div style={{
@@ -5110,14 +4971,17 @@ export function StepBell() {
                         <ClassPicker classes={row.classes} onChange={cls => updateRow(row.id, { classes: cls })}
                           rowId={row.id} openId={openPicker} setOpenId={setOpenPicker}
                           classEntries={activeClasses} allClassKeys={cwClassKeys} classGroups={activeClassGroups} streamDefs={customStreams} classStreamMap={classStreamMap} />
-                        <button className="b-del" onClick={() => deleteRow(row.id)} style={{
-                          background: 'none', border: 'none', cursor: 'pointer', color: '#FCA5A5',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3, opacity: 0,
-                        }}>
-                          <Trash2 size={13} />
-                        </button>
+                        {bellViewFilter === 'all' && (
+                          <button className="b-del" onClick={() => deleteRow(row.id)} style={{
+                            background: 'none', border: 'none', cursor: 'pointer', color: '#FCA5A5',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3, opacity: 0,
+                          }}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
-                      {i < displayRows.length - 1 && (
+                      {/* GapRow only in "All" view — filtered view is read-only to avoid index mismatch */}
+                      {bellViewFilter === 'all' && i < viewRows.length - 1 && (
                         <GapRow afterIndex={i} rows={displayRows}
                           onInsertBreak={insertBreak}
                           onInsertPeriod={insertPeriodAt}
