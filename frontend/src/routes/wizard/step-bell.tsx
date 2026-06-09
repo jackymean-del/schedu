@@ -1948,21 +1948,6 @@ export function StepBell() {
     })
   }, [customClasses, activeClassKeys, customStreams, classStreamMap])
 
-  // Grades derived from the Resources step sections (Step 1 data)
-  const GRADE_SORT = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
-  const { uniqueGrades, sectionsPerGrade } = useMemo(() => {
-    const map = new Map<string, number>()
-    ;(storeSections ?? []).forEach((s: any) => {
-      const g: string = s.grade || s.name?.split('-')[0] || 'Unknown'
-      map.set(g, (map.get(g) ?? 0) + 1)
-    })
-    const sorted = [...map.keys()].sort((a, b) => {
-      const ai = GRADE_SORT.indexOf(a.replace(/^class\s+/i, '').trim())
-      const bi = GRADE_SORT.indexOf(b.replace(/^class\s+/i, '').trim())
-      return (ai < 0 ? 100 : ai) - (bi < 0 ? 100 : bi)
-    })
-    return { uniqueGrades: sorted, sectionsPerGrade: Object.fromEntries(map) }
-  }, [storeSections])
 
   // Groups that have at least one class assigned — used in pickers, timelines, capacity
   const activeClassGroups = useMemo(() =>
@@ -3383,68 +3368,9 @@ export function StepBell() {
             </span>
           </div>
 
-          {/* ─── ASSIGN CLASSES TO SHIFTS ─── */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#FAFAFA', borderBottom: '1px solid #F3F4F6' }}>
-                <svg width='13' height='13' viewBox='0 0 14 14' fill='none'><rect x='1' y='1' width='4' height='4' rx='1' fill='#7C6FE0'/><rect x='1' y='9' width='4' height='4' rx='1' fill='#7C6FE0'/><rect x='9' y='1' width='4' height='4' rx='1' fill='#7C6FE0'/><rect x='9' y='9' width='4' height='4' rx='1' fill='#E5E7EB'/></svg>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Class Shift Assignment</span>
-                {isAdvanced && <span style={{ fontSize: 11, color: '#9CA3AF', marginLeft: 4 }}>· Assign each grade to a shift</span>}
-              </div>
-
-              {!isAdvanced ? (
-                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>✓</span>
-                  <span style={{ fontSize: 12, color: '#6B7280' }}>
-                    All grades follow a single bell schedule in Standard mode.
-                    Switch to <strong>Advanced</strong> to assign different shifts per grade.
-                  </span>
-                </div>
-              ) : uniqueGrades.length === 0 ? (
-                <div style={{ padding: '12px 16px' }}>
-                  <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                    No classes defined yet — complete Step 1 (Resources) first.
-                  </span>
-                </div>
-              ) : (
-                <div style={{ padding: '10px 16px 14px' }}>
-                  <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 10 }}>
-                    Select which shift each grade belongs to. Grades not assigned default to the first shift.
-                  </div>
-                  {uniqueGrades.map(grade => {
-                    const gradeKey = grade.toLowerCase().replace(/^classs+/i, '').trim()
-                    const assignedShiftId = shifts.find(s => s.classes?.includes(gradeKey))?.id ?? shifts[0]?.id ?? ''
-                    const sectionCount = sectionsPerGrade[grade] ?? 0
-                    const gradeLabel = /^(Nursery|LKG|UKG)$/i.test(grade) ? grade : ('Grade ' + grade.replace(/^classs+/i, ''))
-                    return (
-                      <div key={grade} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '7px 10px', borderRadius: 8, background: '#FAFAFA', border: '1px solid #F3F4F6' }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#111028', minWidth: 100 }}>
-                          {gradeLabel}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#9CA3AF', flex: 1 }}>
-                          {sectionCount} section{sectionCount !== 1 ? 's' : ''}
-                        </span>
-                        <select
-                          value={assignedShiftId}
-                          onChange={e => {
-                            const newId = e.target.value
-                            setShifts(prev => prev.map(s => {
-                              if (s.id === newId) return s.classes?.includes(gradeKey) ? s : { ...s, classes: [...(s.classes ?? []), gradeKey] }
-                              return { ...s, classes: (s.classes ?? []).filter(k => k !== gradeKey) }
-                            }))
-                          }}
-                          style={{ padding: '5px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 12, fontFamily: 'inherit', color: '#374151', background: '#fff', outline: 'none', cursor: 'pointer' }}
-                        >
-                          {shifts.map(s => <option key={s.id} value={s.id}>{s.name || 'Shift ' + s.id}</option>)}
-                        </select>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Class → block assignment is derived from Resources › Rooms (each room's
+              block + its assigned classes), so the manual grade-to-shift assignment
+              card was removed as redundant. */}
 
           {/* ─── SCHEDULE RHYTHM ─── */}
           <div style={{ marginBottom: 16 }}>
