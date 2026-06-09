@@ -451,7 +451,8 @@ export function StepResourcesV2() {
     store.setRooms?.(next.map(r => ({
       id: r.id, generatedName: r.name, actualName: r.name,
       roomType: r.type,   // store as Title Case — no kebab conversion
-      capacity: r.capacity, subjectMappings: r.subjectMappings,
+      capacity: r.capacity, building: r.building, floor: r.floor,
+      subjectMappings: r.subjectMappings,
       notes: r.notes, scope: r.scope,
     })))
   }
@@ -460,7 +461,8 @@ export function StepResourcesV2() {
     store.setRooms?.(rooms.map(r => ({
       id: r.id, generatedName: r.name, actualName: r.name,
       roomType: r.type,   // store as Title Case — no kebab conversion
-      capacity: r.capacity, subjectMappings: r.subjectMappings,
+      capacity: r.capacity, building: r.building, floor: r.floor,
+      subjectMappings: r.subjectMappings,
       notes: r.notes, scope: r.scope,
     })))
   }, [rooms]) // eslint-disable-line react-hooks/exhaustive-deps

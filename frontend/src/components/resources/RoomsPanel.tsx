@@ -1,13 +1,15 @@
 /**
  * RoomsPanel — Tab 4.
+ * Rooms are grouped under a Block / Building / Area header (collapsible), mirroring
+ * the Classes tab's grade grouping. Each block holds many rooms/venues; each room can
+ * be assigned to multiple classes. The block label uses the Classroom.building field.
  * Columns: Room | Type | Cap | Assigned Classes | Special Subjects | [ Delete ]
- * Fixed-width grid layout, text action buttons.
  */
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Subject, Section } from '@/types'
 import type { RoomRow } from '@/components/master/EntityGrids'
-import { Plus, Building2, CalendarRange } from 'lucide-react'
+import { Plus, Building2, CalendarRange, ChevronDown } from 'lucide-react'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -20,6 +22,10 @@ import type { ChipOption } from './shared'
 export type RoomExt = RoomRow & { subjectMappings?: string[]; notes?: string }
 
 function makeId() { return Math.random().toString(36).slice(2, 9) }
+
+const DEFAULT_BLOCK = 'Main Block'
+/** Normalise a room's block label (empty → default) for grouping/display. */
+function blockOf(r: RoomExt): string { return (r.building || '').trim() || DEFAULT_BLOCK }
 
 function getGrade(name: string): string {
   const t = name.trim()
@@ -73,27 +79,96 @@ function NameCell({ value, onSave }: { value: string; onSave: (v: string) => voi
   )
 }
 
+// ─── Block move pill (next to room name) ──────────────────────────────────────
+function BlockPill({ block, blocks, onMove }: {
+  block: string
+  blocks: string[]
+  onMove: (b: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(block)
+  const ref = useRef<HTMLInputElement>(null)
+  const listId = useRef('room-block-' + makeId()).current
+  useEffect(() => { if (editing) ref.current?.focus() }, [editing])
+  useEffect(() => { setVal(block) }, [block])
+  function commit() { const v = val.trim(); if (v && v !== block) onMove(v); setEditing(false) }
+  if (editing) return (
+    <>
+      <input ref={ref} value={val} onChange={e => setVal(e.target.value)} onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setVal(block); setEditing(false) } }}
+        list={listId} placeholder="Block / Building…"
+        style={{ ...inp, fontSize: 10.5, width: 130, padding: '2px 6px' }} />
+      <datalist id={listId}>{blocks.map(b => <option key={b} value={b} />)}</datalist>
+    </>
+  )
+  return (
+    <span onClick={() => { setVal(block); setEditing(true) }} title="Move to another block / building"
+      style={{
+        fontSize: 10, fontWeight: 600, color: '#7C78AA', background: '#F4F2FF',
+        border: '1px dashed #C4BAFF', borderRadius: 20, padding: '1px 8px',
+        cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 3,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#F4F2FF'; e.currentTarget.style.borderColor = '#C4BAFF' }}
+    ><Building2 size={9} /> {block}</span>
+  )
+}
+
+// ─── Block header name input (mirrors Classes stream header) ───────────────────
+function BlockNameInput({ initial, onCommit }: { initial: string; onCommit: (v: string) => void }) {
+  const [val, setVal] = useState(initial)
+  useEffect(() => { setVal(initial) }, [initial])
+  return (
+    <input
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onClick={e => e.stopPropagation()}
+      onBlur={() => { if (val.trim() && val.trim() !== initial) onCommit(val.trim()) }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { e.preventDefault(); if (val.trim()) onCommit(val.trim()) }
+        if (e.key === 'Escape') { e.preventDefault(); setVal(initial) }
+      }}
+      title="Rename this block / building / area"
+      style={{
+        fontSize: 13, fontWeight: 800, letterSpacing: '0.03em',
+        color: P_D, border: `1.5px solid transparent`, background: 'transparent',
+        borderRadius: 6, padding: '2px 8px', outline: 'none', fontFamily: 'inherit', width: 200,
+        transition: 'border-color 0.15s, background 0.15s',
+      }}
+      onFocus={e => { e.currentTarget.style.borderColor = P; e.currentTarget.style.background = '#fff' }}
+      onBlurCapture={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
+    />
+  )
+}
+
 // ─── Add row ──────────────────────────────────────────────────────────────────
-function AddRow({ onAdd }: { onAdd: (r: RoomExt) => void }) {
+function AddRow({ onAdd, defaultBlock, blocks }: {
+  onAdd: (r: RoomExt) => void
+  defaultBlock: string
+  blocks: string[]
+}) {
   const [active, setActive] = useState(false)
   const [name, setName]   = useState('')
   const [type, setType]   = useState('Classroom')
   const [cap, setCap]     = useState(40)
+  const [block, setBlock] = useState(defaultBlock)
   const ref = useRef<HTMLInputElement>(null)
+  const listId = useRef('add-room-block-' + makeId()).current
   useEffect(() => { if (active) ref.current?.focus() }, [active])
+  useEffect(() => { setBlock(defaultBlock) }, [defaultBlock])
 
   function commit() {
     if (!name.trim()) { setActive(false); return }
-    onAdd({ id: makeId(), name: name.trim(), type, capacity: cap, building: '', floor: '', subjectMappings: [], notes: '' })
-    setName(''); setType('Classroom'); setCap(40); setActive(false)
+    onAdd({ id: makeId(), name: name.trim(), type, capacity: cap, building: block.trim() || DEFAULT_BLOCK, floor: '', subjectMappings: [], notes: '' })
+    setName(''); setType('Classroom'); setCap(40); setBlock(defaultBlock); setActive(false)
   }
 
   if (!active) return (
     <tr>
-      <td colSpan={6} style={{ ...TD, padding: '9px 12px' }}>
+      <td colSpan={6} style={{ ...TD, padding: '8px 12px 8px 36px' }}>
         <button onClick={() => setActive(true)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px dashed #C8C2F0', borderRadius: 6, color: P, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>
-          <Plus size={13} /> Add Room
+          <Plus size={13} /> Add Room {defaultBlock !== DEFAULT_BLOCK ? `to ${defaultBlock}` : ''}
         </button>
       </td>
     </tr>
@@ -116,7 +191,12 @@ function AddRow({ onAdd }: { onAdd: (r: RoomExt) => void }) {
         <input type="number" value={cap} onChange={e => setCap(+e.target.value)} min={1} max={999}
           style={{ ...inp, width: '100%', textAlign: 'center' }} />
       </td>
-      <td colSpan={3} style={{ ...TD, whiteSpace: 'nowrap' }}>
+      <td style={TD}>
+        <input value={block} onChange={e => setBlock(e.target.value)} list={listId}
+          placeholder="Block / Building" style={{ ...inp, width: '100%' }} />
+        <datalist id={listId}>{blocks.map(b => <option key={b} value={b} />)}</datalist>
+      </td>
+      <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap' }}>
         <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
         <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
       </td>
@@ -125,8 +205,9 @@ function AddRow({ onAdd }: { onAdd: (r: RoomExt) => void }) {
 }
 
 // ─── Room row ─────────────────────────────────────────────────────────────────
-function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onUpdateSections, onDelete, onScopeClick }: {
+function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, onUpdate, onUpdateSections, onDelete, onScopeClick }: {
   room: RoomExt
+  blocks: string[]
   classOpts: ChipOption[]
   subjectOpts: ChipOption[]
   assignedClasses: string[]
@@ -150,9 +231,12 @@ function RoomRow_({ room, classOpts, subjectOpts, assignedClasses, onUpdate, onU
       onMouseEnter={e => (e.currentTarget.style.background = '#F6F4FF')}
       onMouseLeave={e => (e.currentTarget.style.background = '')}
     >
-      {/* Name */}
-      <td style={TD}>
-        <NameCell value={room.name} onSave={v => onUpdate({ name: v })} />
+      {/* Name + block pill */}
+      <td style={{ ...TD, paddingLeft: 36 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+          <NameCell value={room.name} onSave={v => onUpdate({ name: v })} />
+          <BlockPill block={blockOf(room)} blocks={blocks} onMove={b => onUpdate({ building: b })} />
+        </div>
       </td>
 
       {/* Type — colored badge select */}
@@ -243,6 +327,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set())
   const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<RoomExt[]>()
 
@@ -260,7 +345,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         name: cells[0]?.trim() || '',
         type: cells[1]?.trim() || 'Classroom',
         capacity: parseInt(cells[2]) || 40,
-        building: 'Main Block', floor: 'Ground',
+        building: cells[3]?.trim() || DEFAULT_BLOCK, floor: '',
         subjectMappings: [], notes: '',
       } as RoomExt))
       .filter(r => r.name)
@@ -269,11 +354,30 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
 
   const [sortAZ, setSortAZ] = useState(false)
 
-  const filtered = useMemo(() => {
+  // All block names currently in use (for datalists + the "+ Block" affordance)
+  const blocks = useMemo(() => {
+    const set = new Set<string>(rooms.map(blockOf))
+    set.add(DEFAULT_BLOCK)
+    return [...set].sort((a, b) => a === DEFAULT_BLOCK ? -1 : b === DEFAULT_BLOCK ? 1 : a.localeCompare(b))
+  }, [rooms])
+
+  // grouped: block → rooms[]  (respects search + sort)
+  const grouped = useMemo(() => {
     const q = search.toLowerCase()
-    const base = !q ? rooms : rooms.filter(r => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q))
-    return sortAZ ? [...base].sort((a, b) => a.name.localeCompare(b.name)) : base
+    const base = !q ? rooms : rooms.filter(r => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q) || blockOf(r).toLowerCase().includes(q))
+    const map = new Map<string, RoomExt[]>()
+    base.forEach(r => {
+      const b = blockOf(r)
+      if (!map.has(b)) map.set(b, [])
+      map.get(b)!.push(r)
+    })
+    const sorted = new Map([...map.entries()].sort((a, b) =>
+      a[0] === DEFAULT_BLOCK ? -1 : b[0] === DEFAULT_BLOCK ? 1 : a[0].localeCompare(b[0])))
+    if (sortAZ) sorted.forEach((rs, b) => sorted.set(b, [...rs].sort((x, y) => x.name.localeCompare(y.name))))
+    return sorted
   }, [rooms, search, sortAZ])
+
+  const shownCount = useMemo(() => Array.from(grouped.values()).reduce((a, rs) => a + rs.length, 0), [grouped])
 
   const classOpts = useMemo<ChipOption[]>(() => {
     const map = new Map<string, string[]>()
@@ -324,6 +428,28 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
 
   function addRoom(r: RoomExt) { undoHistory.push(rooms); setRooms([...rooms, r]) }
 
+  // Rename a whole block → move every room in it to the new label.
+  function renameBlock(oldName: string, newName: string) {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed === oldName) return
+    undoHistory.push(rooms)
+    setRooms(rooms.map(r => blockOf(r) === oldName ? { ...r, building: trimmed } : r))
+  }
+
+  // Add a brand-new block: seed it with one room so it persists (blocks are derived
+  // from rooms' building field), then the user renames the room.
+  function addBlock() {
+    const base = 'New Block'
+    let name = base; let n = 2
+    while (blocks.includes(name)) { name = `${base} ${n++}` }
+    undoHistory.push(rooms)
+    setRooms([...rooms, { id: makeId(), name: 'Room 1', type: 'Classroom', capacity: 40, building: name, floor: '', subjectMappings: [], notes: '' } as RoomExt])
+  }
+
+  function toggleBlock(b: string) {
+    setCollapsedBlocks(prev => { const next = new Set(prev); next.has(b) ? next.delete(b) : next.add(b); return next })
+  }
+
   return (
     <div
       style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
@@ -338,19 +464,19 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
           <span style={{ fontSize: 10, color: P, background: P_L, borderRadius: 4, padding: '1px 6px 2px', fontWeight: 700, border: `1px solid ${P_B}` }}>
             {rooms.length}
           </span>
-          {search && filtered.length !== rooms.length && (
-            <span style={{ fontSize: 10, color: '#9896B5', fontWeight: 500 }}>{filtered.length} shown</span>
+          {search && shownCount !== rooms.length && (
+            <span style={{ fontSize: 10, color: '#9896B5', fontWeight: 500 }}>{shownCount} shown</span>
           )}
         </div>
         <div style={{ width: 1, height: 14, background: '#EAE6FF', flexShrink: 0 }} />
-        <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
+        <div style={{ position: 'relative', width: 240, flexShrink: 0 }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#C0BBD8', pointerEvents: 'none', fontSize: 13 }}>⌕</span>
           <input
             ref={searchRef}
             value={search} onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholder="Search rooms…"
+            placeholder="Search rooms or blocks…"
             className="rp-inp"
             style={{
               width: '100%', padding: '6px 10px 6px 28px',
@@ -365,7 +491,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         </div>
         <button
           onClick={() => setSortAZ(p => !p)}
-          title={sortAZ ? 'Sorted A→Z (click to reset)' : 'Sort rooms A→Z'}
+          title={sortAZ ? 'Sorted A→Z (click to reset)' : 'Sort rooms A→Z within each block'}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
@@ -376,6 +502,13 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         >↑Z Sort</button>
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
+          <button
+            onClick={addBlock}
+            title="Add a new block / building / area"
+            style={outlineBtn}
+            onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
+          ><Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />+ Block</button>
           {onScopeClick && (
             <button
               title="Set availability scope for all rooms"
@@ -420,16 +553,22 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         </div>
       </div>
 
+      {/* Helper hint */}
+      <div style={{ flexShrink: 0, fontSize: 11, color: '#8B87AD', margin: '0 0 7px 2px', lineHeight: 1.5 }}>
+        Group rooms by <strong style={{ color: P_D }}>block / building / area</strong> so timetabling knows which classes share a location.
+        Click a block name to rename it; use the pill beside a room to move it. Skipping this is fine — everything stays in “{DEFAULT_BLOCK}”.
+      </div>
+
       {importOpen && (
         <ImportModal
           title="Rooms"
-          sampleHeaders={['Room Name', 'Type', 'Capacity']}
+          sampleHeaders={['Room Name', 'Type', 'Capacity', 'Block / Building']}
           sampleRows={[
-            ['Room 101',    'Classroom',    '40'],
-            ['Room 102',    'Classroom',    '40'],
-            ['Chem Lab',    'Lab',          '30'],
-            ['Computer Lab','Computer Lab', '35'],
-            ['Library',     'Library',      '60'],
+            ['Room 101',    'Classroom',    '40', 'Main Block'],
+            ['Room 102',    'Classroom',    '40', 'Main Block'],
+            ['Chem Lab',    'Lab',          '30', 'Science Block'],
+            ['Computer Lab','Computer Lab', '35', 'Science Block'],
+            ['Library',     'Library',      '60', 'Main Block'],
           ]}
           onImport={handleImport}
           onClose={() => setImportOpen(false)}
@@ -442,17 +581,17 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🏫</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#9896B5', marginBottom: 4 }}>No rooms yet</div>
-            <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add rooms, then assign classes and special subjects to them.</div>
+            <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add rooms, group them by block/building, then assign classes and special subjects.</div>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '13%' }} />  {/* Room */}
-              <col style={{ width: '14%' }} />  {/* Type */}
-              <col style={{ width: '5%' }} />   {/* Cap */}
-              <col style={{ width: '26%' }} />  {/* Assigned Classes */}
-              <col style={{ width: '22%' }} />  {/* Special Subjects */}
-              <col style={{ width: '20%' }} />  {/* Actions */}
+              <col style={{ width: '24%' }} />  {/* Room + block pill */}
+              <col style={{ width: '13%' }} />  {/* Type */}
+              <col style={{ width: '6%' }} />   {/* Cap */}
+              <col style={{ width: '25%' }} />  {/* Assigned Classes */}
+              <col style={{ width: '20%' }} />  {/* Special Subjects */}
+              <col style={{ width: '12%' }} />  {/* Actions */}
             </colgroup>
             <thead>
               <tr>
@@ -465,25 +604,53 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
               </tr>
             </thead>
             <tbody>
-              {filtered.map(room => (
-                <RoomRow_
-                  key={room.id}
-                  room={room}
-                  classOpts={classOpts}
-                  subjectOpts={subjectOpts}
-                  assignedClasses={roomClassMap.get(room.name) ?? []}
-                  onUpdate={p => updateRoom(room.id, p)}
-                  onUpdateSections={(add, rem) => updateSections(room.name, add, rem)}
-                  onDelete={() => removeRoom(room.id)}
-                  onScopeClick={onScopeClick
-                    ? (r, rect) => onScopeClick(r, rect)
-                    : undefined}
-                />
-              ))}
-              {filtered.length === 0 && search && (
+              {Array.from(grouped.entries()).map(([block, blockRooms]) => {
+                const collapsed = collapsedBlocks.has(block)
+                return (
+                  <React.Fragment key={block}>
+                    {/* ── Block header ── */}
+                    <tr>
+                      <td colSpan={6} style={{
+                        padding: '8px 14px',
+                        background: 'linear-gradient(90deg, #EAE5FF 0%, #F3F0FF 55%, #F9F8FF 100%)',
+                        borderTop: '2px solid #D4CCFF',
+                        borderBottom: '1px solid #DDD8FF',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span onClick={() => toggleBlock(block)}
+                            style={{ color: P, flexShrink: 0, transition: 'transform 0.18s', transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', display: 'flex', cursor: 'pointer' }}>
+                            <ChevronDown size={16} strokeWidth={2.5} />
+                          </span>
+                          <Building2 size={13} color={P_D} style={{ flexShrink: 0 }} />
+                          <BlockNameInput initial={block} onCommit={v => renameBlock(block, v)} />
+                          <span style={{ fontSize: 11.5, fontWeight: 500, color: '#9590BF' }}>
+                            · {blockRooms.length} room{blockRooms.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {!collapsed && blockRooms.map(room => (
+                      <RoomRow_
+                        key={room.id}
+                        room={room}
+                        blocks={blocks}
+                        classOpts={classOpts}
+                        subjectOpts={subjectOpts}
+                        assignedClasses={roomClassMap.get(room.name) ?? []}
+                        onUpdate={p => updateRoom(room.id, p)}
+                        onUpdateSections={(add, rem) => updateSections(room.name, add, rem)}
+                        onDelete={() => removeRoom(room.id)}
+                        onScopeClick={onScopeClick ? (r, rect) => onScopeClick(r, rect) : undefined}
+                      />
+                    ))}
+                    {!collapsed && <AddRow onAdd={addRoom} defaultBlock={block} blocks={blocks} />}
+                  </React.Fragment>
+                )
+              })}
+              {grouped.size === 0 && search && (
                 <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>No rooms match "{search}"</td></tr>
               )}
-              <AddRow onAdd={addRoom} />
             </tbody>
           </table>
         )}
