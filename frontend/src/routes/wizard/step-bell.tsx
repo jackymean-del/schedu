@@ -345,6 +345,7 @@ interface ShiftConfig {
   id:            string
   name:          string
   startTime:     string   // HH:MM
+  endTime?:      string   // HH:MM — per-shift end (block-wise); falls back to schoolEndTime
   periodDur:     number   // max period duration (minutes)
   periodDurMin?: number   // min period duration (minutes); AI won't go below this
   maxPeriods:    number
@@ -718,28 +719,17 @@ function smartGenerateBellConfig(
   const classGroupMap: Record<string, string> = {}
   activeClasses.forEach(c => { classGroupMap[c.key] = c.group })
 
-  // ── Per-group period DURATION — age-appropriate ──────────────────────────
-  // The uniform fit (cappedPeriodDur) is the longest duration the day allows. Young
-  // children shouldn't sit through long sessions, so cap each group at its age-
-  // appropriate maximum (SCHOOL_HOUR_STANDARDS.periodDurRange[1]): Pre-Primary ≤30,
-  // Primary ≤45, Middle ≤50, Secondary ≤55, Sr.Sec ≤60. The most senior group keeps
-  // the longest periods; juniors get shorter ones — always within the user's
-  // [periodDurMin, periodDur] bounds. When the fitted duration already sits at/under
-  // every group's age cap, all groups share one value (uniform & bell-aligned).
-  //
-  // EXCEPTION: when a concurrent-period feature is active (Match Lunch / Custom), all
-  // classes MUST share one duration so they reach each lunch boundary together and the
-  // concurrent period merges into a single aligned row. There, alignment wins over the
-  // age-cap (the user's choice), and durations stay uniform.
-  const concurrencyActive = concurrentPeriodDur !== undefined
+  // ── Uniform period DURATION within this unit (block or whole school) ──────
+  // Every class in a generation unit shares ONE period length (cappedPeriodDur) so
+  // their bells stay aligned in ALL modes: shared breaks merge into single rows and,
+  // during any group's lunch, the non-eating classes sit in a single aligned period
+  // (Regular keeps the full length; Match-Lunch/Custom shorten it). Age-appropriate
+  // pacing comes from per-group max-periods (younger groups disperse earlier) and from
+  // organising ages into separate blocks — each block is its own unit with its own
+  // uniform length, so a Pre-Primary block can run short periods while a Senior block
+  // runs longer ones.
   const perGroupPeriodDur: Record<string, number> = {}
-  for (const g of activeGroups) {
-    if (concurrencyActive) { perGroupPeriodDur[g.group] = cappedPeriodDur; continue }
-    const std    = SCHOOL_HOUR_STANDARDS[g.group as SchoolGroupKey]
-    const ageMax = std ? std.periodDurRange[1] : periodDur
-    perGroupPeriodDur[g.group] = snap5(Math.max(periodDurMin, Math.min(cappedPeriodDur, ageMax)))
-  }
-  const groupDur = (group: string) => perGroupPeriodDur[group] ?? cappedPeriodDur
+  for (const g of activeGroups) perGroupPeriodDur[g.group] = cappedPeriodDur
 
   // ── Per-group max periods for age-appropriate early dispersal ────────────
   // Pre-Primary (max 4h) and Primary (max 6h) have fewer periods and disperse
@@ -753,10 +743,9 @@ function smartGenerateBellConfig(
     const groupBreakMins = cwRows
       .filter(r => r.classes.some(c => grpKeys.includes(c)))
       .reduce((sum, r) => sum + r.duration, 0)
-    // Fit as many periods as possible within the group's max school hours,
-    // using THIS group's (possibly shorter) period duration.
+    // Fit as many periods as possible within the group's max school hours.
     const targetMaxMins = std.maxHours * 60 - 10 /* assembly */ - 10 /* dispersal */ - groupBreakMins
-    const gMaxP = Math.max(1, Math.min(maxPeriods, Math.floor(targetMaxMins / groupDur(g.group))))
+    const gMaxP = Math.max(1, Math.min(maxPeriods, Math.floor(targetMaxMins / cappedPeriodDur)))
     perGroupMaxPeriods[g.group] = gMaxP
   }
 
@@ -2302,7 +2291,7 @@ export function StepBell() {
     // Advanced/per-block: include each shift's config so editing a block's start time,
     // period length, max periods or class assignment live-regenerates that block.
     shifts: isAdvanced
-      ? shifts.map(s => `${s.id}:${s.startTime}:${s.periodDur}:${s.periodDurMin ?? ''}:${s.maxPeriods}:${[...s.classes].sort().join('|')}`).join(';')
+      ? shifts.map(s => `${s.id}:${s.startTime}:${s.endTime ?? ''}:${s.periodDur}:${s.periodDurMin ?? ''}:${s.maxPeriods}:${[...s.classes].sort().join('|')}`).join(';')
       : '',
   }), [startTime, schoolEndTime,
        smartLunchMode,
@@ -2323,7 +2312,7 @@ export function StepBell() {
                         : concurrentMode === 'match-lunch' ? lunchBreakDur
                         :                                    concurrentDur
     const { rows } = smartGenerateBellConfig(
-      shift.startTime, schoolEndTime, shift.maxPeriods, shift.periodDur,
+      shift.startTime, shift.endTime ?? schoolEndTime, shift.maxPeriods, shift.periodDur,
       smartLunchMode, effectiveLunchAP,
       groupsInShift, shiftClasses,
       morningBreak, morningBreakPos, morningBreakDur,
@@ -2910,7 +2899,7 @@ export function StepBell() {
     return Object.entries(byBlock).map(([block, keys], i) => ({
       id: `shift-blk-${i}-${makeId()}`,
       name: block,
-      startTime, periodDur, periodDurMin, maxPeriods, use12h,
+      startTime, endTime: schoolEndTime, periodDur, periodDurMin, maxPeriods, use12h,
       classes: keys,
     }))
   }
@@ -4053,22 +4042,33 @@ export function StepBell() {
                     onChange={e => updateActiveShift({ startTime: e.target.value })} style={{ width: '100%' }} />
                   <div style={FH}>{fmt12(activeShift.startTime, activeShift.use12h)}</div>
                 </div>
-                {/* End (derived) */}
+                {/* End (per-shift / block) */}
                 <div style={{ flex: '0 0 116px' }}>
                   <div style={FL}>End time</div>
                   {editingEnd ? (
-                    <input className="b-input" type="time" defaultValue={endTime} autoFocus
-                      onBlur={e => { handleEndTimeEdit(e.target.value); setEditingEnd(false) }}
+                    <input className="b-input" type="time" defaultValue={activeShift.endTime ?? endTime} autoFocus
+                      onBlur={e => {
+                        const v = e.target.value
+                        if (/^\d{2}:\d{2}$/.test(v)) {
+                          const capped  = Math.min(toMins(v), toMins(activeShift.startTime) + 8 * 60)
+                          const snapped = toHHMM(snap5(capped))
+                          const updated = { ...activeShift, endTime: snapped }
+                          updateActiveShift({ endTime: snapped })
+                          // Regenerate THIS block to fit its own end time.
+                          setShiftRows(prev => ({ ...prev, [activeShift.id]: generateShiftRows(updated) }))
+                        }
+                        setEditingEnd(false)
+                      }}
                       onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur() }}
                       style={{ width: '100%' }} />
                   ) : (
                     <div className="b-input b-end-display" onClick={() => setEditingEnd(true)}
                       style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
-                      <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700 }}>{fmt12(endTime, activeShift.use12h)}</span>
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700 }}>{fmt12(activeShift.endTime ?? endTime, activeShift.use12h)}</span>
                       <span style={{ fontSize: 10, color: '#C4B5FD', fontWeight: 400 }}>✎</span>
                     </div>
                   )}
-                  <div style={FH}>adjusts last period</div>
+                  <div style={FH}>this block's end</div>
                 </div>
                 {/* Period Min */}
                 <div style={{ flex: '0 0 80px' }}>
