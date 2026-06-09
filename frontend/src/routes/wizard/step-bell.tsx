@@ -799,17 +799,16 @@ function buildBellRowsFromCw(
 
   const breakAbsMap = new Map<string, number>(cwBrks.map(b => [b.id, breakAbsStart(b)]))
 
-  // Collect ALL lunch start times across every class (used for concurrent period detection).
-  // Snapped to the 5-min grid so the check survives the per-class clock drift that
-  // variable-duration concurrent periods introduce relative to these precomputed times.
-  const allLunchStartTimes = new Set<number>(
-    cwBrks.filter(b => b.type === 'lunch').map(b => snap5(breakAbsMap.get(b.id)!))
-  )
-
-  // ── Build per-class event sequences ──────────────────────────────────────
-  const classEvs: Array<{ key: string; evs: Ev[] }> = []
-
-  for (const clsKey of activeClsKeys) {
+  // ── Build a single class's event sequence ─────────────────────────────────
+  // afterPeriod-based breaks are placed by PERIOD COUNT — a break fires right after
+  // the class's Nth teaching period, regardless of how concurrency shortened earlier
+  // periods. This keeps every group's bells aligned: during one group's lunch, all the
+  // others run a single concurrent period that starts and ends with that lunch.
+  // customStartTime / afterBreakId breaks stay time-based (used by the manual panel).
+  //
+  // `lunchStarts` (snapped clock times) drives concurrent-period detection. Pass null to
+  // disable concurrency — used by the discovery pass that learns where lunches land.
+  const buildEvs = (clsKey: string, lunchStarts: Set<number> | null): Ev[] => {
     const evs: Ev[] = []
     let cur = startMins
 
@@ -820,71 +819,90 @@ function buildBellRowsFromCw(
     evs.push({ type: 'assembly', name: 'Assembly', startMins: cur, duration: asmDur })
     cur += asmDur
 
-    // Breaks for this class, sorted by their absolute start time
-    const myBreaks = cwBrks
-      .filter(b => b.classes.includes(clsKey))
+    const myAll = cwBrks.filter(b => b.classes.includes(clsKey))
+    const timeBreaks = myAll
+      .filter(b => b.customStartTime || b.afterBreakId)
       .map(b => ({ type: b.type as RowType, name: b.name, duration: b.duration, absStart: breakAbsMap.get(b.id)! }))
       .sort((a, b) => a.absStart - b.absStart)
+    const countBreaks = myAll
+      .filter(b => !(b.customStartTime || b.afterBreakId))
+      .map(b => ({ type: b.type as RowType, name: b.name, duration: b.duration, afterPeriod: b.afterPeriod }))
 
-    let bi = 0
-
-    // Flush pre-period breaks (absStart already reached before P1)
-    while (bi < myBreaks.length && myBreaks[bi].absStart <= cur) {
-      evs.push({ type: myBreaks[bi].type, name: myBreaks[bi].name, startMins: cur, duration: myBreaks[bi].duration })
-      cur += myBreaks[bi].duration; bi++
+    let ti = 0
+    const flushTime = () => {
+      while (ti < timeBreaks.length && timeBreaks[ti].absStart <= cur) {
+        evs.push({ type: timeBreaks[ti].type, name: timeBreaks[ti].name, startMins: cur, duration: timeBreaks[ti].duration })
+        cur += timeBreaks[ti].duration; ti++
+      }
+    }
+    const flushCount = (k: number) => {
+      for (const b of countBreaks) {
+        if (b.afterPeriod === k) {
+          evs.push({ type: b.type, name: b.name, startMins: cur, duration: b.duration })
+          cur += b.duration
+        }
+      }
     }
 
-    for (let pNum = 1; pNum <= clsMaxP; pNum++) {
-      // Is THIS class about to start its OWN lunch right now? If so it eats (handled by the
-      // break-split loop below) and its post-lunch teaching keeps the full period duration.
-      // We derive this from the live clock (myBreaks[bi]) rather than a precomputed set so
-      // it stays correct even after concurrent periods have shifted the class's clock.
-      const eatingNow =
-        bi < myBreaks.length &&
-        myBreaks[bi].type === 'lunch' &&
-        myBreaks[bi].absStart <= cur
+    // Pre-period breaks (after Assembly / customStartTime before P1)
+    flushCount(0); flushTime()
 
-      // Use concurrentPeriodDur when ANOTHER class's lunch starts exactly at this period's
-      // start time — so bell boundaries align cleanly across all groups. The class that is
-      // itself eating at this instant is excluded (it eats, then teaches a full period).
+    for (let pNum = 1; pNum <= clsMaxP; pNum++) {
+      // Concurrent when another group's lunch starts exactly now — this class can't be
+      // eating now, since its own lunch is flushed as a break before the period begins.
       const effDur = (
+        lunchStarts &&
         concurrentPeriodDur !== undefined &&
-        allLunchStartTimes.has(snap5(cur)) &&
-        !eatingNow
+        lunchStarts.has(snap5(cur))
       ) ? concurrentPeriodDur : periodDur
       let remaining = effDur
 
-      // Split the period at any break whose absStart falls WITHIN this period's window.
-      // Without this, a break with customStartTime = 12:00 that lands during Period 3
-      // would be incorrectly deferred to after the full period ends.
-      while (bi < myBreaks.length && myBreaks[bi].absStart < cur + remaining) {
-        const breakStart  = Math.max(myBreaks[bi].absStart, cur)
-        const prePortion  = breakStart - cur
+      // Split the period at any time-based break (customStartTime) landing within it.
+      while (ti < timeBreaks.length && timeBreaks[ti].absStart < cur + remaining) {
+        const breakStart = Math.max(timeBreaks[ti].absStart, cur)
+        const prePortion = breakStart - cur
         if (prePortion > 0) {
           evs.push({ type: 'teaching', name: `Period ${pNum}`, startMins: cur, duration: prePortion })
-          cur       += prePortion
-          remaining -= prePortion
+          cur += prePortion; remaining -= prePortion
         }
-        evs.push({ type: myBreaks[bi].type, name: myBreaks[bi].name, startMins: cur, duration: myBreaks[bi].duration })
-        cur += myBreaks[bi].duration; bi++
+        evs.push({ type: timeBreaks[ti].type, name: timeBreaks[ti].name, startMins: cur, duration: timeBreaks[ti].duration })
+        cur += timeBreaks[ti].duration; ti++
       }
 
-      // Remaining teaching time for this period
       if (remaining > 0) {
         evs.push({ type: 'teaching', name: `Period ${pNum}`, startMins: cur, duration: remaining })
         cur += remaining
       }
 
-      // Flush breaks that land exactly at the period boundary
-      while (bi < myBreaks.length && myBreaks[bi].absStart <= cur) {
-        evs.push({ type: myBreaks[bi].type, name: myBreaks[bi].name, startMins: cur, duration: myBreaks[bi].duration })
-        cur += myBreaks[bi].duration; bi++
-      }
+      // After this teaching period, flush any breaks scheduled after it (by count, then time).
+      flushCount(pNum); flushTime()
     }
 
     evs.push({ type: 'dispersal', name: 'Dispersal', startMins: cur, duration: asmDur })
-    classEvs.push({ key: clsKey, evs })
+    return evs
   }
+
+  // ── Discover real lunch start times, then build with concurrency ──────────
+  // The naive breakAbsMap mis-times a lunch that shares its afterPeriod slot with
+  // another break (e.g. morning break + Pre-Primary lunch both "after period 1"), so
+  // we learn actual lunch clock times from real builds and iterate to a fixed point:
+  // each pass lets a class's later lunches account for earlier concurrent periods
+  // shortening its clock. Converges in a few passes (durations are bounded & snapped).
+  let lunchStarts: Set<number> | null = null
+  for (let iter = 0; iter < 6; iter++) {
+    const next = new Set<number>()
+    for (const clsKey of activeClsKeys) {
+      for (const ev of buildEvs(clsKey, lunchStarts)) {
+        if (ev.type === 'lunch') next.add(snap5(ev.startMins))
+      }
+    }
+    const stable = lunchStarts !== null && next.size === lunchStarts.size && [...next].every(t => lunchStarts!.has(t))
+    lunchStarts = next
+    if (stable) break
+  }
+
+  const classEvs: Array<{ key: string; evs: Ev[] }> =
+    activeClsKeys.map(clsKey => ({ key: clsKey, evs: buildEvs(clsKey, lunchStarts) }))
 
   // ── Post-process per-class events ─────────────────────────────────────────
   // 1. Merge teaching fragments shorter than periodDurMin into the nearest adjacent
