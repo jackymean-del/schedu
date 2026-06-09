@@ -618,6 +618,7 @@ function smartGenerateBellConfig(
   concurrentPeriodDur?: number,   // period dur for non-eating classes during staggered lunch
   lunchBreakDur:       number  = 30,
   periodDurMin:        number  = 15,
+  dayboarding:         boolean = false,  // true: near-uniform day (juniors leave only slightly earlier)
 ): { rows: BellRow[]; cwRows: CwBreakRow[] } {
   const allKeys  = activeClasses.map(c => c.key)
   const sbAfterP = Math.max(1, Math.ceil(maxPeriods * 0.3))
@@ -731,9 +732,15 @@ function smartGenerateBellConfig(
   const perGroupPeriodDur: Record<string, number> = {}
   for (const g of activeGroups) perGroupPeriodDur[g.group] = cappedPeriodDur
 
-  // ── Per-group max periods for age-appropriate early dispersal ────────────
-  // Pre-Primary (max 4h) and Primary (max 6h) have fewer periods and disperse
-  // earlier than Middle/Senior classes based on SCHOOL_HOUR_STANDARDS.
+  // ── Per-group max periods (controls how early each group disperses) ──────
+  // NORMAL (non-dayboarding): each group fits its OWN age-appropriate school hours,
+  //   so Pre-Primary (4h) / Primary (6h) disperse noticeably earlier than seniors.
+  // DAY-BOARDING: meals (morning snack, lunch, afternoon snack) are served on campus,
+  //   so the day is kept NEARLY uniform — every group runs within ~1 hour of the
+  //   longest (senior-most) day, i.e. juniors leave only slightly earlier rather than
+  //   going home at 12–1pm. Groups with the same standard hours get the same day length.
+  const DAYBOARD_MAX_TRIM_H = 1   // juniors may finish at most ~1h before the senior-most day
+  const topHours = Math.max(0, ...activeGroups.map(g => SCHOOL_HOUR_STANDARDS[g.group as SchoolGroupKey]?.maxHours ?? 0))
   const perGroupMaxPeriods: Record<string, number> = {}
   for (const g of activeGroups) {
     const std = SCHOOL_HOUR_STANDARDS[g.group as SchoolGroupKey]
@@ -743,10 +750,10 @@ function smartGenerateBellConfig(
     const groupBreakMins = cwRows
       .filter(r => r.classes.some(c => grpKeys.includes(c)))
       .reduce((sum, r) => sum + r.duration, 0)
-    // Fit as many periods as possible within the group's max school hours.
-    const targetMaxMins = std.maxHours * 60 - 10 /* assembly */ - 10 /* dispersal */ - groupBreakMins
-    const gMaxP = Math.max(1, Math.min(maxPeriods, Math.floor(targetMaxMins / cappedPeriodDur)))
-    perGroupMaxPeriods[g.group] = gMaxP
+    // Day-boarding lifts each group close to the longest day; normal uses age hours.
+    const effHours = dayboarding ? Math.max(std.maxHours, topHours - DAYBOARD_MAX_TRIM_H) : std.maxHours
+    const targetMaxMins = effHours * 60 - 10 /* assembly */ - 10 /* dispersal */ - groupBreakMins
+    perGroupMaxPeriods[g.group] = Math.max(1, Math.min(maxPeriods, Math.floor(targetMaxMins / cappedPeriodDur)))
   }
 
   return {
@@ -1055,6 +1062,8 @@ interface SavedBell {
   // Quick-Start onboarding: how the user chose to set up this step
   setupChoice?: 'choose' | 'guided' | 'manual'
   areaMode?:    'one' | 'per-block'
+  // Day-boarding vs normal (controls how early juniors disperse)
+  dayboarding?: boolean
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2038,6 +2047,9 @@ export function StepBell() {
   const [concurrentMode, setConcurrentMode] = useState<'regular' | 'match-lunch' | 'custom'>(() => _saved?.concurrentPeriodMode ?? 'regular')
   const [concurrentDur,  setConcurrentDur]  = useState<number>(                               () => _saved?.concurrentPeriodDur  ?? 30)
   const [lunchBreakDur,  setLunchBreakDur]  = useState<number>(                               () => _saved?.lunchBreakDur         ?? 30)
+  // Day-boarding: meals served on campus → near-uniform day (juniors leave only slightly
+  // earlier). Non-dayboarding (normal): juniors disperse noticeably earlier (age hours).
+  const [dayboarding,    setDayboarding]    = useState<boolean>(                              () => _saved?.dayboarding          ?? false)
   // Optional morning break (breakfast / snack break for day-boarding schools)
   const [morningBreak,    setMorningBreak]    = useState<boolean>(() => _saved?.morningBreak    ?? false)
   const [morningBreakPos, setMorningBreakPos] = useState<number>( () => _saved?.morningBreakPos ?? 1)   // 0 = assembly, 1 = P1, 2 = P2 …
@@ -2202,7 +2214,7 @@ export function StepBell() {
       smartLunchMode, smartLunchAfterPeriod: smartLunchAP,
       morningBreak, morningBreakPos, morningBreakDur,
       concurrentPeriodMode: concurrentMode, concurrentPeriodDur: concurrentDur, lunchBreakDur,
-      bellCustomized, setupChoice, areaMode,
+      bellCustomized, setupChoice, areaMode, dayboarding,
     } as SavedBell))
   }, [shiftName, startTime, use12h, periodDur, periodDurMin, maxPeriods, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
@@ -2210,7 +2222,7 @@ export function StepBell() {
       scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,
       customStreams, classStreamMap, autoBellMode, schoolEndTime,
       smartLunchMode, smartLunchAP, morningBreak, morningBreakPos, morningBreakDur,
-      concurrentMode, concurrentDur, lunchBreakDur, bellCustomized, setupChoice, areaMode])
+      concurrentMode, concurrentDur, lunchBreakDur, bellCustomized, setupChoice, areaMode, dayboarding])
 
   // ── Smart lunch: effective afterPeriod per group ─────────────
   // Time-aware defaults: distribute all 5 groups within a 12:00–2:00 PM lunch window.
@@ -2268,7 +2280,7 @@ export function StepBell() {
   // are not overwritten when the user tweaks P.Max.
   const _autoGenKey = useMemo(() => JSON.stringify({
     startTime, schoolEndTime,
-    smartLunchMode,
+    smartLunchMode, dayboarding,
     morningBreak, morningBreakPos, morningBreakDur,
     concurrentMode, concurrentDur, lunchBreakDur,
     groups: activeClassGroups.map(g => g.group).sort().join(','),
@@ -2279,7 +2291,7 @@ export function StepBell() {
       ? shifts.map(s => `${s.id}:${s.startTime}:${s.endTime ?? ''}:${s.periodDur}:${s.periodDurMin ?? ''}:${s.maxPeriods}:${[...s.classes].sort().join('|')}`).join(';')
       : '',
   }), [startTime, schoolEndTime,
-       smartLunchMode,
+       smartLunchMode, dayboarding,
        morningBreak, morningBreakPos, morningBreakDur,
        concurrentMode, concurrentDur, lunchBreakDur,
        activeClassGroups, activeClasses, isAdvanced, shifts])
@@ -2301,12 +2313,12 @@ export function StepBell() {
       smartLunchMode, effectiveLunchAP,
       groupsInShift, shiftClasses,
       morningBreak, morningBreakPos, morningBreakDur,
-      concPeriodDur, lunchBreakDur, shift.periodDurMin ?? periodDurMin,
+      concPeriodDur, lunchBreakDur, shift.periodDurMin ?? periodDurMin, dayboarding,
     )
     return rows
   }, [customClasses, concurrentMode, lunchBreakDur, concurrentDur, schoolEndTime,
       smartLunchMode, effectiveLunchAP, morningBreak, morningBreakPos, morningBreakDur,
-      periodDurMin])
+      periodDurMin, dayboarding])
 
   const runAutoGen = useCallback((opts?: { resetCustomized?: boolean }) => {
     // Advanced (per-block / multi-shift): generate every shift into its own bucket.
@@ -2328,7 +2340,7 @@ export function StepBell() {
       smartLunchMode, effectiveLunchAP,
       activeClassGroups, activeClasses,
       morningBreak, morningBreakPos, morningBreakDur,
-      concPeriodDur, lunchBreakDur, periodDurMin,
+      concPeriodDur, lunchBreakDur, periodDurMin, dayboarding,
     )
     setRows(generated)
     setCwRows(generated_cwRows)
@@ -2337,7 +2349,7 @@ export function StepBell() {
   }, [isAdvanced, shifts, generateShiftRows, concurrentMode, lunchBreakDur, concurrentDur,
       startTime, schoolEndTime, maxPeriods, periodDur, smartLunchMode, effectiveLunchAP,
       activeClassGroups, activeClasses, morningBreak, morningBreakPos, morningBreakDur,
-      periodDurMin]) // eslint-disable-line react-hooks/exhaustive-deps
+      periodDurMin, dayboarding]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!autoBellMode) return
@@ -3176,6 +3188,7 @@ export function StepBell() {
         smartLunchMode, smartLunchAfterPeriod: smartLunchAP,
         morningBreak, morningBreakPos, morningBreakDur,
         concurrentPeriodMode: concurrentMode, concurrentPeriodDur: concurrentDur, lunchBreakDur,
+        dayboarding,
       } satisfies SavedBell))
     } catch { /* localStorage might be full */ }
     setConfig({
@@ -4289,6 +4302,32 @@ export function StepBell() {
               {autoBellMode && (
                 <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+                  {/* ── Institution type: day-boarding vs normal ──────── */}
+                  <div style={{ background: '#F5F3FF', border: '1.5px solid #DDD6FE', borderRadius: 9, padding: '11px 13px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 9 }}>
+                      <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>🍱</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 2 }}>Institution type</div>
+                        <div style={{ fontSize: 10, color: '#9CA3AF', lineHeight: 1.6 }}>
+                          Day-boarding serves snacks &amp; lunch on campus, so all classes stay nearly the full day — juniors leave only slightly earlier. Regular schools disperse younger classes noticeably earlier.
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {([['day', '🍱 Day-boarding', 'Near-uniform day for all ages'], ['normal', '🏃 Regular', 'Juniors finish earlier']] as const).map(([val, label, desc]) => {
+                        const active = dayboarding === (val === 'day')
+                        return (
+                          <button key={val} onClick={() => { setDayboarding(val === 'day'); setBellCustomized(false) }} style={{
+                            flex: 1, textAlign: 'left', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                            border: active ? '2px solid #7C3AED' : '1.5px solid #E5E7EB', background: active ? '#fff' : '#FAFAFA',
+                          }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#6D28D9' : '#374151' }}>{label}</div>
+                            <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 2 }}>{desc}</div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
 
                   {/* ── Morning break ─────────────────────────────────── */}
                   <div style={{
