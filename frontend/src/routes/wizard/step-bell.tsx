@@ -3203,6 +3203,11 @@ export function StepBell() {
       // Resources page reads these to seed sections for the right classes only
       configuredClassDefs: activeClasses,
       configuredClassStreamMap: Object.keys(classStreamMap).length > 0 ? classStreamMap : undefined,
+      // Block-wise (Advanced multi-shift) timetable generation reads these: each shift =
+      // one block with its own classes, start/end, periods and bell rows (shiftRows).
+      scheduleMode,
+      shifts: isAdvanced ? shifts : undefined,
+      shiftRows: isAdvanced ? shiftRows : undefined,
     } as any)
     // When class-wise breaks are configured, store CANONICAL breaks (one per afterPeriod
     // position) so that buildPeriodSequenceFromCw can later reconstruct the correct period
