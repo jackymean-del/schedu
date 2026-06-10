@@ -15,7 +15,7 @@ const BOARDS = [
 
 export function HomePage() {
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: '#fff', color: '#13111E', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'Hanken Grotesk', -apple-system, sans-serif", background: '#fff', color: '#13111E', minHeight: '100vh' }}>
 
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -98,12 +98,12 @@ export function HomePage() {
             </svg>
           </div>
           <span style={{
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Hanken Grotesk', sans-serif",
             fontSize: 17, fontWeight: 900, letterSpacing: '-0.4px', color: '#13111E',
           }}>
             sched<span style={{
               color: '#7C6FE0',
-              fontFamily: "'DM Serif Display', Georgia, serif",
+              fontFamily: "'Fraunces', Georgia, serif",
               fontStyle: 'italic',
             }}>U</span>
           </span>
@@ -171,7 +171,7 @@ export function HomePage() {
         {/* Headline */}
         <h1 className="lp-hero-animate" style={{
           animationDelay: '0.08s',
-          fontFamily: "'DM Serif Display', Georgia, serif",
+          fontFamily: "'Fraunces', Georgia, serif",
           fontSize: 'clamp(34px, 6.5vw, 56px)',
           lineHeight: 1.1, fontWeight: 400, letterSpacing: '-1.5px',
           color: '#13111E', maxWidth: 720, marginBottom: 18,
@@ -358,7 +358,7 @@ export function HomePage() {
               borderRight: i < arr.length - 1 ? '1px solid #E8E4FF' : 'none',
             }}>
               <div style={{
-                fontFamily: "'DM Serif Display', Georgia, serif",
+                fontFamily: "'Fraunces', Georgia, serif",
                 fontSize: 30, fontWeight: 400, color: '#13111E',
                 lineHeight: 1, marginBottom: 7,
               }}>{s.value}</div>
@@ -467,7 +467,7 @@ export function HomePage() {
         alignItems: 'center', textAlign: 'center',
       }}>
         <h2 style={{
-          fontFamily: "'DM Serif Display', Georgia, serif",
+          fontFamily: "'Fraunces', Georgia, serif",
           fontSize: 32, fontWeight: 400, color: '#13111E', marginBottom: 10,
           lineHeight: 1.2,
         }}>

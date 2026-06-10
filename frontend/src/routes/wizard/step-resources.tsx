@@ -119,7 +119,7 @@ export function StepResources() {
           <Users size={20} color="#7C6FE0" />
         </div>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>
             Resources
           </h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>

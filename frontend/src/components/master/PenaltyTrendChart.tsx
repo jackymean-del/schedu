@@ -209,7 +209,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
             borderRadius: 10,
             padding: '8px 12px',
             minWidth: 140,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Hanken Grotesk', sans-serif",
             boxShadow: '0 6px 20px rgba(19,17,30,0.4)',
           }}
         >

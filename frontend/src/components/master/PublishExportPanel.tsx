@@ -232,7 +232,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
         borderRadius: 18,
         boxShadow: '0 24px 64px rgba(19,17,30,0.28), 0 4px 12px rgba(124,111,224,0.12)',
         display: 'flex', flexDirection: 'column',
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Hanken Grotesk', sans-serif",
         overflow: 'hidden',
       }}>
 

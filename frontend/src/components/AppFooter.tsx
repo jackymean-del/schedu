@@ -13,7 +13,7 @@ export function AppFooter({ style }: { style?: React.CSSProperties }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       flexShrink: 0,
-      fontFamily: "'Inter', -apple-system, sans-serif",
+      fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
       ...style,
     }}>
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>

@@ -49,5 +49,5 @@ export const RADIUS = {
 
 export const FONT = {
   mono: "'DM Mono', monospace",
-  body: "'Inter', system-ui, sans-serif",
+  body: "'Hanken Grotesk', system-ui, sans-serif",
 } as const

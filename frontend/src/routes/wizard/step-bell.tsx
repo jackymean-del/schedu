@@ -3328,7 +3328,7 @@ export function StepBell() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '20px 28px 32px', maxWidth: 1280, margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div style={{ padding: '20px 28px 32px', maxWidth: 1280, margin: '0 auto', fontFamily: "'Hanken Grotesk', -apple-system, sans-serif" }}>
       <style>{`
         .b-input { padding:8px 10px;border:1px solid #E5E7EB;border-radius:7px;font-size:13px;font-family:inherit;color:#13111E;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s; }
         .b-input:focus { border-color:#7C6FE0;box-shadow:0 0 0 3px rgba(124,111,224,.10); }
@@ -5553,7 +5553,7 @@ export function StepBell() {
             background: '#fff', borderRadius: 14, padding: '26px 28px',
             maxWidth: 420, width: '100%',
             boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
-            fontFamily: "'Inter', -apple-system, sans-serif",
+            fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

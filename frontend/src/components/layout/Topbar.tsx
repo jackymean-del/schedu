@@ -32,8 +32,8 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
         </div>
         <div>
           <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8B87AD', lineHeight: 1, marginBottom: 2 }}>by bhusku</div>
-          <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.5px', lineHeight: 1 }}>
-            Sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic', fontSize: 17 }}>U</span>
+          <div style={{ fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.5px', lineHeight: 1 }}>
+            Sched<span style={{ color: '#7C6FE0', fontFamily: "'Fraunces',Georgia,serif", fontStyle: 'italic', fontSize: 17 }}>U</span>
           </div>
         </div>
       </a>

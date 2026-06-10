@@ -405,7 +405,7 @@ function CreateTimetableModal({
         background: 'rgba(0,0,0,0.45)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 16,
-        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
       }}
     >
       <style>{`
@@ -771,7 +771,7 @@ function EditTimetableModal({
         background: 'rgba(0,0,0,0.45)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 16,
-        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
       }}
     >
       <div style={{
@@ -1194,7 +1194,7 @@ export function DashboardPage() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', minHeight: '100vh',
-      fontFamily: "'Inter', -apple-system, sans-serif",
+      fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
       background: '#F5F4F0', color: '#13111E',
     }}>
       <style>{`
@@ -1249,7 +1249,7 @@ export function DashboardPage() {
           {sidebarOpen && (
             <a href="/" style={{ textDecoration: 'none', lineHeight: 1 }}>
               <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
-                sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic' }}>U</span>
+                sched<span style={{ color: '#7C6FE0', fontFamily: "'Fraunces',Georgia,serif", fontStyle: 'italic' }}>U</span>
               </span>
             </a>
           )}

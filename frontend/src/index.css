@@ -1,28 +1,33 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Distinctive premium pairing: Fraunces (display serif with character) +
+   Hanken Grotesk (warm, clean grotesque body) + DM Mono (timetable digits). */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Hanken+Grotesk:ital,wght@0,300..800;1,400&family=DM+Mono:wght@400;500&display=swap');
 
 /* ── Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 13px; }
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   background-color: #f7f6f2;
   color: #1c1b18;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* ── Typography ── */
-.font-serif { font-family: 'DM Serif Display', Georgia, serif !important; }
+.font-serif { font-family: 'Fraunces', Georgia, serif !important; font-optical-sizing: auto; }
 .font-mono  { font-family: 'DM Mono', 'Courier New', monospace !important; }
+/* Fraunces is variable across optical sizes — let the browser pick the right cut */
+h1, h2, h3 { font-optical-sizing: auto; letter-spacing: -0.01em; }
 
 /* ── CSS Variable Utilities (shadcn compat) ── */
 .border-border    { border-color: #d4d1c8; }
 .bg-background    { background-color: #f7f6f2; }
 .text-foreground  { color: #1c1b18; }
 .bg-card          { background-color: #ffffff; }
-.bg-primary       { background-color: #1a7f5a !important; }
+.bg-primary       { background-color: #7C6FE0 !important; }
 .text-primary-foreground { color: #ffffff !important; }
 .bg-secondary     { background-color: #f0ede7; }
 .text-secondary-foreground { color: #1c1b18; }
@@ -32,7 +37,7 @@ body {
 .text-accent-foreground { color: #2d3a8c; }
 .bg-destructive   { background-color: #dc2626; }
 .text-destructive-foreground { color: #ffffff; }
-.ring-ring        { outline-color: #1a7f5a; }
+.ring-ring        { outline-color: #7C6FE0; }
 
 /* ── Universal interactive element feedback ──────────────────────────────
    `filter: brightness` works even when buttons have inline background styles
@@ -88,15 +93,15 @@ select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
 .btn-smooth:hover { opacity: 0.92; }
 .btn-smooth:active { opacity: 0.78; }
 
-/* Green primary button */
+/* Primary button — legacy emerald/indigo utility classes remapped to brand */
 .bg-emerald-600         { background-color: #7C6FE0 !important; }
-.hover\:bg-emerald-700:hover { background-color: #047857 !important; }
+.hover\:bg-emerald-700:hover { background-color: #6358C4 !important; }
 .bg-indigo-600          { background-color: #7C6FE0 !important; }
-.hover\:bg-indigo-700:hover  { background-color: #4338ca !important; }
+.hover\:bg-indigo-700:hover  { background-color: #6358C4 !important; }
 
 /* Outline button hover */
 .hover\:bg-gray-50:hover     { background-color: #f9fafb !important; }
-.hover\:bg-emerald-50:hover  { background-color: #ecfdf5 !important; }
+.hover\:bg-emerald-50:hover  { background-color: #EDE9FF !important; }
 .hover\:border-emerald-400:hover { border-color: #9B8EF5 !important; }
 .hover\:shadow-md:hover      { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
 .hover\:-translate-y-1:hover { transform: translateY(-4px) !important; }

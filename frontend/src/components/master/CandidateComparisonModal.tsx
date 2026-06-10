@@ -55,7 +55,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
         background: '#fff', borderRadius: 16, width: '100%', maxWidth: 880,
         maxHeight: '92vh', display: 'flex', flexDirection: 'column' as const,
         boxShadow: '0 24px 60px rgba(19,17,30,0.35)',
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Hanken Grotesk', sans-serif",
       }}>
 
         {/* Header */}

@@ -975,7 +975,7 @@ export function StepStudentGroups() {
           <Users2 size={20} color="#7C6FE0" />
         </div>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
             Define <em style={{ color: '#7C6FE0' }}>student preference groups</em> and <em style={{ color: '#D97706' }}>OR / AND subject combos</em> for parallel scheduling.
           </div>

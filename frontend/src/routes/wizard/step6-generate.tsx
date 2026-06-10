@@ -403,7 +403,7 @@ export function Step6Generate() {
 
       {/* ── Title ── */}
       <div style={{ animation:"fade-up 0.4s ease" }}>
-        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, margin:"0 0 4px" }}>
+        <h2 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:28, margin:"0 0 4px" }}>
           {!job && hasExistingTT && !showRegenConfirm ? `Your ${T.schedule.toLowerCase()} is saved ✓` :
            !job                       ? `Ready to generate your ${T.schedule.toLowerCase()}` :
            job.status === "running"   ? `Building your ${T.schedule.toLowerCase()}…` :
@@ -506,7 +506,7 @@ export function Step6Generate() {
       {!job && hasExistingTT && !showRegenConfirm && (
         <div style={{ width:"100%", maxWidth:500, background:"#f0fdf4", borderRadius:14, border:"1.5px solid #86efac", padding:"22px 26px", animation:"fade-up 0.4s ease 0.2s both", textAlign:"center" as const }}>
           <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
-          <div style={{ fontSize:15, fontWeight:700, color:"#15803d", marginBottom:4 }}>
+          <div style={{ fontSize:15, fontWeight:700, color:"#059669", marginBottom:4 }}>
             {T.schedule} already generated
           </div>
           <div style={{ fontSize:12, color:"#4B5275", marginBottom:18 }}>

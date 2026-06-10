@@ -50,7 +50,7 @@ export function OptionalBlockView({ optionalBlocks, subjectCombinations, periods
         <div style={{ width: 64, height: 64, borderRadius: 16, background: '#EDE9FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
           <Layers size={28} color="#7C6FE0" />
         </div>
-        <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#13111E', margin: 0, marginBottom: 6 }}>
+        <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: '#13111E', margin: 0, marginBottom: 6 }}>
           No Optional Blocks yet
         </h3>
         <div style={{ fontSize: 12, color: '#8B87AD', maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>

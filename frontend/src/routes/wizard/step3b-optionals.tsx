@@ -118,7 +118,7 @@ export function Step3bOptionals() {
 
   return (
     <div>
-      <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, marginBottom:6 }}>
+      <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:28, marginBottom:6 }}>
         Optional Subject Scheduling
       </h1>
       <p style={{ color:"#6a6860", fontSize:13, marginBottom:24, lineHeight:1.65 }}>

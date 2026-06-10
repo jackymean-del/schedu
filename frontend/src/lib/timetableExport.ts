@@ -227,7 +227,7 @@ export function buildPrintHTML(options: ExportOptions): string {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Hanken Grotesk', system-ui, sans-serif;
       font-size: 11px;
       color: #13111E;
       background: #fff;

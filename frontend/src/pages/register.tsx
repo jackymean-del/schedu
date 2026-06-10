@@ -137,7 +137,7 @@ export function RegisterPage() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', minHeight: '100vh',
-      fontFamily: "'Inter', -apple-system, sans-serif",
+      fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
     }}>
     <div style={{ display: 'flex', flex: 1 }}>
       <style>{`
@@ -182,11 +182,11 @@ export function RegisterPage() {
         <div style={{ marginBottom: 40 }}>
           <a href="/" style={{ textDecoration: 'none' }}>
             <span style={{
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "'Hanken Grotesk', sans-serif",
               fontSize: 20, fontWeight: 900,
               letterSpacing: '-0.5px', color: '#13111E',
             }}>
-              sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic' }}>U</span>
+              sched<span style={{ color: '#7C6FE0', fontFamily: "'Fraunces',Georgia,serif", fontStyle: 'italic' }}>U</span>
             </span>
           </a>
         </div>

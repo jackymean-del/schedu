@@ -146,8 +146,8 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                 </svg>
               </div>
               <div>
-                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 17, fontWeight: 900, color: TEXT_ON, letterSpacing: '-0.6px', lineHeight: 1 }}>
-                  Sched<span style={{ color: ACCENT, fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic', fontSize: 18 }}>U</span>
+                <div style={{ fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 17, fontWeight: 900, color: TEXT_ON, letterSpacing: '-0.6px', lineHeight: 1 }}>
+                  Sched<span style={{ color: ACCENT, fontFamily: "'Fraunces',Georgia,serif", fontStyle: 'italic', fontSize: 18 }}>U</span>
                 </div>
                 <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: GROUP_LABEL, lineHeight: 1, marginTop: 3 }}>Smart Scheduling</div>
               </div>

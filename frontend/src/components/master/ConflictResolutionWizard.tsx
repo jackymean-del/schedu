@@ -490,7 +490,7 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
           width: '100%', maxWidth: 520,
           padding: '22px 22px 20px',
           boxShadow: '0 24px 60px rgba(19,17,30,0.3)',
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Hanken Grotesk', sans-serif",
           maxHeight: '90vh', overflowY: 'auto' as const,
           position: 'relative' as const,
         }}

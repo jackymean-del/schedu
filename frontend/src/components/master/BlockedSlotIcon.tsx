@@ -67,7 +67,7 @@ export function BlockedSlotIcon({ reasons }: { reasons: BlockedReason[] }) {
               borderRadius: 10,
               boxShadow: '0 14px 38px rgba(19,17,30,0.18)',
               padding: 0,
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "'Hanken Grotesk', sans-serif",
               textAlign: 'left' as const,
             }}>
             {/* Header */}

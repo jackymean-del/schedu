@@ -75,11 +75,11 @@ export function SchedUWordmark({
       <SchedULogo size={iconSize} />
       <div>
         <div style={{
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Hanken Grotesk', sans-serif",
           fontSize, fontWeight: 900, letterSpacing: '-0.6px', lineHeight: 1,
           color: dark ? '#13111E' : '#FFFFFF',
         }}>
-          Sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display', Georgia, serif", fontStyle: 'italic', fontSize: fontSize + 1 }}>U</span>
+          Sched<span style={{ color: '#7C6FE0', fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic', fontSize: fontSize + 1 }}>U</span>
         </div>
         {showTagline && (
           <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#8B87AD', marginTop: 3 }}>
@@ -102,7 +102,7 @@ export function BhuskuFooter({ compact = false }: { compact?: boolean }) {
       background: '#FAFAFE',
       display: 'flex', alignItems: 'center',
       justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'Hanken Grotesk', sans-serif",
     }}>
       {/* Left: Bhusku brand */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>

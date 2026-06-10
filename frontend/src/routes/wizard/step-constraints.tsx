@@ -47,7 +47,7 @@ export function StepConstraints() {
   const totalDisabled = allEntities.reduce((s, e) => s + scopeStats(e.scope).disabled, 0)
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto', fontFamily: "'Hanken Grotesk', sans-serif" }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -55,7 +55,7 @@ export function StepConstraints() {
           <Lock size={20} color="#7C6FE0" />
         </div>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>
             Constraints
           </h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>

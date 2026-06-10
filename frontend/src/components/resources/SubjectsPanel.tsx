@@ -1386,7 +1386,7 @@ export function SubjectsPanel({
             }
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              background: globalAIApplied ? '#16a34a' : isAiLoading ? '#9b8fef' : P,
+              background: globalAIApplied ? '#059669' : isAiLoading ? '#9b8fef' : P,
               color: '#fff', border: 'none', borderRadius: 7,
               padding: '6px 14px', fontSize: 11.5, fontWeight: 700,
               cursor: isAiLoading ? 'not-allowed' : 'pointer',

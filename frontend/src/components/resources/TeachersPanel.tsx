@@ -775,7 +775,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
               title="AI-assign subjects, classes and workloads to all educators"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                background: aiApplied ? '#16a34a' : aiLoading ? '#9b8fef' : P,
+                background: aiApplied ? '#059669' : aiLoading ? '#9b8fef' : P,
                 color: '#fff', border: 'none', borderRadius: 7,
                 padding: '6px 14px', fontSize: 11.5, fontWeight: 700,
                 cursor: aiLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',

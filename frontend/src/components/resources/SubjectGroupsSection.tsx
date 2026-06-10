@@ -268,7 +268,7 @@ function GroupModal({
         position: 'fixed', inset: 0, zIndex: 2000,
         background: 'rgba(0,0,0,0.42)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Hanken Grotesk', sans-serif",
       }}
     >
       <div style={{

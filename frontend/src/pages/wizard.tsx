@@ -94,7 +94,7 @@ export function WizardPage() {
       display: 'flex', flexDirection: 'column',
       height: 'calc(100vh - 52px)',
       overflow: 'hidden',
-      fontFamily: "'Inter', -apple-system, sans-serif",
+      fontFamily: "'Hanken Grotesk', -apple-system, sans-serif",
     }}>
 
       {/* ══ Timetable name sub-bar ══════════════════════ */}
@@ -108,7 +108,7 @@ export function WizardPage() {
         gap: 10,
       }}>
         <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
-          sched<span style={{ color: '#7C6FE0', fontFamily: "'DM Serif Display',Georgia,serif", fontStyle: 'italic' }}>U</span>
+          sched<span style={{ color: '#7C6FE0', fontFamily: "'Fraunces',Georgia,serif", fontStyle: 'italic' }}>U</span>
         </span>
         <span style={{ color: '#D1D5DB' }}>|</span>
         <span style={{ fontSize: 13, color: '#6B7280' }}>{ttName}</span>

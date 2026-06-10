@@ -71,7 +71,7 @@ export function Step1Org() {
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
         <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#7C6FE0,#9B8EF5)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏫</div>
         <div>
-          <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, margin:0 }}>School Setup</h1>
+          <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:28, margin:0 }}>School Setup</h1>
           <p style={{ color:"#6a6860", fontSize:12, margin:0 }}>Step 1 of 6 — Organization & Academic Profile</p>
         </div>
       </div>

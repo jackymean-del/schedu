@@ -1773,7 +1773,7 @@ export function DataGrid<T>({
             color: '#fff',
             fontSize: 10.5,
             fontWeight: 600,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Hanken Grotesk', sans-serif",
             boxShadow: '0 4px 14px rgba(19,17,30,0.35)',
             whiteSpace: 'nowrap' as const,
           }}

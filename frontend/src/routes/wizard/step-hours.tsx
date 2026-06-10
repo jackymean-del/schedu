@@ -137,7 +137,7 @@ export function StepHours() {
     return (
       <div style={{ textAlign:"center", padding:"48px 24px" }}>
         <div style={{ fontSize:48, marginBottom:16 }}>⚙️</div>
-        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:22, marginBottom:8 }}>No resource data yet</h2>
+        <h2 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:22, marginBottom:8 }}>No resource data yet</h2>
         <p style={{ color:"#6a6860", fontSize:13, marginBottom:24 }}>
           Go back and complete the Resources step, or generate placeholder data now.
         </p>
@@ -155,7 +155,7 @@ export function StepHours() {
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
         <div style={{ width:40, height:40, borderRadius:12, background:"linear-gradient(135deg,#9B8EF5,#6358C4)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>📊</div>
         <div>
-          <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, margin:0 }}>Subject Hours Matrix</h1>
+          <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:28, margin:0 }}>Subject Hours Matrix</h1>
           <p style={{ color:"#6a6860", fontSize:12, margin:0 }}>Step 4 of 6 — Periods/Week per Subject per Class</p>
         </div>
       </div>

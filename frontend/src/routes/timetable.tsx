@@ -2028,7 +2028,7 @@ export function TimetablePage() {
           <div style={{ display:"grid", gridTemplateColumns:"auto 1fr auto", gap:16, alignItems:"start" }}>
             <div style={{ width:42, height:42, borderRadius:"50%", background:"#7C6FE0", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, fontWeight:700 }}>{tn[0]}</div>
             <div>
-              <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'DM Serif Display',Georgia,serif" }}>{tn}</div>
+              <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'Fraunces',Georgia,serif" }}>{tn}</div>
               {st?.role && <div style={{ fontSize:11, color:"#4B5275" }}>{st.role}</div>}
               {assignedStr !== "—" && <div style={{ fontSize:11, color:"#4B5275", marginTop:2 }}><span style={{ fontWeight:600 }}>Teaches: </span>{assignedStr}</div>}
             </div>
@@ -3151,7 +3151,7 @@ export function TimetablePage() {
   if (!periods.length) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"calc(100vh - 52px)", flexDirection:"column" as const, gap:16 }}>
       <div style={{ fontSize:48 }}>📅</div>
-      <div style={{ fontSize:18, color:"#4B5275", fontFamily:"'DM Serif Display',Georgia,serif" }}>No timetable generated yet</div>
+      <div style={{ fontSize:18, color:"#4B5275", fontFamily:"'Fraunces',Georgia,serif" }}>No timetable generated yet</div>
       <button onClick={() => window.location.href="/wizard"} style={{ padding:"10px 24px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>✨ Go to Wizard</button>
     </div>
   )
@@ -3814,12 +3814,12 @@ export function TimetablePage() {
                   Affected: {targetSections.length} section{targetSections.length!==1?"s":""}
                 </div>
                 {!bothClass ? (
-                  <div style={{ fontSize:12, color:"#16a34a", fontWeight:700 }}>✓ Break position change — no cell conflicts.</div>
+                  <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ Break position change — no cell conflicts.</div>
                 ) : noConflicts ? (
-                  <div style={{ fontSize:12, color:"#16a34a", fontWeight:700 }}>✓ No conflicts detected — swap is safe.</div>
+                  <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ No conflicts detected — swap is safe.</div>
                 ) : (
                   <div style={{ display:"flex", gap:20 }}>
-                    <div style={{ fontSize:12, color:"#16a34a", fontWeight:700 }}>✓ {safe} safe</div>
+                    <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ {safe} safe</div>
                     <div style={{ fontSize:12, color:"#dc2626", fontWeight:700 }}>⚠ {conflicted} conflict{conflicted!==1?"s":""}</div>
                   </div>
                 )}
@@ -3903,7 +3903,7 @@ function SectionHeader({ name, classTeacher, meta }: { name:string; classTeacher
   return (
     <div style={{ display:"flex", alignItems:"center", gap:16, padding:"10px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
       <div>
-        <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'DM Serif Display',Georgia,serif" }}>{name}</div>
+        <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'Fraunces',Georgia,serif" }}>{name}</div>
         {classTeacher && <div style={{ fontSize:11, color:"#4B5275", marginTop:1 }}>Class Teacher: <strong>{classTeacher}</strong></div>}
       </div>
       {meta && <div style={{ marginLeft:"auto", fontSize:11, color:"#8B87AD" }}>{meta}</div>}

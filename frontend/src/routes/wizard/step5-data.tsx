@@ -41,7 +41,7 @@ export function Step5Data() {
 
   return (
     <div>
-      <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, marginBottom:8 }}>Review & edit generated data</h1>
+      <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:28, marginBottom:8 }}>Review & edit generated data</h1>
       <p style={{ color:"#6a6860", fontSize:13, marginBottom:14, lineHeight:1.65 }}>
         AI generated {sections.length} {org.sectionsLabel.toLowerCase()}, {staff.length} {org.staffsLabel.toLowerCase()}, {subjects.length} {org.subjectsLabel.toLowerCase()}. Edit anything inline.
       </p>

@@ -233,7 +233,7 @@ export function TimetableSwapModal({
         borderRadius: 20,
         boxShadow: '0 32px 80px rgba(19,17,30,0.3), 0 4px 16px rgba(124,111,224,0.14)',
         display: 'flex', flexDirection: 'column',
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Hanken Grotesk', sans-serif",
         overflow: 'hidden',
       }}>
 

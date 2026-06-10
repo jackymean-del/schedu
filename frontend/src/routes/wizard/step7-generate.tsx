@@ -167,7 +167,7 @@ export function Step7Generate() {
       )}
 
       {/* Title */}
-      <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:26 }}>
+      <h2 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:26 }}>
         {status === "idle"    ? "Ready to generate timetable" :
          status === "running" ? "Generating timetable..." :
          result?.conflicts === 0 ? "Timetable ready! ✅" : `Timetable ready with ${result?.conflicts} conflicts ⚠️`}
