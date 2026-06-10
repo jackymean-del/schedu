@@ -938,7 +938,10 @@ export function StepResourcesV2() {
             cycleWeeks={cycleWeeks}
             anchorRect={scopeTarget.rect}
             entities={
-              scopeTarget.kind === 'BulkSection'  ? sections.map((s: Section) => ({ id: s.id, name: s.name }))
+              // Grade/group-level scope passes memberIds — limit the pickable list to them
+              scopeTarget.kind === 'BulkSection'  ? sections
+                  .filter((s: Section) => !(scopeTarget.entity as any).memberIds || (scopeTarget.entity as any).memberIds.includes(s.id))
+                  .map((s: Section) => ({ id: s.id, name: s.name }))
               : scopeTarget.kind === 'BulkSubject' ? subjects.map((s: Subject) => ({ id: s.id, name: s.name }))
               : scopeTarget.kind === 'BulkTeacher' ? staff.map((t: Staff) => ({ id: t.id, name: t.name }))
               : scopeTarget.kind === 'BulkRoom'    ? rooms.map(r => ({ id: r.id, name: r.name }))
@@ -946,14 +949,18 @@ export function StepResourcesV2() {
             }
             onSave={(nextScope, selectedIds) => {
               const k = scopeTarget.kind
+              // Grade/group bulk: never touch sections outside the level's members
+              const memberIds: string[] | undefined = (scopeTarget.entity as any).memberIds
+              const inBulk = (id: string) =>
+                (!selectedIds || selectedIds.includes(id)) && (!memberIds || memberIds.includes(id))
               if (k === 'Section')       setSections(sections.map((s: Section) => s.id === scopeTarget.entity.id ? { ...s, scope: nextScope } : s))
               else if (k === 'Subject')  setSubjects(subjects.map((s: Subject) => s.id === scopeTarget.entity.id ? { ...s, scope: nextScope } : s))
               else if (k === 'Teacher')  setStaff(staff.map((t: Staff) => t.id === scopeTarget.entity.id ? { ...t, scope: nextScope } : t))
               else if (k === 'Room')     setRooms(rooms.map(r => r.id === scopeTarget.entity.id ? { ...r, scope: nextScope } : r))
-              else if (k === 'BulkSection')  setSections(sections.map((s: Section) => (!selectedIds || selectedIds.includes(s.id)) ? { ...s, scope: nextScope } : s))
-              else if (k === 'BulkSubject')  setSubjects(subjects.map((s: Subject) => (!selectedIds || selectedIds.includes(s.id)) ? { ...s, scope: nextScope } : s))
-              else if (k === 'BulkTeacher')  setStaff(staff.map((t: Staff) => (!selectedIds || selectedIds.includes(t.id)) ? { ...t, scope: nextScope } : t))
-              else if (k === 'BulkRoom')     setRooms(rooms.map(r => (!selectedIds || selectedIds.includes(r.id)) ? { ...r, scope: nextScope } : r))
+              else if (k === 'BulkSection')  setSections(sections.map((s: Section) => inBulk(s.id) ? { ...s, scope: nextScope } : s))
+              else if (k === 'BulkSubject')  setSubjects(subjects.map((s: Subject) => inBulk(s.id) ? { ...s, scope: nextScope } : s))
+              else if (k === 'BulkTeacher')  setStaff(staff.map((t: Staff) => inBulk(t.id) ? { ...t, scope: nextScope } : t))
+              else if (k === 'BulkRoom')     setRooms(rooms.map(r => inBulk(r.id) ? { ...r, scope: nextScope } : r))
             }}
             onClose={() => setScopeTarget(null)}
           />

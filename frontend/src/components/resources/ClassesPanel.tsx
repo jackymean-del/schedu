@@ -1094,9 +1094,9 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col />                             {/* Class: gets remaining ~50% */}
-              <col style={{ width: '25%' }} />    {/* Strength */}
-              <col style={{ width: '22%' }} />    {/* Actions */}
+              <col />                              {/* Class: takes the remaining width */}
+              <col style={{ width: 110 }} />       {/* Strength — compact, near the name */}
+              <col style={{ width: 170 }} />       {/* Actions — Scope + delete */}
             </colgroup>
             <thead>
               <tr>
@@ -1142,10 +1142,26 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                         />
                       </td>
                       <td style={{ ...groupHdrCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                        <DeleteActionButton
-                          onDelete={() => removeMany(groupIds)}
-                          tooltip={`Delete ${group} — removes all ${groupSecs.length} sections`}
-                        />
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {onScopeClick && (
+                            <button
+                              title={`Set availability scope for all ${groupSecs.length} sections in ${group}`}
+                              onClick={e => onScopeClick(
+                                { id: '__bulk__', name: `${group} (${groupSecs.length} sections)`, memberIds: groupSecs.map(s => s.id) } as unknown as Section,
+                                e.currentTarget.getBoundingClientRect(),
+                              )}
+                              style={{ ...actionBtn, gap: 4 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8886A8'; e.currentTarget.style.borderColor = '#DDD8FF' }}
+                            >
+                              <CalendarRange size={12} /> Scope
+                            </button>
+                          )}
+                          <DeleteActionButton
+                            onDelete={() => removeMany(groupIds)}
+                            tooltip={`Delete ${group} — removes all ${groupSecs.length} sections`}
+                          />
+                        </div>
                       </td>
                     </tr>
 
@@ -1192,10 +1208,26 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                               />
                             </td>
                             <td style={{ ...gradeHdrCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              <DeleteActionButton
-                                onDelete={() => removeMany(gradeIds)}
-                                tooltip={`Delete Grade ${grade} — removes its ${gradeSecs.length} sections`}
-                              />
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                {onScopeClick && (
+                                  <button
+                                    title={`Set availability scope for all ${gradeSecs.length} sections in Grade ${grade}`}
+                                    onClick={e => onScopeClick(
+                                      { id: '__bulk__', name: `Grade ${grade} (${gradeSecs.length} sections)`, memberIds: gradeSecs.map(s => s.id) } as unknown as Section,
+                                      e.currentTarget.getBoundingClientRect(),
+                                    )}
+                                    style={{ ...actionBtn, gap: 4 }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8886A8'; e.currentTarget.style.borderColor = '#DDD8FF' }}
+                                  >
+                                    <CalendarRange size={12} /> Scope
+                                  </button>
+                                )}
+                                <DeleteActionButton
+                                  onDelete={() => removeMany(gradeIds)}
+                                  tooltip={`Delete Grade ${grade} — removes its ${gradeSecs.length} sections`}
+                                />
+                              </div>
                             </td>
                           </tr>
 
