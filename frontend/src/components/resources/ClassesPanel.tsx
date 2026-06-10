@@ -704,41 +704,24 @@ function StreamNameInput({ initial, onCommit, onCancel: _onCancel }: {
   )
 }
 
-// ─── Level strength editor (Group / Grade header rows) ────────────────────────
-// Shows the uniform per-section strength when all children match, otherwise a
-// "mixed" placeholder with the total. Committing a number applies it to EVERY
-// section under that level.
-function LevelStrengthInput({ secs, onApply, title }: {
-  secs: SectionExt[]
-  onApply: (n: number) => void
-  title: string
-}) {
-  const strengths = secs.map(s => s.strength ?? 40)
-  const total     = strengths.reduce((a, b) => a + b, 0)
-  const uniform   = strengths.length > 0 && strengths.every(v => v === strengths[0])
-  const [val, setVal] = useState<string>(uniform ? String(strengths[0]) : '')
-  useEffect(() => { setVal(uniform ? String(strengths[0]) : '') }, [uniform, strengths[0], secs.length]) // eslint-disable-line react-hooks/exhaustive-deps
-  function commit() {
-    const n = parseInt(val, 10)
-    if (!isNaN(n) && n > 0 && n < 1000) onApply(n)
-    else setVal(uniform ? String(strengths[0]) : '')
-  }
+// ─── Level strength total (Group / Grade / Stream header rows) ────────────────
+// Read-only sum of the child sections' strengths. Recomputes automatically when
+// any section's strength is edited (derived straight from the sections state).
+function LevelStrengthTotal({ secs, title }: { secs: SectionExt[]; title: string }) {
+  const total = secs.reduce((a, s) => a + (s.strength ?? 40), 0)
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }} onClick={e => e.stopPropagation()}>
-      <input
-        type="number" value={val} min={1} max={999}
-        placeholder={uniform ? undefined : 'mixed'}
-        title={title}
-        onChange={e => setVal(e.target.value)}
-        onBlur={commit}
-        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setVal(uniform ? String(strengths[0]) : '') }}
-        className="rp-inp rp-num"
-        style={{ width: 58, padding: '3px 6px', border: '1px solid #D4CCFF', borderRadius: 5, fontSize: 12, fontWeight: 700, color: '#444', outline: 'none', textAlign: 'center', background: '#fff', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
-      />
-      <span style={{ fontSize: 10, fontWeight: 600, color: '#9590BF', whiteSpace: 'nowrap' }} title="Total students at this level">
-        Σ {total}
-      </span>
-    </div>
+    <span
+      title={title}
+      onClick={e => e.stopPropagation()}
+      style={{
+        display: 'inline-block', minWidth: 58, padding: '3px 10px',
+        fontSize: 12.5, fontWeight: 800, color: P_D, textAlign: 'center',
+        background: 'rgba(255,255,255,0.75)', border: '1px solid #D4CCFF',
+        borderRadius: 5, cursor: 'default', userSelect: 'none',
+      }}
+    >
+      {total}
+    </span>
   )
 }
 
@@ -948,11 +931,6 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
     undoHistory.push(sections)
     setSections(sections.filter(s => !ids.has(s.id)))
   }
-  /** Apply one strength value to every section in the id set. */
-  function applyStrength(ids: Set<string>, n: number) {
-    undoHistory.push(sections)
-    setSections(sections.map(s => ids.has(s.id) ? { ...s, strength: n } as Section : s))
-  }
   /** Rename a grade — updates the grade field AND the "Grade-…" name prefix of its sections. */
   function renameGrade(oldGrade: string, newGrade: string) {
     const trimmed = newGrade.trim().replace(/^grade\s+/i, '')
@@ -1158,10 +1136,9 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                         </div>
                       </td>
                       <td style={{ ...groupHdrCell, textAlign: 'center' }}>
-                        <LevelStrengthInput
+                        <LevelStrengthTotal
                           secs={groupSecs}
-                          onApply={n => applyStrength(groupIds, n)}
-                          title={`Set strength for all ${groupSecs.length} sections in ${group}`}
+                          title={`Total students across ${groupSecs.length} sections in ${group}`}
                         />
                       </td>
                       <td style={{ ...groupHdrCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
@@ -1209,10 +1186,9 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                               </div>
                             </td>
                             <td style={{ ...gradeHdrCell, textAlign: 'center' }}>
-                              <LevelStrengthInput
+                              <LevelStrengthTotal
                                 secs={gradeSecs}
-                                onApply={n => applyStrength(gradeIds, n)}
-                                title={`Set strength for all ${gradeSecs.length} sections in Grade ${grade}`}
+                                title={`Total students across ${gradeSecs.length} sections in Grade ${grade}`}
                               />
                             </td>
                             <td style={{ ...gradeHdrCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
@@ -1272,10 +1248,9 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                                     </div>
                                   </td>
                                   <td style={{ ...streamHdrCell, textAlign: 'center' }}>
-                                    <LevelStrengthInput
+                                    <LevelStrengthTotal
                                       secs={secs}
-                                      onApply={n => applyStrength(streamIds, n)}
-                                      title={`Set strength for all ${secs.length} classes in ${stream}`}
+                                      title={`Total students across ${secs.length} classes in ${stream}`}
                                     />
                                   </td>
                                   <td style={{ ...streamHdrCell, textAlign: 'center' }}>
