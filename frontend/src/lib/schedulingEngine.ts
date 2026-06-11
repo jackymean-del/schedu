@@ -90,6 +90,13 @@ export interface SolverInput {
    *  classes: class-key prefixes ('nur', 'lkg', 'ukg', 'i', 'xi', …) —
    *           matched against section names by case-insensitive prefix. */
   dayOffRules?: Array<{ id?: string; day: string; classes: string[] }>
+  /** Bell-true adjacency per section: list of class-period ids pN such that
+   *  pN → pN+1 are genuinely back-to-back in THIS section's bell schedule
+   *  (no short break / lunch between them). When provided, multi-period
+   *  session blocks (doublePeriods / Xs=Yp syntax) are only placed across
+   *  pairs in this list — a double period never straddles a break.
+   *  Sections missing from the map fall back to plain array adjacency. */
+  sectionAdjacency?: Record<string, string[]>
 }
 
 /** schedU Phase 6 — Auto-infer Optional Blocks from section strengths.
@@ -1176,7 +1183,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         const span = sessionSpan[sec.name]?.[chosenSub.name] ?? 1
         if (span > 1) {
           const spanPeriods = classPeriods.slice(pi, pi + span)
-          const allFree = spanPeriods.length === span &&
+          // Bell-true adjacency: every hop in the block must be back-to-back in
+          // THIS section's real bell (no lunch / short break in between).
+          // Sections absent from the map keep plain array adjacency (legacy).
+          const adjList = input.sectionAdjacency?.[sec.name]
+          const adjOk = !adjList ||
+            spanPeriods.slice(0, -1).every(cp => adjList.includes(cp.id))
+          const allFree = spanPeriods.length === span && adjOk &&
             spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
             spanPeriods.every(cp => !teacherBusy[teacher.name][day].has(cp.id))
           if (allFree) {

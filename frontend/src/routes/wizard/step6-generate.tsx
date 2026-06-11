@@ -134,6 +134,32 @@ function teachCountFromRows(secName: string, rows: any[] | undefined): number | 
 }
 
 /**
+ * Bell-true adjacency for one section: ids of class periods whose SUCCESSOR
+ * teaching period is back-to-back in the bell (no break row between the Nth
+ * and N+1th teaching rows). Used to stop double periods straddling a break.
+ * Returns null when the rows don't cover this section (caller skips the map
+ * entry → solver falls back to plain array adjacency).
+ */
+function adjacencyIdsFromRows(secName: string, rows: any[] | undefined, classPeriodIds: string[]): string[] | null {
+  if (!rows?.length) return null
+  const key = sectionKey(secName)
+  if (!rows.some((r: any) => r.type === 'teaching' && (r.classes ?? []).includes(key))) return null
+  const myRows = rows.filter((r: any) => !(r.classes ?? []).length || r.classes.includes(key))
+  const ids: string[] = []
+  let teachIdx = 0
+  for (let i = 0; i < myRows.length; i++) {
+    if (myRows[i].type !== 'teaching') continue
+    const next = myRows[i + 1]
+    if (next && next.type === 'teaching') {
+      const pid = classPeriodIds[teachIdx]
+      if (pid) ids.push(pid)
+    }
+    teachIdx++
+  }
+  return ids
+}
+
+/**
  * Early dispersal: clone sections with scope-locked slots for periods beyond
  * their bell-schedule period count, so the solver never places subjects after
  * a junior group has already dispersed.
@@ -347,11 +373,20 @@ export function Step6Generate() {
           const lockedBlockSections = lockEarlyDispersal(
             blockSections, bpClass, workDays, name => teachCountFromRows(name, rows))
 
+          // Bell-true adjacency: double periods must not straddle a break
+          const bpClassIds = bpClass.map(p => p.id)
+          const blockAdjacency: Record<string, string[]> = {}
+          for (const sec of blockSections) {
+            const adj = adjacencyIdsFromRows(sec.name, rows, bpClassIds)
+            if (adj) blockAdjacency[sec.name] = adj
+          }
+
           const out = solveTimetable({
             sections: lockedBlockSections, staff, subjects: resolvedSubjects, periods: bp, workDays,
             requirements: [], optionalBlocks, subjectCombinations, sectionStrengths,
             subjectAllocations, rooms, teacherAvailability: avail,
             dayOffRules: (store as any).config?.dayOffRules ?? [],
+            sectionAdjacency: blockAdjacency,
           })
 
           Object.assign(mergedClassTT, out.classTT)
@@ -399,6 +434,16 @@ export function Step6Generate() {
       }
       const effSections = lockEarlyDispersal(sections, classPeriods, workDays, countFor)
 
+      // Bell-true adjacency: double periods must not straddle a break
+      const classPeriodIds = classPeriods.map((p: Period) => p.id)
+      const sectionAdjacency: Record<string, string[]> = {}
+      for (const sec of sections) {
+        for (const bs of bellSchedules ?? []) {
+          const adj = adjacencyIdsFromRows(sec.name, bs.rows, classPeriodIds)
+          if (adj) { sectionAdjacency[sec.name] = adj; break }
+        }
+      }
+
       output  = solveTimetable({
         sections: effSections, staff, subjects: resolvedSubjects, periods, workDays,
         requirements: [],
@@ -410,6 +455,7 @@ export function Step6Generate() {
         teacherAvailability: (store as any).teacherAvailability ?? {},
         // Class-specific day-off rules from bell schedule step (e.g. Sat off for Nursery/LKG)
         dayOffRules: (store as any).config?.dayOffRules ?? [],
+        sectionAdjacency,
       })
       solveMs = Date.now() - startedAt
 
