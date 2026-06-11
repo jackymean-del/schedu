@@ -842,7 +842,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       if (slots.length >= needed) break
     }
 
-    const cellSubject = block.options.map(o => o.subject).filter(Boolean).join(' / ')
+    // Parallel choices read as alternatives — "Physics OR Painting"
+    const cellSubject = block.options.map(o => o.subject).filter(Boolean).join(' OR ')
     slots.forEach(({ day, periodId }) => {
       block.sectionNames.forEach(secName => {
         if (sectionOffDays.get(secName)?.has(day)) return

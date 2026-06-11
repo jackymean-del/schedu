@@ -207,12 +207,95 @@ function getSectionOffDays(
  * Returns null when no class-wise breaks are configured (caller falls back
  * to the unified periodTimes map).
  */
+// ── GROUND-TRUTH bell schedule (config.bellSchedules) ────────────────────────
+// step-bell persists the exact generated rows per generation unit (whole school,
+// or one entry per block in Advanced mode): real assembly length, capped and
+// concurrent period durations, per-group early dispersal. When present, every
+// per-section clock time is derived from these rows — the afterPeriod ×
+// defaultSessionDuration math below stays only as a legacy fallback.
+type BellRowLite  = { id: string; name: string; type: string; duration: number; classes: string[] }
+type BellSchedule = { startTime: string; rows: BellRowLite[] }
+
+/**
+ * Per-section minutes map from the bell rows. Keys:
+ *  - nth teaching row → nth class-type period id (sections with early dispersal
+ *    simply have fewer teaching rows, so trailing period ids stay unmapped)
+ *  - break rows → matched chronologically (by type) to the section's
+ *    classwiseBreaks ids, so break columns resolve exactly
+ *  - assembly / dispersal → 'assembly' / 'dispersal'
+ */
+function bellScheduleForSection(
+  sectionName: string,
+  bellSchedules: BellSchedule[] | undefined,
+  classwiseBreaks: CwBreakLite[] | undefined,
+  classPeriods: Period[],
+): Map<string, SlotMins> | null {
+  if (!bellSchedules?.length) return null
+  const key = getSectionClassKey(sectionName)
+  const sched = bellSchedules.find(bs =>
+    bs.rows.some(r => r.type === 'teaching' && (r.classes ?? []).includes(key)))
+  if (!sched) return null
+  const myRows = sched.rows.filter(r => !(r.classes ?? []).length || r.classes.includes(key))
+  if (!myRows.some(r => r.type === 'teaching')) return null
+
+  const [sh, sm] = (sched.startTime ?? '08:00').split(':').map(Number)
+  let cur = sh * 60 + sm
+  const map = new Map<string, SlotMins>()
+  const classIds = classPeriods.filter(p => p.type === 'class').map(p => p.id)
+
+  // Section's break definitions in chronological order, for id matching
+  const unmatched = (classwiseBreaks ?? [])
+    .filter(b => b.classes.length === 0 || b.classes.includes(key))
+    .sort((a, b) => a.afterPeriod - b.afterPeriod)
+
+  let teachIdx = 0
+  for (const r of myRows) {
+    const slot = { startMin: cur, endMin: cur + r.duration }
+    if (r.type === 'teaching') {
+      const pid = classIds[teachIdx]
+      if (pid) map.set(pid, slot)
+      teachIdx++
+    } else if (r.type === 'assembly') {
+      map.set('assembly', slot)
+    } else if (r.type === 'dispersal') {
+      map.set('dispersal', slot)
+    } else {
+      // short-break / lunch → take the first unmatched break of the same type
+      let mi = unmatched.findIndex(b => ((b as any).type ?? '') === r.type)
+      if (mi < 0) mi = unmatched.length ? 0 : -1
+      if (mi >= 0) {
+        const m = unmatched.splice(mi, 1)[0]
+        map.set(m.id, slot)
+      }
+    }
+    cur += r.duration
+  }
+  return map
+}
+
+/** Number of teaching periods a section actually has per the bell schedule (null = unknown). */
+function bellTeachingCount(sectionName: string, bellSchedules: BellSchedule[] | undefined): number | null {
+  if (!bellSchedules?.length) return null
+  const key = getSectionClassKey(sectionName)
+  const sched = bellSchedules.find(bs =>
+    bs.rows.some(r => r.type === 'teaching' && (r.classes ?? []).includes(key)))
+  if (!sched) return null
+  return sched.rows.filter(r => r.type === 'teaching' && (!(r.classes ?? []).length || r.classes.includes(key))).length
+}
+
 function calcSectionTimes(
   sectionName: string,
   classwiseBreaks: Array<{id: string; classes: string[]; afterPeriod: number; duration: number}> | undefined,
   config: any,
   classPeriods: Period[],
 ): Map<string,{start:string;end:string}> | null {
+  // Ground truth first: exact times from the generated bell rows
+  const bell = bellScheduleForSection(sectionName, (config as any)?.bellSchedules, classwiseBreaks as CwBreakLite[] | undefined, classPeriods)
+  if (bell) {
+    const m = new Map<string,{start:string;end:string}>()
+    bell.forEach((s, id) => m.set(id, { start: fmtMin(s.startMin, config), end: fmtMin(s.endMin, config) }))
+    return m
+  }
   if (!classwiseBreaks?.length) return null
 
   const classKey = getSectionClassKey(sectionName)
@@ -268,27 +351,56 @@ function buildClassPeriods(
   sectionName: string,
   allPeriods: Period[],
   classwiseBreaks: Array<{id: string; name: string; type: string; classes: string[]; afterPeriod: number; duration: number}> | undefined,
+  bellSchedules?: BellSchedule[],
 ): Period[] {
-  if (!classwiseBreaks?.length) return allPeriods
+  // Early dispersal: a section only has as many period columns as its bell
+  // schedule gives it (juniors disperse after fewer periods than seniors).
+  // dropTrailingBreaks: in the global-periods fallback the break columns are
+  // school-wide, so breaks after the section's last period must go too; in the
+  // class-wise path the breaks are already the section's own (e.g. a senior
+  // group's lunch can legitimately sit after its final period) — keep them.
+  const teachCount = bellTeachingCount(sectionName, bellSchedules)
+  const truncate = (list: Period[], dropTrailingBreaks: boolean): Period[] => {
+    if (teachCount == null) return list
+    let seen = 0
+    const out: Period[] = []
+    for (const p of list) {
+      if (p.type === 'class') {
+        if (seen >= teachCount) continue
+        seen++
+      } else if (dropTrailingBreaks && p.type !== 'fixed-start' && seen >= teachCount) {
+        continue
+      }
+      out.push(p)
+    }
+    return out
+  }
+
+  if (!classwiseBreaks?.length) return truncate(allPeriods, true)
 
   const classKey = getSectionClassKey(sectionName)
   const sectionBreaks = classwiseBreaks.filter(b =>
     b.classes.length === 0 || b.classes.includes(classKey)
   )
-  if (!sectionBreaks.length) return allPeriods
+  if (!sectionBreaks.length) return truncate(allPeriods, true)
 
-  // Deduplicate: keep only one break per afterPeriod position for this section.
-  // Prefer 'lunch' over 'short-break'; then prefer longer duration.
-  // This prevents double-lunch when a class-key matches both a specific entry
-  // and an "all classes" entry at the same afterPeriod slot.
-  const byPos = new Map<number, typeof sectionBreaks[0]>()
+  // Deduplicate: keep only one break per (afterPeriod, kind) for this section.
+  // Kind = lunch vs short-break — DISTINCT kinds can legitimately share a slot
+  // (e.g. Morning Break + Pre-Primary's early lunch both after Period 1), so
+  // dedupe per kind only. This still prevents double-lunch when a class-key
+  // matches both a specific entry and an "all classes" entry at the same slot.
+  const byPos = new Map<string, typeof sectionBreaks[0]>()
   for (const b of sectionBreaks) {
-    const ex = byPos.get(b.afterPeriod)
-    if (!ex) { byPos.set(b.afterPeriod, b); continue }
-    if (b.type === 'lunch' && ex.type !== 'lunch') { byPos.set(b.afterPeriod, b); continue }
-    if (b.duration > ex.duration && b.type === ex.type) byPos.set(b.afterPeriod, b)
+    const kind = b.type === 'lunch' ? 'lunch' : 'break'
+    const k = `${b.afterPeriod}|${kind}`
+    const ex = byPos.get(k)
+    if (!ex) { byPos.set(k, b); continue }
+    if (b.duration > ex.duration) byPos.set(k, b)
   }
+  // Within one slot, short break comes before lunch (matches the bell order)
   const dedupedBreaks = Array.from(byPos.values())
+    .sort((a, b) => a.afterPeriod - b.afterPeriod ||
+      (a.type === 'lunch' ? 1 : 0) - (b.type === 'lunch' ? 1 : 0))
 
   const mkBreak = (b: typeof sectionBreaks[0]): Period => ({
     id: b.id, name: b.name, duration: b.duration,
@@ -312,7 +424,7 @@ function buildClassPeriods(
   })
 
   result.push(...fixedEnds)
-  return result
+  return truncate(result, false)
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -354,6 +466,9 @@ function sectionScheduleMins(
   classwiseBreaks: CwBreakLite[] | undefined,
   config: any,
 ): Map<string, SlotMins> {
+  // Ground truth first: exact times from the generated bell rows
+  const bell = bellScheduleForSection(sectionName, (config as any)?.bellSchedules, classwiseBreaks, classPeriods)
+  if (bell) return bell
   const [sh, sm] = (config?.startTime ?? "09:00").split(":").map(Number)
   const startMins = sh*60 + sm
   const assembly  = 15                                   // fixed-start assembly
@@ -431,9 +546,12 @@ function buildUnifiedColumns(
   const schedules = new Map<string, Map<string,SlotMins>>()
   repByGroup.forEach((sec,k)=> schedules.set(k, sectionScheduleMins(sec, classPeriods, classwiseBreaks, config)))
 
-  // No staggering → simple 1:1 column per global period
-  const hasStagger = !!classwiseBreaks?.length &&
-    classwiseBreaks.some(b => b.classes.length>0 && !isFullBreakDef(b, allClassKeys))
+  // No staggering → simple 1:1 column per global period.
+  // When ground-truth bell schedules exist, always take the schedule-derived
+  // path: store period durations can drift from the real (capped) bell.
+  const hasBell = !!(config as any)?.bellSchedules?.length
+  const hasStagger = hasBell || (!!classwiseBreaks?.length &&
+    classwiseBreaks.some(b => b.classes.length>0 && !isFullBreakDef(b, allClassKeys)))
   if (!hasStagger) {
     const t = (() => { // simple cumulative clock from periods
       const [sh,sm]=(config?.startTime ?? "09:00").split(":").map(Number)
@@ -891,19 +1009,34 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
     </td>
   )
   // ── Multi-option / parallel group block ──────────────────
+  // Students split into parallel groups running simultaneously: every option
+  // shows its OWN subject + teacher + room (always — they're what distinguishes
+  // the groups), with an explicit OR chip between choices.
   if (options && options.length > 1) {
     return (
       <td style={{ ...dragTdStyle(!!isDropTarget, isConflict, true), position:"relative" as const }} onClick={onClick} {...sharedTdProps}>
         <div style={{ borderRadius:5, padding:"3px 5px", minHeight:44, background:"linear-gradient(135deg,#F5F2FF 0%,#FAFAFE 100%)", borderLeft:"3px solid #7C6FE0", border:"1px solid #D8D2FF", position:"relative" as const, cursor:onClick?"pointer":"default" }}>
           {absentHighlight && <span style={{ position:"absolute" as const, top:2, left:3, fontSize:8, color:"#D4920E" }}>⚠</span>}
+          <div style={{ fontSize:7, fontWeight:800, letterSpacing:"0.08em", color:"#8B7FE8", textTransform:"uppercase" as const, marginBottom:2 }}>Parallel groups</div>
           {options.map((opt, i) => {
             const oc = getSubjectColor(opt.subject)
             return (
-              <div key={i} style={{ marginBottom: i < options.length-1 ? 3 : 0, borderBottom: i < options.length-1 ? "1px dashed #E8E4FF" : "none", paddingBottom: i < options.length-1 ? 3 : 0 }}>
+              <div key={i}>
+                {i > 0 && (
+                  <div style={{ display:"flex", alignItems:"center", gap:4, margin:"2px 0" }}>
+                    <span style={{ flex:1, height:1, background:"#E4DEFF" }} />
+                    <span style={{ fontSize:7, fontWeight:800, color:"#9B8EF5", letterSpacing:"0.06em" }}>OR</span>
+                    <span style={{ flex:1, height:1, background:"#E4DEFF" }} />
+                  </div>
+                )}
                 <div className={oc} style={{ borderRadius:3, padding:"2px 4px" }}>
                   <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{dSub(opt.subject)}</div>
-                  {showTeacher && opt.teacher && <div style={{ fontSize:9, opacity:0.75 }}>{dTch(opt.teacher)}</div>}
-                  {showRoom && opt.room && <div style={{ fontSize:8, opacity:0.55 }}>{dRm(opt.room)}</div>}
+                  {(opt.teacher || opt.room) && (
+                    <div style={{ fontSize:8.5, opacity:0.8, display:"flex", justifyContent:"space-between", gap:4 }}>
+                      <span>{dTch(opt.teacher)}</span>
+                      {opt.room && <span style={{ opacity:0.75 }}>{dRm(opt.room)}</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -1199,14 +1332,19 @@ export function TimetablePage() {
   }, [staff, sections, classTT, classPeriods, periods, cwBreaksGlobal, config])
 
   // Uncovered periods — recomputes only when class timetable / periods change.
+  // Periods a section doesn't have (early dispersal per the bell schedule) are
+  // not gaps — skip them.
   const uncoveredPeriodsAll = useMemo(() =>
-    sections.flatMap(sec =>
-      config.workDays.flatMap(day =>
-        classPeriods
+    sections.flatMap(sec => {
+      const tc = bellTeachingCount(sec.name, (config as any).bellSchedules)
+      const secPeriods = tc == null ? classPeriods : classPeriods.slice(0, tc)
+      return config.workDays.flatMap(day =>
+        secPeriods
           .filter(p => !classTT[sec.name]?.[day]?.[p.id]?.subject)
           .map(p => ({ section: sec.name, day, periodId: p.id, periodName: p.name, time: periodTimes.get(p.id) }))
       )
-    ),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sections, config.workDays, classPeriods, classTT, periodTimes]
   )
 
@@ -1782,7 +1920,7 @@ export function TimetablePage() {
     const usedDays = config.workDays.filter(d => sd[d])
     // Use class-wise timing when configured, fall back to unified periodTimes
     const cwBreaks = (config as any).classwiseBreaks as Parameters<typeof buildClassPeriods>[2]
-    const sectionPeriods = buildClassPeriods(sn, periods, cwBreaks)
+    const sectionPeriods = buildClassPeriods(sn, periods, cwBreaks, (config as any).bellSchedules)
     const sectionTimes   = calcSectionTimes(sn, cwBreaks, config, classPeriods) ?? periodTimes
     const offDays        = getSectionOffDays(sn, (config as any).dayOffRules)
     return (
@@ -1888,7 +2026,7 @@ export function TimetablePage() {
     const ctName = resolveTeacher(section?.classTeacher ?? "")
     const usedDays = config.workDays.filter(d => sd[d])
     const cwBreaksT  = (config as any).classwiseBreaks as Parameters<typeof buildClassPeriods>[2]
-    const sectionPeriodsT = buildClassPeriods(sn, periods, cwBreaksT)
+    const sectionPeriodsT = buildClassPeriods(sn, periods, cwBreaksT, (config as any).bellSchedules)
     const sectionTimesT   = calcSectionTimes(sn, cwBreaksT, config, classPeriods) ?? periodTimes
     const offDaysT        = getSectionOffDays(sn, (config as any).dayOffRules)
     return (

@@ -756,10 +756,82 @@ function smartGenerateBellConfig(
     perGroupMaxPeriods[g.group] = Math.max(1, Math.min(maxPeriods, Math.floor(targetMaxMins / cappedPeriodDur)))
   }
 
-  return {
-    rows:   buildBellRowsFromCw(startTime, cappedPeriodDur, maxPeriods, cwRows, allKeys, 10, effectiveConcurrent, periodDurMin, classGroupMap, perGroupMaxPeriods, perGroupPeriodDur),
-    cwRows,
+  // ── Age-monotonic dispersal enforcement ───────────────────────────────────
+  // Concurrent (shortened) periods count toward a group's period quota, so each
+  // group's wall-clock end time is EMERGENT — a group whose period starts happen
+  // to align with many other groups' lunch slots finishes its quota early. That
+  // can invert the age order (e.g. Middle dispersing before Pre-Primary).
+  // Guarantee: a younger group never disperses AFTER an older one. We build,
+  // measure actual dispersal times, and adjust per-group max periods to a fixed
+  // point. In day-boarding mode a second pass lifts juniors that ended too far
+  // before the senior-most day back inside the trim window (order preserved).
+  const AGE_ORDER = ['Pre-Primary', 'Primary', 'Middle', 'Senior', 'Senior Secondary']
+  const orderedGroups = AGE_ORDER.filter(g => activeGroups.some(ag => ag.group === g))
+
+  const build = () => buildBellRowsFromCw(startTime, cappedPeriodDur, maxPeriods, cwRows, allKeys, 10, effectiveConcurrent, periodDurMin, classGroupMap, perGroupMaxPeriods, perGroupPeriodDur)
+
+  // Dispersal start per group = startTime + Σ durations of all non-dispersal rows
+  // containing one of its classes (each class's rows are its complete sequential
+  // day, so the sum is exact). Composite stream keys are stripped in built rows.
+  const groupEnds = (rows: BellRow[]): Record<string, number> => {
+    const ends: Record<string, number> = {}
+    for (const g of orderedGroups) {
+      const keys = activeClasses
+        .filter(c => c.group === g)
+        .map(c => isCompositeKey(c.key) ? baseClassKey(c.key) : c.key)
+      let grpEnd = 0
+      for (const k of keys) {
+        const end = toMins(startTime) + rows
+          .filter(r => r.type !== 'dispersal' && r.classes.includes(k))
+          .reduce((s, r) => s + r.duration, 0)
+        grpEnd = Math.max(grpEnd, end)
+      }
+      ends[g] = grpEnd
+    }
+    return ends
   }
+
+  let rows = build()
+
+  // Pass 1 — trim younger groups that outlast older ones (applies in BOTH modes)
+  for (let guard = 0; guard < 16; guard++) {
+    const ends = groupEnds(rows)
+    let fixed = false
+    for (let i = 0; i < orderedGroups.length - 1 && !fixed; i++) {
+      const young = orderedGroups[i]
+      for (let j = i + 1; j < orderedGroups.length && !fixed; j++) {
+        const older = orderedGroups[j]
+        if (ends[young] > ends[older]) {
+          if (perGroupMaxPeriods[young] > 1) { perGroupMaxPeriods[young]--; fixed = true }
+          else if (perGroupMaxPeriods[older] < maxPeriods) { perGroupMaxPeriods[older]++; fixed = true }
+        }
+      }
+    }
+    if (!fixed) break
+    rows = build()
+  }
+
+  // Pass 2 — day-boarding: lift juniors ending too far before the senior-most
+  // group (beyond the trim window) while the age order keeps holding.
+  if (dayboarding && orderedGroups.length > 1) {
+    const trimWin = DAYBOARD_MAX_TRIM_H * 60
+    for (let gi = 0; gi < orderedGroups.length - 1; gi++) {
+      const g = orderedGroups[gi]
+      for (let guard = 0; guard < maxPeriods; guard++) {
+        const ends = groupEnds(rows)
+        const topEnd = Math.max(...orderedGroups.map(og => ends[og]))
+        if (ends[g] >= topEnd - trimWin || perGroupMaxPeriods[g] >= maxPeriods) break
+        perGroupMaxPeriods[g]++
+        const trial  = build()
+        const tEnds  = groupEnds(trial)
+        const inOrder = orderedGroups.slice(gi + 1).every(og => tEnds[g] <= tEnds[og])
+        if (!inOrder) { perGroupMaxPeriods[g]--; rows = build(); break }
+        rows = trial
+      }
+    }
+  }
+
+  return { rows, cwRows }
 }
 
 // ── Class-wise bell generation ────────────────────────────────
@@ -3248,6 +3320,41 @@ export function StepBell() {
     })
   }, [displayRows, workDays.length, activeClasses, activeClassGroups])
 
+  // ── Live dispersal ladder (per-group actual end times) ────────
+  // Derived straight from the displayed rows, so it updates instantly when the
+  // user flips Day-boarding/Regular, edits a duration, or changes the end time.
+  const dispersalLadder = useMemo(() => {
+    const order = ['Pre-Primary', 'Primary', 'Middle', 'Senior', 'Senior Secondary']
+    const startM = toMins(startTime)
+    const fmt = (m: number) => {
+      const h = Math.floor(m / 60), mi = m % 60
+      if (!use12h) return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`
+      return `${h % 12 || 12}:${String(mi).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`
+    }
+    const out: Array<{ group: string; emoji: string; time: string; mins: number }> = []
+    for (const gm of activeClassGroups) {
+      const keys = activeClasses
+        .filter(c => c.group === gm.group)
+        .map(c => isCompositeKey(c.key) ? baseClassKey(c.key) : c.key)
+      if (!keys.length) continue
+      let end = 0
+      for (const k of keys) {
+        const e = startM + displayRows
+          .filter(r => r.type !== 'dispersal' && r.classes.includes(k))
+          .reduce((s, r) => s + r.duration, 0)
+        end = Math.max(end, e)
+      }
+      if (end <= startM) continue
+      const std = SCHOOL_HOUR_STANDARDS[gm.group as SchoolGroupKey]
+      out.push({ group: gm.group, emoji: (std as any)?.emoji ?? '🏷️', time: fmt(end), mins: end })
+    }
+    out.sort((a, b) => {
+      const ia = order.indexOf(a.group), ib = order.indexOf(b.group)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+    })
+    return out
+  }, [displayRows, activeClasses, activeClassGroups, startTime, use12h])
+
   const handleNext = () => {
     // Flush bell state to localStorage synchronously before unmounting.
     // The persistence useEffect is async (fires after paint) so there is a
@@ -3274,6 +3381,16 @@ export function StepBell() {
       dayOffRules: dayOffRules.length > 0 ? dayOffRules : undefined,
       // Persist class-wise break config so the timetable display shows correct per-class times
       classwiseBreaks: cwRows.length > 0 ? cwRows : undefined,
+      // GROUND-TRUTH bell schedule(s): the exact generated rows (real assembly length,
+      // capped/concurrent period durations, per-group early dispersal). The timetable
+      // derives every per-class clock time from these instead of re-deriving from
+      // afterPeriod × defaultSessionDuration (which drifts from the real bell).
+      bellSchedules: (isAdvanced && shifts.length > 0
+        ? shifts.map(s => ({
+            startTime: s.startTime || startTime,
+            rows: (shiftRows[s.id] ?? rows).map(r => ({ id: r.id, name: r.name, type: r.type, duration: r.duration, classes: r.classes })),
+          }))
+        : [{ startTime, rows: rows.map(r => ({ id: r.id, name: r.name, type: r.type, duration: r.duration, classes: r.classes })) }]),
       // Resources page reads these to seed sections for the right classes only
       configuredClassDefs: activeClasses,
       configuredClassStreamMap: Object.keys(classStreamMap).length > 0 ? classStreamMap : undefined,
@@ -3297,7 +3414,7 @@ export function StepBell() {
         if (row.duration > ex.duration && row.type === ex.type) byPos.set(row.afterPeriod, row)
       }
       const canonical: Array<{ id: string; name: string; duration: number; type: any; shiftable: boolean }> = [
-        { id: 'assembly', name: 'Assembly', duration: 15, type: 'fixed-start', shiftable: false },
+        { id: 'assembly', name: 'Assembly', duration: rows.find(r => r.type === 'assembly')?.duration ?? 10, type: 'fixed-start', shiftable: false },
       ]
       byPos.forEach(row => canonical.push({
         id: row.id, name: row.name, duration: row.duration,
@@ -4403,6 +4520,30 @@ export function StepBell() {
                         )
                       })}
                     </div>
+
+                    {/* Live dispersal ladder — shows each group's real end time, youngest first */}
+                    {dispersalLadder.length > 1 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#8B7FE8', textTransform: 'uppercase' }}>
+                          Dispersal
+                        </span>
+                        {dispersalLadder.map((d, i) => (
+                          <span key={d.group} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            {i > 0 && <span style={{ color: '#C4BBF0', fontSize: 10, fontWeight: 700 }}>→</span>}
+                            <span
+                              title={`${d.group} disperses at ${d.time}`}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                background: '#fff', border: '1px solid #DDD6FE', borderRadius: 14,
+                                padding: '2px 9px', fontSize: 10.5, fontWeight: 700, color: '#4C4480',
+                              }}
+                            >
+                              {d.emoji} {d.time}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* ── Morning break ─────────────────────────────────── */}

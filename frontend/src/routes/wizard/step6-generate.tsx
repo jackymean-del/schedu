@@ -124,10 +124,44 @@ function sectionKey(sectionName: string): string {
   return sectionName.split(/[\s-]/)[0].toLowerCase()
 }
 
+/** Teaching periods a section actually has, per a set of bell rows (null = unknown). */
+function teachCountFromRows(secName: string, rows: any[] | undefined): number | null {
+  if (!rows?.length) return null
+  const key = sectionKey(secName)
+  if (!rows.some((r: any) => r.type === 'teaching' && (r.classes ?? []).includes(key))) return null
+  return rows.filter((r: any) =>
+    r.type === 'teaching' && (!(r.classes ?? []).length || r.classes.includes(key))).length
+}
+
+/**
+ * Early dispersal: clone sections with scope-locked slots for periods beyond
+ * their bell-schedule period count, so the solver never places subjects after
+ * a junior group has already dispersed.
+ */
+function lockEarlyDispersal(
+  secs: any[], classPeriods: Period[], workDays: string[],
+  countFor: (name: string) => number | null,
+): any[] {
+  return secs.map(sec => {
+    const tc = countFor(sec.name)
+    if (tc == null || tc >= classPeriods.length) return sec
+    const scope = JSON.parse(JSON.stringify(sec.scope ?? {}))
+    scope.cells ??= {}
+    for (const day of workDays) {
+      scope.cells[day] ??= {}
+      for (const p of classPeriods.slice(tc)) scope.cells[day][p.id] = 'locked'
+    }
+    return { ...sec, scope }
+  })
+}
+
 /**
  * Build a block's abstract period sequence (block-prefixed ids so merged
  * timetables never collide) plus a periodId → [startMins, endMins] clock map.
- * Period duration is uniform within a block, so clock times are exact.
+ *
+ * Derived from the block's ACTUAL bell rows (real assembly length, capped
+ * period durations, real break positions) — falls back to a synthetic uniform
+ * grid only when the block has no generated rows yet.
  */
 function buildBlockPeriods(shift: any, rows: any[]): { periods: Period[]; clock: Record<string, [number, number]> } {
   const periods: Period[] = []
@@ -138,6 +172,28 @@ function buildBlockPeriods(shift: any, rows: any[]): { periods: Period[]; clock:
     periods.push({ id, name, duration: dur, type, shiftable: type === 'class' } as Period)
     clock[id] = [cur, cur + dur]; cur += dur
   }
+
+  // ── Ground-truth path: walk the generated rows in order ──
+  if (rows.some(r => r.type === 'teaching')) {
+    const seen = new Set<string>()
+    let pN = 0, brkN = 0
+    for (const r of rows) {
+      // Skip duplicate same-name rows (per-group variants merged by the bell grid)
+      const sig = `${r.type}|${r.name}`
+      if (seen.has(sig)) continue
+      seen.add(sig)
+      if (r.type === 'assembly')         push('asm', 'Assembly', r.duration, 'fixed-start')
+      else if (r.type === 'teaching')    push(`p${++pN}`, `Period ${pN}`, r.duration, 'class')
+      else if (r.type === 'lunch')       push(`brk${++brkN}`, r.name || 'Lunch', r.duration, 'lunch')
+      else if (r.type === 'short-break') push(`brk${++brkN}`, r.name || 'Break', r.duration, 'break')
+      // dispersal intentionally omitted — not a schedulable column
+    }
+    if (pN > 0) return { periods, clock }
+    // fall through to synthetic if rows had no usable teaching periods
+    periods.length = 0; cur = _toMins(shift.startTime)
+  }
+
+  // ── Synthetic fallback (no rows generated for this block yet) ──
   const asm = rows.find(r => r.type === 'assembly')
   if (asm) push('asm', 'Assembly', asm.duration, 'fixed-start')
   const lunchDur = Math.max(0, ...rows.filter(r => r.type === 'lunch').map(r => r.duration))
@@ -286,8 +342,13 @@ export function Step6Generate() {
             }
           }
 
+          // Early dispersal within the block: lock periods a section doesn't have
+          const bpClass = bp.filter(p => p.type === 'class')
+          const lockedBlockSections = lockEarlyDispersal(
+            blockSections, bpClass, workDays, name => teachCountFromRows(name, rows))
+
           const out = solveTimetable({
-            sections: blockSections, staff, subjects: resolvedSubjects, periods: bp, workDays,
+            sections: lockedBlockSections, staff, subjects: resolvedSubjects, periods: bp, workDays,
             requirements: [], optionalBlocks, subjectCombinations, sectionStrengths,
             subjectAllocations, rooms, teacherAvailability: avail,
             dayOffRules: (store as any).config?.dayOffRules ?? [],
@@ -325,8 +386,21 @@ export function Step6Generate() {
         setSuggestions([])
       } else {
 
+      // Early dispersal: lock the periods each section doesn't have per the
+      // ground-truth bell schedule, so juniors never get subjects scheduled
+      // after their dispersal time.
+      const bellSchedules = (config as any).bellSchedules as Array<{ startTime: string; rows: any[] }> | undefined
+      const countFor = (name: string): number | null => {
+        for (const bs of bellSchedules ?? []) {
+          const c = teachCountFromRows(name, bs.rows)
+          if (c != null) return c
+        }
+        return null
+      }
+      const effSections = lockEarlyDispersal(sections, classPeriods, workDays, countFor)
+
       output  = solveTimetable({
-        sections, staff, subjects: resolvedSubjects, periods, workDays,
+        sections: effSections, staff, subjects: resolvedSubjects, periods, workDays,
         requirements: [],
         optionalBlocks,
         subjectCombinations,
