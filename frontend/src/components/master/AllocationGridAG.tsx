@@ -37,6 +37,7 @@ import {
 import { AllEnterpriseModule } from 'ag-grid-enterprise'
 
 import { useTimetableStore } from '@/store/timetableStore'
+import { buildPeriodSequence } from '@/lib/aiEngine'
 import type { Subject, Section, Period } from '@/types'
 import { parseAllocation, validateAllocationCapacity } from '@/lib/allocationSyntax'
 import {
@@ -681,7 +682,16 @@ export function AllocationGridAG({
 }: Props) {
   const store = useTimetableStore() as any
   const { sections, subjects, subjectAllocations, sectionCapacityOverrides = {}, config } = store
-  const periods: Period[] = store.periods ?? []
+  // store.periods is only populated AFTER the first generation — on a fresh
+  // wizard run derive the abstract sequence from the bell-step breaks so the
+  // capacity engine (and the auto-suggest that depends on it) works first time.
+  const storePeriodsArr: Period[] = store.periods ?? []
+  const periods: Period[] = useMemo(() => {
+    if (storePeriodsArr.length) return storePeriodsArr
+    try { return buildPeriodSequence(store.breaks ?? [], config?.periodsPerDay ?? 8) }
+    catch { return [] }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storePeriodsArr, store.breaks, config?.periodsPerDay])
   const workDays: string[] = config?.workDays ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])

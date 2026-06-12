@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useTerminology } from "@/hooks/useTerminology"
 import { buildPeriodSequence, buildPeriodSequenceFromCw, rebuildTeacherTT } from "@/lib/aiEngine"
 import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from "@/lib/schedulingEngine"
+import { parseAllocation } from "@/lib/allocationSyntax"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import { getCountry } from "@/lib/orgData"
 import type { OptionalBlock, Period } from "@/types"
@@ -269,6 +270,77 @@ export function Step6Generate() {
     { icon:"📅", label:"Days/week", value: config.workDays?.length ?? 5 },
     { icon:"⏰", label:"Periods/day",value: config.periodsPerDay ?? 8 },
   ]
+
+  // ── Pre-flight summary — what WILL be generated, judged before clicking ──
+  // All derived from the ground-truth bell schedules + the allocation matrix,
+  // so the user can sanity-check day shape, workload and capacity in one look.
+  const preflight = useMemo(() => {
+    const bellSchedules = (config as any).bellSchedules as Array<{ startTime: string; rows: any[] }> | undefined
+    if (!bellSchedules?.length || !sections.length) return null
+    const subjectAllocations: Record<string, Record<string, string>> = (store as any).subjectAllocations ?? {}
+    const workDayCount = config.workDays?.length || 5
+    const toMin = (s: string) => { const [h, m] = (s || '08:00').split(':').map(Number); return h * 60 + m }
+    const fmt = (m: number) => `${(Math.floor(m / 60) % 12) || 12}:${String(m % 60).padStart(2, '0')} ${Math.floor(m / 60) >= 12 ? 'PM' : 'AM'}`
+
+    // Bucket sections by (periods/day, end time) — one line per distinct day shape
+    type Bucket = { count: number; endMin: number; secs: string[] }
+    const buckets = new Map<string, Bucket>()
+    const overCap: string[] = []
+    const unallocated: string[] = []
+    let totalWeekly = 0, doubleSubjects = 0
+
+    for (const sec of sections as any[]) {
+      let count: number | null = null, endMin = 0
+      for (const bs of bellSchedules) {
+        const c = teachCountFromRows(sec.name, bs.rows)
+        if (c == null) continue
+        count = c
+        const key = sectionKey(sec.name)
+        endMin = toMin(bs.startTime) + bs.rows
+          .filter((r: any) => r.type !== 'dispersal' && (!(r.classes ?? []).length || r.classes.includes(key)))
+          .reduce((s: number, r: any) => s + r.duration, 0)
+        break
+      }
+      if (count == null) continue
+      const bk = `${count}@${endMin}`
+      if (!buckets.has(bk)) buckets.set(bk, { count, endMin, secs: [] })
+      buckets.get(bk)!.secs.push(sec.name)
+
+      // Workload + capacity (bell-true: this section's real periods × days)
+      const row = subjectAllocations[sec.name] ?? {}
+      let used = 0
+      for (const raw of Object.values(row)) {
+        const p = parseAllocation(raw)
+        if (!p.valid) continue
+        used += p.weeklyTotal
+        if (p.doublePeriods > 0) doubleSubjects++
+      }
+      totalWeekly += used
+      if (used === 0) unallocated.push(sec.name)
+      else if (used > count * workDayCount) overCap.push(sec.name)
+    }
+
+    // Display label for a bucket: unique grade names, capped
+    const gradeLabel = (secs: string[]) => {
+      const grades = [...new Set(secs.map(s => {
+        const parts = s.split(/[-\s]+/)
+        const last = parts[parts.length - 1]
+        return (parts.length > 1 && (/^[A-Za-z]$/.test(last) || /^\d{1,2}$/.test(last))) ? parts.slice(0, -1).join('-') : s
+      }))]
+      return grades.length <= 4 ? grades.join(', ') : `${grades.slice(0, 3).join(', ')} +${grades.length - 3}`
+    }
+
+    const shapes = [...buckets.values()]
+      .sort((a, b) => a.endMin - b.endMin)
+      .map(b => ({ label: gradeLabel(b.secs), count: b.count, end: fmt(b.endMin), nSecs: b.secs.length }))
+
+    const parallelGroups = ((store as any).dynamicLearningGroups ?? []).length ||
+                           ((store as any).optionalBlocks ?? []).length
+    const dayOffRules = ((config as any).dayOffRules ?? []).length
+
+    return { shapes, totalWeekly, doubleSubjects, parallelGroups, dayOffRules, overCap, unallocated }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, sections, (store as any).subjectAllocations])
 
   // ── Start generation ─────────────────────────────────────────
   const startGenerate = () => {
@@ -621,6 +693,68 @@ export function Step6Generate() {
           </div>
         ))}
       </div>
+
+      {/* ── Pre-flight summary — judge the outcome BEFORE generating ── */}
+      {!job && preflight && (
+        <div style={{ width:"100%", maxWidth:520, background:"#fff", borderRadius:14, border:"1.5px solid #E8E4FF", padding:"16px 20px", animation:"fade-up 0.4s ease 0.22s both", textAlign:"left" as const }}>
+          <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase" as const, color:"#8B7FE8", marginBottom:10 }}>
+            Pre-flight summary
+          </div>
+
+          {/* Day shapes — one line per distinct (periods/day, end time) */}
+          <div style={{ display:"flex", flexDirection:"column" as const, gap:5, marginBottom:10 }}>
+            {preflight.shapes.map(s => (
+              <div key={`${s.label}-${s.end}`} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275" }}>
+                <span style={{ fontSize:13 }}>🕐</span>
+                <span style={{ fontWeight:700, color:"#13111E" }}>{s.label}</span>
+                <span style={{ color:"#9B96BD" }}>·</span>
+                <span>{s.count} period{s.count !== 1 ? "s" : ""}/day</span>
+                <span style={{ color:"#9B96BD" }}>·</span>
+                <span>ends <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
+              </div>
+            ))}
+          </div>
+
+          {/* Workload line */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275", marginBottom:10, flexWrap:"wrap" as const }}>
+            <span style={{ fontSize:13 }}>📚</span>
+            <span><strong style={{ fontFamily:"'DM Mono',monospace" }}>{preflight.totalWeekly}</strong> lessons/week</span>
+            {preflight.doubleSubjects > 0 && (
+              <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.doubleSubjects} double-period subject{preflight.doubleSubjects !== 1 ? "s" : ""}</span></>
+            )}
+            {preflight.parallelGroups > 0 && (
+              <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.parallelGroups} parallel group{preflight.parallelGroups !== 1 ? "s" : ""}</span></>
+            )}
+            {preflight.dayOffRules > 0 && (
+              <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.dayOffRules} day-off rule{preflight.dayOffRules !== 1 ? "s" : ""}</span></>
+            )}
+          </div>
+
+          {/* Checks */}
+          {preflight.overCap.length > 0 ? (
+            <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:8, padding:"7px 11px" }}>
+              <span>⚠</span>
+              <span>
+                <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
+                ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
+                extra lessons will be dropped. Trim in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
+              </span>
+            </div>
+          ) : preflight.unallocated.length > 0 ? (
+            <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:"1px solid #E8E4FF", borderRadius:8, padding:"7px 11px" }}>
+              <span>ℹ</span>
+              <span>
+                {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
+                ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) — they'll come out empty.
+              </span>
+            </div>
+          ) : (
+            <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11.5, color:"#15803D" }}>
+              <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Already-generated banner (persisted across sessions) ── */}
       {!job && hasExistingTT && !showRegenConfirm && (

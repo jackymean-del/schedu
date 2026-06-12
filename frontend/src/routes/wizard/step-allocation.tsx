@@ -62,7 +62,9 @@ export function StepAllocation() {
   }, [breaks, config?.periodsPerDay])
 
   const workDays: string[] = config?.workDays?.length ? config.workDays : DEFAULT_WORK_DAYS
-  const periodsArr = storePeriods ?? derivedPeriods
+  // store.periods is empty until the first generation — `??` keeps an empty
+  // array, so fall back on LENGTH to the bell-derived sequence.
+  const periodsArr = storePeriods?.length ? storePeriods : derivedPeriods
 
   // Capacity engine
   const cap = useMemo(() => computeCapacity(workDays, periodsArr), [workDays, periodsArr])
@@ -569,8 +571,15 @@ export function StepAllocation() {
     // Yield to paint thread so the spinner renders before heavy computation
     await new Promise<void>(r => setTimeout(r, 60))
     const nextPeriods = derivePeriodsFromResources()
-    store.setSubjectAllocations?.(nextPeriods)
-    handleAITeacherAllocate(nextPeriods)   // passes fresh periods — avoids stale-state race
+    if (Object.keys(nextPeriods).length > 0) {
+      store.setSubjectAllocations?.(nextPeriods)
+      handleAITeacherAllocate(nextPeriods)   // passes fresh periods — avoids stale-state race
+    } else {
+      // Resources carry no explicit class↔subject mappings — there is nothing
+      // to sync. NEVER overwrite the existing matrix with an empty one (the
+      // grid's own capacity-aware auto-fill may have just populated it).
+      handleAITeacherAllocate()
+    }
     setSyncing(false)
     setSyncDone(true)
     setTimeout(() => setSyncDone(false), 2500)
