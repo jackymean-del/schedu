@@ -87,6 +87,52 @@ export function inferBandFromSection(sectionName: string): string {
   return 'primary'
 }
 
+// ── Bell-true per-section capacity ───────────────────────────────────────────
+// config.bellSchedules (persisted by the Shift & Timing step) carries the
+// EXACT generated rows per generation unit — including per-group early
+// dispersal, so a Regular-mode Nursery with 3 periods/day caps at 15/week
+// while Seniors cap at 40. Prefer this over the band heuristic whenever the
+// bell data covers the section.
+
+export type BellScheduleLite = {
+  startTime?: string
+  rows: Array<{ type: string; duration?: number; classes?: string[] }>
+}
+
+/** Class key from a section name — "Nursery-A" → 'nur', "XI-Sci-B" → 'xi'. */
+function sectionClassKey(sectionName: string): string {
+  const norm = sectionName.toLowerCase().replace(/[\s-]/g, '')
+  if (norm.startsWith('nur')) return 'nur'
+  if (norm.startsWith('lkg')) return 'lkg'
+  if (norm.startsWith('ukg')) return 'ukg'
+  return sectionName.split(/[\s-]/)[0].toLowerCase()
+}
+
+/** Teaching periods/day a section actually has per the bell (null = unknown). */
+export function bellTeachingCount(
+  sectionName: string,
+  bellSchedules: BellScheduleLite[] | undefined,
+): number | null {
+  if (!bellSchedules?.length) return null
+  const key = sectionClassKey(sectionName)
+  for (const bs of bellSchedules) {
+    if (!bs.rows?.some(r => r.type === 'teaching' && (r.classes ?? []).includes(key))) continue
+    return bs.rows.filter(r =>
+      r.type === 'teaching' && (!(r.classes ?? []).length || r.classes!.includes(key))).length
+  }
+  return null
+}
+
+/** Bell-true weekly capacity for a section (null when bell data is absent). */
+export function bellWeeklyCapacity(
+  sectionName: string,
+  bellSchedules: BellScheduleLite[] | undefined,
+  workDayCount: number,
+): number | null {
+  const c = bellTeachingCount(sectionName, bellSchedules)
+  return c == null ? null : c * workDayCount
+}
+
 /** Capacity utilisation percentage (0-100). */
 export function utilisationPct(allocated: number, capacity: number): number {
   if (capacity <= 0) return 0

@@ -18,6 +18,7 @@ import { AllocationReportModal } from '@/components/master/AllocationReportModal
 import { buildPeriodSequence } from '@/lib/aiEngine'
 import {
   computeCapacity, capacityForSection, inferBandFromSection, utilisationStatus,
+  bellWeeklyCapacity,
 } from '@/lib/capacityEngine'
 import { parseAllocation } from '@/lib/allocationSyntax'
 import type { Section, Subject, Staff } from '@/types'
@@ -70,6 +71,18 @@ export function StepAllocation() {
   const cap = useMemo(() => computeCapacity(workDays, periodsArr), [workDays, periodsArr])
   const periodMinutes = config?.periodMinutes ?? 40
 
+  // Capacity resolution: user override → bell-true (real periods/day × days,
+  // covers per-group early dispersal) → band heuristic fallback.
+  const capOverrides: Record<string, number> = (store as any).sectionCapacityOverrides ?? {}
+  const capFor = useCallback((secName: string): number => {
+    const o = capOverrides[secName]
+    if (o !== undefined) return o
+    const bell = bellWeeklyCapacity(secName, (config as any)?.bellSchedules, workDays.length)
+    if (bell != null) return bell
+    return capacityForSection(cap, inferBandFromSection(secName))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capOverrides, (config as any)?.bellSchedules, workDays.length, cap])
+
   // Per-section totals (for capacity engine sidebar)
   const sectionTotals = useMemo(() => {
     const m: Record<string, number> = {}
@@ -93,7 +106,7 @@ export function StepAllocation() {
     BANDS.forEach(b => { m[b.key] = { used: 0, cap: 0, count: 0 } })
     ;(sections as Section[]).forEach(sec => {
       const band = inferBandFromSection(sec.name)
-      const c = capacityForSection(cap, band)
+      const c = capFor(sec.name)
       const u = sectionTotals[sec.name] ?? 0
       if (!m[band]) m[band] = { used: 0, cap: 0, count: 0 }
       m[band].used += u
@@ -101,7 +114,7 @@ export function StepAllocation() {
       m[band].count++
     })
     return m
-  }, [sections, sectionTotals, cap])
+  }, [sections, sectionTotals, capFor])
 
   // Validation checks
   const { hardConflicts, softWarnings } = useMemo(() => {
@@ -110,8 +123,7 @@ export function StepAllocation() {
 
     // Period allocation checks
     ;(sections as Section[]).forEach(sec => {
-      const band = inferBandFromSection(sec.name)
-      const c = capacityForSection(cap, band)
+      const c = capFor(sec.name)
       const u = sectionTotals[sec.name] ?? 0
       const status = utilisationStatus(u, c)
       if (status === 'over')   hard.push(`${sec.name}: allocated ${u} > capacity ${c}`)
@@ -315,7 +327,7 @@ export function StepAllocation() {
     }
 
     return { hardConflicts: hard, softWarnings: soft }
-  }, [sections, sectionTotals, cap, staff, teacherAllocations, subjects, subjectAllocations, storeRooms])
+  }, [sections, sectionTotals, capFor, staff, teacherAllocations, subjects, subjectAllocations, storeRooms])
 
   // Teacher allocation summary stats
   const teacherStats = useMemo(() => {
@@ -346,8 +358,7 @@ export function StepAllocation() {
   const derivePeriodsFromResources = useCallback((): Record<string, Record<string, string>> => {
     const next: Record<string, Record<string, string>> = {}
     ;(sections as Section[]).forEach((sec: Section) => {
-      const band     = inferBandFromSection(sec.name)
-      const capacity = capacityForSection(cap, band)
+      const capacity = capFor(sec.name)
       // Only subjects assigned to this section (respect classConfigs from Resources)
       const assignedSubjects = (subjects as Subject[]).filter(s => {
         const configs = (s as any).classConfigs as any[] | undefined
@@ -383,7 +394,7 @@ export function StepAllocation() {
       if (Object.keys(row).length) next[sec.name] = row
     })
     return next
-  }, [sections, subjects, cap])
+  }, [sections, subjects, capFor])
 
   const handleAIPeriodSuggest = useCallback(() => {
     store.setSubjectAllocations?.(derivePeriodsFromResources())
@@ -919,7 +930,7 @@ export function StepAllocation() {
             <>
               <PeriodSyntaxGuide periodMinutes={periodMinutes} />
               <CapacityEnginePanel bandStats={bandStats} sections={sections as Section[]} />
-              <AINotesPanel sections={sections as Section[]} sectionTotals={sectionTotals} cap={cap} />
+              <AINotesPanel sections={sections as Section[]} sectionTotals={sectionTotals} capFor={capFor} />
             </>
           )}
           {sub === 'teachers' && (
@@ -1120,22 +1131,17 @@ function CapacityEnginePanel({
 // ─────────────────────────────────────────────────────────────────
 
 function AINotesPanel({
-  sections, sectionTotals, cap,
+  sections, sectionTotals, capFor,
 }: {
   sections: Section[]
   sectionTotals: Record<string, number>
-  cap: ReturnType<typeof computeCapacity>
+  capFor: (secName: string) => number
 }) {
   const notes = useMemo(() => {
     const out: Array<{ kind: 'ok' | 'warn' | 'info'; text: string }> = []
-    const over = sections.filter(s => {
-      const band = inferBandFromSection(s.name)
-      const c = capacityForSection(cap, band)
-      return (sectionTotals[s.name] ?? 0) > c
-    })
+    const over = sections.filter(s => (sectionTotals[s.name] ?? 0) > capFor(s.name))
     const under = sections.filter(s => {
-      const band = inferBandFromSection(s.name)
-      const c = capacityForSection(cap, band)
+      const c = capFor(s.name)
       const u = sectionTotals[s.name] ?? 0
       return c > 0 && u > 0 && u < c * 0.7
     })
@@ -1151,7 +1157,7 @@ function AINotesPanel({
       out.push({ kind: 'ok', text: 'All sections within board capacity range.' })
 
     return out
-  }, [sections, sectionTotals, cap])
+  }, [sections, sectionTotals, capFor])
 
   if (sections.length === 0) return null
 

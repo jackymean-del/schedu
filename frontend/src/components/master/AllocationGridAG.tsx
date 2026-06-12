@@ -42,6 +42,7 @@ import type { Subject, Section, Period } from '@/types'
 import { parseAllocation, validateAllocationCapacity } from '@/lib/allocationSyntax'
 import {
   computeCapacity, capacityForSection, inferBandFromSection, utilisationStatus,
+  bellWeeklyCapacity,
 } from '@/lib/capacityEngine'
 import { Search, ChevronDown, Minus, Plus, Check } from 'lucide-react'
 
@@ -100,11 +101,18 @@ interface GridContext {
   getDisplayMode:   () => 'periods' | 'hours'
   getPeriodMinutes: () => number
   getSections:      () => Section[]
+  /** Bell-true per-section weekly capacity (periods/day from the REAL bell ×
+   *  work days) — covers per-group early dispersal. Missing = no bell data. */
+  getBellCaps:      () => Record<string, number>
 }
 
+/** Capacity resolution: user override → bell-true → band heuristic. */
 function effectiveCap(ctx: GridContext, sn: string): number {
   const o = ctx.getCapOverrides()[sn]
-  return o !== undefined ? o : capacityForSection(ctx.getCap(), inferBandFromSection(sn))
+  if (o !== undefined) return o
+  const bell = ctx.getBellCaps()[sn]
+  if (bell !== undefined) return bell
+  return capacityForSection(ctx.getCap(), inferBandFromSection(sn))
 }
 
 /** Plain-English translation of an allocation syntax string ("5+1" → "5 theory + 1 lab = 6 periods/week"). */
@@ -696,6 +704,19 @@ export function AllocationGridAG({
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])
 
+  // Bell-true per-section weekly capacity — covers per-group early dispersal
+  // (Regular-mode Nursery with 3 periods/day caps at 15/wk, Seniors at 40).
+  const bellCaps = useMemo(() => {
+    const bellSchedules = (config as any)?.bellSchedules
+    const out: Record<string, number> = {}
+    for (const sec of (sections as Section[])) {
+      const c = bellWeeklyCapacity(sec.name, bellSchedules, workDays.length)
+      if (c != null) out[sec.name] = c
+    }
+    return out
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(config as any)?.bellSchedules, sections, workDays.length])
+
   // ── DOM refs ──────────────────────────────────────────────────
   const gridRef          = useRef<AgGridReact<RowData>>(null)
   const wrapperRef       = useRef<HTMLDivElement>(null)
@@ -709,12 +730,14 @@ export function AllocationGridAG({
   const allocationsRef  = useRef<Record<string, Record<string, string>>>(subjectAllocations)
   const capOverrideRef  = useRef<Record<string, number>>(sectionCapacityOverrides)
   const capRef          = useRef(cap)
+  const bellCapsRef     = useRef(bellCaps)
   const sectionsRef     = useRef<Section[]>(sections)
   const displayModeRef  = useRef(displayMode)
   const periodMinRef    = useRef(periodMinutes)
   allocationsRef.current  = subjectAllocations
   capOverrideRef.current  = sectionCapacityOverrides
   capRef.current          = cap
+  bellCapsRef.current     = bellCaps
   sectionsRef.current     = sections
   displayModeRef.current  = displayMode
   periodMinRef.current    = periodMinutes
@@ -911,6 +934,7 @@ export function AllocationGridAG({
     getDisplayMode:   () => displayModeRef.current,
     getPeriodMinutes: () => periodMinRef.current,
     getSections:      () => sectionsRef.current as Section[],
+    getBellCaps:      () => bellCapsRef.current,
   }), [])
 
   // ── defaultColDef — stable, empty deps ───────────────────────
@@ -998,8 +1022,7 @@ export function AllocationGridAG({
 
         valueGetter: (params) => {
           const sn = params.data?.sectionName ?? ''
-          const o  = capOverrideRef.current[sn]
-          return o !== undefined ? o : capacityForSection(capRef.current, inferBandFromSection(sn))
+          return effectiveCap(gridContext, sn)   // override → bell-true → band
         },
 
         valueSetter: (params) => {
