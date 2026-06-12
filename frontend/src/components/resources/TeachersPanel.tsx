@@ -16,7 +16,7 @@
  * Data model: Staff extended with `subjectMappings?: { subject, classes }[]`
  */
 
-import { useState, useRef, useMemo, useEffect, useCallback, type KeyboardEvent as RKeyboardEvent } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback, Fragment, type KeyboardEvent as RKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { Staff, Section, Subject } from '@/types'
 import { Plus, X, Users, ChevronDown, ChevronUp, CalendarRange } from 'lucide-react'
@@ -53,6 +53,7 @@ function getGrade(n: string) {
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
 function gradeKey(g: string) { const i = GRADE_ORDER.indexOf(g); return i >= 0 ? i : 100 + g.charCodeAt(0) }
 const ROLES   = ['Teacher','HoD','Coordinator','Principal','Vice Principal','Lab Incharge','Librarian']
+const ROLE_DISPLAY_ORDER = ['Principal','Vice Principal','HoD','Coordinator','Teacher','Senior Teacher','Lab Incharge','Librarian','Counselor','Admin Staff']
 const GENDERS = ['','female','male','other']
 
 function getMappings(t: StaffExt): SubjectMapping[] {
@@ -481,6 +482,36 @@ function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
   )
 }
 
+// ─── Role header row ──────────────────────────────────────────────────────────
+function RoleHeaderRow({ role, count, collapsed, onToggle }: {
+  role: string; count: number; collapsed: boolean; onToggle: () => void
+}) {
+  return (
+    <tr>
+      <td colSpan={6} style={{ padding: 0 }}>
+        <button
+          onClick={onToggle}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 7,
+            padding: '4px 12px', background: '#F3F1FF',
+            border: 'none', borderBottom: '1px solid #E8E4FF',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#EDEBFF')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#F3F1FF')}
+        >
+          {collapsed
+            ? <ChevronDown size={11} color={P} />
+            : <ChevronUp size={11} color={P} />
+          }
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{role}</span>
+          <span style={{ fontSize: 9.5, fontWeight: 700, color: P, background: P_L, borderRadius: 8, padding: '0 5px', border: `1px solid ${P_B}` }}>{count}</span>
+        </button>
+      </td>
+    </tr>
+  )
+}
+
 // ─── Teacher row ──────────────────────────────────────────────────────────────
 function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, onUpdate, onDelete, onScopeClick }: {
   t: StaffExt
@@ -667,6 +698,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   }
 
   const [sortAZ, setSortAZ] = useState(false)
+  const [collapsedRoles, setCollapsedRoles] = useState<Set<string>>(new Set())
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -692,6 +724,22 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   }, [sections])
 
   const classTeacherOpts = classOpts
+  const allRoleExpanded = collapsedRoles.size === 0
+  const groupedByRole = useMemo(() => {
+    const map = new Map<string, StaffExt[]>()
+    for (const t of filtered) {
+      const role = t.role || 'Teacher'
+      if (!map.has(role)) map.set(role, [])
+      map.get(role)!.push(t)
+    }
+    return [...map.entries()].sort((a, b) => {
+      const ai = ROLE_DISPLAY_ORDER.indexOf(a[0]); const bi = ROLE_DISPLAY_ORDER.indexOf(b[0])
+      return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi)
+    })
+  }, [filtered])
+  function toggleRole(role: string) {
+    setCollapsedRoles(prev => { const n = new Set(prev); n.has(role) ? n.delete(role) : n.add(role); return n })
+  }
 
   function update(id: string, p: Partial<StaffExt>) {
     undoHistory.push(staff)
@@ -751,6 +799,22 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
+        {groupedByRole.length > 1 && (
+          <button
+            onClick={() => setCollapsedRoles(allRoleExpanded ? new Set(groupedByRole.map(([r]) => r)) : new Set())}
+            title={allRoleExpanded ? 'Collapse all roles' : 'Expand all roles'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
+              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#8B87AD',
+              fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#8B87AD' }}
+          >
+            {allRoleExpanded ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+            {allRoleExpanded ? 'Collapse' : 'Expand'}
+          </button>
+        )}
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
           {onScopeClick && (
@@ -841,24 +905,29 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
               </tr>
             </thead>
             <tbody>
-              {filtered.map(t => (
-                <TeacherRow
-                  key={t.id}
-                  t={t}
-                  subjects={subjects}
-                  classOpts={classOpts}
-                  classTeacherOpts={classTeacherOpts}
-                  coClassTeacherOpts={classTeacherOpts}
-                  onUpdate={p => update(t.id, p)}
-                  onDelete={() => remove(t.id)}
-                  onScopeClick={onScopeClick
-                    ? (st, rect) => onScopeClick(st as Staff, rect)
-                    : undefined}
-                />
+              {groupedByRole.map(([role, teachers]) => (
+                <Fragment key={`role-${role}`}>
+                  <RoleHeaderRow role={role} count={teachers.length} collapsed={collapsedRoles.has(role)} onToggle={() => toggleRole(role)} />
+                  {!collapsedRoles.has(role) && teachers.map(t => (
+                    <TeacherRow
+                      key={t.id}
+                      t={t}
+                      subjects={subjects}
+                      classOpts={classOpts}
+                      classTeacherOpts={classTeacherOpts}
+                      coClassTeacherOpts={classTeacherOpts}
+                      onUpdate={p => update(t.id, p)}
+                      onDelete={() => remove(t.id)}
+                      onScopeClick={onScopeClick
+                        ? (st, rect) => onScopeClick(st as Staff, rect)
+                        : undefined}
+                    />
+                  ))}
+                </Fragment>
               ))}
               {filtered.length === 0 && search && (
                 <tr>
-                  <td colSpan={5} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>
+                  <td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>
                     No teachers match "{search}"
                   </td>
                 </tr>

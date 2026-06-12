@@ -19,7 +19,7 @@
  * - All chips shown (no truncation)
  */
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import type { Subject, Section, SubjectClassConfig } from '@/types'
 import { Plus, BookOpen, ChevronDown, ChevronUp, CalendarRange, X } from 'lucide-react'
@@ -736,6 +736,36 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
   )
 }
 
+// ─── Category header row ──────────────────────────────────────────────────────
+function CategoryHeaderRow({ cat, count, collapsed, onToggle }: {
+  cat: string; count: number; collapsed: boolean; onToggle: () => void
+}) {
+  return (
+    <tr>
+      <td colSpan={4} style={{ padding: 0 }}>
+        <button
+          onClick={onToggle}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 7,
+            padding: '4px 12px', background: '#F3F1FF',
+            border: 'none', borderBottom: '1px solid #E8E4FF',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#EDEBFF')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#F3F1FF')}
+        >
+          {collapsed
+            ? <ChevronDown size={11} color={P} />
+            : <ChevronUp size={11} color={P} />
+          }
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{cat}</span>
+          <span style={{ fontSize: 9.5, fontWeight: 700, color: P, background: P_L, borderRadius: 8, padding: '0 5px', border: `1px solid ${P_B}` }}>{count}</span>
+        </button>
+      </td>
+    </tr>
+  )
+}
+
 // ─── Subject row ──────────────────────────────────────────────────────────────
 function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, sessionMins, onUpdate, onDelete, extraCats = [], onAddCategory, onDeleteCategory, onScopeClick }: {
   sub:          Subject
@@ -1096,6 +1126,7 @@ export function SubjectsPanel({
 
   const [sortAZ,           setSortAZ]           = useState(false)
   const [filterUnassigned, setFilterUnassigned] = useState(false)
+  const [collapsedCats,    setCollapsedCats]    = useState<Set<string>>(new Set())
 
   // Must be declared before the useEffect that references them
   const assignedCount   = useMemo(() => subjects.filter(s => getAssignedClasses(s).length > 0).length, [subjects])
@@ -1127,6 +1158,24 @@ export function SubjectsPanel({
     sorted.forEach(([grade, names]) => names.forEach(n => opts.push({ value: n, label: n, group: `Grade ${grade}` })))
     return opts
   }, [sections])
+
+  const allCatOrder = useMemo(() => [...BUILTIN_CATS, ...extraCats], [extraCats])
+  const allExpanded = collapsedCats.size === 0
+  function toggleCat(cat: string) {
+    setCollapsedCats(prev => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n })
+  }
+  const groupedByCategory = useMemo(() => {
+    const map = new Map<string, Subject[]>()
+    for (const sub of filtered) {
+      const cat = sub.category || 'Compulsory'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(sub)
+    }
+    return [...map.entries()].sort((a, b) => {
+      const ai = allCatOrder.indexOf(a[0]); const bi = allCatOrder.indexOf(b[0])
+      return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi)
+    })
+  }, [filtered, allCatOrder])
 
   function update(id: string, patch: Partial<Subject>) {
     undoHistory.push(subjects)
@@ -1302,6 +1351,24 @@ export function SubjectsPanel({
           ↑Z Sort
         </button>
 
+        {/* Expand / collapse all categories */}
+        {groupedByCategory.length > 1 && (
+          <button
+            onClick={() => setCollapsedCats(allExpanded ? new Set(groupedByCategory.map(([c]) => c)) : new Set())}
+            title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
+              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#8B87AD',
+              fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#8B87AD' }}
+          >
+            {allExpanded ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+            {allExpanded ? 'Collapse' : 'Expand'}
+          </button>
+        )}
+
         {/* Load Unit selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: '#F5F3FF', border: '1.5px solid #DDD8FF', borderRadius: 7, padding: '2px 8px', height: 34, boxSizing: 'border-box' as const }}>
           <span style={{ fontSize: 9.5, color: '#9896B5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>Unit</span>
@@ -1449,25 +1516,30 @@ export function SubjectsPanel({
               </tr>
             </thead>
             <tbody>
-              {filtered.map(sub => (
-                <SubjectRow
-                  key={sub.id}
-                  sub={sub}
-                  classOptions={classOptions}
-                  sections={sections}
-                  board={board}
-                  isAiAssigned={localAiAssignedIds.has(sub.id)}
-                  unit={unit}
-                  sessionMins={sessionMins}
-                  onUpdate={patch => update(sub.id, patch)}
-                  onDelete={() => remove(sub.id)}
-                  extraCats={extraCats}
-                  onAddCategory={addCategory}
-                  onDeleteCategory={deleteCategory}
-                  onScopeClick={onScopeClick
-                    ? (s, rect) => onScopeClick(s, rect)
-                    : undefined}
-                />
+              {groupedByCategory.map(([cat, subs]) => (
+                <Fragment key={`cat-${cat}`}>
+                  <CategoryHeaderRow cat={cat} count={subs.length} collapsed={collapsedCats.has(cat)} onToggle={() => toggleCat(cat)} />
+                  {!collapsedCats.has(cat) && subs.map(sub => (
+                    <SubjectRow
+                      key={sub.id}
+                      sub={sub}
+                      classOptions={classOptions}
+                      sections={sections}
+                      board={board}
+                      isAiAssigned={localAiAssignedIds.has(sub.id)}
+                      unit={unit}
+                      sessionMins={sessionMins}
+                      onUpdate={patch => update(sub.id, patch)}
+                      onDelete={() => remove(sub.id)}
+                      extraCats={extraCats}
+                      onAddCategory={addCategory}
+                      onDeleteCategory={deleteCategory}
+                      onScopeClick={onScopeClick
+                        ? (s, rect) => onScopeClick(s, rect)
+                        : undefined}
+                    />
+                  ))}
+                </Fragment>
               ))}
               {filtered.length === 0 && search && (
                 <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '18px 10px' }}>No subjects match "{search}"</td></tr>
