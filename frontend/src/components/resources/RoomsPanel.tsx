@@ -15,9 +15,10 @@ import {
   TH, TD, TABLE_CARD,
   InlineChipSelect, ImportModal,
   DeleteActionButton, outlineBtn, actionBtn,
-  ResourceGlobalStyles, useUndoHistory,
+  ResourceGlobalStyles, useUndoHistory, SmartEmptyState,
 } from './shared'
 import type { ChipOption } from './shared'
+import { seedStandardRooms } from './aiEngine'
 
 export type RoomExt = RoomRow & { subjectMappings?: string[]; notes?: string }
 
@@ -327,9 +328,18 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set())
   const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<RoomExt[]>()
+
+  // Smart-create rooms: a homeroom per section + special rooms (labs, library)
+  // implied by the subjects present, with lab→subject mappings pre-wired.
+  function handleSmartCreate() {
+    if (!sections.length) return
+    undoHistory.push(rooms)
+    setRooms(seedStandardRooms(sections, subjects))
+  }
 
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -577,12 +587,22 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
 
       {/* Table */}
       <div style={TABLE_CARD}>
-        {rooms.length === 0 && !search ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🏫</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#9896B5', marginBottom: 4 }}>No rooms yet</div>
-            <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add rooms, group them by block/building, then assign classes and special subjects.</div>
-          </div>
+        {rooms.length === 0 && !search && !manualMode ? (
+          <SmartEmptyState
+            icon={<Building2 size={26} color={P} />}
+            title="No rooms yet"
+            subtitle={sections.length === 0
+              ? 'Add classes first — then schedU can lay out a homeroom for each plus the labs your subjects need, or you can add rooms by hand.'
+              : `Let schedU lay out a starter set — one homeroom per class for your ${sections.length} section${sections.length !== 1 ? 's' : ''}, plus the special rooms your subjects need (Computer Lab, science labs, Library) with subject mappings wired.`}
+            smartLabel="Let me create smartly"
+            smartSubtext={sections.length > 0 ? `Homerooms + labs for ${sections.length} class${sections.length !== 1 ? 'es' : ''}` : undefined}
+            onSmart={handleSmartCreate}
+            smartDisabled={sections.length === 0}
+            smartDisabledHint="Add at least one class first — a homeroom is created per section."
+            manualLabel="Add manually"
+            manualSubtext="Start with a blank table"
+            onManual={() => setManualMode(true)}
+          />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>

@@ -25,10 +25,11 @@ import {
   TH, TD, TABLE_CARD,
   InlineChipSelect, ImportModal,
   actionBtn, DeleteActionButton, outlineBtn,
-  ResourceGlobalStyles, useUndoHistory,
+  ResourceGlobalStyles, useUndoHistory, SmartEmptyState,
 } from './shared'
 import type { ChipOption } from './shared'
-import { calcTeacherSlots, slotLoadLevel } from './aiEngine'
+import { calcTeacherSlots, slotLoadLevel, seedStandardStaff } from './aiEngine'
+import { normalizeBoardType, type CurriculumBoard } from './curriculum'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SubjectMapping { subject: string; classes: string[] }
@@ -596,8 +597,17 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
   const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<Staff[]>()
+
+  // Smart-create faculty from the subject list (load-sized teachers per subject)
+  function handleSmartCreate() {
+    if (!subjects.length) return
+    undoHistory.push(staff)
+    const board = normalizeBoardType('CBSE') as CurriculumBoard
+    setStaff(seedStandardStaff(subjects, board) as unknown as Staff[])
+  }
 
   const handlePanelKeyDown = useCallback((e: RKeyboardEvent<HTMLDivElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -798,12 +808,22 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
 
       {/* Table */}
       <div style={TABLE_CARD}>
-        {staff.length === 0 && !search ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>👤</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#9896B5', marginBottom: 4 }}>No educators yet</div>
-            <div style={{ fontSize: 12, color: '#C4C0DC' }}>Add educators, then assign subjects and classes to them.</div>
-          </div>
+        {staff.length === 0 && !search && !manualMode ? (
+          <SmartEmptyState
+            icon={<Users size={26} color={P} />}
+            title="No educators yet"
+            subtitle={subjects.length === 0
+              ? 'Add subjects first — then schedU can create a load-balanced faculty roster for them automatically, or you can add educators by hand.'
+              : `Let schedU create a starter faculty from your ${subjects.length} subject${subjects.length !== 1 ? 's' : ''} — one or more teachers per subject, sized to the weekly load, with class assignments wired. Rename and tune afterwards.`}
+            smartLabel="Let me create smartly"
+            smartSubtext={subjects.length > 0 ? `Teachers for ${subjects.length} subject${subjects.length !== 1 ? 's' : ''}` : undefined}
+            onSmart={handleSmartCreate}
+            smartDisabled={subjects.length === 0}
+            smartDisabledHint="Add subjects first — the roster is built from your subject list."
+            manualLabel="Add manually"
+            manualSubtext="Start with a blank table"
+            onManual={() => setManualMode(true)}
+          />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>

@@ -344,3 +344,103 @@ export function slotLoadLevel(slots: number): 'none' | 'low' | 'good' | 'high' |
   if (slots <= 34)   return 'high'
   return 'over'
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SMART CREATE — bootstrap Faculty / Rooms from the subject + class list.
+//  Used by each tab's first-run "Let me create smartly" empty state.
+// ════════════════════════════════════════════════════════════════════════════
+
+function seedId() { return Math.random().toString(36).slice(2, 9) }
+
+/** Sections a subject is taught in (classConfigs first, then sections[]). */
+function assignedSections(sub: Subject): string[] {
+  const fromConfigs = (sub.classConfigs ?? []).map(c => c.sectionName).filter(Boolean) as string[]
+  return [...new Set([...(fromConfigs.length ? fromConfigs : (sub.sections ?? []))])]
+}
+
+function slotForSection(sub: Subject, sectionName: string): number {
+  const cfg = (sub.classConfigs ?? []).find(c => c.sectionName === sectionName)
+  return cfg?.periodsPerWeek ?? sub.periodsPerWeek ?? 5
+}
+
+/** Split a list into n roughly-equal contiguous chunks. */
+function splitEven<T>(items: T[], n: number): T[][] {
+  if (n <= 1) return [items]
+  const out: T[][] = Array.from({ length: n }, () => [])
+  items.forEach((it, i) => out[i % n].push(it))
+  return out.filter(g => g.length > 0)
+}
+
+/**
+ * Seed a realistic faculty roster from the subject list. Each subject gets one
+ * or more teachers sized to its total weekly load (≈ TARGET_SLOTS each), with
+ * sections split between them and subjectMappings wired so the Faculty tab,
+ * timetable and solver can use them immediately. The user renames the
+ * placeholder names ("Mathematics Teacher 1") and tweaks loads afterwards.
+ */
+export function seedStandardStaff(subjects: Subject[], _board: CurriculumBoard): StaffExt[] {
+  const staff: StaffExt[] = []
+  const sorted = [...subjects].sort((a, b) => subjectPriority(a.name) - subjectPriority(b.name))
+  for (const sub of sorted) {
+    const secs = assignedSections(sub)
+    if (secs.length === 0) continue
+    const totalLoad = secs.reduce((sum, sn) => sum + slotForSection(sub, sn), 0)
+    const nTeachers = Math.min(secs.length, Math.max(1, Math.ceil(totalLoad / TARGET_SLOTS)))
+    splitEven(secs, nTeachers).forEach((group, i) => {
+      staff.push({
+        id: seedId(),
+        name: nTeachers > 1 ? `${sub.name} Teacher ${i + 1}` : `${sub.name} Teacher`,
+        shortName: '',
+        role: 'Teacher',
+        subjects: [sub.name],
+        classes: group,
+        isClassTeacher: '',
+        maxPeriodsPerWeek: MAX_SLOTS - 2,
+        subjectMappings: [{ subject: sub.name, classes: group }],
+      } as StaffExt)
+    })
+  }
+  return staff
+}
+
+/**
+ * Seed a standard room set: one homeroom per section plus the shared special
+ * rooms implied by the subjects present (Computer Lab, Physics/Chemistry/
+ * Biology Labs, Library), with lab→subject mappings pre-wired.
+ */
+export function seedStandardRooms(sections: Section[], subjects: Subject[]): RoomExt[] {
+  const rooms: RoomExt[] = sections.map(sec => ({
+    id: seedId(),
+    name: `Room ${sec.name}`,
+    type: 'Classroom',
+    capacity: (sec as any).strength || 40,
+    building: 'Main Block',
+    floor: '',
+    subjectMappings: [],
+    notes: '',
+  } as RoomExt))
+
+  const present = new Set(subjects.map(s => s.name))
+  const specials: Array<{ name: string; type: string; subs: string[] }> = [
+    { name: 'Computer Lab',  type: 'Computer Lab', subs: ['Computer Science', 'Information Technology', 'Informatics Practices', 'Artificial Intelligence'] },
+    { name: 'Physics Lab',   type: 'Lab',          subs: ['Physics'] },
+    { name: 'Chemistry Lab', type: 'Lab',          subs: ['Chemistry'] },
+    { name: 'Biology Lab',   type: 'Lab',          subs: ['Biology', 'Botany', 'Zoology', 'Biotechnology'] },
+    { name: 'Library',       type: 'Library',      subs: ['Library'] },
+  ]
+  for (const sp of specials) {
+    const mapped = sp.subs.filter(s => present.has(s))
+    if (mapped.length === 0) continue
+    rooms.push({
+      id: seedId(),
+      name: sp.name,
+      type: sp.type,
+      capacity: 40,
+      building: 'Main Block',
+      floor: '',
+      subjectMappings: mapped,
+      notes: '',
+    } as RoomExt)
+  }
+  return rooms
+}
