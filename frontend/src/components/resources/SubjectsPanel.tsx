@@ -628,13 +628,29 @@ function ClassSlotsExpanded({
   return (
     <div style={{ background: '#FAFAFE', borderTop: '1px solid #EEE9FF', padding: '7px 16px 10px' }}>
       {/* Header */}
-      <div style={{ marginBottom: 6 }}>
-        <span style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          Slots per Grade
-        </span>
-        <span style={{ fontWeight: 500, textTransform: 'none', marginLeft: 6, fontSize: 9.5, color: '#C4C0DC' }}>
-          · {ALLOCATION_LABELS[unit]}
-        </span>
+      <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <span style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            Slots per Grade
+          </span>
+          <span style={{ fontWeight: 500, textTransform: 'none', marginLeft: 6, fontSize: 9.5, color: '#C4C0DC' }}>
+            · {ALLOCATION_LABELS[unit]}
+          </span>
+        </div>
+        {/* Elective toggle — the standard "students choose this from a list of
+            options" switch. Works for ANY subject (a language R-slot, a science
+            elective, anything); when on, the subject appears in the Groups
+            preference matrix for student-count entry & group formation. */}
+        <label
+          title="When on, students choose this subject from a list of options — it appears in the Groups & Combos preference matrix. Use for electives, optional languages (R1/R2/R3), 4th/5th/6th options, etc."
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: sub.isOptional ? P_D : '#8B87AD', background: sub.isOptional ? P_L : '#fff', border: `1.5px solid ${sub.isOptional ? P_B : '#E4E0FF'}`, borderRadius: 6, padding: '3px 10px' }}
+        >
+          <input type="checkbox" checked={sub.isOptional ?? false}
+            onChange={e => onChange({ isOptional: e.target.checked })}
+            style={{ accentColor: P, width: 13, height: 13 }}
+          />
+          ⇄ Elective — chosen from options
+        </label>
       </div>
 
       <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', maxWidth: 600 }}>
