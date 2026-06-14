@@ -9,9 +9,9 @@
  *   ┃ History   [VI-A]       ✕
  *   + Subject
  *
- * Clicking "+ Subject" opens a 2-step portal flow:
- *   Step 1 → pick subject from list
- *   Step 2 → pick applicable classes (grade-grouped, bulk actions)
+ * Clicking "+ Subject" opens a one-step portal list — picking a subject adds
+ * it immediately (no classes yet). Classes are then assigned on the subject's
+ * own row via the grade-grouped chip selector; ✕ removes the subject row.
  *
  * Data model: Staff extended with `subjectMappings?: { subject, classes }[]`
  */
@@ -85,23 +85,19 @@ function Avatar({ name }: { name: string }) {
   )
 }
 
-// ─── AddSubjectFlow — 2-step portal dropdown ──────────────────────────────────
-function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose }: {
+// ─── AddSubjectFlow — one-step portal dropdown ────────────────────────────────
+// Picking a subject adds it to the educator immediately (with no classes).
+// Classes are assigned afterwards on the subject's own row.
+function AddSubjectFlow({ anchorEl, availableSubjects, onAdd, onClose }: {
   anchorEl: HTMLElement | null
   availableSubjects: Subject[]
-  classOpts: ChipOption[]
-  onAdd: (subject: string, classes: string[]) => void
+  onAdd: (subject: string) => void
   onClose: () => void
 }) {
-  const [step, setStep]           = useState<1 | 2>(1)
-  const [selSubject, setSelSub]   = useState<Subject | null>(null)
-  const [selClasses, setSelCls]   = useState<string[]>([])
   const [subSearch, setSubSearch] = useState('')
-  const [clsSearch, setClsSearch] = useState('')
   const [pos, setPos]             = useState({ top: 0, left: 0, width: 290 })
   const dropRef   = useRef<HTMLDivElement>(null)
   const subInRef  = useRef<HTMLInputElement>(null)
-  const clsInRef  = useRef<HTMLInputElement>(null)
 
   const calcPos = useCallback(() => {
     if (!anchorEl) return
@@ -111,7 +107,7 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
     setPos({
       left: Math.min(rect.left, window.innerWidth - w - 8),
       width: w,
-      top: spaceBelow > 340 ? rect.bottom + 4 : rect.top - 350,
+      top: spaceBelow > 330 ? rect.bottom + 4 : Math.max(8, rect.top - 330),
     })
   }, [anchorEl])
 
@@ -129,124 +125,48 @@ function AddSubjectFlow({ anchorEl, availableSubjects, classOpts, onAdd, onClose
     return () => document.removeEventListener('mousedown', h)
   }, [anchorEl, onClose])
 
-  useEffect(() => {
-    if (step === 1) setTimeout(() => subInRef.current?.focus(), 30)
-    else            setTimeout(() => clsInRef.current?.focus(), 30)
-  }, [step])
+  useEffect(() => { setTimeout(() => subInRef.current?.focus(), 30) }, [])
 
   const filteredSubs = availableSubjects.filter(s =>
     !subSearch || s.name.toLowerCase().includes(subSearch.toLowerCase())
   )
 
-  const hasGroups = classOpts.some(o => o.group)
-  const groupedCls = useMemo(() => {
-    const q = clsSearch.toLowerCase()
-    const map = new Map<string, ChipOption[]>()
-    for (const opt of classOpts) {
-      if (q && !(opt.label ?? opt.value).toLowerCase().includes(q)) continue
-      const g = opt.group ?? ''
-      if (!map.has(g)) map.set(g, [])
-      map.get(g)!.push(opt)
-    }
-    return map
-  }, [classOpts, clsSearch])
-
-  const bb: React.CSSProperties = { fontSize: 10, borderRadius: 3, padding: '2px 6px', cursor: 'pointer', border: '1px solid #e0dcff', background: '#f5f3ff', color: '#555' }
-
   return createPortal(
     <div ref={dropRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, background: '#fff', border: '1px solid #dbd5ff', borderRadius: 10, boxShadow: '0 10px 32px rgba(124,111,224,0.22)', zIndex: 9999, overflow: 'hidden' }}>
-      {step === 1 ? (
-        <>
-          <div style={{ padding: '9px 12px', background: '#faf9ff', borderBottom: '1px solid #f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: P, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Select Subject</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', padding: 2, lineHeight: 1 }}><X size={12} /></button>
+      <div style={{ padding: '9px 12px', background: '#faf9ff', borderBottom: '1px solid #f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: P, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Add Subject</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', padding: 2, lineHeight: 1 }}><X size={12} /></button>
+      </div>
+      <div style={{ padding: '7px 10px', borderBottom: '1px solid #f5f3ff' }}>
+        <input ref={subInRef} value={subSearch} onChange={e => setSubSearch(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') onClose()
+            if (e.key === 'Enter' && filteredSubs.length === 1) { onAdd(filteredSubs[0].name); onClose() }
+          }}
+          placeholder="Search subjects…"
+          style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
+        />
+      </div>
+      <div style={{ maxHeight: 230, overflowY: 'auto' }}>
+        {filteredSubs.length === 0 ? (
+          <div style={{ padding: '16px', textAlign: 'center', fontSize: 12, color: '#bbb' }}>
+            {subSearch ? `No matches for "${subSearch}"` : 'All subjects already assigned'}
           </div>
-          <div style={{ padding: '7px 10px', borderBottom: '1px solid #f5f3ff' }}>
-            <input ref={subInRef} value={subSearch} onChange={e => setSubSearch(e.target.value)} placeholder="Search subjects…"
-              style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
-            />
+        ) : filteredSubs.map(s => (
+          <div key={s.id} onClick={() => { onAdd(s.name); onClose() }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, color: '#1a1a2e' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
+            onMouseLeave={e => (e.currentTarget.style.background = '')}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color ?? P, flexShrink: 0 }} />
+            <span style={{ flex: 1, fontWeight: 500 }}>{s.name}</span>
+            <Plus size={11} color="#C4BDFF" style={{ flexShrink: 0 }} />
           </div>
-          <div style={{ maxHeight: 230, overflowY: 'auto' }}>
-            {filteredSubs.length === 0 ? (
-              <div style={{ padding: '16px', textAlign: 'center', fontSize: 12, color: '#bbb' }}>
-                {subSearch ? `No matches for "${subSearch}"` : 'All subjects already assigned'}
-              </div>
-            ) : filteredSubs.map(s => (
-              <div key={s.id} onClick={() => { setSelSub(s); setStep(2) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, color: '#1a1a2e' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
-                onMouseLeave={e => (e.currentTarget.style.background = '')}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color ?? P, flexShrink: 0 }} />
-                <span style={{ flex: 1, fontWeight: 500 }}>{s.name}</span>
-                <span style={{ fontSize: 11, color: '#ccc' }}>›</span>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ padding: '9px 12px', background: '#faf9ff', borderBottom: '1px solid #f0eeff', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => { setStep(1); setSelCls([]) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: P, padding: '0 4px 0 0', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>←</button>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: selSubject?.color ?? P, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', flex: 1 }}>{selSubject?.name}</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', padding: 2, lineHeight: 1 }}><X size={12} /></button>
-          </div>
-          <div style={{ padding: '7px 10px', borderBottom: '1px solid #f5f3ff' }}>
-            <input ref={clsInRef} value={clsSearch} onChange={e => setClsSearch(e.target.value)} placeholder="Search classes…"
-              style={{ width: '100%', border: '1px solid #e0dcff', borderRadius: 5, padding: '5px 8px', fontSize: 12, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
-            />
-          </div>
-          <div style={{ padding: '4px 8px', display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid #f5f3ff', background: '#faf9ff' }}>
-            <button onMouseDown={e => { e.preventDefault(); setSelCls(classOpts.map(o => o.value)) }} style={{ ...bb, color: P, background: '#f0eeff', borderColor: `${P}22`, fontWeight: 700 }}>All</button>
-            <button onMouseDown={e => { e.preventDefault(); setSelCls([]) }} style={bb}>None</button>
-            {hasGroups && Array.from(groupedCls.keys()).filter(g => g).map(g => {
-              const vals = (groupedCls.get(g) ?? []).map(o => o.value)
-              const allIn = vals.every(v => selClasses.includes(v))
-              return (
-                <button key={g} onMouseDown={e => {
-                  e.preventDefault()
-                  if (allIn) setSelCls(selClasses.filter(v => !vals.includes(v)))
-                  else { const ns = new Set(selClasses); vals.forEach(v => ns.add(v)); setSelCls([...ns]) }
-                }} style={{ ...bb, color: allIn ? P : '#555', background: allIn ? '#f0eeff' : '#f5f5f5', borderColor: allIn ? `${P}22` : '#e0dcff' }}>
-                  {g}
-                </button>
-              )
-            })}
-          </div>
-          <div style={{ maxHeight: 190, overflowY: 'auto' }}>
-            {Array.from(groupedCls.entries()).map(([grp, opts]) => (
-              <div key={grp}>
-                {grp && <div style={{ padding: '4px 10px 2px', fontSize: 10, fontWeight: 700, color: '#bbb', textTransform: 'uppercase', background: '#faf9ff', borderBottom: '1px solid #f5f3ff' }}>{grp}</div>}
-                {opts.map(opt => {
-                  const checked = selClasses.includes(opt.value)
-                  return (
-                    <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 10px', cursor: 'pointer', background: checked ? '#f5f3ff' : '', fontSize: 12, color: '#1a1a2e' }}
-                      onMouseEnter={e => { if (!checked) (e.currentTarget as HTMLElement).style.background = '#fafbff' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = checked ? '#f5f3ff' : '' }}
-                    >
-                      <input type="checkbox" checked={checked}
-                        onChange={() => setSelCls(prev => checked ? prev.filter(v => v !== opt.value) : [...prev, opt.value])}
-                        style={{ accentColor: P, margin: 0 }}
-                      />
-                      {opt.label ?? opt.value}
-                    </label>
-                  )
-                })}
-              </div>
-            ))}
-            {groupedCls.size === 0 && <div style={{ padding: '16px', textAlign: 'center', fontSize: 12, color: '#bbb' }}>No classes available</div>}
-          </div>
-          <div style={{ padding: '8px 12px', borderTop: '1px solid #f0eeff', display: 'flex', gap: 8, justifyContent: 'flex-end', background: '#faf9ff' }}>
-            <button onClick={onClose} style={{ background: 'none', border: '1px solid #e0e0e0', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: '#666', fontFamily: 'inherit' }}>Cancel</button>
-            <button
-              onClick={() => { if (selSubject) { onAdd(selSubject.name, selClasses); onClose() } }}
-              disabled={selClasses.length === 0}
-              style={{ background: selClasses.length > 0 ? P : '#e0dcff', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 16px', fontSize: 12, fontWeight: 700, cursor: selClasses.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
-            >Add {selClasses.length > 0 ? `(${selClasses.length})` : ''}</button>
-          </div>
-        </>
-      )}
+        ))}
+      </div>
+      <div style={{ padding: '6px 12px', borderTop: '1px solid #f0eeff', background: '#faf9ff', fontSize: 10, color: '#9896B5' }}>
+        Pick a subject — then assign its classes on the row.
+      </div>
     </div>,
     document.body,
   )
@@ -266,11 +186,11 @@ function SubjectLine({ mapping, subjectColor, classOpts, onUpdate, onRemove }: {
         {/* maxChips=3: prevents cell overflow; "+N more" badge reveals the rest on click */}
         <InlineChipSelect selected={mapping.classes} options={classOpts} onChange={onUpdate} placeholder="+ classes" minDropdownWidth={260} maxChips={3} />
       </div>
-      <button onClick={onRemove}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 2px', color: '#D4CFEC', lineHeight: 1, flexShrink: 0, alignSelf: 'center' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#e74c3c')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#D4CFEC')}
-      ><X size={10} /></button>
+      <button onClick={onRemove} title={`Remove ${mapping.subject} from this educator`}
+        style={{ background: 'none', border: '1px solid transparent', borderRadius: 4, cursor: 'pointer', padding: '2px 3px', color: '#B8B2DC', lineHeight: 1, flexShrink: 0, alignSelf: 'center', display: 'inline-flex' }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#e74c3c'; e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.borderColor = '#FECACA' }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#B8B2DC'; e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'transparent' }}
+      ><X size={11} /></button>
     </div>
   )
 }
@@ -323,8 +243,8 @@ function SubjectAssignmentCell({ teacher, subjects, classOpts, onUpdateMappings 
         <Plus size={10} /> Subject
       </button>
       {showAdd && anchor && (
-        <AddSubjectFlow anchorEl={anchor} availableSubjects={available} classOpts={classOpts}
-          onAdd={addMapping} onClose={() => { setShowAdd(false); setAnchor(null) }}
+        <AddSubjectFlow anchorEl={anchor} availableSubjects={available}
+          onAdd={name => addMapping(name, [])} onClose={() => { setShowAdd(false); setAnchor(null) }}
         />
       )}
     </div>
