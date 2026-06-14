@@ -24,7 +24,7 @@ import { makeId } from '@/components/master/EntityGrids'
 import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
 import { SubjectsPanel, generateShortName } from '@/components/resources/SubjectsPanel'
-import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, type CurriculumBoard } from '@/components/resources/curriculum'
+import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, type CurriculumBoard } from '@/components/resources/curriculum'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import { runAIAssignment, type AISnapshot } from '@/components/resources/aiEngine'
 import {
@@ -266,6 +266,59 @@ export function StepResourcesV2() {
   const aiAbortRef = useRef(false)
 
   function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
+
+  // ── Auto-extend subjects when a NEW class is added ──────────────────────────
+  // When the user adds a section, any EXISTING subject the curriculum says that
+  // grade/stream takes is auto-mapped onto the new section (grade-aware slots).
+  // Only genuinely-new section names trigger this — manual removals on existing
+  // sections are never re-added, and no new subjects are created (the empty-state
+  // "create smartly" handles bootstrapping). Skips the very first render so it
+  // never fights a freshly-loaded store.
+  const seenSectionsRef = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    const current = new Set<string>((sections as Section[]).map(s => s.name))
+    // First run: record baseline, don't extend.
+    if (seenSectionsRef.current === null) { seenSectionsRef.current = current; return }
+    const prev = seenSectionsRef.current
+    const added = [...current].filter(n => !prev.has(n))
+    seenSectionsRef.current = current
+    if (added.length === 0 || subjects.length === 0) return
+
+    const board = normalizeBoardType(config.board ?? 'CBSE') as CurriculumBoard
+    // subjectName → new sections that should carry it
+    const wants = new Map<string, string[]>()
+    for (const secName of added) {
+      for (const subName of standardSubjectsForSection(secName, board)) {
+        if (!wants.has(subName)) wants.set(subName, [])
+        wants.get(subName)!.push(secName)
+      }
+    }
+    let changed = false
+    const nextSubjects = (subjects as Subject[]).map(sub => {
+      const newSecs = (wants.get(sub.name) ?? []).filter(sn =>
+        !(sub.sections ?? []).includes(sn) &&
+        !(sub.classConfigs ?? []).some(c => c.sectionName === sn))
+      if (newSecs.length === 0) return sub
+      changed = true
+      const addedConfigs = newSecs.map(sn => {
+        const group = getGradeGroup(getGrade(sn))
+        const slots = suggestSlotsPerWeek(sub.name, group, board) ?? (sub.periodsPerWeek || 5)
+        return {
+          sectionName:      sn,
+          periodsPerWeek:   slots,
+          maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2,
+          sessionDuration:  sub.sessionDuration ?? 45,
+        }
+      })
+      return {
+        ...sub,
+        sections:     [...new Set([...(sub.sections ?? []), ...newSecs])],
+        classConfigs: [...(sub.classConfigs ?? []), ...addedConfigs],
+      }
+    })
+    if (changed) setSubjects(nextSubjects)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections])
 
   // ── Full AI assign (all resources) — used by empty-state & Regenerate All ──
   async function handleGlobalAIAssign(board: CurriculumBoard) {
