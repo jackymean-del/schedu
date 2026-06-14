@@ -356,10 +356,10 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     hint: 'CCA subject — pre-primary through middle school',
   },
   'Library': {
-    grades: ['preK','primary','middle','secondary'],
+    grades: ['preK','primary','middle','secondary','srSec'],
     isActivity: true,
-    slots: { preK: 1, primary: 1, middle: 1, secondary: 1 },
-    hint: 'Library period — most schools through Class X',
+    slots: { preK: 1, primary: 1, middle: 1, secondary: 1, srSec: 1 },
+    hint: 'Library period — common across all grades, including the XI–XII PE/Painting/Library rotation',
   },
   'Moral Science': {
     grades: ['preK','primary','middle','secondary'],
@@ -929,12 +929,20 @@ const STD_SECONDARY = [
 /** Sr. Secondary (XI–XII) — keyed by stream. 'science' defaults to PCM;
  *  'pcb' is the medical/Spark biology track; unmarked sections fall back to
  *  PCM science (the most common Indian Sr.Sec default). */
+// Sr.Secondary stream → subject set. Calibrated against real CBSE school
+// timetables (MPS Khandagiri 2025-26, XI–XII): the subjects below are the ones
+// the majority of sections in each stream actually run. PE / Painting / Library
+// are the shared co-curricular rotation present across every stream.
+//   science  — PCMB core (Maths + Biology, since most science sections offer both)
+//   pcb      — medical track with the Botany + Zoology split
+//   commerce — Accountancy/BST/Eco + Maths, Computer Science & Entrepreneurship
+//   arts     — the five humanities + Maths & Entrepreneurship electives
 const STD_SRSEC: Record<Stream, string[]> = {
-  science:  ['Physics', 'Chemistry', 'Mathematics', 'English', 'Computer Science', 'Physical Education'],
-  pcb:      ['Physics', 'Chemistry', 'Biology', 'English', 'Physical Education'],
-  commerce: ['Accountancy', 'Business Studies', 'Economics', 'Mathematics', 'English', 'Physical Education'],
-  arts:     ['History', 'Geography', 'Political Science', 'Economics', 'English', 'Physical Education'],
-  general:  ['Physics', 'Chemistry', 'Mathematics', 'English', 'Computer Science', 'Physical Education'],
+  science:  ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'Physical Education', 'Painting', 'Library'],
+  pcb:      ['Physics', 'Chemistry', 'Botany', 'Zoology', 'Biology', 'English', 'Physical Education', 'Painting', 'Library'],
+  commerce: ['Accountancy', 'Business Studies', 'Economics', 'Mathematics', 'Computer Science', 'Entrepreneurship', 'English', 'Physical Education', 'Painting', 'Library'],
+  arts:     ['History', 'Geography', 'Political Science', 'Economics', 'Psychology', 'Sociology', 'Mathematics', 'Entrepreneurship', 'English', 'Physical Education', 'Painting', 'Library'],
+  general:  ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'Physical Education', 'Painting', 'Library'],
 }
 
 /**
