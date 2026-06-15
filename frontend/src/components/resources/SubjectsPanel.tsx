@@ -990,11 +990,35 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
   }
 
   // Set elective flag for ALL sections of a grade atomically.
+  // Stream-match auto-assign: when MARKING elective, pull in same-stream sibling
+  // sections of the same grade(s) that aren't assigned yet, so the elective
+  // automatically covers all relevant classes (e.g. Biology on XI-Sci-A also
+  // picks up XI-Sci-B / XI-Sci-C). Unsetting never adds sections.
   function handleUpdateGradeElective(classNames: string[], isOptional: boolean) {
     const classSet    = new Set(classNames)
     const allAssigned = getAssignedClasses(sub)
     const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
-    const updated: SubjectClassConfig[] = allAssigned.map(name => {
+
+    const streamOf = (name: string) => {
+      const sec = sections.find(s => s.name === name) as any
+      return String(sec?.stream ?? name.split('-')[1] ?? '').trim().toLowerCase()
+    }
+
+    let autoAdded: string[] = []
+    if (isOptional) {
+      const targetGrades  = new Set(classNames.map(getGrade))
+      const targetStreams = new Set(classNames.map(streamOf))
+      autoAdded = sections
+        .map(s => s.name)
+        .filter(n =>
+          !allAssigned.includes(n) && !classSet.has(n) &&
+          targetGrades.has(getGrade(n)) && targetStreams.has(streamOf(n)))
+    }
+
+    const fullList = [...allAssigned, ...autoAdded]
+    const markSet  = new Set([...classNames, ...autoAdded]) // these become elective
+
+    const updated: SubjectClassConfig[] = fullList.map(name => {
       const ex = existingMap.get(name)
       const base: SubjectClassConfig = {
         sectionName:      name,
@@ -1006,12 +1030,13 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
         isOptional:       ex?.isOptional,
         electiveSlotId:   ex?.electiveSlotId,
       }
-      if (!classSet.has(name)) return base
+      if (!markSet.has(name)) return base
       return { ...base, isOptional, ...(!isOptional ? { electiveSlotId: undefined } : {}) }
     })
     const globalIsOptional = updated.some(c => c.isOptional === true)
     const firstSlot = updated.find(c => c.isOptional && c.electiveSlotId)?.electiveSlotId
-    onUpdate({ classConfigs: updated, isOptional: globalIsOptional, electiveSlotId: firstSlot })
+    const newSections = updated.map(c => c.sectionName!).filter(Boolean)
+    onUpdate({ classConfigs: updated, sections: newSections, isOptional: globalIsOptional, electiveSlotId: firstSlot })
   }
 
   // Atomically set requiresLab for all sections of a grade
