@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import type {
+  AndComboGroup,
+  ElectiveSlot,
   // Core Schedu model
   Organization,
   AcademicSession,
@@ -234,6 +236,11 @@ interface ScheduState {
   // ── Teacher Availability — pre-solve per-teacher slot matrix ──
   teacherAvailability: TeacherAvailability
 
+  // ── Step 4 — AND Combo Groups (bundle-based split, e.g. PCM vs PCB) ──
+  andComboGroups: AndComboGroup[]
+  // ── Step 4 — Elective Slots (OR groups — students pick one per slot) ──
+  electiveSlots: ElectiveSlot[]
+
   // ── Step 4 — Subject Grouping Rules (per-subject cross-class behavior) ──
   //    Shape: { [subjectName]: GroupingBehavior }
   subjectGroupingRules: Record<string, 'NO_GROUPING' | 'SAME_GRADE_ONLY' | 'CROSS_GRADE_ALLOWED' | 'FLEXIBLE_GROUPING'>
@@ -371,6 +378,9 @@ interface ScheduState {
   setBlockedSlots: (b: Array<{ section: string; day: string; periodId: string; reasons: Array<{ category: string; detail: string; affected?: string }> }>) => void
   // ── Doc Part 3 — DLG setter ──
   setDynamicLearningGroups: (g: ScheduState['dynamicLearningGroups']) => void
+  // ── Step 4 — AND Combo Groups + Elective Slots ──
+  setAndComboGroups: (g: AndComboGroup[]) => void
+  setElectiveSlots: (s: ElectiveSlot[]) => void
   // ── Step 4 — Subject Grouping Rules ──
   setSubjectGroupingRule: (subject: string, behavior: 'NO_GROUPING' | 'SAME_GRADE_ONLY' | 'CROSS_GRADE_ALLOWED' | 'FLEXIBLE_GROUPING') => void
   setSubjectGroupingRules: (rules: ScheduState['subjectGroupingRules']) => void
@@ -421,6 +431,7 @@ const initialState: Omit<ScheduState,
   | 'setTeacherAllocations' | 'setTeacherAllocationCell'
   | 'setBlockedSlots'
   | 'setDynamicLearningGroups'
+  | 'setAndComboGroups' | 'setElectiveSlots'
   | 'setTeacherAvailability' | 'setTeacherSlotStatus' | 'clearTeacherAvailability'
   | 'setSubjectGroupingRule' | 'setSubjectGroupingRules'
   | 'resetWizard' | 'resetAll'
@@ -478,6 +489,8 @@ const initialState: Omit<ScheduState,
   optionalConfigs: [],
   subjectPools: [],
   subjectGroups: [],
+  andComboGroups: [],
+  electiveSlots: [],
   optionalBlocks: [],
   subjectCombinations: [],
   sectionStrengths: [],
@@ -700,6 +713,8 @@ export const useTimetableStore = create<ScheduState>()(
         setTeacherAllocations: (teacherAllocations) => set({ teacherAllocations }),
         setBlockedSlots: (blockedSlots) => set({ blockedSlots }),
         setDynamicLearningGroups: (dynamicLearningGroups) => set({ dynamicLearningGroups }),
+        setAndComboGroups: (andComboGroups) => set({ andComboGroups }),
+        setElectiveSlots: (electiveSlots) => set({ electiveSlots }),
 
         // ── Teacher Availability ──────────────────────────────
         setTeacherAvailability: (teacherAvailability) => set({ teacherAvailability }),
@@ -855,6 +870,8 @@ export const useTimetableStore = create<ScheduState>()(
           optionalConfigs: state.optionalConfigs,
           subjectPools: state.subjectPools,
           subjectGroups: state.subjectGroups,
+          andComboGroups: state.andComboGroups,
+          electiveSlots: state.electiveSlots,
           schedulingMode: state.schedulingMode,
           workingDaysPerYear: state.workingDaysPerYear,
           teacherAvailability: state.teacherAvailability,

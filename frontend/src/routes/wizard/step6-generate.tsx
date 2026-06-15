@@ -178,6 +178,103 @@ function comboGroupsToOptionalBlocks(
   return blocks
 }
 
+// ── AND Combo Groups → OptionalBlocks bridge ──────────────────────────────────
+//
+// Each AndComboGroup defines mutually-exclusive bundles (PCM vs PCB).
+// For the solver, each bundle that runs parallel to other bundles in the same
+// time slot becomes an AND-logic OptionalBlock. We create one OptionalBlock
+// per AndComboGroup that has generated teaching groups — the solver then
+// knows to run all bundles simultaneously in the same period.
+function andGroupsToOptionalBlocks(
+  andGroups: import('@/types').AndComboGroup[],
+  subjects: any[],
+  staff: any[],
+): OptionalBlock[] {
+  if (!andGroups?.length) return []
+  const blocks: OptionalBlock[] = []
+
+  for (const group of andGroups) {
+    if (!group.bundles?.length || !group.applicableSections?.length) continue
+
+    // Find a teacher for a subject from the staff list
+    const teacherFor = (subName: string, secNames: string[], taken: Set<string>): string => {
+      const found = staff.find((t: any) =>
+        !taken.has(t.name) &&
+        ((t.subjectMappings ?? []) as Array<{ subject: string; classes?: string[] }>)
+          .some(m => m.subject === subName && (m.classes ?? []).some(c => secNames.includes(c))))
+      if (found) return found.name
+      const any = staff.find((t: any) => !taken.has(t.name) &&
+        ((t.subjects ?? []) as string[]).some(s => s === subName))
+      return any?.name ?? ''
+    }
+
+    // If teaching groups have been generated, use them for precise room/section data
+    if (group.generatedGroups && group.generatedGroups.length > 0) {
+      // Group by bundleId — each bundle's groups run in the same slot type
+      const byBundle = new Map<string, typeof group.generatedGroups>()
+      for (const tg of group.generatedGroups) {
+        if (!byBundle.has(tg.bundleId)) byBundle.set(tg.bundleId, [])
+        byBundle.get(tg.bundleId)!.push(tg)
+      }
+
+      // One OptionalBlock covering all applicable sections, logic=AND
+      const taken = new Set<string>()
+      const options: OptionalOption[] = []
+      for (const bundle of group.bundles) {
+        const tgs = byBundle.get(bundle.id) ?? []
+        const allSecs = tgs.flatMap(tg => tg.sectionSlices.map(s => s.sectionName))
+        const repSubject = bundle.subjects[0] ?? bundle.name
+        const t = teacherFor(repSubject, allSecs, taken)
+        if (t) taken.add(t)
+        options.push({
+          subject: repSubject,
+          teacher: tg_teacher(tgs) || t,
+          room: tgs[0]?.room ?? '',
+          allocatedStrength: tgs.reduce((a, tg) => a + tg.totalStrength, 0),
+        })
+      }
+
+      if (options.length >= 2) {
+        blocks.push({
+          id: `and-group-${group.id}`,
+          name: group.name,
+          sectionNames: group.applicableSections,
+          day: '', periodId: '',
+          options,
+          logic: 'AND',
+        })
+      }
+    } else {
+      // Fallback: use the strengthMatrix directly
+      const taken = new Set<string>()
+      const options: OptionalOption[] = group.bundles.map(bundle => {
+        const repSubject = bundle.subjects[0] ?? bundle.name
+        const t = teacherFor(repSubject, group.applicableSections, taken)
+        if (t) taken.add(t)
+        const strength = group.applicableSections.reduce(
+          (a, sec) => a + (group.strengthMatrix?.[sec]?.[bundle.id] ?? 0), 0)
+        return { subject: repSubject, teacher: t, room: '', allocatedStrength: strength || undefined }
+      })
+
+      if (options.length >= 2) {
+        blocks.push({
+          id: `and-group-${group.id}`,
+          name: group.name,
+          sectionNames: group.applicableSections,
+          day: '', periodId: '',
+          options,
+          logic: 'AND',
+        })
+      }
+    }
+  }
+  return blocks
+}
+
+function tg_teacher(tgs: Array<{ teacher?: string }>): string {
+  return tgs.find(tg => tg.teacher)?.teacher ?? ''
+}
+
 type JobStatus = "idle" | "running" | "completed" | "failed"
 
 interface Job {
@@ -489,6 +586,7 @@ export function Step6Generate() {
 
       const staff = store.staff
       const manualOptionalBlocks = (store as any).optionalBlocks ?? []
+      const storeAndComboGroups  = (store as any).andComboGroups ?? []
       const storeDLGs            = (store as any).dynamicLearningGroups ?? []
       const subjectCombinations  = (store as any).subjectCombinations ?? []
       const sectionStrengths     = (store as any).sectionStrengths ?? []
@@ -508,6 +606,8 @@ export function Step6Generate() {
       // merged in, deduped against blocks covering the same sections+subjects.
       const comboBlocks = comboGroupsToOptionalBlocks(
         (store as any).subjectGroups ?? [], resolvedSubjects, sections, staff)
+      // AND Combo Groups from Step 4 Tab 1 (bundle-based splits like PCM vs PCB)
+      const andComboBlocks = andGroupsToOptionalBlocks(storeAndComboGroups, resolvedSubjects, staff)
       const blockSig = (b: OptionalBlock) =>
         (b.slotId ?? '') + '::' +
         [...b.sectionNames].sort().join('|') + '::' +
@@ -516,6 +616,7 @@ export function Step6Generate() {
       const optionalBlocks: OptionalBlock[] = [
         ...baseBlocks,
         ...comboBlocks.filter(b => !seenSigs.has(blockSig(b))),
+        ...andComboBlocks.filter(b => !seenSigs.has(blockSig(b))),
       ]
 
       // ── Block-wise (Advanced multi-shift) generation ──────────────────────

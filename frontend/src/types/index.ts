@@ -1210,6 +1210,81 @@ export interface Facility {
   shiftId?: string
 }
 
+// ─────────────────────────────────────────────────────────────
+// 24. AND / OR GROUP TYPES (Step 4 redesign)
+// ─────────────────────────────────────────────────────────────
+
+/** A subject bundle = all subjects a student takes together.
+ *  E.g. PCM = { id: 'pcm', name: 'PCM', subjects: ['Physics','Chemistry','Maths'] } */
+export interface SubjectBundle {
+  id: string
+  name: string        // display name: "PCM", "PCB", "Arts", "Commerce"
+  subjects: string[]  // ALL subject names in this bundle
+  color?: string      // display color
+}
+
+/** One AND-group card represents a single split point:
+ *  "In these sections, students are divided into these bundles."
+ *  E.g. "Science XI-XII: PCM vs PCB" */
+export interface AndComboGroup {
+  id: string
+  name: string                   // user-facing name: "Science XI-XII Combination"
+  applicableSections: string[]   // which sections this split applies to
+  bundles: SubjectBundle[]       // 2+ mutually exclusive options
+  /** Student count matrix: sectionName → bundleId → headcount.
+   *  Validation: for each section, sum(bundleHeadcounts) === section.totalStudents */
+  strengthMatrix: Record<string, Record<string, number>>
+  /** AI-suggested? Shows a badge if true, dismissed once user edits */
+  aiSuggested?: boolean
+  /** Resolved teaching groups (generated, not user-entered) */
+  generatedGroups?: AndTeachingGroup[]
+}
+
+/** One concrete teaching group produced from an AndComboGroup.
+ *  Multiple groups per bundle when room capacity < total bundle headcount. */
+export interface AndTeachingGroup {
+  id: string
+  bundleId: string       // which bundle (PCM, PCB)
+  bundleName: string
+  subjects: string[]     // same as bundle.subjects
+  sectionSlices: Array<{
+    sectionName: string
+    studentCount: number
+  }>
+  totalStrength: number
+  teacher?: string
+  room?: string
+  roomCapacity?: number
+  capacityWarning?: boolean
+}
+
+/** One OR-group slot: students pick exactly one subject from this slot.
+ *  Separate slots are independent — a student can appear in R1, R2, AND R3. */
+export interface ElectiveSlot {
+  id: string
+  name: string           // "R1 Regional Language", "Physical Activity Elective"
+  slotLabel?: string     // short label: "R1", "R2", "PE"
+  subjects: string[]     // choices within this slot
+  applicableSections: string[]  // empty = all sections
+  periodsPerWeek?: number
+  /** Student count matrix: sectionName → subjectName → headcount.
+   *  Validation: for each section, sum(subjectHeadcounts) === section.totalStudents */
+  strengthMatrix: Record<string, Record<string, number>>
+  /** Generated teaching groups, one per (slotLabel+subject) combination */
+  generatedGroups?: ElectiveTeachingGroup[]
+}
+
+export interface ElectiveTeachingGroup {
+  id: string
+  slotId: string
+  slotLabel?: string
+  subjectName: string
+  sectionNames: string[]
+  totalStrength: number
+  teacher?: string
+  room?: string
+}
+
 /** @deprecated Use InstructionalCluster instead. */
 export interface ParticipantPool {
   id: string
