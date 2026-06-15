@@ -852,8 +852,6 @@ export function StepResourcesV2() {
                 <SubjectsPanel
                   subjects={subjects} setSubjects={setSubjects}
                   sections={sections} board={config.board}
-                  subjectGroups={store.subjectGroups ?? []}
-                  setSubjectGroups={store.setSubjectGroups}
                   onGlobalAIAssign={handleSubjectsAIAssign}
                   globalAILoading={aiLoading && activeTab === 'subjects'}
                   globalAIStatus={aiStatus}

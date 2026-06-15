@@ -23,8 +23,6 @@ import { useState, useRef, useMemo, useEffect, useCallback, Fragment } from 'rea
 import { createPortal } from 'react-dom'
 import type { Subject, Section, SubjectClassConfig } from '@/types'
 import { Plus, BookOpen, ChevronDown, ChevronUp, CalendarRange, X } from 'lucide-react'
-import { SubjectGroupsSection } from './SubjectGroupsSection'
-import type { SubjectAndOrGroup } from './SubjectGroupsSection'
 import {
   P, P_D, P_L, P_B,
   TH, TD, TABLE_CARD,
@@ -415,6 +413,7 @@ function SectionSubRow({
           style={secInp}
         />
       </td>
+      <td />
       {/* Elective — per-section toggle + optional slot name */}
       <td style={{ padding: '2px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -567,6 +566,8 @@ function GradeSlotRow({
           />
         </td>
 
+        <td />
+
         {/* Elective — aggregate for this grade (indeterminate if mixed) */}
         <td style={{ padding: '3px 6px' }}>
           {(() => {
@@ -695,13 +696,14 @@ function ClassSlotsExpanded({
         )}
       </div>
 
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', maxWidth: 640 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', maxWidth: 620 }}>
         <colgroup>
           <col style={{ width: 110 }} />
           <col style={{ width: 84 }} />
           <col style={{ width: 60 }} />
           <col />
-          <col style={{ width: 64 }} />
+          <col style={{ width: 100 }} />
+          <col style={{ width: 58 }} />
           <col style={{ width: 26 }} />
         </colgroup>
         <thead>
@@ -709,8 +711,9 @@ function ClassSlotsExpanded({
             <th style={{ ...thS, textAlign: 'left' }}>Grade</th>
             <th style={{ ...thS, textAlign: 'center' }}>{ALLOCATION_SHORT[unit]}</th>
             <th style={{ ...thS, textAlign: 'center' }}>Max/day</th>
-            <th style={{ ...thS, textAlign: 'left', whiteSpace: 'nowrap' }}>⇄ Elective / Slot</th>
-            <th style={{ ...thS, textAlign: 'center', whiteSpace: 'nowrap' }}>Lab Req.</th>
+            <th style={thS} />
+            <th style={{ ...thS, textAlign: 'left', whiteSpace: 'nowrap', paddingLeft: 4 }}>⇄ Elective</th>
+            <th style={{ ...thS, textAlign: 'center', whiteSpace: 'nowrap' }}>Lab</th>
             <th style={{ borderBottom: '1px solid #E4E0FF' }} />
           </tr>
         </thead>
@@ -1165,7 +1168,6 @@ interface SubjectSnapshot {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function SubjectsPanel({
   subjects, setSubjects, sections, board: boardProp,
-  subjectGroups = [], setSubjectGroups,
   onGlobalAIAssign,
   globalAILoading = false,
   globalAIStatus  = '',
@@ -1178,8 +1180,6 @@ export function SubjectsPanel({
   setSubjects: (s: Subject[]) => void
   sections:    Section[]
   board?:      string
-  subjectGroups?:    SubjectAndOrGroup[]
-  setSubjectGroups?: (g: SubjectAndOrGroup[]) => void
   onGlobalAIAssign?:    (board: CurriculumBoard) => Promise<void>
   globalAILoading?:     boolean
   globalAIStatus?:      string
@@ -1727,22 +1727,6 @@ export function SubjectsPanel({
         )}
       </div>
 
-      {/* ── Subject AND/OR Groups ──────────────────────────────────────────── */}
-      {setSubjectGroups && (
-        <SubjectGroupsSection
-          groups={subjectGroups}
-          setGroups={setSubjectGroups}
-          allSubjectNames={subjects.map(s => s.name)}
-          allSectionNames={sections.map(s => s.name)}
-          subjectSectionsMap={Object.fromEntries(
-            subjects.map(sub => {
-              const fromConfigs = (sub.classConfigs ?? []).map((c: SubjectClassConfig) => c.sectionName).filter(Boolean) as string[]
-              const fromSections: string[] = (sub as any).sections ?? []
-              return [sub.name, [...new Set([...fromConfigs, ...fromSections])]]
-            }).filter(([, secs]) => (secs as string[]).length > 0)
-          )}
-        />
-      )}
 
       {importOpen && (
         <ImportModal

@@ -1042,7 +1042,7 @@ export function StepStudentGroups() {
         <div style={{ flex: 1 }}>
           <h2 style={{ fontFamily: "'Plus Jakarta Sans', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-            Define <em style={{ color: '#7C6FE0' }}>student preference groups</em> and <em style={{ color: '#D97706' }}>OR / AND subject combos</em> for parallel scheduling.
+            <strong style={{ color: '#7C6FE0' }}>AND</strong> — student groups for parallel teaching &nbsp;·&nbsp; <strong style={{ color: '#D97706' }}>OR</strong> — elective combos where students pick one subject from options.
           </div>
         </div>
       </div>
@@ -1053,8 +1053,8 @@ export function StepStudentGroups() {
         borderBottom: '2px solid #E8E4FF', paddingBottom: 0,
       }}>
         {([
-          { key: 'groups', label: 'Student Groups', icon: <Users2 size={14} />, desc: 'Preference matrix & AI group formation' },
-          { key: 'combos', label: 'Subject Combos',  icon: <Shuffle size={14} />, desc: 'OR / AND subject combination rules' },
+          { key: 'groups', label: 'AND', icon: <Users2 size={14} />, desc: 'Student grouping — parallel teaching of the same subject across sections (AND logic)' },
+          { key: 'combos', label: 'OR',  icon: <Shuffle size={14} />, desc: 'Elective combos — students pick one subject from a list of options (OR logic)' },
         ] as const).map(tab => {
           const active = activeTab === tab.key
           return (
@@ -1064,13 +1064,14 @@ export function StepStudentGroups() {
               title={tab.desc}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '9px 18px', border: 'none', cursor: 'pointer',
+                padding: '9px 22px', border: 'none', cursor: 'pointer',
                 background: 'transparent', fontFamily: 'inherit',
-                fontSize: 13, fontWeight: active ? 700 : 500,
+                fontSize: 14, fontWeight: active ? 800 : 500,
                 color: active ? '#7C6FE0' : '#8B87AD',
                 borderBottom: active ? '3px solid #7C6FE0' : '3px solid transparent',
                 marginBottom: -2,
                 transition: 'all 0.13s',
+                letterSpacing: active ? '0.03em' : 0,
               }}
             >
               <span style={{ color: active ? '#7C6FE0' : '#C4B5FD' }}>{tab.icon}</span>
@@ -1556,7 +1557,7 @@ export function StepStudentGroups() {
         <div style={{ flex: 1 }} />
         <button onClick={() => setActiveTab('combos')}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          Subject Combos <Shuffle size={13} />
+          OR (Elective Combos) <Shuffle size={13} />
         </button>
         <button onClick={() => setStep(5)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
@@ -1605,7 +1606,7 @@ export function StepStudentGroups() {
           <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
             <button onClick={() => setActiveTab('groups')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E8E4FF', background: '#fff', color: '#4B5275', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <ChevronLeft size={14} /> Student Groups
+              <ChevronLeft size={14} /> AND Groups
             </button>
             <div style={{ flex: 1 }} />
             <button onClick={() => setStep(5)}
