@@ -126,28 +126,23 @@ function EditCell({ value, onSave, placeholder = '…', style: extra }: {
 }
 
 
-/** Built-in category options — user can append custom ones */
-const BUILTIN_CATS = ['Compulsory','Language','R1','R2','R3','Optional','4th Option','5th Option','6th Option','Elective','Practical','Activity','CCA','Skill','Others']
+/** Built-in category options — two canonical types; user can add more via the Category Manager */
+const BUILTIN_CATS = ['Scholastic', 'Co-scholastic']
 
-/** Heuristic category from a subject's name / lab flag / class assignment —
- *  used by the "AI Categorize" bulk button. */
+/** Heuristic category from a subject's name — used by the "AI Categorize" bulk button.
+ *  Co-scholastic = PE / arts / music / CCA / library / assembly / pre-school activities.
+ *  Everything academic → Scholastic. */
 function inferCategory(sub: Subject): string {
   const n = sub.name.toLowerCase()
-  if (sub.requiresLab) return 'Practical'
   const has = (kws: string[]) => kws.some(kw => n.includes(kw))
-  if (has(['physical education','yoga','ncc','nss','sports','gym','dance','music','art','painting','craft','drawing']))
-    return 'Activity'
-  if (has(['english','hindi','odia','oriya','sanskrit','french','german','spanish','arabic','bengali','tamil','telugu','marathi','gujarati','punjabi','urdu','language']))
-    return 'Language'
-  if (has(['computer','informatics','information technology','coding','data science','vocational']) || /\bit\b|\bai\b/.test(n))
-    return 'Skill'
-  if (has(['cca','co-curricular','cocurricular','club','value education','moral','library','assembly']))
-    return 'CCA'
-  // Senior-secondary-only + already optional → Optional
-  const classes = getAssignedClasses(sub)
-  const onlySrSec = classes.length > 0 && classes.every(c => c.startsWith('XI') || c.startsWith('XII'))
-  if (onlySrSec && sub.isOptional) return 'Optional'
-  return 'Compulsory'
+  if (has([
+    'physical education','yoga','ncc','nss','sports','gym','dance','music',
+    'art','painting','craft','drawing','scout','guide','library','assembly',
+    'morning meeting','cca','co-curricular','cocurricular','club',
+    'value education','moral science','moral','free play','nursery rhyme',
+    'activity','story','rhyme',
+  ])) return 'Co-scholastic'
+  return 'Scholastic'
 }
 
 // ─── Category dropdown (native select, always shows full list) ────────────────
@@ -236,7 +231,8 @@ function CategoryManager({
 
       {/* Built-in (read-only) */}
       <div style={{ padding: '7px 12px 6px', borderBottom: '1px solid #F5F3FF' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: '#C4C0DC', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Built-in</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: '#C4C0DC', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Built-in</div>
+        <div style={{ fontSize: 9.5, color: '#9896B5', marginBottom: 5, lineHeight: 1.4 }}>Scholastic = academic subjects. Co-scholastic = PE, Arts, CCA, Library, etc. Click a category header to rename it.</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {BUILTIN_CATS.map(cat => (
             <span key={cat} style={{ fontSize: 10, padding: '1px 6px', background: '#F0EDFF', color: '#8B87AD', borderRadius: 3, border: '1px solid #E8E4FF' }}>{cat}</span>
@@ -419,7 +415,29 @@ function SectionSubRow({
           style={secInp}
         />
       </td>
-      <td />{/* spacer (was Category) */}
+      {/* Elective — per-section toggle + optional slot name */}
+      <td style={{ padding: '2px 6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <input type="checkbox"
+            checked={cfg?.isOptional ?? false}
+            onChange={e => onUpdateSectionConfig({
+              isOptional: e.target.checked,
+              ...(!e.target.checked ? { electiveSlotId: undefined } : {}),
+            })}
+            style={{ accentColor: P, width: 12, height: 12, flexShrink: 0, cursor: 'pointer' }}
+            title="Mark as elective for this class — students choose from a list of options"
+          />
+          {cfg?.isOptional && (
+            <input
+              value={cfg.electiveSlotId ?? ''}
+              onChange={e => onUpdateSectionConfig({ electiveSlotId: e.target.value || undefined })}
+              placeholder="R1, R2…"
+              title="Elective slot / group name (e.g. R1, R2, R3, PCM, 4th-Option). Subjects sharing a slot are mutually exclusive."
+              style={{ width: 52, padding: '1px 4px', border: `1px solid ${P_B}`, borderRadius: 3, fontSize: 10, outline: 'none', fontFamily: 'inherit', background: P_L, color: P_D, fontWeight: 600 }}
+            />
+          )}
+        </div>
+      </td>
       <td style={{ padding: '2px 6px', textAlign: 'center' as const }}>
         <input type="checkbox" checked={hasLab}
           onChange={e => onUpdateSectionConfig({ requiresLab: e.target.checked })}
@@ -435,7 +453,7 @@ function SectionSubRow({
 function GradeSlotRow({
   grade, sections, sub, unit, sessionMins, extraCats,
   onUpdateGradeSlots, onRemoveGrade, onUpdateSectionMaxDay, onUpdateSectionConfig,
-  onUpdateGradeRequiresLab, onChange, onAddCategory,
+  onUpdateGradeRequiresLab, onUpdateGradeElective, onChange, onAddCategory,
 }: {
   grade:              string
   sections:           string[]
@@ -448,6 +466,7 @@ function GradeSlotRow({
   onUpdateSectionMaxDay:    (sectionName: string, max: number) => void
   onUpdateSectionConfig:    (sectionName: string, patch: Partial<SubjectClassConfig>) => void
   onUpdateGradeRequiresLab: (classNames: string[], requiresLab: boolean) => void
+  onUpdateGradeElective:    (classNames: string[], isOptional: boolean) => void
   onChange:                 (patch: Partial<Subject>) => void
   onAddCategory:            (cat: string) => void
 }) {
@@ -548,7 +567,32 @@ function GradeSlotRow({
           />
         </td>
 
-        <td />{/* spacer (was Category) */}
+        {/* Elective — aggregate for this grade (indeterminate if mixed) */}
+        <td style={{ padding: '3px 6px' }}>
+          {(() => {
+            const cfgs = sections.map(sn => (sub.classConfigs ?? []).find(c => c.sectionName === sn))
+            const allEl  = cfgs.every(c => c?.isOptional === true)
+            const someEl = cfgs.some(c => c?.isOptional === true)
+            const slotName = cfgs.find(c => c?.isOptional && c.electiveSlotId)?.electiveSlotId
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input type="checkbox"
+                  checked={allEl}
+                  ref={el => { if (el) el.indeterminate = someEl && !allEl }}
+                  onChange={e => onUpdateGradeElective(sections, e.target.checked)}
+                  style={{ accentColor: P, width: 13, height: 13, cursor: 'pointer', flexShrink: 0 }}
+                  title={allEl ? 'All sections elective — click to unset' : someEl ? 'Partial — expand to set per section' : 'Mark all sections of this grade as elective'}
+                />
+                {slotName && allEl && (
+                  <span style={{ fontSize: 9, color: P, background: P_L, borderRadius: 3, padding: '0 4px', border: `1px solid ${P_B}`, whiteSpace: 'nowrap' }}>{slotName}</span>
+                )}
+                {someEl && !allEl && (
+                  <span style={{ fontSize: 9, color: '#D97706', fontWeight: 700 }}>partial</span>
+                )}
+              </div>
+            )
+          })()}
+        </td>
 
         {/* Lab Required — tick-all for this grade */}
         <td style={{ padding: '3px 6px', textAlign: 'center' as const }}>
@@ -594,7 +638,8 @@ function GradeSlotRow({
 // ─── Expanded grade-level slots view ─────────────────────────────────────────
 function ClassSlotsExpanded({
   sub, unit, sessionMins, onUpdateGradeSlots, onRemoveGrade, onChange,
-  onUpdateSectionMaxDay, onUpdateSectionConfig, onUpdateGradeRequiresLab, onAddCategory, onDeleteCategory, extraCats = [],
+  onUpdateSectionMaxDay, onUpdateSectionConfig, onUpdateGradeRequiresLab,
+  onUpdateGradeElective, onAddCategory, onDeleteCategory, extraCats = [],
 }: {
   sub: Subject
   unit: AllocationUnit
@@ -605,6 +650,7 @@ function ClassSlotsExpanded({
   onUpdateSectionMaxDay:    (sectionName: string, max: number) => void
   onUpdateSectionConfig:    (sectionName: string, patch: Partial<SubjectClassConfig>) => void
   onUpdateGradeRequiresLab: (classNames: string[], requiresLab: boolean) => void
+  onUpdateGradeElective:    (classNames: string[], isOptional: boolean) => void
   onAddCategory:            (cat: string) => void
   onDeleteCategory?:        (cat: string) => void
   extraCats?:               string[]
@@ -635,57 +681,27 @@ function ClassSlotsExpanded({
   return (
     <div style={{ background: '#FAFAFE', borderTop: '1px solid #EEE9FF', padding: '7px 16px 10px' }}>
       {/* Header */}
-      <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <span style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            Slots per Grade
-          </span>
-          <span style={{ fontWeight: 500, textTransform: 'none', marginLeft: 6, fontSize: 9.5, color: '#C4C0DC' }}>
-            · {ALLOCATION_LABELS[unit]}
-          </span>
-        </div>
-        {/* Elective toggle — the standard "students choose this from a list of
-            options" switch. Works for ANY subject (a language R-slot, a science
-            elective, anything); when on, the subject appears in the Groups
-            preference matrix for student-count entry & group formation. */}
-        <label
-          title="When on, students choose this subject from a list of options — it appears in the Groups & Combos preference matrix. Use for electives, optional languages (R1/R2/R3), 4th/5th/6th options, etc."
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: sub.isOptional ? P_D : '#8B87AD', background: sub.isOptional ? P_L : '#fff', border: `1.5px solid ${sub.isOptional ? P_B : '#E4E0FF'}`, borderRadius: 6, padding: '3px 10px' }}
-        >
-          <input type="checkbox" checked={sub.isOptional ?? false}
-            onChange={e => onChange({ isOptional: e.target.checked })}
-            style={{ accentColor: P, width: 13, height: 13 }}
-          />
-          ⇄ Elective — chosen from options
-        </label>
-        {/* Elective slot — group this subject into a named slot (R1/R2/R3…).
-            Subjects in the same slot are mutually exclusive (pick one). For a
-            subject that lives in MANY slots at once (Hindi in R1+R2+R3), define
-            the slots via OR-combos instead — those override this single value. */}
+      <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          Slots per Grade
+        </span>
+        <span style={{ fontWeight: 500, textTransform: 'none', fontSize: 9.5, color: '#C4C0DC' }}>
+          · {ALLOCATION_LABELS[unit]}
+        </span>
         {sub.isOptional && (
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 700, color: '#8B87AD', whiteSpace: 'nowrap' }}>
-            Slot / Group
-            <input
-              value={sub.electiveSlotId ?? ''}
-              onChange={e => onChange({ electiveSlotId: e.target.value.trim() || undefined })}
-              placeholder="e.g. R1, R2…"
-              title="Optional: group this subject into a named elective slot. Subjects in the same slot are mutually exclusive — students pick one."
-              style={{ width: 84, padding: '3px 8px', border: '1.5px solid #E4E0FF', borderRadius: 5, fontSize: 11, outline: 'none', fontFamily: 'inherit', background: '#FAFAFE' }}
-            />
-            {sub.electiveSlotId && (
-              <span style={{ fontSize: 9.5, color: P, background: P_L, borderRadius: 3, padding: '0 5px', border: `1px solid ${P_B}` }}>{sub.electiveSlotId}</span>
-            )}
-          </label>
+          <span style={{ marginLeft: 4, fontSize: 9.5, fontWeight: 700, color: P, background: P_L, border: `1px solid ${P_B}`, borderRadius: 4, padding: '1px 7px' }}>
+            ⇄ Elective in {(sub.classConfigs ?? []).filter(c => c.isOptional).length} class{(sub.classConfigs ?? []).filter(c => c.isOptional).length !== 1 ? 'es' : ''}
+          </span>
         )}
       </div>
 
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', maxWidth: 600 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', maxWidth: 640 }}>
         <colgroup>
           <col style={{ width: 110 }} />
-          <col style={{ width: 96 }} />
-          <col style={{ width: 64 }} />
+          <col style={{ width: 84 }} />
+          <col style={{ width: 60 }} />
           <col />
-          <col style={{ width: 68 }} />
+          <col style={{ width: 64 }} />
           <col style={{ width: 26 }} />
         </colgroup>
         <thead>
@@ -693,7 +709,7 @@ function ClassSlotsExpanded({
             <th style={{ ...thS, textAlign: 'left' }}>Grade</th>
             <th style={{ ...thS, textAlign: 'center' }}>{ALLOCATION_SHORT[unit]}</th>
             <th style={{ ...thS, textAlign: 'center' }}>Max/day</th>
-            <th style={thS} />
+            <th style={{ ...thS, textAlign: 'left', whiteSpace: 'nowrap' }}>⇄ Elective / Slot</th>
             <th style={{ ...thS, textAlign: 'center', whiteSpace: 'nowrap' }}>Lab Req.</th>
             <th style={{ borderBottom: '1px solid #E4E0FF' }} />
           </tr>
@@ -713,6 +729,7 @@ function ClassSlotsExpanded({
               onUpdateSectionMaxDay={onUpdateSectionMaxDay}
               onUpdateSectionConfig={onUpdateSectionConfig}
               onUpdateGradeRequiresLab={onUpdateGradeRequiresLab}
+              onUpdateGradeElective={onUpdateGradeElective}
               onChange={onChange}
               onAddCategory={onAddCategory}
             />
@@ -736,7 +753,7 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
     onAdd({
       id: makeId(), name: name.trim(),
       shortName: generateShortName(name.trim()),
-      category: 'Compulsory', periodsPerWeek: 5,
+      category: 'Scholastic', periodsPerWeek: 5,
       sessionDuration: 45, maxPeriodsPerDay: 2,
       color: P, isOptional: false, requiresLab: false,
       sections: [], classConfigs: [],
@@ -798,12 +815,13 @@ function CategoryHeaderRow({ cat, count, collapsed, onToggle, onRename }: {
     <tr>
       <td colSpan={4} style={{ padding: 0 }}>
         <div style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 7,
-          padding: '4px 12px', background: '#F3F1FF', borderBottom: '1px solid #E8E4FF',
+          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '7px 14px', background: 'linear-gradient(90deg,#EDEAFF 0%,#F5F3FF 100%)',
+          borderBottom: '2px solid #DDD8FF', borderTop: '1px solid #E8E4FF',
         }}>
           <button onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
-            {collapsed ? <ChevronDown size={11} color={P} /> : <ChevronUp size={11} color={P} />}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0, color: P }}>
+            {collapsed ? <ChevronDown size={13} color={P} /> : <ChevronUp size={13} color={P} />}
           </button>
           {editing ? (
             <input
@@ -811,16 +829,19 @@ function CategoryHeaderRow({ cat, count, collapsed, onToggle, onRename }: {
               onChange={e => setDraft(e.target.value)}
               onBlur={commit}
               onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(cat); setEditing(false) }; e.stopPropagation() }}
-              style={{ fontSize: 10.5, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.07em', border: `1.5px solid ${P_B}`, borderRadius: 4, padding: '1px 6px', outline: 'none', background: '#fff', fontFamily: 'inherit' }}
+              style={{ fontSize: 12, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.08em', border: `1.5px solid ${P_B}`, borderRadius: 4, padding: '2px 8px', outline: 'none', background: '#fff', fontFamily: 'inherit' }}
             />
           ) : (
             <span onClick={() => onRename && setEditing(true)} title={onRename ? 'Click to rename category — applies to all its subjects' : undefined}
-              style={{ fontSize: 10.5, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.07em', cursor: onRename ? 'text' : 'default', padding: '1px 4px', borderRadius: 3 }}
-              onMouseEnter={e => { if (onRename) e.currentTarget.style.background = '#EDE9FF' }}
+              style={{ fontSize: 12, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: onRename ? 'text' : 'default', padding: '2px 6px', borderRadius: 4 }}
+              onMouseEnter={e => { if (onRename) e.currentTarget.style.background = '#DDD8FF' }}
               onMouseLeave={e => (e.currentTarget.style.background = '')}
             >{cat}</span>
           )}
-          <span style={{ fontSize: 9.5, fontWeight: 700, color: P, background: P_L, borderRadius: 8, padding: '0 5px', border: `1px solid ${P_B}` }}>{count}</span>
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: P, background: '#fff', borderRadius: 10, padding: '0 7px', border: `1.5px solid ${P_B}`, lineHeight: '18px' }}>{count}</span>
+          {onRename && !editing && (
+            <span style={{ marginLeft: 2, fontSize: 9, color: '#C4C0DC', fontStyle: 'italic' }}>click name to rename</span>
+          )}
         </div>
       </td>
     </tr>
@@ -937,7 +958,8 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
     onUpdate({ classConfigs: updated })
   }
 
-  // Patch category / requiresLab for a single section
+  // Patch any per-section field (requiresLab, isOptional, electiveSlotId, category…).
+  // Syncs global sub.isOptional from sections so the Groups matrix stays up-to-date.
   function handleUpdateSectionConfig(sectionName: string, patch: Partial<SubjectClassConfig>) {
     const allAssigned = getAssignedClasses(sub)
     const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
@@ -950,10 +972,43 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
         sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
         category:         ex?.category,
         requiresLab:      ex?.requiresLab,
+        isOptional:       ex?.isOptional,
+        electiveSlotId:   ex?.electiveSlotId,
       }
       return name === sectionName ? { ...base, ...patch } : base
     })
-    onUpdate({ classConfigs: updated })
+    const globalIsOptional = updated.some(c => c.isOptional === true)
+    const firstSlot = updated.find(c => c.isOptional && c.electiveSlotId)?.electiveSlotId
+    onUpdate({
+      classConfigs: updated,
+      isOptional: globalIsOptional,
+      electiveSlotId: firstSlot,
+    })
+  }
+
+  // Set elective flag for ALL sections of a grade atomically.
+  function handleUpdateGradeElective(classNames: string[], isOptional: boolean) {
+    const classSet    = new Set(classNames)
+    const allAssigned = getAssignedClasses(sub)
+    const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
+    const updated: SubjectClassConfig[] = allAssigned.map(name => {
+      const ex = existingMap.get(name)
+      const base: SubjectClassConfig = {
+        sectionName:      name,
+        periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
+        category:         ex?.category,
+        requiresLab:      ex?.requiresLab,
+        isOptional:       ex?.isOptional,
+        electiveSlotId:   ex?.electiveSlotId,
+      }
+      if (!classSet.has(name)) return base
+      return { ...base, isOptional, ...(!isOptional ? { electiveSlotId: undefined } : {}) }
+    })
+    const globalIsOptional = updated.some(c => c.isOptional === true)
+    const firstSlot = updated.find(c => c.isOptional && c.electiveSlotId)?.electiveSlotId
+    onUpdate({ classConfigs: updated, isOptional: globalIsOptional, electiveSlotId: firstSlot })
   }
 
   // Atomically set requiresLab for all sections of a grade
@@ -1087,6 +1142,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
               onUpdateSectionMaxDay={handleUpdateSectionMaxDay}
               onUpdateSectionConfig={handleUpdateSectionConfig}
               onUpdateGradeRequiresLab={handleUpdateGradeRequiresLab}
+              onUpdateGradeElective={handleUpdateGradeElective}
               onAddCategory={onAddCategory ?? (() => {})}
               onDeleteCategory={onDeleteCategory}
               extraCats={extraCats}
@@ -1366,7 +1422,7 @@ export function SubjectsPanel({
         id: makeId(),
         name:            cells[0]?.trim() || '',
         shortName:       cells[1]?.trim() || generateShortName(cells[0]?.trim() || ''),
-        category:        'Compulsory' as any,
+        category:        'Scholastic' as any,
         periodsPerWeek:  parseInt(cells[2]) || 5,
         sessionDuration: sessionMins, maxPeriodsPerDay: 2,
         color: P, isOptional: false, requiresLab: false,

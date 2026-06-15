@@ -981,9 +981,8 @@ function fallbackSlot(name: string, group: GradeGroup): number {
 /** Category label for a seeded subject — drives the Subjects-tab grouping. */
 function seedCategory(name: string): string {
   const rule = getRule(name)
-  if (rule?.isActivity)  return 'Activity'
-  if (rule?.isLanguage)  return 'Language'
-  return 'Compulsory'
+  if (rule?.isActivity) return 'Co-scholastic'
+  return 'Scholastic'
 }
 
 export interface SeededSubject {
@@ -1056,7 +1055,6 @@ export function seedStandardSubjects(
 
   // Stable, human order: core academics first, activities/languages later,
   // alphabetical within. Mirrors how a scheme of studies is usually printed.
-  const rank = (s: SeededSubject) =>
-    s.category === 'Activity' ? 2 : s.category === 'Language' ? 1 : 0
+  const rank = (s: SeededSubject) => s.category === 'Co-scholastic' ? 1 : 0
   return out.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
 }

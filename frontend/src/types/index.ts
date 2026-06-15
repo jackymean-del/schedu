@@ -230,6 +230,13 @@ export interface SubjectClassConfig {
   category?: string
   /** Per-section lab requirement override */
   requiresLab?: boolean
+  /** Per-section elective flag — when true, students choose this subject from a
+   *  list of options for this specific class. Drives the Groups preference matrix.
+   *  Setting this on any section also sets the global Subject.isOptional flag. */
+  isOptional?: boolean
+  /** Per-section elective slot name (e.g. "R1", "R2", "PCM", "4th-Option").
+   *  Subjects sharing the same slot are mutually exclusive for that class. */
+  electiveSlotId?: string
 }
 
 export const SubjectSchema = z.object({
