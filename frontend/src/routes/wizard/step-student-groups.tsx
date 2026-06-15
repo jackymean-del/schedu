@@ -418,8 +418,24 @@ function BlockCard({
 
   const getTotal = (sec: string) => sectionsStore.find((s: any) => s.name === sec)?.strength ?? 0
 
-  // ── mutators (always emit the full new combos array for this block) ──
-  const commit = (next: AndComboGroup[]) => onReplace(next)
+  // ── mutators ──
+  // Once a block has generated groups, structural/headcount edits auto-regenerate
+  // (no explicit "Generate" press needed). Manually-set rooms are preserved when
+  // a group's subject + section composition is unchanged.
+  const hasGroups = combos.some(c => (c.generatedGroups?.length ?? 0) > 0)
+  const roomKey = (g: AndTeachingGroup) => `${g.subjects[0] ?? g.bundleName}|${g.sectionSlices.map(s => s.sectionName).sort().join(',')}`
+  const regen = (cs: AndComboGroup[]): AndComboGroup[] => cs.map(c => {
+    const prevRoom = new Map((c.generatedGroups ?? []).map(g => [roomKey(g), g.room]))
+    const fresh = generateAndGroups(c, rooms).map(g => {
+      const r = prevRoom.get(roomKey(g))
+      return r ? { ...g, room: r } : g
+    })
+    return { ...c, generatedGroups: fresh }
+  })
+  /** auto-regenerating commit — used by all matrix / scope / structure edits */
+  const commit = (next: AndComboGroup[]) => onReplace(hasGroups ? regen(next) : next)
+  /** raw commit — bypasses regeneration (room edits, group deletes, name edits) */
+  const commitRaw = (next: AndComboGroup[]) => onReplace(next)
 
   const setCell = (comboId: string, sec: string, sub: string, val: number) =>
     commit(combos.map(c => c.id !== comboId ? c : {
@@ -455,7 +471,7 @@ function BlockCard({
     }))
 
   const renameCombo = (comboId: string, name: string) =>
-    commit(combos.map(c => c.id === comboId ? { ...c, name } : c))
+    commitRaw(combos.map(c => c.id === comboId ? { ...c, name } : c))
 
   const addCombo = () =>
     commit([...combos, {
@@ -468,7 +484,7 @@ function BlockCard({
 
   const setScope = (s: AndGroupScope) => commit(combos.map(c => ({ ...c, groupingScope: s })))
   const setRoomSensitive = (b: boolean) => commit(combos.map(c => ({ ...c, roomCapacitySensitive: b })))
-  const renameBlock = (name: string) => commit(combos.map(c => ({ ...c, blockName: name })))
+  const renameBlock = (name: string) => commitRaw(combos.map(c => ({ ...c, blockName: name })))
 
   const splitEvenly = () =>
     commit(combos.map(c => {
@@ -484,10 +500,10 @@ function BlockCard({
       return { ...c, strengthMatrix: sm }
     }))
 
-  const generate = () => commit(combos.map(c => ({ ...c, generatedGroups: generateAndGroups(c, rooms) })))
-  const clearGroups = () => commit(combos.map(c => ({ ...c, generatedGroups: undefined })))
+  const generate = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: generateAndGroups(c, rooms) })))
+  const clearGroups = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: undefined })))
   const deleteGroup = (comboId: string, groupId: string) =>
-    commit(combos.map(c => c.id !== comboId ? c : { ...c, generatedGroups: (c.generatedGroups ?? []).filter(g => g.id !== groupId) }))
+    commitRaw(combos.map(c => c.id !== comboId ? c : { ...c, generatedGroups: (c.generatedGroups ?? []).filter(g => g.id !== groupId) }))
 
   const allGenerated = combos.flatMap(c => c.generatedGroups ?? [])
   const colorOf = (sub: string) => {
@@ -710,7 +726,7 @@ function BlockCard({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 8 }}>
             {combos.flatMap(c => (c.generatedGroups ?? []).map(g => (
               <ParallelGroupCard key={g.id} tg={g} color={colorOf(g.subjects[0] ?? g.bundleName)} allRoomNames={allRoomNames}
-                onRoom={room => commit(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
+                onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
                 onDelete={() => deleteGroup(c.id, g.id)} />
             )))}
           </div>
