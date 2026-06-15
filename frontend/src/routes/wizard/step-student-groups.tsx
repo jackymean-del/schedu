@@ -41,13 +41,51 @@ function isScienceSenior(secName: string): boolean {
     (secName.startsWith('XI') || secName.startsWith('XII'))
 }
 
-const SCOPE_META: Record<AndGroupScope, { short: string; label: string; desc: string }> = {
-  PER_SECTION: { short: 'Per section', label: 'Per section', desc: 'Each section keeps its own teaching group — no merging across sections.' },
-  SAME_GRADE:  { short: 'Same grade',  label: 'Same grade',  desc: 'Merge sections of the same grade into one group (XI-A + XI-B → one XI group).' },
-  SAME_STREAM: { short: 'Same stream', label: 'Same stream', desc: 'Merge sections of the same stream across grades into one group.' },
-  CROSS_GRADE: { short: 'Pool all',    label: 'Pool all',    desc: 'Merge every section in this card into one pooled group.' },
+const ROMAN: Record<string, number> = { I:1, II:2, III:3, IV:4, V:5, VI:6, VII:7, VIII:8, IX:9, X:10, XI:11, XII:12 }
+function gradeNum(grade: string): number {
+  const u = (grade ?? '').toUpperCase().replace(/[^IVX0-9]/g, '')
+  if (ROMAN[u] != null) return ROMAN[u]
+  const n = parseInt(grade)
+  return isNaN(n) ? 99 : n
 }
-const SCOPE_ORDER: AndGroupScope[] = ['PER_SECTION', 'SAME_GRADE', 'SAME_STREAM', 'CROSS_GRADE']
+/** Grade-band proxy used for the "block" scope dimension. */
+function blockOf(secName: string): string {
+  const n = gradeNum(parseSection(secName).grade)
+  if (n <= 5) return 'Primary'
+  if (n <= 8) return 'Middle'
+  if (n <= 10) return 'Secondary'
+  if (n <= 12) return 'Senior'
+  return 'Other'
+}
+
+// ── grouping scope (4 independent same/cross axes) ──────────────────────────────
+
+const DEFAULT_SCOPE: AndGroupScope = { section: 'same', grade: 'same', stream: 'same', block: 'same' }
+
+const SCOPE_DIMS: { key: keyof AndGroupScope; label: string; desc: string }[] = [
+  { key: 'section', label: 'Section', desc: 'Same: each section keeps its own group. Cross: sections may merge.' },
+  { key: 'grade',   label: 'Grade',   desc: 'Same: only merge sections of the same grade. Cross: merge across grades.' },
+  { key: 'stream',  label: 'Stream',  desc: 'Same: only merge same-stream sections. Cross: merge across streams.' },
+  { key: 'block',   label: 'Block',   desc: 'Same: only merge within the same grade-band (Primary/Middle/Secondary/Senior). Cross: merge across bands.' },
+]
+
+/** Tolerant read: migrates the old single-enum groupingScope to the axis record. */
+function getScope(g: AndComboGroup): AndGroupScope {
+  const s: any = g.groupingScope
+  if (!s) return DEFAULT_SCOPE
+  if (typeof s === 'string') {
+    switch (s) {
+      case 'SAME_GRADE':  return { section: 'cross', grade: 'same',  stream: 'cross', block: 'cross' }
+      case 'SAME_STREAM': return { section: 'cross', grade: 'cross', stream: 'same',  block: 'cross' }
+      case 'CROSS_GRADE': return { section: 'cross', grade: 'cross', stream: 'cross', block: 'cross' }
+      default:            return DEFAULT_SCOPE // PER_SECTION
+    }
+  }
+  return {
+    section: s.section ?? 'same', grade: s.grade ?? 'same',
+    stream: s.stream ?? 'same',  block: s.block ?? 'same',
+  }
+}
 
 // ── group <-> column helpers ─────────────────────────────────────────────────
 
@@ -73,28 +111,79 @@ function getCell(group: AndComboGroup, sec: string, sub: string): number {
   return group.strengthMatrix?.[sec]?.[sub] ?? 0
 }
 
-// ── AI suggestion (conservative) ────────────────────────────────────────────────
+// ── AI suggestion (slot / category driven) ──────────────────────────────────────
 
-/** Auto-create ONLY high-confidence stream splits. Returns [] for everything
- *  else — broadly-shared electives are handled by detectSharedElectives(). */
+interface OptInfo { sub: any; optional: boolean; slot?: string; category?: string; sections: string[] }
+
+function readOpt(sub: any): OptInfo {
+  const cfgs = (sub.classConfigs ?? []) as any[]
+  const optional = sub.isOptional === true || cfgs.some(c => c.isOptional === true)
+  const slot = sub.electiveSlotId ?? cfgs.find(c => c.electiveSlotId)?.electiveSlotId
+  const category = sub.category ?? cfgs.find(c => c.category)?.category
+  const fromCfg = cfgs.map(c => c.sectionName).filter(Boolean) as string[]
+  const sections = [...new Set([...fromCfg, ...(sub.sections ?? [])])]
+  return { sub, optional, slot, category, sections }
+}
+
+/**
+ * Auto-build combination tables from how electives were set up in Resources →
+ * Subjects. Mutually-exclusive electives are grouped by:
+ *   1. electiveSlotId  (explicit slot — strongest signal), else
+ *   2. category + identical section signature (e.g. two "Co-scholastic" options
+ *      offered to the same sections).
+ * A group becomes a card ONLY when it has ≥2 distinct subjects — a lone elective
+ * shared across sections is never turned into a combination (per requirement).
+ * Different slots / categories stay in SEPARATE cards (Maths/Bio apart from PE/Painting).
+ */
 function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[] {
-  const out: AndComboGroup[] = []
+  const opts = subjects.map(readOpt).filter(o => o.optional && o.sections.length > 0)
 
-  const sci = sections.filter(s => isScienceSenior(s.name))
-  if (sci.length > 0) {
-    const maths = subjects.find(s => s.isOptional && /math/i.test(s.name))?.name
-    const bio   = subjects.find(s => s.isOptional && /bio/i.test(s.name))?.name
-    const cols = [maths, bio].filter(Boolean) as string[]
-    if (cols.length >= 2) {
-      out.push({
-        id: `ai_sci_${Date.now()}`,
-        name: autoName(cols),
+  const byKey = new Map<string, OptInfo[]>()
+  for (const o of opts) {
+    const key = o.slot
+      ? `slot:${o.slot}`
+      : o.category
+        ? `cat:${o.category}|${[...o.sections].sort().join(',')}`
+        : null
+    if (!key) continue
+    if (!byKey.has(key)) byKey.set(key, [])
+    byKey.get(key)!.push(o)
+  }
+
+  const out: AndComboGroup[] = []
+  const seen = new Set<string>()
+  for (const [key, members] of byKey) {
+    const cols = [...new Set(members.map(m => m.sub.name))]
+    if (cols.length < 2) continue                 // lone elective → not a combination
+    const sig = [...cols].sort().join('|')
+    if (seen.has(sig)) continue
+    seen.add(sig)
+    const secs = [...new Set(members.flatMap(m => m.sections))]
+      .sort((a, b) => gradeNum(parseSection(a).grade) - gradeNum(parseSection(b).grade) || a.localeCompare(b))
+    out.push({
+      id: `ai_${key.replace(/[^a-z0-9]/gi, '').slice(0, 14)}_${cols.join('').replace(/[^a-z0-9]/gi, '').slice(0, 10)}`,
+      name: autoName(cols),
+      applicableSections: secs,
+      subjects: cols,
+      bundles: syncBundles(cols),
+      groupingScope: DEFAULT_SCOPE,
+      strengthMatrix: {},
+      aiSuggested: true,
+    })
+  }
+
+  // Fallback: classic Science Maths-vs-Bio split when no slot/category produced one
+  if (out.length === 0) {
+    const sci = sections.filter(s => isScienceSenior(s.name))
+    if (sci.length > 0) {
+      const maths = subjects.find(s => readOpt(s).optional && /math/i.test(s.name))?.name
+      const bio   = subjects.find(s => readOpt(s).optional && /bio/i.test(s.name))?.name
+      const cols = [maths, bio].filter(Boolean) as string[]
+      if (cols.length >= 2) out.push({
+        id: 'ai_sci_mathsbio', name: autoName(cols),
         applicableSections: sci.map(s => s.name),
-        subjects: cols,
-        bundles: syncBundles(cols),
-        groupingScope: 'PER_SECTION',
-        strengthMatrix: {},
-        aiSuggested: true,
+        subjects: cols, bundles: syncBundles(cols),
+        groupingScope: DEFAULT_SCOPE, strengthMatrix: {}, aiSuggested: true,
       })
     }
   }
@@ -102,33 +191,34 @@ function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[
   return out
 }
 
-/** Optional subjects that look like plain elective choices (offered across
- *  sections) but are NOT part of an auto-created combination. These belong in
- *  the OR tab — we only surface them as a hint, never bundle them. */
+/** Optional subjects NOT consumed by any auto card (lone electives). Surfaced as
+ *  a hint pointing to the OR tab — never bundled into a combination. */
 function detectSharedElectives(subjects: any[], consumed: Set<string>): string[] {
   const shared: string[] = []
-  for (const sub of subjects.filter(s => s.isOptional)) {
+  for (const sub of subjects) {
     if (consumed.has(sub.name)) continue
-    const fromCfg = (sub.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean) as string[]
-    const secs = [...new Set([...fromCfg, ...(sub.sections ?? [])])]
-    if (secs.length >= 2) shared.push(sub.name)
+    const o = readOpt(sub)
+    if (o.optional && o.sections.length >= 2) shared.push(sub.name)
   }
   return shared
 }
 
 // ── teaching-group generation (scope-aware) ─────────────────────────────────────
 
+/** Pool key from the scope axes set to 'same'. Empty (all cross) → one pool. */
 function poolKeyFor(scope: AndGroupScope, secName: string): string {
-  if (scope === 'CROSS_GRADE') return 'all'
   const { grade, stream } = parseSection(secName)
-  if (scope === 'SAME_GRADE')  return grade
-  if (scope === 'SAME_STREAM') return stream || grade
-  return secName // PER_SECTION
+  const parts: string[] = []
+  if (scope.section === 'same') parts.push('S:' + secName)
+  if (scope.grade === 'same')   parts.push('G:' + grade)
+  if (scope.stream === 'same')  parts.push('T:' + (stream || '-'))
+  if (scope.block === 'same')   parts.push('B:' + blockOf(secName))
+  return parts.join('|') || 'ALL'
 }
 
 function generateAndGroups(group: AndComboGroup, rooms: any[]): AndTeachingGroup[] {
   const cols = getCols(group)
-  const scope = group.groupingScope ?? 'PER_SECTION'
+  const scope = getScope(group)
   const sorted = [...rooms].sort((a, b) => (a.capacity ?? 0) - (b.capacity ?? 0))
   const biggest = sorted.length > 0 ? sorted[sorted.length - 1].capacity ?? 0 : Infinity
   const result: AndTeachingGroup[] = []
@@ -265,7 +355,7 @@ function ComboCard({
   const cardRef = useRef<HTMLDivElement>(null)
 
   const cols  = getCols(group)
-  const scope = group.groupingScope ?? 'PER_SECTION'
+  const scope = getScope(group)
 
   useEffect(() => {
     if (!picker) return
@@ -354,20 +444,27 @@ function ComboCard({
         </button>
       </div>
 
-      {/* scope selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderBottom: '1px solid #F0EDFF', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 9.5, fontWeight: 700, color: '#8B87AD', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Group:</span>
-        {SCOPE_ORDER.map(sc => {
-          const active = scope === sc
+      {/* scope selector — 4 independent same/cross axes */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid #F0EDFF', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 9.5, fontWeight: 700, color: '#8B87AD', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Merge:</span>
+        {SCOPE_DIMS.map(dim => {
+          const val = scope[dim.key]
           return (
-            <button key={sc} title={SCOPE_META[sc].desc} onClick={() => patch({ groupingScope: sc })} style={{
-              padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 600,
-              border: `1.5px solid ${active ? '#7C6FE0' : '#E4E0FF'}`,
-              background: active ? '#7C6FE0' : '#fff',
-              color: active ? '#fff' : '#9CA3AF', cursor: 'pointer', fontFamily: 'inherit',
-            }}>
-              {SCOPE_META[sc].short}
-            </button>
+            <div key={dim.key} title={dim.desc} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#8B87AD', padding: '2px 5px', background: '#F8F7FF' }}>{dim.label}</span>
+              {(['same', 'cross'] as const).map(v => {
+                const active = val === v
+                return (
+                  <button key={v} onClick={() => patch({ groupingScope: { ...scope, [dim.key]: v } })} style={{
+                    padding: '2px 7px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    background: active ? (v === 'same' ? '#7C6FE0' : '#F59E0B') : '#fff',
+                    color: active ? '#fff' : '#C4C0DC',
+                  }}>
+                    {v === 'same' ? 'Same' : 'Cross'}
+                  </button>
+                )
+              })}
+            </div>
           )
         })}
       </div>
@@ -547,7 +644,7 @@ export function StepStudentGroups() {
   }
   const addBlank = () => setAndComboGroups([
     ...groups,
-    { id: makeId(), name: '', applicableSections: [], subjects: [], bundles: [], groupingScope: 'PER_SECTION', strengthMatrix: {} } as AndComboGroup,
+    { id: makeId(), name: '', applicableSections: [], subjects: [], bundles: [], groupingScope: DEFAULT_SCOPE, strengthMatrix: {} } as AndComboGroup,
   ])
   const runAiSuggest = () => {
     const fresh = suggestAndComboGroups(subjects as any[], sections as any[])

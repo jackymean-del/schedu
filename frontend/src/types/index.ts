@@ -1223,8 +1223,17 @@ export interface SubjectBundle {
   color?: string      // display color
 }
 
-/** How teaching groups merge sections within one AND combination. */
-export type AndGroupScope = 'PER_SECTION' | 'SAME_GRADE' | 'SAME_STREAM' | 'CROSS_GRADE'
+/** How teaching groups merge sections within one AND combination.
+ *  Each dimension is an independent same/cross axis (multi-select):
+ *   - 'same'  → partition by this dimension (only merge sections that share it)
+ *   - 'cross' → ignore this dimension when merging
+ *  section:'same' is the finest grain (each section stays its own group). */
+export interface AndGroupScope {
+  section: 'same' | 'cross'
+  grade:   'same' | 'cross'
+  stream:  'same' | 'cross'
+  block:   'same' | 'cross'
+}
 
 /** One AND-group card represents a single split point:
  *  "In these sections, students are divided across these mutually-exclusive subjects."

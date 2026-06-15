@@ -1046,10 +1046,8 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
         if (!byGroup.has(grp)) byGroup.set(grp, new Map())
         byGroup.get(grp)!.set(grade, sm)
       })
-    // Also include any custom empty groups so they appear in the list
-    groupDefs.forEach(def => {
-      if (!byGroup.has(def.name)) byGroup.set(def.name, new Map())
-    })
+    // Empty groups (no sections) are intentionally NOT shown — a group only
+    // appears once at least one section falls under it.
     const groupSortKeyDyn = (name: string) => { const i = groupDefs.findIndex(d => d.name === name); return i >= 0 ? i : 99 }
     return new Map([...byGroup.entries()].sort((a, b) => groupSortKeyDyn(a[0]) - groupSortKeyDyn(b[0])))
   }, [sections, search, sortAZ, gradeGroupFn, groupDefs])
