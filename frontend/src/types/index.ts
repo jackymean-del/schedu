@@ -1221,22 +1221,31 @@ export interface SubjectBundle {
   name: string        // display name: "PCM", "PCB", "Arts", "Commerce"
   subjects: string[]  // ALL subject names in this bundle
   color?: string      // display color
+  /** Per-section, per-subject headcount. [sectionName][subjectName] = count.
+   *  Validation: sum over subjects for a section = section total. */
+  strengthMatrix?: Record<string, Record<string, number>>
 }
 
-/** One AND-group card represents a single split point:
- *  "In these sections, students are divided into these bundles."
- *  E.g. "Science XI-XII: PCM vs PCB" */
+/** One AND-group matrix: students in these sections split across subject columns.
+ *  E.g. "Science XI–XII: Maths vs Bio" — rows = sections, columns = subjects. */
 export interface AndComboGroup {
   id: string
-  name: string                   // user-facing name: "Science XI-XII Combination"
-  applicableSections: string[]   // which sections this split applies to
-  bundles: SubjectBundle[]       // 2+ mutually exclusive options
-  /** Student count matrix: sectionName → bundleId → headcount.
-   *  Validation: for each section, sum(bundleHeadcounts) === section.totalStudents */
+  name: string
+  applicableSections: string[]
+  bundles: SubjectBundle[]       // kept for backward compat; new UI uses subjectColumns
+  /** Ordered list of subject-column headers for the inline matrix UI */
+  subjectColumns?: string[]
+  /** Parallel grouping scope — controls how teaching groups are formed */
+  groupingScope?: {
+    section: 'same' | 'cross'
+    stream: 'same' | 'cross'
+    class: 'same' | 'cross'
+    block: 'same' | 'cross'
+  }
+  /** Student count matrix: sectionName → subjectName → headcount.
+   *  Validation: for each section, sum(subjectHeadcounts) === section.totalStudents */
   strengthMatrix: Record<string, Record<string, number>>
-  /** AI-suggested? Shows a badge if true, dismissed once user edits */
   aiSuggested?: boolean
-  /** Resolved teaching groups (generated, not user-entered) */
   generatedGroups?: AndTeachingGroup[]
 }
 
