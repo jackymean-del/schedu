@@ -1,99 +1,111 @@
 /**
  * Step 4 — AND Groups + OR Groups
  *
- * AND Groups tab: Inline matrix tables — sections as rows, subjects as columns.
- *   No modal. Add subjects / sections directly inside the table.
- *   Grouping scope toggles (same/cross × section/stream/class/block).
+ * AND Groups tab: Subject bundles where students split into mutually exclusive
+ *   combinations (e.g. PCM vs PCB). Each bundle card has a per-section strength
+ *   matrix and can generate concrete teaching groups.
  *
- * OR Groups tab: Elective slots via SubjectGroupsSection (unchanged).
+ * OR Groups tab: Elective slots where students pick one subject from a list
+ *   (e.g. R1/R2/R3 regional language, PE/Art/Music). Uses SubjectGroupsSection.
  */
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
-import type { AndComboGroup, AndTeachingGroup } from '@/types'
+import type { AndComboGroup, AndTeachingGroup, SubjectBundle } from '@/types'
 import {
-  Layers, Shuffle, ChevronRight, ChevronLeft, Plus, Trash2,
-  Sparkles, RefreshCw, Zap, CheckCircle2, AlertCircle, XCircle,
+  Layers, Shuffle, ChevronRight, ChevronLeft, Plus, Trash2, Pencil,
+  Sparkles, Users, Check, X, RefreshCw, Info, Zap, CheckCircle2,
+  AlertCircle, XCircle,
 } from 'lucide-react'
 import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSection'
 
-// ── constants & helpers ────────────────────────────────────────────────────────
+// ── color palette ──────────────────────────────────────────────────────────────
 
-const PALETTE = ['#7C6FE0','#10B981','#F59E0B','#EF4444','#3B82F6','#EC4899','#8B5CF6','#06B6D4']
+const BUNDLE_COLORS = ['#7C6FE0', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#8B5CF6', '#06B6D4']
+function bundleColor(i: number) { return BUNDLE_COLORS[i % BUNDLE_COLORS.length] }
 function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
-function colColor(i: number) { return PALETTE[i % PALETTE.length] }
 
-type ScopeVal = 'same' | 'cross'
-interface GroupingScope { section: ScopeVal; stream: ScopeVal; class: ScopeVal; block: ScopeVal }
-const DEFAULT_SCOPE: GroupingScope = { section: 'cross', stream: 'same', class: 'same', block: 'same' }
+// ── helpers ────────────────────────────────────────────────────────────────────
 
-function getSubjectCols(group: AndComboGroup): string[] {
-  if (group.subjectColumns && group.subjectColumns.length > 0) return group.subjectColumns
-  const cols: string[] = []
-  for (const b of group.bundles ?? []) {
-    for (const s of b.subjects) { if (!cols.includes(s)) cols.push(s) }
-  }
-  return cols
+function guessStream(secName: string): string {
+  const u = secName.toUpperCase()
+  if (u.includes('SCIENCE') || u.includes('SCI') || u.includes('PCM') || u.includes('PCB')) return 'Science'
+  if (u.includes('COMMERCE') || u.includes('COM')) return 'Commerce'
+  if (u.includes('HUM') || u.includes('ARTS')) return 'Humanities'
+  return 'General'
 }
 
-function getScope(group: AndComboGroup): GroupingScope {
-  return group.groupingScope ?? DEFAULT_SCOPE
-}
+// ── AI suggestion logic ────────────────────────────────────────────────────────
 
-function getCell(group: AndComboGroup, sec: string, sub: string): number {
-  return group.strengthMatrix?.[sec]?.[sub] ?? 0
-}
-
-// ── AI suggestion ──────────────────────────────────────────────────────────────
-
-function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[] {
+function suggestAndComboGroups(
+  subjects: any[],
+  sections: any[],
+): AndComboGroup[] {
   const suggestions: AndComboGroup[] = []
 
-  // Science optional split (Maths vs Bio, etc.)
-  const sciSecs = sections.filter(s => {
+  // Science stream: PCM vs PCB
+  const sciSections = sections.filter(s => {
     const u = (s.name ?? '').toUpperCase()
     return (u.includes('SCI') || u.includes('SCIENCE')) &&
       (s.name.startsWith('XI') || s.name.startsWith('XII'))
   })
-  if (sciSecs.length > 0) {
-    const opts = subjects.filter(s => s.isOptional)
-    const mathName = opts.find(s => /math/i.test(s.name))?.name
-    const bioName  = opts.find(s => /bio/i.test(s.name))?.name
-    const cols = [mathName, bioName].filter(Boolean) as string[]
-    if (cols.length >= 2) {
-      suggestions.push({
-        id: `suggest_sci_${Date.now()}`,
-        name: 'Science XI–XII: Maths vs Bio',
-        applicableSections: sciSecs.map(s => s.name),
-        bundles: [], subjectColumns: cols,
-        groupingScope: { section: 'cross', stream: 'same', class: 'same', block: 'same' },
-        strengthMatrix: {}, aiSuggested: true,
+  if (sciSections.length > 0) {
+    const hasMaths = subjects.some(s => s.name.toLowerCase().includes('math') && s.isOptional)
+    const hasBio   = subjects.some(s => s.name.toLowerCase().includes('bio')  && s.isOptional)
+    const hasPhy   = subjects.some(s => s.name.toLowerCase().includes('phys') && s.isOptional)
+    const hasChem  = subjects.some(s => s.name.toLowerCase().includes('chem') && s.isOptional)
+    if ((hasMaths || hasBio) && (hasPhy || hasChem)) {
+      const bundles: SubjectBundle[] = []
+      if (hasMaths) bundles.push({
+        id: 'pcm', name: 'PCM',
+        subjects: ['Physics','Chemistry','Mathematics'].filter(n => subjects.some(s => s.name === n)),
+        color: '#7C6FE0',
       })
+      if (hasBio) bundles.push({
+        id: 'pcb', name: 'PCB',
+        subjects: ['Physics','Chemistry','Biology'].filter(n => subjects.some(s => s.name === n)),
+        color: '#10B981',
+      })
+      if (bundles.length >= 2) {
+        suggestions.push({
+          id: `suggest_sci_${Date.now()}`,
+          name: `Science Stream: ${bundles.map(b => b.name).join(' vs ')}`,
+          applicableSections: sciSections.map(s => s.name),
+          bundles,
+          strengthMatrix: {},
+          aiSuggested: true,
+        })
+      }
     }
   }
 
-  // Cross-stream: optional subjects sharing identical section signature
+  // Cross-stream: optional subjects with the same section signature
   const bySig = new Map<string, any[]>()
   for (const sub of subjects.filter(s => s.isOptional)) {
-    const fromCfg = (sub.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean) as string[]
-    const sig = [...new Set([...fromCfg, ...(sub.sections ?? [])])].sort().join('|')
-    if (!sig) continue
-    if (!bySig.has(sig)) bySig.set(sig, [])
-    bySig.get(sig)!.push(sub)
+    const fromConfigs = (sub.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean) as string[]
+    const assigned = [...new Set([...fromConfigs, ...(sub.sections ?? [])])].sort().join('|')
+    if (!assigned) continue
+    if (!bySig.has(assigned)) bySig.set(assigned, [])
+    bySig.get(assigned)!.push(sub)
   }
   for (const [sig, subs] of bySig) {
     if (subs.length < 2) continue
     const alreadyCovered = suggestions.some(sg =>
-      subs.every((s: any) => getSubjectCols(sg).includes(s.name)))
+      subs.every(s => sg.bundles.some(b => b.subjects.includes(s.name))))
     if (alreadyCovered) continue
     const secNames = sig.split('|')
     suggestions.push({
       id: `suggest_sig_${sig.slice(0, 20)}_${Date.now()}`,
       name: `${subs.map((s: any) => s.name).join(' vs ')} (${secNames[0]}…)`,
       applicableSections: secNames,
-      bundles: [], subjectColumns: subs.map((s: any) => s.name),
-      groupingScope: DEFAULT_SCOPE,
-      strengthMatrix: {}, aiSuggested: true,
+      bundles: subs.map((s: any, i: number) => ({
+        id: s.id,
+        name: s.name,
+        subjects: [s.name],
+        color: BUNDLE_COLORS[i % BUNDLE_COLORS.length],
+      })),
+      strengthMatrix: {},
+      aiSuggested: true,
     })
   }
 
@@ -102,458 +114,511 @@ function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[
 
 // ── Teaching group generation ──────────────────────────────────────────────────
 
-function generateMatrixGroups(group: AndComboGroup, rooms: any[]): AndTeachingGroup[] {
-  const cols = getSubjectCols(group)
-  const sorted = [...rooms].sort((a, b) => (a.capacity ?? 0) - (b.capacity ?? 0))
-  const biggest = sorted.length > 0 ? sorted[sorted.length - 1].capacity ?? 0 : Infinity
-  const result: AndTeachingGroup[] = []
+// Composite key for per-subject headcount in strengthMatrix
+function subjKey(bundleId: string, subjectName: string) {
+  return `${bundleId}::${subjectName}`
+}
 
-  for (const sub of cols) {
-    const slices = group.applicableSections
-      .map(sec => ({ sectionName: sec, studentCount: getCell(group, sec, sub) }))
-      .filter(s => s.studentCount > 0)
-    if (slices.length === 0) continue
-    const total = slices.reduce((a, s) => a + s.studentCount, 0)
-    const room = sorted.find(r => (r.capacity ?? 0) >= total) ?? sorted[sorted.length - 1]
-    result.push({
-      id: `${group.id}_${sub.replace(/\s/g, '')}_G1`,
-      bundleId: sub,
-      bundleName: sub,
-      subjects: [sub],
-      sectionSlices: slices,
-      totalStrength: total,
-      room: room?.name ?? room?.actualName,
-      roomCapacity: room?.capacity,
-      capacityWarning: (room?.capacity ?? 0) < total,
-    })
+function generateAndGroups(
+  group: AndComboGroup,
+  rooms: any[],
+): AndTeachingGroup[] {
+  const result: AndTeachingGroup[] = []
+  const sortedRooms = [...rooms].sort((a, b) => (a.capacity ?? 0) - (b.capacity ?? 0))
+  const biggestRoom = sortedRooms.length > 0
+    ? sortedRooms[sortedRooms.length - 1].capacity ?? 0
+    : Infinity
+
+  for (const bundle of group.bundles) {
+    // One teaching group per subject (subjects within a bundle are alternatives)
+    for (const subjectName of bundle.subjects) {
+      const key = subjKey(bundle.id, subjectName)
+      const sectionSlices: Array<{ sectionName: string; studentCount: number }> = []
+      for (const secName of group.applicableSections) {
+        const count = group.strengthMatrix?.[secName]?.[key] ?? 0
+        if (count > 0) sectionSlices.push({ sectionName: secName, studentCount: count })
+      }
+      if (sectionSlices.length === 0) continue
+
+      const totalStrength = sectionSlices.reduce((a, s) => a + s.studentCount, 0)
+      const subKey = subjectName.replace(/\s/g, '')
+
+      const pushGroup = (
+        id: string,
+        slices: Array<{ sectionName: string; studentCount: number }>,
+        strength: number,
+      ) => {
+        const room = sortedRooms.find(r => (r.capacity ?? 0) >= strength)
+          ?? sortedRooms[sortedRooms.length - 1]
+        result.push({
+          id,
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+          subjects: [subjectName],
+          sectionSlices: slices,
+          totalStrength: strength,
+          room: room?.name ?? room?.actualName,
+          roomCapacity: room?.capacity,
+          capacityWarning: (room?.capacity ?? 0) < strength,
+        })
+      }
+
+      if (totalStrength <= biggestRoom || biggestRoom === Infinity) {
+        pushGroup(`${group.id}_${bundle.id}_${subKey}_G1`, sectionSlices, totalStrength)
+      } else {
+        let batch: Array<{ sectionName: string; studentCount: number }> = []
+        let batchStr = 0
+        let gIdx = 1
+        const flush = () => {
+          if (batch.length === 0) return
+          pushGroup(`${group.id}_${bundle.id}_${subKey}_G${gIdx}`, [...batch], batchStr)
+          batch = []; batchStr = 0; gIdx++
+        }
+        for (const slice of sectionSlices) {
+          if (batchStr + slice.studentCount > biggestRoom && batch.length > 0) flush()
+          batch.push(slice); batchStr += slice.studentCount
+        }
+        flush()
+      }
+    }
   }
   return result
 }
 
-// ── Table style helpers ────────────────────────────────────────────────────────
+// ── Mini table helpers ─────────────────────────────────────────────────────────
 
-const TH = (align: 'left' | 'center', w?: number): React.CSSProperties => ({
-  padding: '6px 8px', fontSize: 10, fontWeight: 800, color: '#8B87AD',
-  textTransform: 'uppercase', letterSpacing: '0.07em', background: '#F8F7FF',
-  borderBottom: '2px solid #E8E4FF', textAlign: align,
-  width: w, minWidth: w, whiteSpace: 'nowrap',
-} as React.CSSProperties)
-
-const TD = (align: 'left' | 'center'): React.CSSProperties => ({
-  padding: '5px 8px', textAlign: align, borderBottom: '1px solid #F0EDFF',
-})
-
-// ── Scope toggle row ───────────────────────────────────────────────────────────
-
-const SCOPE_DIMS: { key: keyof GroupingScope; label: string }[] = [
-  { key: 'section', label: 'Section' },
-  { key: 'stream',  label: 'Stream'  },
-  { key: 'class',   label: 'Class'   },
-  { key: 'block',   label: 'Block'   },
-]
-
-function ScopeToggle({ scope, onChange }: { scope: GroupingScope; onChange: (s: GroupingScope) => void }) {
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '8px 14px', borderBottom: '1px solid #F0EDFF', background: '#FAFAFE' }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: '#8B87AD', alignSelf: 'center', textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 90 }}>Parallel groups</span>
-      {SCOPE_DIMS.map(({ key, label }) => (
-        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <span style={{ fontSize: 10, color: '#9CA3AF', marginRight: 2 }}>{label}:</span>
-          {(['same', 'cross'] as ScopeVal[]).map(val => (
-            <button
-              key={val}
-              onClick={() => onChange({ ...scope, [key]: val })}
-              style={{
-                padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                border: `1.5px solid ${scope[key] === val ? '#7C6FE0' : '#E4E0FF'}`,
-                background: scope[key] === val ? '#7C6FE0' : '#fff',
-                color: scope[key] === val ? '#fff' : '#9CA3AF',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              {val === 'same' ? 'Same' : 'Cross'}-{label}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
+function miniTH(align: 'left' | 'center', w?: number): React.CSSProperties {
+  return {
+    padding: '6px 8px', fontSize: 10, fontWeight: 800, color: '#8B87AD',
+    textTransform: 'uppercase', letterSpacing: '0.07em', background: '#F8F7FF',
+    borderBottom: '2px solid #E8E4FF', textAlign: align,
+    width: w, minWidth: w, whiteSpace: 'nowrap',
+  } as React.CSSProperties
+}
+function miniTD(align: 'left' | 'center'): React.CSSProperties {
+  return { padding: '5px 8px', textAlign: align, borderBottom: '1px solid #F0EDFF' }
 }
 
-// ── Subject picker dropdown ────────────────────────────────────────────────────
+// ── AND Group Card ─────────────────────────────────────────────────────────────
 
-function SubjectDropdown({
-  allSubjects, existing, onAdd, onClose,
-}: {
-  allSubjects: string[]
-  existing: string[]
-  onAdd: (s: string) => void
-  onClose: () => void
-}) {
-  const [q, setQ] = useState('')
-  const available = allSubjects.filter(s =>
-    !existing.includes(s) && s.toLowerCase().includes(q.toLowerCase()))
-  return (
-    <div
-      style={{
-        position: 'absolute', zIndex: 400, top: '100%', left: 0, marginTop: 4,
-        background: '#fff', border: '1.5px solid #E4E0FF', borderRadius: 9,
-        boxShadow: '0 8px 28px rgba(0,0,0,0.13)', minWidth: 200,
-      }}
-      onMouseDown={e => e.stopPropagation()}
-    >
-      <div style={{ padding: '6px 8px', borderBottom: '1px solid #F0EDFF' }}>
-        <input
-          autoFocus
-          value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search subjects…"
-          style={{ width: '100%', boxSizing: 'border-box', padding: '4px 7px', borderRadius: 5, border: '1.5px solid #E4E0FF', fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
-        />
-      </div>
-      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-        {available.length === 0
-          ? <div style={{ padding: '10px 12px', fontSize: 12, color: '#C4C0DC' }}>All subjects added</div>
-          : available.map(s => (
-            <button key={s} onMouseDown={() => { onAdd(s); onClose() }} style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '7px 12px', border: 'none', background: 'none',
-              fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: 'inherit',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F5F2FF' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none' }}>
-              + {s}
-            </button>
-          ))
-        }
-      </div>
-    </div>
-  )
-}
-
-// ── Section picker dropdown ────────────────────────────────────────────────────
-
-function SectionDropdown({
-  allSections, existing, onAdd, onClose,
-}: {
-  allSections: string[]
-  existing: string[]
-  onAdd: (s: string) => void
-  onClose: () => void
-}) {
-  const [q, setQ] = useState('')
-  const available = allSections.filter(s =>
-    !existing.includes(s) && s.toLowerCase().includes(q.toLowerCase()))
-  return (
-    <div
-      style={{
-        position: 'absolute', zIndex: 400, bottom: '100%', left: 0, marginBottom: 4,
-        background: '#fff', border: '1.5px solid #E4E0FF', borderRadius: 9,
-        boxShadow: '0 8px 28px rgba(0,0,0,0.13)', minWidth: 200,
-      }}
-      onMouseDown={e => e.stopPropagation()}
-    >
-      <div style={{ padding: '6px 8px', borderBottom: '1px solid #F0EDFF' }}>
-        <input
-          autoFocus
-          value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search sections…"
-          style={{ width: '100%', boxSizing: 'border-box', padding: '4px 7px', borderRadius: 5, border: '1.5px solid #E4E0FF', fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
-        />
-      </div>
-      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-        {available.length === 0
-          ? <div style={{ padding: '10px 12px', fontSize: 12, color: '#C4C0DC' }}>All sections added</div>
-          : available.map(s => (
-            <button key={s} onMouseDown={() => { onAdd(s); onClose() }} style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '7px 12px', border: 'none', background: 'none',
-              fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: 'inherit',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F5F2FF' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none' }}>
-              + {s}
-            </button>
-          ))
-        }
-      </div>
-    </div>
-  )
-}
-
-// ── Matrix Table Card ──────────────────────────────────────────────────────────
-
-function MatrixTableCard({
-  group, sections, allSubjectNames, allSectionNames, onUpdate, onDelete, onGenerateGroups,
+function AndGroupCard({
+  group, sections, onUpdate, onDelete, onEdit, onGenerateGroups,
 }: {
   group: AndComboGroup
   sections: any[]
-  allSubjectNames: string[]
-  allSectionNames: string[]
   onUpdate: (g: AndComboGroup) => void
   onDelete: () => void
+  onEdit: () => void
   onGenerateGroups: () => void
 }) {
-  const [showSubjPicker, setShowSubjPicker] = useState(false)
-  const [showSecPicker, setShowSecPicker]   = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
+  const getTotal = (secName: string) =>
+    sections.find((s: any) => s.name === secName)?.strength ?? 0
 
-  const cols  = getSubjectCols(group)
-  const scope = getScope(group)
+  const getSubjCount = (secName: string, bundleId: string, subjectName: string) =>
+    group.strengthMatrix?.[secName]?.[subjKey(bundleId, subjectName)] ?? 0
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    if (!showSubjPicker && !showSecPicker) return
-    const handler = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        setShowSubjPicker(false)
-        setShowSecPicker(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showSubjPicker, showSecPicker])
-
-  const patch = (p: Partial<AndComboGroup>) => onUpdate({ ...group, ...p })
-
-  const setCell = (sec: string, sub: string, val: number) =>
-    patch({
+  const setSubjCount = (secName: string, bundleId: string, subjectName: string, val: number) => {
+    const key = subjKey(bundleId, subjectName)
+    onUpdate({
+      ...group,
       aiSuggested: false,
       strengthMatrix: {
         ...group.strengthMatrix,
-        [sec]: { ...(group.strengthMatrix?.[sec] ?? {}), [sub]: val },
+        [secName]: { ...(group.strengthMatrix?.[secName] ?? {}), [key]: val },
       },
     })
-
-  const addSubject = (sub: string) =>
-    patch({ subjectColumns: [...cols, sub], bundles: [], aiSuggested: false })
-
-  const removeSubject = (sub: string) => {
-    const sm: Record<string, Record<string, number>> = {}
-    for (const [sec, vals] of Object.entries(group.strengthMatrix ?? {})) {
-      const v = { ...vals }; delete v[sub]; sm[sec] = v
-    }
-    onUpdate({ ...group, subjectColumns: cols.filter(s => s !== sub), bundles: [], strengthMatrix: sm })
   }
-
-  const addSection = (sec: string) =>
-    patch({ applicableSections: [...group.applicableSections, sec], aiSuggested: false })
-
-  const removeSection = (sec: string) => {
-    const sm = { ...group.strengthMatrix }; delete sm[sec]
-    onUpdate({ ...group, applicableSections: group.applicableSections.filter(s => s !== sec), strengthMatrix: sm })
-  }
-
-  const getTotal = (sec: string) => sections.find(s => s.name === sec)?.strength ?? 0
 
   return (
-    <div ref={cardRef} style={{
-      border: '1.5px solid #E4E0FF', borderRadius: 12, overflow: 'visible',
-      background: '#fff', marginBottom: 16, position: 'relative',
+    <div style={{
+      border: '1.5px solid #E4E0FF', borderRadius: 12, overflow: 'hidden',
+      background: '#FAFAFE', marginBottom: 14,
     }}>
-      {/* Name row */}
+      {/* Card header */}
       <div style={{
-        padding: '10px 14px', background: '#F3F1FF',
+        padding: '12px 16px', background: '#F3F1FF',
         borderBottom: '1px solid #E8E4FF',
-        display: 'flex', alignItems: 'center', gap: 8, borderRadius: '12px 12px 0 0',
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
       }}>
-        {group.aiSuggested && (
-          <span style={{ fontSize: 9, background: '#7C6FE0', color: '#fff', borderRadius: 3, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>⚡ AI</span>
-        )}
-        <input
-          value={group.name}
-          onChange={e => patch({ name: e.target.value, aiSuggested: false })}
-          placeholder="Group name (e.g. Science XI–XII: Maths vs Bio)…"
-          style={{
-            flex: 1, padding: '4px 8px', borderRadius: 6, border: '1.5px solid #E4E0FF',
-            fontSize: 13, fontWeight: 700, outline: 'none', fontFamily: 'inherit',
-            color: '#13111E', background: 'transparent',
-          }}
-        />
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#13111E', flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
+          {group.aiSuggested && (
+            <span style={{ fontSize: 9, background: '#7C6FE0', color: '#fff', borderRadius: 3, padding: '1px 6px', fontWeight: 700 }}>⚡ AI</span>
+          )}
+          {group.name}
+        </span>
+        <span style={{ fontSize: 11, color: '#8B87AD' }}>
+          {group.bundles.length} bundle{group.bundles.length !== 1 ? 's' : ''} · {group.applicableSections.length} section{group.applicableSections.length !== 1 ? 's' : ''}
+        </span>
+        <button onClick={onEdit} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 4 }}>
+          <Pencil size={13} />
+        </button>
         <button onClick={onDelete} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 4 }}>
-          <Trash2 size={14} />
+          <Trash2 size={13} />
         </button>
       </div>
 
-      {/* Grouping scope row */}
-      <ScopeToggle scope={scope} onChange={s => patch({ groupingScope: s })} />
-
-      {/* Matrix table */}
-      <div style={{ overflowX: 'auto', padding: '10px 14px 0' }}>
-        {cols.length === 0 && group.applicableSections.length === 0 ? (
-          <div style={{ padding: '18px 0', textAlign: 'center', color: '#B8B4D4', fontSize: 12 }}>
-            Use the buttons below to add subjects (columns) and class-sections (rows).
-          </div>
+      {/* One mini-table per bundle (subjects as columns) */}
+      <div style={{ padding: '10px 16px' }}>
+        {group.applicableSections.length === 0 ? (
+          <p style={{ fontSize: 12, color: '#C4C0DC', margin: 0 }}>No sections selected. Edit to add sections.</p>
         ) : (
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                <th style={TH('left', 140)}>Section</th>
-                <th style={TH('center', 62)}>Total</th>
-                {cols.map((sub, ci) => (
-                  <th key={sub} style={{ ...TH('center', 86), color: colColor(ci) }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      {sub}
-                      <button
-                        onClick={() => removeSubject(sub)}
-                        title={`Remove ${sub}`}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D1D5DB', padding: 0, lineHeight: 1, fontSize: 10 }}
-                        onMouseEnter={e => { e.currentTarget.style.color = '#EF4444' }}
-                        onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB' }}
-                      >✕</button>
-                    </span>
-                  </th>
-                ))}
-                <th style={TH('center', 90)}>Validation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {group.applicableSections.map((sec, ri) => {
-                const total = getTotal(sec)
-                const sum   = cols.reduce((a, s) => a + getCell(group, sec, s), 0)
-                const isMatch = total > 0 && sum === total
-                const isOver  = sum > total
+          group.bundles.map(bundle => {
+            const color = bundle.color ?? '#7C6FE0'
+            return (
+              <div key={bundle.id} style={{ marginBottom: 12 }}>
+                {/* Bundle label */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 8px', marginBottom: 4,
+                  background: `${color}12`, borderRadius: 6,
+                  border: `1px solid ${color}30`,
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, fontWeight: 800, color }}>{bundle.name}</span>
+                  <span style={{ fontSize: 10, color: '#9CA3AF' }}>{bundle.subjects.join(' · ')}</span>
+                </div>
+                {/* Table: sections × subjects */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+                    <thead>
+                      <tr>
+                        <th style={miniTH('left', 130)}>Section</th>
+                        <th style={miniTH('center', 62)}>Total</th>
+                        {bundle.subjects.map(sub => (
+                          <th key={sub} style={{ ...miniTH('center', 86), color }}>{sub}</th>
+                        ))}
+                        <th style={miniTH('center', 90)}>Validation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.applicableSections.map((secName, ri) => {
+                        const total = getTotal(secName)
+                        const sum = bundle.subjects.reduce((a, s) => a + getSubjCount(secName, bundle.id, s), 0)
+                        const isMatch = total > 0 && sum === total
+                        const isOver  = sum > total
+                        return (
+                          <tr key={secName} style={{ background: ri % 2 === 0 ? '#fff' : '#FAFAFE' }}>
+                            <td style={miniTD('left')}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{secName}</span>
+                            </td>
+                            <td style={miniTD('center')}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280' }}>{total || '—'}</span>
+                            </td>
+                            {bundle.subjects.map(sub => (
+                              <td key={sub} style={miniTD('center')}>
+                                <input
+                                  type="number" min={0}
+                                  value={getSubjCount(secName, bundle.id, sub) || ''}
+                                  onChange={e => setSubjCount(secName, bundle.id, sub, Math.max(0, parseInt(e.target.value) || 0))}
+                                  placeholder="0"
+                                  style={{
+                                    width: 62, padding: '4px 5px', borderRadius: 6, textAlign: 'center',
+                                    border: `1.5px solid ${isOver ? '#FCA5A5' : color + '55'}`,
+                                    fontSize: 13, fontWeight: 700, outline: 'none',
+                                    fontFamily: 'inherit',
+                                    background: isOver ? '#FEF2F2' : `${color}0D`,
+                                    color: '#111028',
+                                  }}
+                                />
+                              </td>
+                            ))}
+                            <td style={miniTD('center')}>
+                              {total === 0 ? (
+                                <span style={{ fontSize: 10, color: '#C4C0DC' }}>—</span>
+                              ) : isMatch ? (
+                                <span style={{ color: '#15803D', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  <CheckCircle2 size={11} /> {sum}/{total}
+                                </span>
+                              ) : isOver ? (
+                                <span style={{ color: '#DC2626', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  <XCircle size={11} /> +{sum - total}
+                                </span>
+                              ) : sum > 0 ? (
+                                <span style={{ color: '#D97706', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  <AlertCircle size={11} /> −{total - sum}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 10, color: '#C4C0DC' }}>○ {total}</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })
+        )}
+
+        {/* Generate / generated groups */}
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button onClick={onGenerateGroups} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 7,
+            border: '1.5px solid #C4B5FD', background: '#F5F2FF',
+            color: '#7C6FE0', fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <RefreshCw size={11} /> Generate Teaching Groups
+          </button>
+          {group.generatedGroups && group.generatedGroups.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {group.generatedGroups.map(g => {
+                const bc = group.bundles.find(b => b.id === g.bundleId)?.color ?? '#7C6FE0'
                 return (
-                  <tr key={sec} style={{ background: ri % 2 === 0 ? '#fff' : '#FAFAFE' }}>
-                    <td style={TD('left')}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{sec}</span>
-                        <button
-                          onClick={() => removeSection(sec)}
-                          title="Remove section"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D1D5DB', padding: 0, lineHeight: 1, fontSize: 10 }}
-                          onMouseEnter={e => { e.currentTarget.style.color = '#EF4444' }}
-                          onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB' }}
-                        >✕</button>
-                      </span>
-                    </td>
-                    <td style={TD('center')}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280' }}>{total || '—'}</span>
-                    </td>
-                    {cols.map((sub, ci) => (
-                      <td key={sub} style={TD('center')}>
-                        <input
-                          type="number" min={0}
-                          value={getCell(group, sec, sub) || ''}
-                          onChange={e => setCell(sec, sub, Math.max(0, parseInt(e.target.value) || 0))}
-                          placeholder="0"
-                          style={{
-                            width: 60, padding: '4px 5px', borderRadius: 6, textAlign: 'center',
-                            border: `1.5px solid ${isOver ? '#FCA5A5' : colColor(ci) + '55'}`,
-                            fontSize: 13, fontWeight: 700, outline: 'none',
-                            fontFamily: 'inherit',
-                            background: isOver ? '#FEF2F2' : colColor(ci) + '0D',
-                            color: '#111028',
-                          }}
-                        />
-                      </td>
-                    ))}
-                    <td style={TD('center')}>
-                      {total === 0
-                        ? <span style={{ fontSize: 10, color: '#C4C0DC' }}>—</span>
-                        : isMatch
-                          ? <span style={{ color: '#15803D', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}><CheckCircle2 size={11} /> {sum}/{total}</span>
-                          : isOver
-                            ? <span style={{ color: '#DC2626', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}><XCircle size={11} /> +{sum - total}</span>
-                            : sum > 0
-                              ? <span style={{ color: '#D97706', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}><AlertCircle size={11} /> −{total - sum}</span>
-                              : <span style={{ fontSize: 10, color: '#C4C0DC' }}>○ {total}</span>
-                      }
-                    </td>
-                  </tr>
+                  <span key={g.id} title={g.sectionSlices.map(s => `${s.sectionName}: ${s.studentCount}`).join(', ')} style={{
+                    fontSize: 10, fontWeight: 700, padding: '3px 9px',
+                    background: bc, color: '#fff', borderRadius: 5,
+                  }}>
+                    {g.subjects[0] ?? g.bundleName} · {g.totalStrength} students
+                    {g.room ? ` · ${g.room}` : ''}
+                    {g.capacityWarning ? ' ⚠' : ''}
+                  </span>
                 )
               })}
-            </tbody>
-          </table>
-        )}
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Action row: Add Class-Section | Add Subject | Generate */}
+// ── AND Group Modal ────────────────────────────────────────────────────────────
+
+function AndGroupModal({
+  initial, allSubjects, allSections, onSave, onClose,
+}: {
+  initial?: AndComboGroup | null
+  allSubjects: string[]
+  allSections: string[]
+  onSave: (g: AndComboGroup) => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState(initial?.name ?? '')
+  const [selectedSections, setSelectedSections] = useState<string[]>(initial?.applicableSections ?? [])
+  const [bundles, setBundles] = useState<SubjectBundle[]>(
+    initial?.bundles?.length
+      ? initial.bundles
+      : [
+          { id: makeId(), name: '', subjects: [], color: BUNDLE_COLORS[0] },
+          { id: makeId(), name: '', subjects: [], color: BUNDLE_COLORS[1] },
+        ]
+  )
+  const [secQ, setSecQ] = useState('')
+
+  const filteredSections = useMemo(() =>
+    allSections.filter(s => s.toLowerCase().includes(secQ.toLowerCase()) && !selectedSections.includes(s)),
+    [allSections, secQ, selectedSections],
+  )
+
+  const updateBundle = (id: string, patch: Partial<SubjectBundle>) =>
+    setBundles(bs => bs.map(b => b.id === id ? { ...b, ...patch } : b))
+
+  const autoName = (subs: string[]) => subs.map(s => s.split(' ')[0]).join('/')
+
+  const toggleBundleSubject = (bundleId: string, subj: string) => {
+    setBundles(bs => bs.map(b => {
+      if (b.id !== bundleId) return b
+      const newSubjects = b.subjects.includes(subj)
+        ? b.subjects.filter(s => s !== subj)
+        : [...b.subjects, subj]
+      const wasAuto = !b.name || b.name === autoName(b.subjects)
+      return {
+        ...b,
+        subjects: newSubjects,
+        name: wasAuto ? autoName(newSubjects) : b.name,
+      }
+    }))
+  }
+
+  const addBundle = () => {
+    setBundles(bs => [...bs, {
+      id: makeId(), name: '',
+      subjects: [],
+      color: BUNDLE_COLORS[bs.length % BUNDLE_COLORS.length],
+    }])
+  }
+
+  const removeBundle = (id: string) => {
+    setBundles(bs => bs.filter(b => b.id !== id))
+  }
+
+  const canSave = name.trim() && bundles.length >= 2 && bundles.every(b => b.name.trim() && b.subjects.length >= 1) && selectedSections.length >= 1
+
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,0.42)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+      }}
+    >
       <div style={{
-        padding: '10px 14px 12px',
-        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-        borderTop: group.applicableSections.length > 0 || cols.length > 0 ? '1px dashed #E8E4FF' : 'none',
-        marginTop: 6,
+        background: '#fff', borderRadius: 14, width: '100%', maxWidth: 560,
+        maxHeight: '92vh', overflowY: 'auto',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.22)',
+        padding: '22px 22px 18px',
       }}>
-        {/* Add Class-Section */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => { setShowSecPicker(v => !v); setShowSubjPicker(false) }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '5px 12px', borderRadius: 7,
-              border: '1.5px dashed #C4B5FD', background: '#F5F3FF',
-              color: '#7C6FE0', fontSize: 11, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            <Plus size={11} /> Add Class-Section
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#13111E' }}>
+            {initial ? 'Edit AND Group' : 'New AND Group'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 4 }}>
+            <X size={16} />
           </button>
-          {showSecPicker && (
-            <SectionDropdown
-              allSections={allSectionNames}
-              existing={group.applicableSections}
-              onAdd={s => { addSection(s); setShowSecPicker(false) }}
-              onClose={() => setShowSecPicker(false)}
-            />
+        </div>
+
+        {/* Info callout */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18, padding: '9px 12px', background: '#EDE9FF', border: '1px solid #C4B5FD', borderRadius: 8 }}>
+          <Info size={13} color="#7C6FE0" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 11, color: '#4C1D95', lineHeight: 1.55 }}>
+            Students split into <strong>mutually exclusive bundles</strong> — PCM students take Physics+Chemistry+Maths,
+            PCB students take Physics+Chemistry+Biology. The sum of all bundle headcounts = section total.
+          </div>
+        </div>
+
+        {/* Group name */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Group name <span style={{ color: '#EF4444' }}>*</span>
+          </label>
+          <input
+            value={name} onChange={e => setName(e.target.value)}
+            placeholder='e.g. "Science XI-XII: PCM vs PCB"'
+            style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 7, border: '1.5px solid #E4E0FF', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: '#13111E', background: '#FAFAFE' }}
+          />
+        </div>
+
+        {/* Applicable sections */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Applicable sections <span style={{ color: '#EF4444' }}>*</span>
+            <span style={{ color: '#C4C0DC', fontWeight: 400, marginLeft: 4 }}>({selectedSections.length} selected)</span>
+          </label>
+
+          {selectedSections.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8, padding: '7px 10px', borderRadius: 8, background: '#EDE9FF', border: '1px solid #C4B5FD' }}>
+              {selectedSections.map(s => (
+                <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff', border: '1.5px solid #7C6FE0', borderRadius: 5, padding: '2px 7px', fontSize: 11, fontWeight: 700, color: '#4C1D95' }}>
+                  {s}
+                  <button onClick={() => setSelectedSections(p => p.filter(x => x !== s))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7C6FE0', padding: 0, lineHeight: 1, fontSize: 12 }}>✕</button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            value={secQ} onChange={e => setSecQ(e.target.value)}
+            placeholder="Search sections…"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '6px 10px', borderRadius: 7, border: '1.5px solid #E4E0FF', fontSize: 12, outline: 'none', fontFamily: 'inherit', background: '#FAFAFE', marginBottom: 6 }}
+          />
+          {filteredSections.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 90, overflowY: 'auto', padding: '6px 8px', borderRadius: 7, background: '#F9FAFB', border: '1px solid #E4E0FF' }}>
+              {filteredSections.map(s => (
+                <button key={s} onClick={() => setSelectedSections(p => [...p, s])} style={{ padding: '3px 9px', borderRadius: 5, fontSize: 11, fontWeight: 600, border: '1.5px solid #E4E0FF', background: '#fff', color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#EDE9FF'; e.currentTarget.style.borderColor = '#7C6FE0'; e.currentTarget.style.color = '#4C1D95' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#6B7280' }}>
+                  + {s}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Add Subject */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => { setShowSubjPicker(v => !v); setShowSecPicker(false) }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '5px 12px', borderRadius: 7,
-              border: '1.5px dashed #A7F3D0', background: '#F0FDF4',
-              color: '#065F46', fontSize: 11, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            <Plus size={11} /> Add Subject
+        {/* Bundles */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Bundles <span style={{ color: '#EF4444' }}>*</span>
+            <span style={{ color: '#C4C0DC', fontWeight: 400, marginLeft: 4 }}>min 2 required</span>
+          </label>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {bundles.map((bundle, bi) => (
+              <div key={bundle.id} style={{ border: `2px solid ${bundle.color ?? '#E4E0FF'}22`, borderRadius: 10, padding: '12px 14px', background: '#FAFAFE' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: bundle.color ?? '#7C6FE0', flexShrink: 0 }} />
+                  <input
+                    value={bundle.name}
+                    onChange={e => updateBundle(bundle.id, { name: e.target.value })}
+                    placeholder={`Bundle ${bi + 1} name (e.g. PCM, PCB, Arts)`}
+                    style={{ flex: 1, padding: '5px 9px', borderRadius: 6, border: '1.5px solid #E4E0FF', fontSize: 12, fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#13111E' }}
+                  />
+                  {/* Color swatches */}
+                  <div style={{ display: 'flex', gap: 3 }}>
+                    {BUNDLE_COLORS.slice(0, 6).map(c => (
+                      <button key={c} onClick={() => updateBundle(bundle.id, { color: c })} title={c} style={{ width: 14, height: 14, borderRadius: '50%', background: c, border: `2px solid ${bundle.color === c ? '#13111E' : 'transparent'}`, cursor: 'pointer', padding: 0 }} />
+                    ))}
+                  </div>
+                  {bundles.length > 2 && (
+                    <button onClick={() => removeBundle(bundle.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 2 }}>
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+                {/* Subject picker for this bundle */}
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 5 }}>Subjects in bundle:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {allSubjects.map(s => {
+                    const selected = bundle.subjects.includes(s)
+                    return (
+                      <button key={s} onClick={() => toggleBundleSubject(bundle.id, s)} style={{
+                        padding: '3px 9px', borderRadius: 5, fontSize: 11, fontWeight: 600,
+                        border: `1.5px solid ${selected ? (bundle.color ?? '#7C6FE0') : '#E4E0FF'}`,
+                        background: selected ? `${bundle.color ?? '#7C6FE0'}22` : '#fff',
+                        color: selected ? (bundle.color ?? '#7C6FE0') : '#6B7280',
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.1s',
+                      }}>
+                        {selected ? '✓ ' : '+ '}{s}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={addBundle} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px dashed #C4B5FD', background: '#F5F3FF', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Plus size={11} /> Add Bundle
           </button>
-          {showSubjPicker && (
-            <SubjectDropdown
-              allSubjects={allSubjectNames}
-              existing={cols}
-              onAdd={s => { addSubject(s); setShowSubjPicker(false) }}
-              onClose={() => setShowSubjPicker(false)}
-            />
-          )}
         </div>
 
-        <div style={{ flex: 1 }} />
-
-        <button onClick={onGenerateGroups} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '6px 14px', borderRadius: 7,
-          border: '1.5px solid #C4B5FD', background: '#F5F2FF',
-          color: '#7C6FE0', fontSize: 11, fontWeight: 700,
-          cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <RefreshCw size={11} /> Generate Teaching Groups
-        </button>
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid #F3F4F6' }}>
+          <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 7, border: '1.5px solid #D1D5DB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Cancel
+          </button>
+          <button
+            disabled={!canSave}
+            onClick={() => {
+              if (!canSave) return
+              onSave({
+                id: initial?.id ?? makeId(),
+                name: name.trim(),
+                applicableSections: selectedSections,
+                bundles,
+                strengthMatrix: initial?.strengthMatrix ?? {},
+                aiSuggested: false,
+                generatedGroups: undefined,
+              })
+            }}
+            style={{
+              padding: '8px 22px', borderRadius: 7, border: 'none',
+              background: canSave ? '#7C6FE0' : '#E5E7EB',
+              color: canSave ? '#fff' : '#9CA3AF',
+              fontSize: 13, fontWeight: 700,
+              cursor: canSave ? 'pointer' : 'default',
+              fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Check size={13} /> {initial ? 'Save changes' : 'Add AND Group'}
+          </button>
+        </div>
       </div>
-
-      {/* Generated group chips */}
-      {group.generatedGroups && group.generatedGroups.length > 0 && (
-        <div style={{ padding: '0 14px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {group.generatedGroups.map((g, gi) => (
-            <span
-              key={g.id}
-              title={g.sectionSlices.map(s => `${s.sectionName}: ${s.studentCount}`).join(', ')}
-              style={{
-                fontSize: 10, fontWeight: 700, padding: '3px 9px',
-                background: colColor(gi), color: '#fff', borderRadius: 5,
-              }}
-            >
-              {g.subjects[0] ?? g.bundleName} · {g.totalStrength}
-              {g.room ? ` · ${g.room}` : ''}
-              {g.capacityWarning ? ' ⚠' : ''}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -562,12 +627,21 @@ function MatrixTableCard({
 
 export function StepStudentGroups() {
   const store = useTimetableStore() as any
-  const { sections, subjects, setStep, andComboGroups, setAndComboGroups } = store
+  const {
+    sections, subjects, setStep,
+    andComboGroups, setAndComboGroups,
+  } = store
+
   const rooms: any[] = useMemo(() => store.rooms ?? [], [store])
 
   const [activeTab, setActiveTab] = useState<'and' | 'or'>('and')
 
-  // Auto-populate suggestions on first mount when store is empty
+  // ── AND Groups state ───────────────────────────────────────────────────────
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<AndComboGroup | null>(null)
+  const [dismissedSugs, setDismissedSugs] = useState<Set<string>>(new Set())
+
+  // Auto-populate suggestions as real cards on first mount when store is empty
   const didAutoSuggest = useRef(false)
   useEffect(() => {
     if (didAutoSuggest.current) return
@@ -579,48 +653,70 @@ export function StepStudentGroups() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleUpdate = (updated: AndComboGroup) =>
-    setAndComboGroups((andComboGroups as AndComboGroup[]).map((g: AndComboGroup) => g.id === updated.id ? updated : g))
+  const openNew  = () => { setEditTarget(null); setModalOpen(true) }
+  const openEdit = (g: AndComboGroup) => { setEditTarget(g); setModalOpen(true) }
 
-  const handleDelete = (id: string) =>
-    setAndComboGroups((andComboGroups as AndComboGroup[]).filter((g: AndComboGroup) => g.id !== id))
-
-  const handleGenerate = (id: string) => {
-    const group = (andComboGroups as AndComboGroup[]).find((g: AndComboGroup) => g.id === id)
-    if (!group) return
-    handleUpdate({ ...group, generatedGroups: generateMatrixGroups(group, rooms) })
+  const handleSaveGroup = (g: AndComboGroup) => {
+    const isEdit = editTarget && editTarget.id !== ''
+    setAndComboGroups(
+      isEdit
+        ? (andComboGroups as AndComboGroup[]).map((x: AndComboGroup) => x.id === g.id ? g : x)
+        : [...(andComboGroups as AndComboGroup[]), g]
+    )
+    setModalOpen(false)
   }
 
-  const addBlankMatrix = () =>
-    setAndComboGroups([
-      ...(andComboGroups as AndComboGroup[]),
-      {
-        id: makeId(), name: '', applicableSections: [],
-        bundles: [], subjectColumns: [],
-        groupingScope: DEFAULT_SCOPE, strengthMatrix: {},
-      } as AndComboGroup,
-    ])
+  const handleDeleteGroup = (id: string) => {
+    setAndComboGroups((andComboGroups as AndComboGroup[]).filter((g: AndComboGroup) => g.id !== id))
+  }
 
-  const allSubjectNames = useMemo(() => (subjects as any[]).map((s: any) => s.name), [subjects])
-  const allSectionNames = useMemo(() => (sections as any[]).map((s: any) => s.name), [sections])
+  const handleUpdateGroup = (updated: AndComboGroup) => {
+    setAndComboGroups((andComboGroups as AndComboGroup[]).map((g: AndComboGroup) => g.id === updated.id ? updated : g))
+  }
 
+  const handleGenerateGroups = (groupId: string) => {
+    const group = (andComboGroups as AndComboGroup[]).find((g: AndComboGroup) => g.id === groupId)
+    if (!group) return
+    const generated = generateAndGroups(group, rooms)
+    handleUpdateGroup({ ...group, generatedGroups: generated })
+  }
+
+  // AI suggestions
+  const rawSuggestions = useMemo(
+    () => suggestAndComboGroups(subjects as any[], sections as any[]),
+    [subjects, sections],
+  )
+  const suggestions = useMemo(
+    () => rawSuggestions.filter(s => !dismissedSugs.has(s.id)),
+    [rawSuggestions, dismissedSugs],
+  )
+
+  const useSuggestion = (sug: AndComboGroup) => {
+    // Pre-fill the modal with the suggestion — user can still edit
+    setEditTarget({ ...sug, id: '' })
+    setModalOpen(true)
+  }
+
+  // Subject sections map for the OR Groups tab
   const subjectSectionsMap = useMemo(() => {
     const map: Record<string, string[]> = {}
     for (const sub of subjects as any[]) {
-      const fromCfg = (sub.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean) as string[]
-      const all = [...new Set([...fromCfg, ...(sub.sections ?? [])])]
+      const fromConfigs = (sub.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean) as string[]
+      const fromSections: string[] = sub.sections ?? []
+      const all = [...new Set([...fromConfigs, ...fromSections])]
       if (all.length > 0) map[sub.name] = all
     }
     return map
   }, [subjects])
 
-  const groups = andComboGroups as AndComboGroup[]
-  const totalGeneratedGroups = groups.reduce((t, g) => t + (g.generatedGroups?.length ?? 0), 0)
+  const allSubjectNames = useMemo(() => (subjects as any[]).map((s: any) => s.name), [subjects])
+  const allSectionNames = useMemo(() => (sections as any[]).map((s: any) => s.name), [sections])
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ padding: '20px 24px 40px', maxWidth: 1280, margin: '0 auto' }}>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Layers size={20} color="#7C6FE0" />
@@ -628,23 +724,24 @@ export function StepStudentGroups() {
         <div style={{ flex: 1 }}>
           <h2 style={{ fontFamily: "'Plus Jakarta Sans', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-            Define <em style={{ color: '#7C6FE0' }}>AND subject groups</em> (Maths vs Bio, PE vs Painting) and{' '}
+            Define <em style={{ color: '#7C6FE0' }}>AND subject bundles</em> (PCM/PCB) and{' '}
             <em style={{ color: '#D97706' }}>OR elective slots</em> (R1/R2/R3, PE/Art) for parallel scheduling.
           </div>
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #E8E4FF' }}>
+      {/* ── Tab bar ── */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #E8E4FF', paddingBottom: 0 }}>
         {([
-          { key: 'and', label: 'AND Groups', icon: <Layers size={14} /> },
-          { key: 'or',  label: 'OR Groups',  icon: <Shuffle size={14} /> },
+          { key: 'and', label: 'AND Groups', icon: <Layers size={14} />, desc: 'Subject combinations — students split by bundle (PCM/PCB, Arts/Commerce)' },
+          { key: 'or',  label: 'OR Groups',  icon: <Shuffle size={14} />, desc: 'Elective slots — students pick one subject from a list (R1/R2/R3, PE/Art)' },
         ] as const).map(tab => {
           const active = activeTab === tab.key
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
+              title={tab.desc}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 padding: '9px 18px', border: 'none', cursor: 'pointer',
@@ -662,98 +759,127 @@ export function StepStudentGroups() {
         })}
       </div>
 
-      {/* ══ AND Groups ══ */}
+      {/* ══ TAB 1: AND Groups ══ */}
       {activeTab === 'and' && (
         <div>
-          {/* Toolbar */}
+          {/* Tab header bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', marginBottom: 2 }}>AND Groups</div>
               <div style={{ fontSize: 11, color: '#6B7280' }}>
-                Each matrix: sections as rows, subjects as columns — students split across subjects, headcounts sum to section total.
+                Each group defines mutually exclusive bundles — the sum of all bundle headcounts equals the section total.
               </div>
             </div>
-            <button
-              onClick={() => {
-                const fresh = suggestAndComboGroups(subjects as any[], sections as any[])
-                if (fresh.length === 0) {
-                  alert('No suggestions found — mark subjects as Elective in Resources → Subjects first.')
-                } else {
-                  setAndComboGroups([
-                    ...groups,
-                    ...fresh.filter(f => !groups.some(g => g.id === f.id)),
-                  ])
-                }
-              }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 8,
-                border: '1.5px solid #FDE68A', background: '#FFFBEB',
-                color: '#92400E', fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={() => {
+              const fresh = suggestAndComboGroups(subjects as any[], sections as any[])
+              setDismissedSugs(new Set())
+              if (fresh.length === 0) alert('No suggestions found — mark subjects as Elective in Resources → Subjects first.')
+            }} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8,
+              border: '1.5px solid #FDE68A', background: '#FFFBEB',
+              color: '#92400E', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
               <Sparkles size={13} color="#D97706" /> AI Suggest
             </button>
-            <button
-              onClick={addBlankMatrix}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 16px', borderRadius: 8, border: 'none',
-                background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-                boxShadow: '0 2px 8px rgba(124,111,224,0.35)',
-              }}
-            >
-              <Plus size={13} /> Add Matrix Table
+            <button onClick={openNew} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 8,
+              border: 'none', background: '#7C6FE0',
+              color: '#fff', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+              boxShadow: '0 2px 8px rgba(124,111,224,0.35)',
+            }}>
+              <Plus size={13} /> New AND Group
             </button>
           </div>
 
-          {/* Cards */}
-          {groups.length === 0 ? (
-            <div style={{ padding: '44px 20px', textAlign: 'center', background: '#FAFAFE', borderRadius: 12, border: '1.5px dashed #E4E0FF' }}>
+          {/* AI Suggestions */}
+          {suggestions.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Sparkles size={12} color="#D97706" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#92400E', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  AI Suggestions
+                </span>
+                <span style={{ fontSize: 10, color: '#B45309', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '1px 6px', fontWeight: 600 }}>
+                  {suggestions.length}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {suggestions.map(sug => (
+                  <div key={sug.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#92400E', marginBottom: 5 }}>
+                        ⚡ {sug.name}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {sug.bundles.map(b => (
+                          <span key={b.id} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', background: b.color ?? '#7C6FE0', color: '#fff', borderRadius: 4 }}>
+                            {b.name}: {b.subjects.join('+')}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#B45309', marginTop: 5 }}>
+                        Applies to: {sug.applicableSections.slice(0, 4).join(', ')}{sug.applicableSections.length > 4 ? ` +${sug.applicableSections.length - 4} more` : ''}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <button onClick={() => useSuggestion(sug)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#D97706', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Use
+                      </button>
+                      <button onClick={() => setDismissedSugs(p => new Set([...p, sug.id]))} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px', borderRadius: 6, border: '1px solid #FDE68A', background: 'transparent', color: '#B45309', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <X size={10} /> dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(andComboGroups as AndComboGroup[]).length > 0 && (
+                <div style={{ borderTop: '1px dashed #E4E0FF', margin: '16px 0 0' }} />
+              )}
+            </div>
+          )}
+
+          {/* AND Group Cards */}
+          {(andComboGroups as AndComboGroup[]).length === 0 && suggestions.length === 0 ? (
+            <div style={{ padding: '40px 20px', textAlign: 'center', background: '#FAFAFE', borderRadius: 12, border: '1.5px dashed #E4E0FF' }}>
               <Layers size={32} color="#C4B5FD" style={{ marginBottom: 12 }} />
               <div style={{ fontSize: 14, fontWeight: 700, color: '#8B87AD', marginBottom: 6 }}>No AND Groups yet</div>
               <div style={{ fontSize: 12, color: '#B8B4D4', marginBottom: 16, lineHeight: 1.6 }}>
-                Click <strong>AI Suggest</strong> to auto-detect optional subject splits,<br />
-                or <strong>Add Matrix Table</strong> to create one manually.
+                AND groups define subject bundles — e.g. PCM students take Physics+Chemistry+Maths, PCB students take Physics+Chemistry+Biology.<br />
+                Mark subjects as <strong>Elective</strong> in Resources → Subjects, then click <strong>AI Suggest</strong> or <strong>New AND Group</strong>.
               </div>
-              <button onClick={addBlankMatrix} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '9px 20px', borderRadius: 8, border: 'none',
-                background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-                boxShadow: '0 2px 8px rgba(124,111,224,0.3)',
-              }}>
-                <Plus size={14} /> Add Matrix Table
+              <button onClick={openNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
+                <Plus size={14} /> New AND Group
               </button>
             </div>
           ) : (
-            groups.map(group => (
-              <MatrixTableCard
+            (andComboGroups as AndComboGroup[]).map((group: AndComboGroup) => (
+              <AndGroupCard
                 key={group.id}
                 group={group}
                 sections={sections as any[]}
-                allSubjectNames={allSubjectNames}
-                allSectionNames={allSectionNames}
-                onUpdate={handleUpdate}
-                onDelete={() => handleDelete(group.id)}
-                onGenerateGroups={() => handleGenerate(group.id)}
+                onUpdate={handleUpdateGroup}
+                onDelete={() => handleDeleteGroup(group.id)}
+                onEdit={() => openEdit(group)}
+                onGenerateGroups={() => handleGenerateGroups(group.id)}
               />
             ))
           )}
 
-          {/* Summary bar */}
-          {groups.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, padding: '10px 14px', borderRadius: 8, background: '#F5F2FF', border: '1px solid #E8E4FF' }}>
+          {/* Generate all button if any groups exist */}
+          {(andComboGroups as AndComboGroup[]).length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '10px 14px', borderRadius: 8, background: '#F5F2FF', border: '1px solid #E8E4FF' }}>
               <Zap size={13} color="#7C6FE0" />
               <span style={{ fontSize: 11, color: '#7C6FE0', fontWeight: 600, flex: 1 }}>
-                {totalGeneratedGroups} teaching group{totalGeneratedGroups !== 1 ? 's' : ''} across {groups.length} matrix table{groups.length !== 1 ? 's' : ''}
+                {(andComboGroups as AndComboGroup[]).reduce((t: number, g: AndComboGroup) => t + (g.generatedGroups?.length ?? 0), 0)} teaching groups generated across {(andComboGroups as AndComboGroup[]).length} AND group{(andComboGroups as AndComboGroup[]).length !== 1 ? 's' : ''}
               </span>
-              <button
-                onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateMatrixGroups(g, rooms) })))}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-              >
+              <button onClick={() => {
+                const updated = (andComboGroups as AndComboGroup[]).map((g: AndComboGroup) => ({ ...g, generatedGroups: generateAndGroups(g, rooms) }))
+                setAndComboGroups(updated)
+              }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <RefreshCw size={11} /> Generate All
               </button>
             </div>
@@ -775,16 +901,22 @@ export function StepStudentGroups() {
         </div>
       )}
 
-      {/* ══ OR Groups ══ */}
+      {/* ══ TAB 2: OR Groups ══ */}
       {activeTab === 'or' && (
         <div>
+          {/* Explainer banner */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', marginBottom: 20, borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
             <Shuffle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>OR / AND Subject Combos</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>
+                OR / AND Subject Combos
+              </div>
               <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.65 }}>
-                <strong>OR combo</strong> — one subject runs per slot; whichever teacher is free takes that period.<br />
-                <strong>AND combo</strong> — all subjects share one slot in parallel, students divide into groups.
+                <strong>OR combo</strong> — one of the listed subjects runs per slot. Whichever teacher is free takes that period
+                (e.g. <em style={{ fontFamily: "'DM Mono', monospace" }}>PHY OR CHEM OR BIO</em>).<br />
+                <strong>AND combo</strong> — all subjects share one slot in parallel — students divide into groups
+                (e.g. <em style={{ fontFamily: "'DM Mono', monospace" }}>PHY AND CHEM AND BIO</em> = lab split).<br />
+                Combos defined here become pre-set constraints for the timetable generator.
               </div>
             </div>
           </div>
@@ -798,6 +930,7 @@ export function StepStudentGroups() {
             defaultOpen
           />
 
+          {/* Navigation */}
           <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
             <button onClick={() => setActiveTab('and')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E8E4FF', background: '#fff', color: '#4B5275', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               <ChevronLeft size={14} /> AND Groups
@@ -809,6 +942,19 @@ export function StepStudentGroups() {
           </div>
         </div>
       )}
+
+      {/* AND Group Modal */}
+      {modalOpen && (
+        <AndGroupModal
+          initial={editTarget}
+          allSubjects={allSubjectNames}
+          allSections={allSectionNames}
+          onSave={handleSaveGroup}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
