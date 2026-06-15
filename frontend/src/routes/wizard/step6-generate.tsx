@@ -6,7 +6,7 @@ import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from "@/
 import { parseAllocation } from "@/lib/allocationSyntax"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import { getCountry } from "@/lib/orgData"
-import type { OptionalBlock, Period } from "@/types"
+import type { OptionalBlock, OptionalOption, Period } from "@/types"
 
 // ── DLG → OptionalBlock bridge ─────────────────────────────────────────────
 //
