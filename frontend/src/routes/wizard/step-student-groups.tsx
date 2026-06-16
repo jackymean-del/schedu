@@ -259,7 +259,20 @@ function poolKeyFor(scope: AndGroupScope, secName: string): string {
   return parts.join('|') || 'ALL'
 }
 
-function generateAndGroups(group: AndComboGroup, rooms: any[]): AndTeachingGroup[] {
+/** Best-matching teacher for a subject taught to any of these sections. */
+function teacherForSubject(sub: string, secNames: string[], staff: any[]): string {
+  const secSet = new Set(secNames)
+  const teaches = (t: any) => (t.subjects ?? []).includes(sub) ||
+    (t.subjectMappings ?? []).some((m: any) => m.subject === sub)
+  const inSections = (t: any) => (t.classes ?? []).some((c: string) => secSet.has(c)) ||
+    (t.subjectMappings ?? []).some((m: any) => m.subject === sub && (m.classes ?? []).some((c: string) => secSet.has(c)))
+  const exact = staff.find(t => teaches(t) && inSections(t))
+  if (exact) return exact.name
+  const any = staff.find(t => teaches(t))
+  return any?.name ?? ''
+}
+
+function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []): AndTeachingGroup[] {
   const cols = getCols(group)
   const scope = getScope(group)
   const capacitySensitive = group.roomCapacitySensitive !== false
@@ -273,7 +286,7 @@ function generateAndGroups(group: AndComboGroup, rooms: any[]): AndTeachingGroup
   for (const sub of cols) {
     const slices = group.applicableSections
       .map(sec => ({ sectionName: sec, studentCount: getCell(group, sec, sub) }))
-      .filter(s => s.studentCount > 0)
+      .filter(s => s.studentCount > 0)   // negative (NA) and 0 are excluded
     if (slices.length === 0) continue
 
     const pools = new Map<string, typeof slices>()
@@ -286,13 +299,14 @@ function generateAndGroups(group: AndComboGroup, rooms: any[]): AndTeachingGroup
     const subKey = sub.replace(/\s/g, '')
     let gIdx = 1
     const emit = (poolSlices: typeof slices, strength: number) => {
-      const room = sorted.find(r => (r.capacity ?? 0) >= strength) ?? sorted[sorted.length - 1]
+      // Room is intentionally NOT auto-assigned (avoids irrelevant rooms and keeps
+      // the room dropdown unfiltered). The teacher is matched from the faculty list.
       result.push({
         id: `${group.id}_${subKey}_G${gIdx++}`,
         bundleId: sub, bundleName: sub, subjects: [sub],
         sectionSlices: poolSlices, totalStrength: strength,
-        room: room?.name ?? room?.actualName, roomCapacity: room?.capacity,
-        capacityWarning: capacitySensitive && (room?.capacity ?? 0) < strength,
+        teacher: teacherForSubject(sub, poolSlices.map(s => s.sectionName), staff),
+        room: '', roomCapacity: undefined, capacityWarning: false,
       })
     }
 
@@ -374,9 +388,11 @@ function Picker({
 // ── generated parallel group (last-day card style, editable room) ───────────────
 
 function ParallelGroupCard({
-  tg, shade, allRoomNames, onRoom, onDelete,
+  tg, shade, allRoomNames, allTeacherNames, onRoom, onTeacher, onDelete,
 }: {
-  tg: AndTeachingGroup; shade: { dot: string; headBg: string; border: string }; allRoomNames: string[]; onRoom: (room: string) => void; onDelete: () => void
+  tg: AndTeachingGroup; shade: { dot: string; headBg: string; border: string }
+  allRoomNames: string[]; allTeacherNames: string[]
+  onRoom: (room: string) => void; onTeacher: (teacher: string) => void; onDelete: () => void
 }) {
   const subject = tg.subjects[0] ?? tg.bundleName
   const secs = tg.sectionSlices.map(s => s.sectionName)
@@ -402,10 +418,16 @@ function ParallelGroupCard({
           <Users size={9} /> {tg.totalStrength} students
           {tg.roomCapacity ? <span style={{ color: over ? '#DC2626' : '#15803D', fontWeight: 700 }}>{over ? ` · over cap ${tg.roomCapacity}` : ` · cap ${tg.roomCapacity} ✓`}</span> : null}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
+          <span style={{ fontSize: 12, flexShrink: 0 }} title="Faculty">👤</span>
+          <input list="and-teachers" value={tg.teacher ?? ''} onChange={e => onTeacher(e.target.value)} placeholder="Teacher…"
+            style={{ flex: 1, minWidth: 0, padding: '3px 6px', borderRadius: 5, border: '1.5px solid #E4E0FF', fontSize: 11, fontWeight: 600, color: '#13111E', outline: 'none', fontFamily: 'inherit', background: '#FAFAFE' }} />
+          <datalist id="and-teachers">{allTeacherNames.map(t => <option key={t} value={t} />)}</datalist>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontSize: 12, flexShrink: 0 }}>🏫</span>
+          <span style={{ fontSize: 12, flexShrink: 0 }} title="Room / venue">🏫</span>
           <input list="and-rooms" value={tg.room ?? ''} onChange={e => onRoom(e.target.value)} placeholder="Room…"
-            style={{ flex: 1, minWidth: 0, padding: '3px 6px', borderRadius: 5, border: `1.5px solid ${over ? '#FCA5A5' : '#E4E0FF'}`, fontSize: 11, fontWeight: 600, color: '#13111E', outline: 'none', fontFamily: 'inherit', background: over ? '#FEF2F2' : '#FAFAFE' }} />
+            style={{ flex: 1, minWidth: 0, padding: '3px 6px', borderRadius: 5, border: '1.5px solid #E4E0FF', fontSize: 11, fontWeight: 600, color: '#13111E', outline: 'none', fontFamily: 'inherit', background: '#FAFAFE' }} />
           <datalist id="and-rooms">{allRoomNames.map(r => <option key={r} value={r} />)}</datalist>
         </div>
       </div>
@@ -418,19 +440,21 @@ function ParallelGroupCard({
 interface Block { blockId: string; blockName: string; sections: string[]; combos: AndComboGroup[] }
 
 function BlockCard({
-  block, sectionsStore, allSubjectNames, allSectionNames, allRoomNames, rooms, onReplace, onDeleteBlock,
+  block, sectionsStore, allSubjectNames, allSectionNames, allRoomNames, allTeacherNames, rooms, staff, onReplace, onDeleteBlock,
 }: {
   block: Block
   sectionsStore: any[]
   allSubjectNames: string[]
   allSectionNames: string[]
   allRoomNames: string[]
+  allTeacherNames: string[]
   rooms: any[]
+  staff: any[]
   onReplace: (combos: AndComboGroup[]) => void
   onDeleteBlock: () => void
 }) {
   const [picker, setPicker] = useState<null | { type: 'section' } | { type: 'subject'; comboId: string }>(null)
-  const [collapsed, setCollapsed] = useState(false)
+  const [groupsCollapsed, setGroupsCollapsed] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const combos = block.combos
@@ -452,12 +476,13 @@ function BlockCard({
   // (no explicit "Generate" press needed). Manually-set rooms are preserved when
   // a group's subject + section composition is unchanged.
   const hasGroups = combos.some(c => (c.generatedGroups?.length ?? 0) > 0)
-  const roomKey = (g: AndTeachingGroup) => `${g.subjects[0] ?? g.bundleName}|${g.sectionSlices.map(s => s.sectionName).sort().join(',')}`
+  const gKey = (g: AndTeachingGroup) => `${g.subjects[0] ?? g.bundleName}|${g.sectionSlices.map(s => s.sectionName).sort().join(',')}`
   const regen = (cs: AndComboGroup[]): AndComboGroup[] => cs.map(c => {
-    const prevRoom = new Map((c.generatedGroups ?? []).map(g => [roomKey(g), g.room]))
-    const fresh = generateAndGroups(c, rooms).map(g => {
-      const r = prevRoom.get(roomKey(g))
-      return r ? { ...g, room: r } : g
+    const prev = new Map((c.generatedGroups ?? []).map(g => [gKey(g), g]))
+    const fresh = generateAndGroups(c, rooms, staff).map(g => {
+      const p = prev.get(gKey(g))
+      // preserve manually-edited room / teacher when composition is unchanged
+      return p ? { ...g, room: p.room || g.room, teacher: p.teacher || g.teacher } : g
     })
     return { ...c, generatedGroups: fresh }
   })
@@ -470,6 +495,14 @@ function BlockCard({
     commit(combos.map(c => c.id !== comboId ? c : {
       ...c, aiSuggested: false,
       strengthMatrix: { ...c.strengthMatrix, [sec]: { ...(c.strengthMatrix?.[sec] ?? {}), [sub]: val } },
+    }))
+  // NA = subject not applicable to this section (stored as -1, excluded everywhere)
+  const isNA = (combo: AndComboGroup, sec: string, sub: string) => (combo.strengthMatrix?.[sec]?.[sub] ?? 0) < 0
+  const toggleNA = (comboId: string, sec: string, sub: string) =>
+    commit(combos.map(c => {
+      if (c.id !== comboId) return c
+      const cur = c.strengthMatrix?.[sec]?.[sub] ?? 0
+      return { ...c, aiSuggested: false, strengthMatrix: { ...c.strengthMatrix, [sec]: { ...(c.strengthMatrix?.[sec] ?? {}), [sub]: cur < 0 ? 0 : -1 } } }
     }))
 
   const addSection = (sec: string) =>
@@ -530,7 +563,7 @@ function BlockCard({
       return { ...c, strengthMatrix: sm }
     }))
 
-  const generate = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: generateAndGroups(c, rooms) })))
+  const generate = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: generateAndGroups(c, rooms, staff) })))
   const clearGroups = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: undefined })))
   const deleteGroup = (comboId: string, groupId: string) =>
     commitRaw(combos.map(c => c.id !== comboId ? c : { ...c, generatedGroups: (c.generatedGroups ?? []).filter(g => g.id !== groupId) }))
@@ -578,29 +611,10 @@ function BlockCard({
         <button onClick={addCombo} title="Add another combination (a new optional group)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#7C6FE0', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', padding: '5px 11px', fontSize: 10.5, fontWeight: 800, fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 2px 6px rgba(124,111,224,0.35)' }}>
           <Plus size={13} /> Add combo
         </button>
-        <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Show preview' : 'Hide / preview'} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fff', border: '1.5px solid #E4E0FF', borderRadius: 6, cursor: 'pointer', color: '#7C6FE0', padding: '3px 8px', fontSize: 10, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
-          {collapsed ? <Eye size={12} /> : <EyeOff size={12} />}{collapsed ? 'Show' : 'Hide'}
-          <ChevronDown size={13} style={{ transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform .15s' }} />
-        </button>
         <button onClick={onDeleteBlock} title="Delete this block (all its combinations)" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 3, flexShrink: 0 }}>
           <Trash2 size={14} />
         </button>
       </div>
-
-      {collapsed ? (
-        <div style={{ padding: '12px 14px', fontSize: 12, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, color: '#13111E' }}>Preview hidden</span>
-          <span>·</span>
-          <span>{combos.length} combination{combos.length !== 1 ? 's' : ''}</span>
-          <span>·</span>
-          <span>{sections.length} section{sections.length !== 1 ? 's' : ''}</span>
-          <span>·</span>
-          <span>{allGenerated.length} group{allGenerated.length !== 1 ? 's' : ''}</span>
-          <button onClick={() => setCollapsed(false)} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1.5px solid #C4B5FD', background: '#F5F3FF', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <Eye size={12} /> Show preview
-          </button>
-        </div>
-      ) : (<>
 
       {/* the shared table */}
       <div style={{ overflowX: 'auto', position: 'relative' }}>
@@ -681,17 +695,26 @@ function BlockCard({
                   </td>
                   {combos.map((combo, ci) => {
                     const cols = getCols(combo)
-                    const sum = cols.reduce((a, s) => a + getCell(combo, sec, s), 0)
+                    const sum = cols.reduce((a, s) => a + Math.max(0, getCell(combo, sec, s)), 0)
                     const isMatch = total > 0 && sum === total
                     const isOver = sum > total
                     return [
                       ...(cols.length ? cols : ['—']).map((sub, si) => (
                         <td key={combo.id + sub + si} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid #F0EDFF', borderLeft: si === 0 ? '2px solid #E8E4FF' : 'none' }}>
-                          {cols.length ? (
-                            <input type="number" min={0} value={getCell(combo, sec, sub) || ''}
-                              onChange={e => setCell(combo.id, sec, sub, Math.max(0, parseInt(e.target.value) || 0))} placeholder="0"
-                              style={{ width: 52, padding: '3px 4px', borderRadius: 5, textAlign: 'center', border: `1.5px solid ${isOver ? '#FCA5A5' : colColor(ci) + '55'}`, fontSize: 12.5, fontWeight: 700, outline: 'none', fontFamily: 'inherit', background: isOver ? '#FEF2F2' : colColor(ci) + '0D', color: '#111028' }} />
-                          ) : <span style={{ fontSize: 10, color: '#D1D5DB' }}>—</span>}
+                          {!cols.length ? <span style={{ fontSize: 10, color: '#D1D5DB' }}>—</span>
+                          : isNA(combo, sec, sub) ? (
+                            <button onClick={() => toggleNA(combo.id, sec, sub)} title="Not applicable to this section — click to enable"
+                              style={{ width: 52, padding: '3px 4px', borderRadius: 5, border: '1.5px dashed #D1D5DB', background: '#F3F4F6', color: '#9CA3AF', fontSize: 10.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>NA</button>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                              <input type="number" min={0} value={getCell(combo, sec, sub) || ''}
+                                onChange={e => setCell(combo.id, sec, sub, Math.max(0, parseInt(e.target.value) || 0))} placeholder="0"
+                                style={{ width: 46, padding: '3px 4px', borderRadius: 5, textAlign: 'center', border: `1.5px solid ${isOver ? '#FCA5A5' : colColor(ci) + '55'}`, fontSize: 12.5, fontWeight: 700, outline: 'none', fontFamily: 'inherit', background: isOver ? '#FEF2F2' : colColor(ci) + '0D', color: '#111028' }} />
+                              <button onClick={() => toggleNA(combo.id, sec, sub)} title="Mark Not Applicable for this section"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4C0DC', fontSize: 8, fontWeight: 800, padding: 0, lineHeight: 1 }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#6B7280' }} onMouseLeave={e => { e.currentTarget.style.color = '#C4C0DC' }}>NA</button>
+                            </span>
+                          )}
                         </td>
                       )),
                       <td key={combo.id + 'val'} style={{ width: 40, textAlign: 'center', borderBottom: '1px solid #F0EDFF' }}>
@@ -771,26 +794,33 @@ function BlockCard({
         <div style={{ flex: 1 }} />
       </div>
 
-      {/* generated groups */}
+      {/* generated groups — show/hide applies to THIS section only */}
       {allGenerated.length > 0 && (
         <div style={{ padding: '2px 12px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 7px' }}>
             <span style={{ fontSize: 9.5, fontWeight: 800, color: '#8B87AD', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Parallel groups ({allGenerated.length})</span>
+            <button onClick={() => setGroupsCollapsed(c => !c)} title={groupsCollapsed ? 'Show groups' : 'Hide groups'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 6, border: '1.5px solid #E4E0FF', background: '#fff', color: '#7C6FE0', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {groupsCollapsed ? <Eye size={11} /> : <EyeOff size={11} />}{groupsCollapsed ? 'Show' : 'Hide'}
+              <ChevronDown size={12} style={{ transform: groupsCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform .15s' }} />
+            </button>
             <button onClick={clearGroups} title="Delete the generated groups only (keeps the tables above)"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 6, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Trash2 size={10} /> Delete groups
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 8 }}>
-            {combos.flatMap(c => (c.generatedGroups ?? []).map(g => (
-              <ParallelGroupCard key={g.id} tg={g} shade={shadeOf(g)} allRoomNames={allRoomNames}
-                onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
-                onDelete={() => deleteGroup(c.id, g.id)} />
-            )))}
-          </div>
+          {!groupsCollapsed && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 8 }}>
+              {combos.flatMap(c => (c.generatedGroups ?? []).map(g => (
+                <ParallelGroupCard key={g.id} tg={g} shade={shadeOf(g)} allRoomNames={allRoomNames} allTeacherNames={allTeacherNames}
+                  onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
+                  onTeacher={teacher => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, teacher } : x) }))}
+                  onDelete={() => deleteGroup(c.id, g.id)} />
+              )))}
+            </div>
+          )}
         </div>
       )}
-      </>)}
     </div>
   )
 }
@@ -850,7 +880,7 @@ export function StepStudentGroups() {
   }, [groups])
 
   const replaceBlock = (blockId: string, newCombos: AndComboGroup[]) =>
-    setAndComboGroups([...groups.filter(g => blockKey(g) !== blockId), ...newCombos])
+    commitGroups([...groups.filter(g => blockKey(g) !== blockId), ...newCombos])
 
   const deleteBlock = (blockId: string) =>
     setAndComboGroups(groups.filter(g => blockKey(g) !== blockId))
@@ -868,14 +898,59 @@ export function StepStudentGroups() {
     const fresh = suggestAndComboGroups(subjects as any[], sections as any[])
       .filter(f => !groups.some(g => g.subjects?.join() === f.subjects?.join()))
     if (fresh.length === 0) { alert('No new optional groups detected. Mark subjects as Elective in Resources → Subjects, or add a combination manually.'); return }
-    setAndComboGroups([...groups, ...fresh])
+    commitGroups([...groups, ...fresh])
   }
 
   const applyGlobalScope = (scope: AndGroupScope) => setAndComboGroups(groups.map(g => ({ ...g, groupingScope: scope })))
 
+  const staff: any[] = useMemo(() => store.staff ?? store.teachers ?? [], [store.staff, store.teachers])
   const allSubjectNames = useMemo(() => (subjects as any[]).map((s: any) => s.name), [subjects])
   const allSectionNames = useMemo(() => (sections as any[]).map((s: any) => s.name), [sections])
   const allRoomNames    = useMemo(() => rooms.map((r: any) => r.name), [rooms])
+  const allTeacherNames = useMemo(() => [...new Set((staff as any[]).map((t: any) => t.name).filter(Boolean))], [staff])
+
+  // Write-back link: reflect combo subject↔section assignments into Resources → Subjects.
+  // A subject used in a combo becomes Elective and assigned to its applicable sections;
+  // a cell marked NA removes that section from the subject. Existing assignments are kept.
+  const reconcileSubjects = (newGroups: AndComboGroup[]) => {
+    if (!store.setSubjects) return
+    const applicable = new Map<string, Set<string>>()
+    const naSet = new Map<string, Set<string>>()
+    for (const g of newGroups) {
+      for (const sub of getCols(g)) {
+        if (!applicable.has(sub)) { applicable.set(sub, new Set()); naSet.set(sub, new Set()) }
+        for (const sec of g.applicableSections ?? []) {
+          const v = g.strengthMatrix?.[sec]?.[sub] ?? 0
+          if (v < 0) naSet.get(sub)!.add(sec)
+          else applicable.get(sub)!.add(sec)
+        }
+      }
+    }
+    if (applicable.size === 0) return
+    let changed = false
+    const next = (subjects as any[]).map((s: any) => {
+      if (!applicable.has(s.name)) return s
+      const existing = new Set<string>((s.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean))
+      const finalSecs = new Set<string>([...existing, ...applicable.get(s.name)!])
+      for (const x of naSet.get(s.name)!) finalSecs.delete(x)
+      const cfgs = [...finalSecs].map(sec => {
+        const ex = (s.classConfigs ?? []).find((c: any) => c.sectionName === sec)
+        return {
+          sectionName: sec,
+          periodsPerWeek: ex?.periodsPerWeek ?? s.periodsPerWeek ?? 5,
+          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? s.maxPeriodsPerDay ?? 2,
+          sessionDuration: ex?.sessionDuration ?? s.sessionDuration ?? 45,
+          isOptional: true, electiveSlotId: ex?.electiveSlotId, category: ex?.category, requiresLab: ex?.requiresLab,
+        }
+      })
+      const before = [...existing].sort().join(',') + '|' + (s.isOptional ? 1 : 0)
+      const after = [...finalSecs].sort().join(',') + '|1'
+      if (before !== after) changed = true
+      return { ...s, isOptional: true, sections: [...finalSecs], classConfigs: cfgs }
+    })
+    if (changed) store.setSubjects(next)
+  }
+  const commitGroups = (next: AndComboGroup[]) => { setAndComboGroups(next); reconcileSubjects(next) }
 
   const consumed = useMemo(() => { const set = new Set<string>(); for (const g of groups) for (const c of getCols(g)) set.add(c); return set }, [groups])
   const sharedElectives = useMemo(() => detectSharedElectives(subjects as any[], consumed), [subjects, consumed])
@@ -1018,8 +1093,8 @@ export function StepStudentGroups() {
               </button>
             </div>
           ) : blocks.map(block => (
-            <BlockCard key={block.blockId} block={block} sectionsStore={sections as any[]} rooms={rooms}
-              allSubjectNames={allSubjectNames} allSectionNames={allSectionNames} allRoomNames={allRoomNames}
+            <BlockCard key={block.blockId} block={block} sectionsStore={sections as any[]} rooms={rooms} staff={staff}
+              allSubjectNames={allSubjectNames} allSectionNames={allSectionNames} allRoomNames={allRoomNames} allTeacherNames={allTeacherNames}
               onReplace={combos => replaceBlock(block.blockId, combos)} onDeleteBlock={() => deleteBlock(block.blockId)} />
           ))}
 
@@ -1030,7 +1105,7 @@ export function StepStudentGroups() {
               <span style={{ fontSize: 11, color: '#7C6FE0', fontWeight: 600, flex: 1 }}>
                 {totalGenerated} teaching group{totalGenerated !== 1 ? 's' : ''} across {blocks.length} block{blocks.length !== 1 ? 's' : ''}
               </span>
-              <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms, staff) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <RefreshCw size={11} /> Generate all
               </button>
             </div>
