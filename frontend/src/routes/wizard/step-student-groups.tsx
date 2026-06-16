@@ -27,6 +27,35 @@ const PALETTE = ['#7C6FE0', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899
 function colColor(i: number) { return PALETTE[i % PALETTE.length] }
 function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 
+/** hex → HSL components. */
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  let x = hex.replace('#', '')
+  if (x.length === 3) x = x.split('').map(c => c + c).join('')
+  const r = parseInt(x.slice(0, 2), 16) / 255, g = parseInt(x.slice(2, 4), 16) / 255, b = parseInt(x.slice(4, 6), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2
+  let h = 0, s = 0
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    h = (max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60
+  }
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) }
+}
+
+/** A distinct shade for group #idx of a subject — same hue, stepped lightness,
+ *  so every generated group gets its own unique colour. */
+function shadeFor(baseHex: string, idx: number): { dot: string; headBg: string; border: string } {
+  const { h, s } = hexToHsl(baseHex)
+  const sat = Math.max(48, s)
+  const lights = [48, 36, 60, 30, 68, 42, 54, 24, 64, 40]
+  const l = lights[idx % lights.length]
+  return {
+    dot: `hsl(${h}deg ${sat}% ${l}%)`,
+    headBg: `hsl(${h}deg ${Math.max(40, sat - 8)}% ${Math.min(95, l + 42)}%)`,
+    border: `hsl(${h}deg ${Math.max(38, sat - 12)}% ${Math.min(88, l + 34)}%)`,
+  }
+}
+
 /** Section name → { grade, stream }. "XI-Sci-A" → { grade:'XI', stream:'Sci' } */
 function parseSection(name: string): { grade: string; stream: string } {
   const parts = (name ?? '').split('-')
@@ -345,9 +374,9 @@ function Picker({
 // ── generated parallel group (last-day card style, editable room) ───────────────
 
 function ParallelGroupCard({
-  tg, color, allRoomNames, onRoom, onDelete,
+  tg, shade, allRoomNames, onRoom, onDelete,
 }: {
-  tg: AndTeachingGroup; color: string; allRoomNames: string[]; onRoom: (room: string) => void; onDelete: () => void
+  tg: AndTeachingGroup; shade: { dot: string; headBg: string; border: string }; allRoomNames: string[]; onRoom: (room: string) => void; onDelete: () => void
 }) {
   const subject = tg.subjects[0] ?? tg.bundleName
   const secs = tg.sectionSlices.map(s => s.sectionName)
@@ -356,9 +385,9 @@ function ParallelGroupCard({
     : `${subject} · ${secs[0]} +${secs.length - 1}`
   const over = tg.capacityWarning
   return (
-    <div style={{ borderRadius: 9, border: `1px solid ${over ? '#FECACA' : '#E8E4FF'}`, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 4px rgba(124,111,224,0.07)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', background: 'linear-gradient(135deg, #F5F2FF, #FAFAFE)', borderBottom: '1px solid #F0EDFF' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+    <div style={{ borderRadius: 9, border: `1px solid ${over ? '#FECACA' : shade.border}`, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 4px rgba(124,111,224,0.07)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px', background: shade.headBg, borderBottom: `1px solid ${shade.border}` }}>
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: shade.dot, flexShrink: 0, boxShadow: `0 0 0 2px ${shade.headBg}` }} />
         <span title={title} style={{ fontSize: 10.5, fontWeight: 700, color: '#13111E', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
         <button onClick={onDelete} title="Delete this group" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4C0DC', padding: 1, flexShrink: 0, lineHeight: 1 }}
           onMouseEnter={e => { e.currentTarget.style.color = '#EF4444' }} onMouseLeave={e => { e.currentTarget.style.color = '#C4C0DC' }}>
@@ -506,10 +535,22 @@ function BlockCard({
     commitRaw(combos.map(c => c.id !== comboId ? c : { ...c, generatedGroups: (c.generatedGroups ?? []).filter(g => g.id !== groupId) }))
 
   const allGenerated = combos.flatMap(c => c.generatedGroups ?? [])
-  const colorOf = (sub: string) => {
-    const all = [...new Set(combos.flatMap(getCols))]
-    return colColor(all.indexOf(sub) >= 0 ? all.indexOf(sub) : 0)
-  }
+  // assign every generated group its own unique shade: hue from the subject,
+  // lightness stepped per group within that subject
+  const groupShades = useMemo(() => {
+    const allSubjects = [...new Set(combos.flatMap(getCols))]
+    const perSubject = new Map<string, number>()
+    const map = new Map<string, { dot: string; headBg: string; border: string }>()
+    for (const c of combos) for (const g of (c.generatedGroups ?? [])) {
+      const subj = g.subjects[0] ?? g.bundleName
+      const base = colColor(allSubjects.indexOf(subj) >= 0 ? allSubjects.indexOf(subj) : 0)
+      const k = perSubject.get(subj) ?? 0
+      perSubject.set(subj, k + 1)
+      map.set(g.id, shadeFor(base, k))
+    }
+    return map
+  }, [combos])
+  const shadeOf = (g: AndTeachingGroup) => groupShades.get(g.id) ?? shadeFor(colColor(0), 0)
 
   return (
     <div ref={ref} style={{ border: '1.5px solid #E4E0FF', borderRadius: 12, background: '#fff', marginBottom: 16, boxShadow: '0 1px 3px rgba(124,111,224,0.06)', overflow: 'hidden' }}>
@@ -725,7 +766,7 @@ function BlockCard({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 8 }}>
             {combos.flatMap(c => (c.generatedGroups ?? []).map(g => (
-              <ParallelGroupCard key={g.id} tg={g} color={colorOf(g.subjects[0] ?? g.bundleName)} allRoomNames={allRoomNames}
+              <ParallelGroupCard key={g.id} tg={g} shade={shadeOf(g)} allRoomNames={allRoomNames}
                 onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
                 onDelete={() => deleteGroup(c.id, g.id)} />
             )))}
