@@ -1601,6 +1601,7 @@ export function CalendarView({
                 position:"sticky" as const, left:0, top:0, zIndex:30,
                 width:ENTITY_W, minWidth:ENTITY_W, background:"#F8FAFC",
                 border:"1px solid #CBD5E1", fontSize:12, fontWeight:800, color:"#334155",
+                boxShadow:"3px 0 6px -2px rgba(15,23,42,0.10)",
               }}>{viewMode === "class" ? "Class" : viewMode === "teacher" ? "Teacher" : viewMode === "room" ? "Room" : "Subject"}</th>
               {days.map((day, di) => (
                 <th key={day} colSpan={cols.length} style={{
@@ -1645,6 +1646,7 @@ export function CalendarView({
                   background: ri%2===0 ? "#fff" : "#F8FAFC",
                   border:"1px solid #E2E8F0", fontSize:11.5, fontWeight:700,
                   color:"#1e293b", padding:"6px 10px", whiteSpace:"nowrap" as const,
+                  boxShadow:"3px 0 6px -2px rgba(15,23,42,0.06)",
                 }}>{ent.label}</td>
                 {days.map((day, di) => {
                   // Index this entity's teaching blocks for the day by periodId@startMin.

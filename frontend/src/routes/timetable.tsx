@@ -1202,6 +1202,7 @@ export function TimetablePage() {
   const [showTime, setShowTime] = useState(false)
   const [shortNames, setShortNames] = useState(false)
   const [showInsights, setShowInsights] = useState(false)
+  const [showLegend, setShowLegend] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("class")
   const [transposed, setTransposed] = useState(false)
   const [selectedEntity, setSelectedEntity] = useState<string>("ALL")
@@ -3551,13 +3552,53 @@ export function TimetablePage() {
             )}
           </div>
 
-          {/* ── Insights ── */}
-          <div style={{ display:"flex", alignItems:"center", padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
+          {/* ── Insights + Legend ── */}
+          <div style={{ display:"flex", alignItems:"center", gap:6, padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
             <button onClick={() => setShowInsights(v=>!v)}
               style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showInsights?"#7C6FE0":"#E5EBF5"}`, borderRadius:6,
                 background:showInsights?"#EDE9FF":"#fff", color:showInsights?"#7C6FE0":"#64748b", fontSize:11, fontWeight:showInsights?700:400, cursor:"pointer" }}>
               📊 Insights
             </button>
+            <div style={{ position:"relative" as const }}>
+              <button onClick={() => setShowLegend(v=>!v)} title="What the colours & symbols mean"
+                style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showLegend?"#7C6FE0":"#E5EBF5"}`, borderRadius:6,
+                  background:showLegend?"#EDE9FF":"#fff", color:showLegend?"#7C6FE0":"#64748b", fontSize:11, fontWeight:showLegend?700:400, cursor:"pointer" }}>
+                ⓘ Legend
+              </button>
+              {showLegend && (
+                <div onMouseLeave={() => setShowLegend(false)}
+                  style={{ position:"absolute" as const, top:"calc(100% + 4px)", right:0, zIndex:200, width:280,
+                    background:"#fff", border:"1px solid #E5EBF5", borderRadius:10, boxShadow:"0 8px 30px rgba(0,0,0,0.12)", padding:"12px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:8 }}>Legend</div>
+                  {([
+                    ["▌", "Parallel groups — students share one slot", "#7C6FE0"],
+                    ["AND", "Parallel split — students divide into groups", "#7C6FE0"],
+                    ["OR", "Rotation — one subject runs per slot", "#D97706"],
+                    ["★", "Class teacher's period", "#7C6FE0"],
+                    ["🔄", "Substituted teacher", "#D4920E"],
+                    ["⚠", "Conflict / over capacity", "#DC2626"],
+                  ] as const).map(([sym, txt, col], i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+                      <span style={{ minWidth:22, textAlign:"center" as const, fontSize:11, fontWeight:800, color:col }}>{sym}</span>
+                      <span style={{ fontSize:11, color:"#475569", lineHeight:1.4 }}>{txt}</span>
+                    </div>
+                  ))}
+                  <div style={{ height:1, background:"#E5EBF5", margin:"8px 0" }} />
+                  <div style={{ fontSize:10, fontWeight:800, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:6 }}>Group merge rule</div>
+                  <div style={{ display:"flex", flexWrap:"wrap" as const, gap:5 }}>
+                    {([
+                      ["Per section", "#F1F5F9", "#475569"],
+                      ["Same grade", "#FEF3C7", "#92400E"],
+                      ["Same stream", "#FFF7ED", "#C2410C"],
+                      ["Grade + stream", "#FCE7F3", "#9D174D"],
+                      ["Cross grade", "#DBEAFE", "#1D4ED8"],
+                    ] as const).map(([lbl, bg, fg]) => (
+                      <span key={lbl} style={{ fontSize:9.5, fontWeight:700, padding:"2px 7px", borderRadius:6, background:bg, color:fg }}>{lbl}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── Publish ── */}
