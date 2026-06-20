@@ -103,6 +103,10 @@ func main() {
 
 	// API v1
 	h := handlers.New(pool)
+
+	// Public marketing endpoints (no auth)
+	app.Post("/api/contact", h.SubmitContact)
+
 	api := app.Group("/api/v1", middleware.Auth())
 
 	// --- Timetable routes ---
