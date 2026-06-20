@@ -1,9 +1,0 @@
-<svg width="168" height="36" viewBox="0 0 168 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="36" height="36" rx="10" fill="#7C6FE0"/>
-  <g transform="scale(0.692)">
-    <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
-    <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
-  </g>
-  <text x="46" y="24" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="19" font-weight="800" letter-spacing="-0.5" fill="#13111E">sched<tspan fill="#7C6FE0" font-style="italic">U</tspan></text>
-</svg>

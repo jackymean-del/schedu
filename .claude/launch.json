@@ -7,14 +7,6 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "C:/Latest/Projects/SmartSched/frontend",
       "port": 5173
-    },
-    {
-      "name": "smartsched-web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "cwd": "C:/Latest/Projects/SmartSched/smartsched-web",
-      "port": 3000,
-      "autoPort": true
     }
   ]
 }
