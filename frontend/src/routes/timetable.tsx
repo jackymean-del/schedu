@@ -1205,20 +1205,33 @@ export function TimetablePage() {
   const [showInsights, setShowInsights] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   // Share-by-link state
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareVisibility, setShareVisibility] = useState<"public" | "restricted">("public")
+  const [shareEmails, setShareEmails] = useState("")
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState("")
   const [shareCopied, setShareCopied] = useState(false)
 
-  const handleShare = async () => {
+  const openShare = () => {
     setShowExportMenu(false)
+    setShareOpen(true)
+    setShareUrl(null)
+    setShareError("")
+    setShareCopied(false)
+  }
+  const closeShare = () => { setShareOpen(false); setShareUrl(null); setShareError("") }
+
+  const createLink = async () => {
     setSharing(true)
     setShareError("")
-    setShareUrl(null)
-    setShareCopied(false)
     try {
       const snapshot = buildShareSnapshot((config as any).name)
-      const url = await createShareLink(snapshot)
+      const emails = shareEmails.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean)
+      if (shareVisibility === "restricted" && emails.length === 0) {
+        throw new Error("Add at least one email, or choose “Anyone with the link”.")
+      }
+      const url = await createShareLink(snapshot, { visibility: shareVisibility, emails })
       setShareUrl(url)
     } catch (err) {
       setShareError(err instanceof Error ? err.message : "Could not create share link.")
@@ -3585,7 +3598,7 @@ export function TimetablePage() {
                 <div style={{ padding:"4px 14px 4px", fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em" }}>
                   Share
                 </div>
-                <button onClick={handleShare}
+                <button onClick={openShare}
                   style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"7px 14px", border:"none", background:"none", textAlign:"left" as const, fontSize:12, color:"#374151", cursor:"pointer" }}>
                   <span style={{ fontSize:14 }}>🔗</span> Share via link
                 </button>
@@ -3594,22 +3607,63 @@ export function TimetablePage() {
           </div>
 
           {/* Share-link modal */}
-          {(sharing || shareUrl || shareError) && (
-            <div onClick={() => { setShareUrl(null); setShareError("") }}
+          {shareOpen && (
+            <div onClick={closeShare}
               style={{ position:"fixed" as const, inset:0, zIndex:500, background:"rgba(19,17,30,0.45)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
               <div onClick={e=>e.stopPropagation()}
                 style={{ width:"100%", maxWidth:460, background:"#fff", borderRadius:14, border:"1px solid #E8E4FF", boxShadow:"0 16px 48px rgba(124,111,224,0.2)", padding:24 }}>
                 <div style={{ fontSize:16, fontWeight:700, color:"#13111E", marginBottom:6 }}>🔗 Share this timetable</div>
-                {sharing && <div style={{ fontSize:13, color:"#8B87AD", padding:"12px 0" }}>Creating link…</div>}
-                {shareError && (
-                  <div style={{ fontSize:13, color:"#DC2626", lineHeight:1.5, padding:"8px 0" }}>
-                    {shareError} You can still export to PDF or Excel above.
-                  </div>
-                )}
-                {shareUrl && (
+
+                {!shareUrl ? (
                   <>
-                    <p style={{ fontSize:13, color:"#4B5275", lineHeight:1.6, marginBottom:14 }}>
-                      Anyone with this link can view a read-only copy of this timetable — no account needed.
+                    {/* Visibility chooser */}
+                    {([
+                      ["public", "Anyone with the link", "Anyone who has the link can view — no account needed."],
+                      ["restricted", "Specific people", "Only the email addresses you list can view it."],
+                    ] as const).map(([val, label, desc]) => (
+                      <label key={val}
+                        style={{ display:"flex", gap:10, alignItems:"flex-start", padding:"10px 12px", marginTop:8, borderRadius:10,
+                          border:`1.5px solid ${shareVisibility===val ? "#7C6FE0" : "#E8E4FF"}`,
+                          background: shareVisibility===val ? "#F8F7FF" : "#fff", cursor:"pointer" }}>
+                        <input type="radio" name="share-vis" checked={shareVisibility===val}
+                          onChange={() => setShareVisibility(val)} style={{ marginTop:3 }} />
+                        <span>
+                          <span style={{ display:"block", fontSize:13, fontWeight:700, color:"#13111E" }}>{label}</span>
+                          <span style={{ display:"block", fontSize:11.5, color:"#8B87AD", lineHeight:1.5 }}>{desc}</span>
+                        </span>
+                      </label>
+                    ))}
+
+                    {shareVisibility === "restricted" && (
+                      <div style={{ marginTop:12 }}>
+                        <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:"#4B5275", marginBottom:5 }}>
+                          Allowed emails (comma or newline separated)
+                        </label>
+                        <textarea value={shareEmails} onChange={e=>setShareEmails(e.target.value)}
+                          placeholder="teacher@school.edu, parent@example.com"
+                          style={{ width:"100%", minHeight:72, resize:"vertical" as const, padding:"10px 12px", borderRadius:8, border:"1px solid #E8E4FF", background:"#FAFAFE", fontSize:12.5, color:"#13111E", fontFamily:"inherit" }} />
+                      </div>
+                    )}
+
+                    {shareError && <div style={{ fontSize:12.5, color:"#DC2626", lineHeight:1.5, marginTop:10 }}>{shareError}</div>}
+
+                    <div style={{ marginTop:18, display:"flex", justifyContent:"flex-end", gap:8 }}>
+                      <button onClick={closeShare}
+                        style={{ padding:"8px 16px", borderRadius:8, border:"1px solid #E8E4FF", background:"#fff", fontSize:12.5, fontWeight:600, color:"#4B5275", cursor:"pointer" }}>
+                        Cancel
+                      </button>
+                      <button onClick={createLink} disabled={sharing}
+                        style={{ padding:"8px 18px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:12.5, fontWeight:700, cursor: sharing?"default":"pointer", opacity: sharing?0.6:1 }}>
+                        {sharing ? "Creating…" : "Create link"}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize:13, color:"#4B5275", lineHeight:1.6, margin:"6px 0 14px" }}>
+                      {shareVisibility === "restricted"
+                        ? "Only the people you listed can open this — they’ll confirm their email to view."
+                        : "Anyone with this link can view a read-only copy — no account needed."}
                     </p>
                     <div style={{ display:"flex", gap:8 }}>
                       <input readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}
@@ -3619,18 +3673,18 @@ export function TimetablePage() {
                         {shareCopied ? "Copied!" : "Copy"}
                       </button>
                     </div>
-                    <a href={shareUrl} target="_blank" rel="noreferrer"
-                      style={{ display:"inline-block", marginTop:12, fontSize:12, fontWeight:600, color:"#7C6FE0", textDecoration:"none" }}>
-                      Open in new tab →
-                    </a>
+                    <div style={{ marginTop:14, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <a href={shareUrl} target="_blank" rel="noreferrer"
+                        style={{ fontSize:12, fontWeight:600, color:"#7C6FE0", textDecoration:"none" }}>
+                        Open in new tab →
+                      </a>
+                      <button onClick={closeShare}
+                        style={{ padding:"8px 16px", borderRadius:8, border:"1px solid #E8E4FF", background:"#fff", fontSize:12.5, fontWeight:600, color:"#4B5275", cursor:"pointer" }}>
+                        Done
+                      </button>
+                    </div>
                   </>
                 )}
-                <div style={{ marginTop:18, textAlign:"right" as const }}>
-                  <button onClick={() => { setShareUrl(null); setShareError("") }}
-                    style={{ padding:"8px 16px", borderRadius:8, border:"1px solid #E8E4FF", background:"#fff", fontSize:12.5, fontWeight:600, color:"#4B5275", cursor:"pointer" }}>
-                    Close
-                  </button>
-                </div>
               </div>
             </div>
           )}

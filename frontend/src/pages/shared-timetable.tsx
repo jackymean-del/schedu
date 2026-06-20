@@ -10,7 +10,12 @@ export function SharedTimetablePage() {
   const token = window.location.pathname.split('/').filter(Boolean).pop() ?? ''
   const [data, setData] = useState<SharedTimetable | null>(null)
   const [title, setTitle] = useState('Shared timetable')
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'ready' | 'restricted' | 'error'>('loading')
+
+  // Email gate (restricted shares)
+  const [email, setEmail] = useState('')
+  const [unlocking, setUnlocking] = useState(false)
+  const [accessError, setAccessError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -21,8 +26,12 @@ export function SharedTimetablePage() {
       })
       .then(json => {
         if (!active) return
-        setData(json.timetable as SharedTimetable)
         setTitle(json.title || json.timetable?.title || 'Shared timetable')
+        if (json.restricted) {
+          setStatus('restricted')
+          return
+        }
+        setData(json.timetable as SharedTimetable)
         setStatus('ready')
       })
       .catch(() => {
@@ -32,6 +41,31 @@ export function SharedTimetablePage() {
       active = false
     }
   }, [token])
+
+  const unlock = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUnlocking(true)
+    setAccessError('')
+    try {
+      const res = await fetch(`/api/share/${token}/access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || 'This email doesn’t have access to this timetable.')
+      }
+      const json = await res.json()
+      setData(json.timetable as SharedTimetable)
+      setTitle(json.title || 'Shared timetable')
+      setStatus('ready')
+    } catch (err) {
+      setAccessError(err instanceof Error ? err.message : 'Could not unlock this timetable.')
+    } finally {
+      setUnlocking(false)
+    }
+  }
 
   return (
     <div data-mk className="flex min-h-screen flex-col bg-white text-[#13111E]">
@@ -66,6 +100,34 @@ export function SharedTimetablePage() {
 
       <main className="flex-1 px-6 py-8">
         {status === 'loading' && <p className="py-20 text-center text-[#8B87AD]">Loading timetable…</p>}
+
+        {status === 'restricted' && (
+          <div className="mx-auto max-w-[420px] py-20 text-center">
+            <div className="text-4xl">🔒</div>
+            <h1 className="mt-4 text-[24px] font-normal text-[#13111E]">{title}</h1>
+            <p className="mt-2 text-[15px] leading-[1.7] text-[#8B87AD]">
+              This timetable is shared privately. Enter your email to confirm you have access.
+            </p>
+            <form onSubmit={unlock} className="mx-auto mt-6 flex max-w-[360px] flex-col gap-3">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@institution.edu"
+                className="w-full rounded-lg border border-[#E8E4FF] bg-white px-3.5 py-[11px] text-sm text-[#13111E] outline-none focus:border-[#7C6FE0]"
+              />
+              <button
+                type="submit"
+                disabled={unlocking}
+                className="rounded-[9px] bg-[#7C6FE0] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {unlocking ? 'Checking…' : 'View timetable'}
+              </button>
+              {accessError && <p className="text-[12px] text-[#DC2626]">{accessError}</p>}
+            </form>
+          </div>
+        )}
 
         {status === 'error' && (
           <div className="mx-auto max-w-[480px] py-20 text-center">

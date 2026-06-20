@@ -106,7 +106,8 @@ func main() {
 
 	// Public endpoints (no auth)
 	app.Post("/api/contact", h.SubmitContact)
-	app.Get("/api/share/:token", h.GetShare) // public read-only timetable shares
+	app.Get("/api/share/:token", h.GetShare)          // public read-only timetable shares
+	app.Post("/api/share/:token/access", h.AccessShare) // unlock a restricted share by email
 
 	api := app.Group("/api/v1", middleware.Auth())
 

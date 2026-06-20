@@ -70,8 +70,18 @@ export function buildShareSnapshot(title?: string): SharedTimetable {
   }
 }
 
-/** POST the snapshot and return a public, copyable share URL. */
-export async function createShareLink(snapshot: SharedTimetable): Promise<string> {
+export interface ShareOptions {
+  /** 'public' = anyone with the link; 'restricted' = only listed emails. */
+  visibility: 'public' | 'restricted'
+  /** Allow-listed emails (required when visibility is 'restricted'). */
+  emails?: string[]
+}
+
+/** POST the snapshot and return a copyable share URL. */
+export async function createShareLink(
+  snapshot: SharedTimetable,
+  options: ShareOptions = { visibility: 'public' },
+): Promise<string> {
   const token = useAuthStore.getState().token
   const res = await fetch('/api/v1/timetables/share', {
     method: 'POST',
@@ -79,7 +89,12 @@ export async function createShareLink(snapshot: SharedTimetable): Promise<string
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ title: snapshot.title, payload: snapshot }),
+    body: JSON.stringify({
+      title: snapshot.title,
+      payload: snapshot,
+      visibility: options.visibility,
+      emails: options.emails ?? [],
+    }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))

@@ -226,9 +226,23 @@ export const DOC_ARTICLES: DocArticle[] = [
             ol: [
               'Open the timetable you want to share.',
               'Click Export, then “Share via link”.',
+              'Choose who can view it — anyone with the link, or specific people.',
               'Copy the link and send it to staff, students, or parents.',
             ],
           },
+        ],
+      },
+      {
+        heading: 'Public or private',
+        blocks: [
+          { p: 'Every share link can be one of two modes:' },
+          {
+            ul: [
+              'Anyone with the link — a public, read-only view, like a shared calendar.',
+              'Specific people — only the email addresses you list can open it. Viewers confirm their email before the timetable is shown.',
+            ],
+          },
+          { note: 'Private shares gate access by email at view time; for stricter control, generate a new link to revoke the old one.' },
         ],
       },
       {
