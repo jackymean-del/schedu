@@ -173,17 +173,18 @@ export const DOC_ARTICLES: DocArticle[] = [
     ],
   },
   {
-    slug: 'exports',
-    icon: '📄',
-    title: 'Exporting & publishing timetables',
-    description: 'Publish print-ready PDF and Excel grids for staff and students.',
-    readMins: 3,
+    slug: 'publishing-sharing',
+    icon: '📤',
+    title: 'Publishing & Sharing',
+    description: 'Publish your timetable, share it as a public or private link, or export to PDF and Excel.',
+    readMins: 4,
     intro:
-      'Once your timetable is conflict-free, schedU publishes polished, print-ready outputs for everyone who needs them.',
+      'Once your timetable is conflict-free, schedU gets it in front of everyone — published views for the whole institution, shareable links, and downloadable files.',
     sections: [
       {
-        heading: 'Available views',
+        heading: 'Publishing your timetable',
         blocks: [
+          { p: 'Publish polished, ready-to-read views for every audience:' },
           {
             ul: [
               'Master grid — the whole institution at a glance, for administrators.',
@@ -195,73 +196,30 @@ export const DOC_ARTICLES: DocArticle[] = [
         ],
       },
       {
-        heading: 'Formats',
+        heading: 'Sharing by link',
         blocks: [
-          { p: 'Export to PDF for printing and sharing, or Excel for further editing. You can also print directly from the browser.' },
-        ],
-      },
-      {
-        heading: 'Share by link',
-        blocks: [
-          { p: 'Instead of sending a file, publish a read-only link to the timetable — like sharing a calendar. Open the Export menu and choose “Share via link”.' },
-          { p: 'Anyone with the link can view a snapshot of the timetable in their browser, no account needed. The snapshot is frozen at the moment you shared it, so later edits don’t change what others see.' },
-          { note: 'Need a fresh snapshot after changes? Just share again to get a new link.' },
-        ],
-      },
-    ],
-  },
-  {
-    slug: 'share-by-link',
-    icon: '🔗',
-    title: 'Sharing timetables by link',
-    description: 'Publish a read-only timetable link anyone can open — like sharing a calendar.',
-    readMins: 3,
-    intro:
-      'schedU lets you share a published timetable as a public, read-only link — no file to email, and no account for the viewer.',
-    sections: [
-      {
-        heading: 'Create a share link',
-        blocks: [
-          {
-            ol: [
-              'Open the timetable you want to share.',
-              'Click Export, then “Share via link”.',
-              'Choose who can view it — anyone with the link, or specific people.',
-              'Copy the link and send it to staff, students, or parents.',
-            ],
-          },
-        ],
-      },
-      {
-        heading: 'Public or private',
-        blocks: [
-          { p: 'Every share link can be one of two modes:' },
+          { p: 'Instead of sending a file, publish a read-only link to the timetable — like sharing a calendar. Open the Export menu, choose “Share via link”, then pick who can see it.' },
           {
             ul: [
-              'Anyone with the link — a public, read-only view, like a shared calendar.',
-              'Specific people — only the email addresses you list can open it. Viewers confirm their email before the timetable is shown.',
+              'Anyone with the link — a public, read-only view, no account needed.',
+              'Specific people — only the email addresses you list can open it; viewers confirm their email first.',
             ],
           },
-          { note: 'Private shares gate access by email at view time; for stricter control, generate a new link to revoke the old one.' },
+          { p: 'The shared link is a frozen snapshot, so later edits don’t change what others see.' },
+          { note: 'Need to share updated content, or revoke an old link? Just share again to get a new one.' },
         ],
       },
       {
-        heading: 'What the link shows',
+        heading: 'Exporting to PDF & Excel',
         blocks: [
-          { p: 'The link opens a clean, read-only view of the timetable grid — days, periods, subjects, teachers, and rooms — branded as a schedU share.' },
+          { p: 'Download the timetable to share or archive offline:' },
           {
             ul: [
-              'No login required to view.',
-              'Read-only — viewers can’t edit anything.',
-              'A frozen snapshot — it won’t change if you later edit the timetable.',
+              'PDF — print-ready, class-wise / teacher-wise / room-wise, combined or individual.',
+              'Excel — editable workbooks with days or classes in tabs.',
             ],
           },
-        ],
-      },
-      {
-        heading: 'Updating or revoking',
-        blocks: [
-          { p: 'To share updated content, generate a new link after your changes. Each link is independent, so you control exactly which version each audience sees.' },
+          { p: 'You can also print directly from the browser.' },
         ],
       },
     ],

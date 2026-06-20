@@ -31,9 +31,9 @@ const FEATURES = [
     desc: 'Tag rooms by type and capacity and let schedU place labs, halls, and shared spaces where they fit. Resource constraints are honoured automatically.',
   },
   {
-    icon: '📄',
-    title: 'Export & share',
-    desc: 'Publish polished, print-ready PDF and Excel timetables in seconds — master grids for administrators, personal schedules for teachers, and clear class views for students.',
+    icon: '📤',
+    title: 'Publishing & sharing',
+    desc: 'Publish polished timetables, share them as a public or email-restricted link, or export to print-ready PDF and Excel — for staff, students, and parents.',
   },
 ]
 

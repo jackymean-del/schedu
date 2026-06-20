@@ -29,7 +29,7 @@ const STEPS = [
   { n: 1, title: 'Enter basics', desc: 'Name, board, class range, teachers, rooms.' },
   { n: 2, title: 'AI generates', desc: 'Allocations, groups, and constraints auto-built.' },
   { n: 3, title: 'Review & refine', desc: 'AI inlines like a spreadsheet. AI explains every choice.' },
-  { n: 4, title: 'Export & publish', desc: 'PDF, Excel, print — class-wise, teacher-wise, room-wise.' },
+  { n: 4, title: 'Publish & share', desc: 'Share a public or private link, or export to PDF and Excel.' },
 ]
 
 const DEMO_CELLS = [
