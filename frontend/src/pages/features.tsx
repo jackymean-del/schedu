@@ -18,7 +18,7 @@ const FEATURES = [
   {
     icon: '🔀',
     title: 'Elective OR / AND groups',
-    desc: 'Model the real choices students make. OR groups for mutually exclusive electives, AND groups for required combinations — every parallel section scheduled so no student is double-booked.',
+    desc: 'OR slots run one subject at a time (e.g. Physics or Chemistry, as the day’s syllabus needs); AND groups pool same-subject students across sections into one cross-class group — all scheduled clash-free.',
   },
   {
     icon: '🎓',

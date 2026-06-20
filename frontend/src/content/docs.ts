@@ -110,22 +110,25 @@ export const DOC_ARTICLES: DocArticle[] = [
     slug: 'electives',
     icon: '🔀',
     title: 'Electives & cross-class groups',
-    description: 'Model OR/AND elective groups and parallel sections that stay clash-free.',
+    description: 'Model flexible OR slots and cross-class AND groups so electives stay clash-free.',
     readMins: 5,
     intro:
-      'Electives are where most timetables fall apart, because students in the same class head in different directions. schedU models this with two building blocks: OR groups and AND groups.',
+      'Electives are where most timetables fall apart, because students in the same class head in different directions. schedU handles this with two ideas: OR slots and AND (cross-class) groups.',
     sections: [
       {
-        heading: 'OR groups',
+        heading: 'OR — a flexible period slot',
         blocks: [
-          { p: 'An OR group is a set of mutually exclusive options — pick exactly one. A student choosing between Art, Music, and Drama belongs to one OR group.' },
-          { p: 'schedU schedules the options in parallel so the choice is always available and never conflicts.' },
+          { p: 'An OR slot is a single period that runs one of several subjects — not all at once. The section stays together; which subject (and teacher) takes the slot can change day to day, based on the syllabus need.' },
+          { p: 'Example: a period set as “Physics OR Chemistry”. On one day the Chemistry teacher takes it; on another, the Physics teacher does — whatever the syllabus needs that day. Never both at the same time.' },
+          { note: 'schedU keeps the slot reserved and assigns whichever teacher is needed, so it’s never double-booked.' },
         ],
       },
       {
-        heading: 'AND groups',
+        heading: 'AND — cross-class groups',
         blocks: [
-          { p: 'An AND group is a set of subjects taken together — a required combination, like Physics + Chemistry + Biology for a Science stream. schedU keeps all of them on the timetable without overlapping them.' },
+          { p: 'When sections share subject combinations, students taking the same subject can be pooled into one group across sections — a cross-class group — when they follow the same textbook.' },
+          { p: 'Example: sections offer combinations like PCM (Physics, Chemistry, Maths) and PCB (Physics, Chemistry, Biology). In each section some students take Maths and the rest Biology. Across sections, all the Maths students form one group and all the Biology students another.' },
+          { p: 'schedU schedules those cross-class groups in the same block, so the right students from different sections are taught together by one teacher in one room — instead of running tiny duplicate classes per section.' },
         ],
       },
       {
@@ -133,9 +136,9 @@ export const DOC_ARTICLES: DocArticle[] = [
         blocks: [
           {
             ol: [
-              'Every elective belongs to exactly one OR or AND group.',
-              'Parallel sections have enough rooms and teachers to run simultaneously.',
-              'Mutually exclusive options share the same time block.',
+              'For an OR slot, reserve one period and list the subjects that may run in it — schedU assigns the teacher as needed.',
+              'For cross-class (AND) groups, mark which subjects can pool across sections (same textbook / grade), so students are grouped rather than duplicated.',
+              'Make sure each pooled group has a room large enough for the combined students.',
             ],
           },
         ],
