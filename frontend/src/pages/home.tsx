@@ -114,8 +114,13 @@ export function HomePage() {
 
         {/* Nav links — right of centre, before auth */}
         <div style={{ display: 'flex', gap: 28, alignItems: 'center', marginRight: 32 }}>
-          {['Features', 'Pricing', 'Docs', 'Contact'].map(l => (
-            <a key={l} href="#" className="lp-nav-link">{l}</a>
+          {[
+            { label: 'Features', href: '#features' },
+            { label: 'Pricing', href: '#pricing' },
+            { label: 'Docs', href: '#' },
+            { label: 'Contact', href: 'mailto:hello@bhusku.com' },
+          ].map(l => (
+            <a key={l.label} href={l.href} className="lp-nav-link">{l.label}</a>
           ))}
         </div>
 
@@ -291,7 +296,7 @@ export function HomePage() {
       {/* ════════════════════════════════════════════════════
           3 FEATURE COLUMNS
       ════════════════════════════════════════════════════ */}
-      <section style={{
+      <section id="features" style={{
         background: '#fff', padding: '64px 24px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
@@ -451,6 +456,155 @@ export function HomePage() {
                 marginBottom: 7, fontFamily: 'inherit',
               }}>{s.title}</h4>
               <p style={{ fontSize: 12.5, color: '#4B5275', lineHeight: 1.65 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
+      {/* ════════════════════════════════════════════════════
+          PRICING
+      ════════════════════════════════════════════════════ */}
+      <section id="pricing" style={{
+        background: '#fff', borderTop: '1px solid #F0EDFF',
+        padding: '64px 24px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+        <p style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+          textTransform: 'uppercase', color: '#8B87AD', marginBottom: 14,
+        }}>Pricing</p>
+        <h2 style={{
+          fontFamily: "'Plus Jakarta Sans', Georgia, serif",
+          fontSize: 30, fontWeight: 400, color: '#13111E',
+          marginBottom: 8, lineHeight: 1.2, textAlign: 'center',
+        }}>
+          Simple pricing that scales with you
+        </h2>
+        <p style={{
+          fontSize: 14, color: '#8B87AD', marginBottom: 38,
+          lineHeight: 1.6, textAlign: 'center', maxWidth: 440,
+        }}>
+          Start free, upgrade when your institution grows. No hidden fees.
+        </p>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 18, maxWidth: 920, width: '100%', alignItems: 'stretch',
+        }}>
+          {[
+            {
+              name: 'Starter', price: 'Free', period: '',
+              desc: 'Everything a small team needs to try AI scheduling.',
+              cta: 'Start free', href: '/wizard', popular: false,
+              features: ['Up to 2 classes', 'Up to 20 subjects', 'AI auto-schedule', 'Real-time conflict detection', 'PDF export'],
+            },
+            {
+              name: 'Pro', price: '$29', period: '/mo',
+              desc: 'For a single institution running multiple streams and electives.',
+              cta: 'Start free', href: '/wizard', popular: true,
+              features: ['Unlimited classes', 'Unlimited subjects', 'Elective OR/AND groups', 'Multi-stream support', 'Room & resource planning', 'Priority support'],
+            },
+            {
+              name: 'Enterprise', price: '$99', period: '/mo',
+              desc: 'For groups managing many campuses or institutions.',
+              cta: 'Talk to sales', href: 'mailto:hello@bhusku.com', popular: false,
+              features: ['Everything in Pro', 'Multi-campus management', 'API access', 'SSO / SAML', 'Dedicated success manager'],
+            },
+          ].map(t => (
+            <div key={t.name} className="lp-feat" style={{
+              display: 'flex', flexDirection: 'column',
+              padding: '28px 24px', borderRadius: 14, background: '#fff',
+              border: t.popular ? '1.5px solid #7C6FE0' : '1px solid #E8E4FF',
+              boxShadow: t.popular ? '0 12px 32px rgba(124,111,224,0.16)' : 'none',
+              position: 'relative',
+            }}>
+              {t.popular && (
+                <span style={{
+                  position: 'absolute', top: 16, right: 16,
+                  padding: '3px 10px', borderRadius: 20,
+                  background: '#EDE9FF', color: '#7C6FE0',
+                  fontSize: 10, fontWeight: 800, letterSpacing: '0.04em',
+                }}>
+                  Most popular
+                </span>
+              )}
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#13111E', fontFamily: 'inherit' }}>{t.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, margin: '14px 0 6px' }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 34, fontWeight: 700, color: '#13111E', lineHeight: 1 }}>{t.price}</span>
+                {t.period && <span style={{ fontSize: 13, color: '#8B87AD' }}>{t.period}</span>}
+              </div>
+              <p style={{ fontSize: 13, color: '#4B5275', lineHeight: 1.6, marginBottom: 18, minHeight: 42 }}>{t.desc}</p>
+              <a href={t.href} style={{ textDecoration: 'none' }}>
+                <button className={t.popular ? undefined : 'lp-ghost'} style={{
+                  width: '100%', padding: '11px 18px', borderRadius: 8,
+                  border: t.popular ? 'none' : '1.5px solid #E8E4FF',
+                  background: t.popular ? '#7C6FE0' : '#fff',
+                  color: t.popular ? '#fff' : '#4B5275',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  boxShadow: t.popular ? '0 4px 14px rgba(124,111,224,0.32)' : 'none',
+                }}>
+                  {t.cta}
+                </button>
+              </a>
+              <ul style={{ listStyle: 'none', margin: '20px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {t.features.map(f => (
+                  <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13, color: '#13111E' }}>
+                    <span style={{ color: '#7C6FE0', fontWeight: 800, lineHeight: 1.4 }}>✓</span>
+                    <span style={{ lineHeight: 1.4 }}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
+      {/* ════════════════════════════════════════════════════
+          TESTIMONIALS
+      ════════════════════════════════════════════════════ */}
+      <section id="testimonials" style={{
+        background: '#F8F7FF', borderTop: '1px solid #F0EDFF',
+        padding: '64px 24px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+        <p style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+          textTransform: 'uppercase', color: '#8B87AD', marginBottom: 14,
+        }}>Loved by teams worldwide</p>
+        <h2 style={{
+          fontFamily: "'Plus Jakarta Sans', Georgia, serif",
+          fontSize: 30, fontWeight: 400, color: '#13111E',
+          marginBottom: 38, lineHeight: 1.2, textAlign: 'center',
+        }}>
+          Trusted by institutions that hate scheduling
+        </h2>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 18, maxWidth: 920, width: '100%', alignItems: 'stretch',
+        }}>
+          {[
+            { quote: 'schedU turned a three-week scheduling marathon into an afternoon. The conflict detection alone has saved us from a dozen timetable headaches this term.', name: 'Priya Nair', role: 'Vice Principal, Greenwood International School' },
+            { quote: 'Managing electives across three streams used to be guesswork. Now the OR/AND groups just work, and every student gets a clash-free schedule.', name: 'Daniel Osei', role: 'Registrar, Northgate College' },
+            { quote: 'Rolling schedU out across all our campuses was painless. SSO and the API meant every institution in the group was generating timetables in the same week.', name: 'Maria Gonzalez', role: 'Director of Operations, Atlas Education Group' },
+          ].map(t => (
+            <div key={t.name} style={{
+              display: 'flex', flexDirection: 'column', gap: 18,
+              padding: '24px 22px', borderRadius: 14,
+              border: '1px solid #E8E4FF', background: '#fff',
+            }}>
+              <p style={{ flex: 1, fontSize: 14, lineHeight: 1.7, color: '#13111E' }}>
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>{t.name}</div>
+                <div style={{ fontSize: 12, color: '#8B87AD', marginTop: 2 }}>{t.role}</div>
+              </div>
             </div>
           ))}
         </div>
