@@ -593,7 +593,7 @@ function CreateTimetableModal({
             Enter a count and <strong>schedU</strong> will auto-create initial editable resources for you.{' '}
             <span style={{ color: '#9590BF' }}>Leave blank if you'd like to create them yourself.</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
             {[
               { label: 'Classes',  value: classes,  set: setClasses  },
               { label: 'Teachers', value: teachers, set: setTeachers },
@@ -907,7 +907,7 @@ function EditTimetableModal({
             Enter a count and <strong>schedU</strong> will auto-create initial editable resources for you.{' '}
             <span style={{ color: '#9590BF' }}>Leave blank if you'd like to create them yourself.</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
             {([
               { label: 'Classes',  value: classes,  set: setClasses,  req: true  },
               { label: 'Teachers', value: teachers, set: setTeachers, req: true  },
