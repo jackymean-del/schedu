@@ -15,7 +15,7 @@ const BOARDS = [
 const FEATURES = [
   { icon: '🧠', title: 'AI period allocation', desc: 'AI suggests balanced period distributions per class and board — no manual tables needed.' },
   { icon: '👨‍🏫', title: 'Smart teacher allocation', desc: 'Workload-balanced, expertise-matched teacher assignments with vertical continuity rules.' },
-  { icon: '👥', title: 'Dynamic cross-class groups', desc: 'Elective and activity groups auto-created across sections — no manual group setup.' },
+  { icon: '👥', title: 'OR slots & cross-class groups', desc: 'Flexible OR periods run one subject at a time; AND groups pool same-subject students across sections — built automatically.' },
 ]
 
 const STATS = [
