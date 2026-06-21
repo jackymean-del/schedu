@@ -596,7 +596,6 @@ function CreateTimetableModal({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {[
               { label: 'Classes',  value: classes,  set: setClasses  },
-              { label: 'Subjects', value: subjects, set: setSubjects },
               { label: 'Teachers', value: teachers, set: setTeachers },
               { label: 'Rooms',    value: rooms,    set: setRooms    },
             ].map(f => (
@@ -911,7 +910,6 @@ function EditTimetableModal({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {([
               { label: 'Classes',  value: classes,  set: setClasses,  req: true  },
-              { label: 'Subjects', value: subjects, set: setSubjects, req: false },
               { label: 'Teachers', value: teachers, set: setTeachers, req: true  },
               { label: 'Rooms',    value: rooms,    set: setRooms,    req: false },
             ] as const).map(f => (
