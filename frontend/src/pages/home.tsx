@@ -231,7 +231,7 @@ export function HomePage() {
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
               </div>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
-              <a href={t.href} className="no-underline">
+              <a href={t.href === '/wizard' ? appStartHref() : t.href} className="no-underline">
                 <button
                   className={`w-full rounded-lg px-[18px] py-[11px] text-[13px] font-bold ${
                     t.popular
@@ -280,7 +280,7 @@ export function HomePage() {
         <p className="mb-8 max-w-[380px] text-[15px] leading-[1.6] text-[#8B87AD]">
           Start free. No setup. No training required.
         </p>
-        <a href="/wizard" className="no-underline">
+        <a href={appStartHref()} className="no-underline">
           <button className="inline-flex items-center gap-2 rounded-[9px] bg-[#7C6FE0] px-9 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_18px_rgba(124,111,224,0.38)]">
             Create your first timetable →
           </button>
