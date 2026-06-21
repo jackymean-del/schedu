@@ -1295,12 +1295,22 @@ export function TimetablePage() {
 
   const { exportXLSX } = useExport()
 
+  // ── Print properties ─────────────────────────────────────
+  const [printOrientation, setPrintOrientation] = useState<"landscape"|"portrait">("landscape")
+  const [printPaper, setPrintPaper] = useState<"A4"|"A3"|"Letter"|"Legal">("A4")
+
   // ── PDF print trigger ────────────────────────────────────
   const triggerPrint = (type: "class"|"teacher"|"room", scope: "combined"|"individual") => {
-    // Store print params in sessionStorage, then open a print-specific page/window
-    // For now we use window.print() after setting a data attribute for CSS targeting
     document.body.setAttribute("data-print-type", type)
     document.body.setAttribute("data-print-scope", scope)
+    // Apply the chosen paper size + orientation via a dynamic @page rule.
+    let pageStyle = document.getElementById("schedu-print-page") as HTMLStyleElement | null
+    if (!pageStyle) {
+      pageStyle = document.createElement("style")
+      pageStyle.id = "schedu-print-page"
+      document.head.appendChild(pageStyle)
+    }
+    pageStyle.textContent = `@page { size: ${printPaper} ${printOrientation}; margin: 8mm; }`
     window.print()
     setTimeout(() => {
       document.body.removeAttribute("data-print-type")
@@ -3578,6 +3588,27 @@ export function TimetablePage() {
                 {/* PDF exports */}
                 <div style={{ padding:"4px 14px 4px", fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em" }}>
                   PDF Export
+                </div>
+                {/* Print properties */}
+                <div style={{ display:"flex", gap:8, padding:"2px 14px 8px" }}>
+                  <label style={{ flex:1, fontSize:10, color:"#94A3B8", fontWeight:600 }}>
+                    Orientation
+                    <select value={printOrientation} onChange={e=>setPrintOrientation(e.target.value as any)}
+                      style={{ width:"100%", marginTop:3, padding:"4px 6px", borderRadius:6, border:"1px solid #E5EBF5", fontSize:11.5, color:"#374151", background:"#fff" }}>
+                      <option value="landscape">Landscape</option>
+                      <option value="portrait">Portrait</option>
+                    </select>
+                  </label>
+                  <label style={{ flex:1, fontSize:10, color:"#94A3B8", fontWeight:600 }}>
+                    Paper
+                    <select value={printPaper} onChange={e=>setPrintPaper(e.target.value as any)}
+                      style={{ width:"100%", marginTop:3, padding:"4px 6px", borderRadius:6, border:"1px solid #E5EBF5", fontSize:11.5, color:"#374151", background:"#fff" }}>
+                      <option value="A4">A4</option>
+                      <option value="A3">A3</option>
+                      <option value="Letter">Letter</option>
+                      <option value="Legal">Legal</option>
+                    </select>
+                  </label>
                 </div>
                 {[
                   ["Class-wise (Combined)",    ()=>triggerPrint("class","combined")],
