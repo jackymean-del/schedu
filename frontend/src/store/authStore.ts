@@ -6,7 +6,11 @@ export interface AuthUser {
   name: string
   email: string
   schoolName?: string
+  /** Institution mailing address — printed in document headers when set. */
+  address?: string
   role: 'admin' | 'teacher' | 'viewer'
+  /** Subscription tier. Absent / 'free' shows the schedU print watermark. */
+  plan?: 'free' | 'pro' | 'enterprise'
   createdAt: string
 }
 

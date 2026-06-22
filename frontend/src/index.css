@@ -145,38 +145,64 @@ select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
 }
 
 /* ══ Print / PDF styles ══════════════════════════════════════════════════
-   Timetable Print/PDF (class/teacher/room) renders the live grids into a
-   top-level portal (.schedu-print-root) that the timetable mounts during a
-   print job. We isolate it with display (NOT visibility) so the document
-   flows from the top and paginates correctly across pages — no app chrome,
-   no buttons, no scrollbars, and no overlap.
+   Timetable Print/PDF (class/teacher/room) opens an in-app PREVIEW overlay
+   (.schedu-print-overlay) that renders the live grids into page-like cards
+   with a branded header (institution) + footer (schedU watermark / print
+   date-time). The user picks orientation + paper and hits the big Print
+   button; for the actual print we isolate just the document
+   (.schedu-print-root) with display — no app chrome, no toolbar, paginated.
 
    (Master Data / Saved Schedules use a separate hidden-iframe document; see
    printSheets in lib/exportData.ts.)
    ========================================================================= */
 
-/* Portal is render-only for print — never shown on screen. */
-.schedu-print-root { display: none; }
+/* ── On-screen preview overlay ── */
+.schedu-print-overlay {
+  position: fixed; inset: 0; z-index: 4000;
+  background: rgba(17,17,30,0.55);
+  display: flex; flex-direction: column;
+}
+.schedu-print-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 18px; background: #fff; border-bottom: 1px solid #E5EBF5; flex-shrink: 0;
+}
+.schedu-print-scroll {
+  flex: 1; overflow: auto; padding: 28px 24px 80px;
+  /* block + margin-auto root keeps pages wider than the viewport fully
+     scrollable (flex centering would clip & strand the left edge). */
+  display: block;
+}
+.schedu-print-root { display: flex; flex-direction: column; align-items: center; gap: 22px; width: fit-content; min-width: 100%; margin: 0 auto; box-sizing: border-box; }
+.schedu-print-entity { background: #fff; box-shadow: 0 6px 26px rgba(0,0,0,0.28); padding: 14px 16px; box-sizing: border-box; }
+.schedu-print-fab {
+  position: fixed; right: 28px; bottom: 26px; z-index: 4100;
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 26px; border-radius: 999px; border: none;
+  background: #7C6FE0; color: #fff; font-size: 15px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 8px 24px rgba(124,111,224,0.5);
+}
 
 @media print {
-  /* Isolate the print document: hide the app, show only the portal. The
-     portal is a direct <body> child, so this paginates from page 1 cleanly. */
-  body[data-print-doc] > *:not(.schedu-print-root) { display: none !important; }
-  body[data-print-doc] .schedu-print-root { display: block !important; }
-
-  .schedu-print-root {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    background: #fff;
-    padding: 0;
+  /* Isolate the document: hide the app + the preview chrome, show only the
+     printable pages. */
+  body[data-print-doc] > *:not(.schedu-print-overlay) { display: none !important; }
+  .no-print { display: none !important; }
+  .schedu-print-overlay {
+    position: static !important; inset: auto !important; background: none !important;
+    display: block !important; z-index: auto !important;
+  }
+  .schedu-print-scroll { overflow: visible !important; padding: 0 !important; display: block !important; }
+  .schedu-print-root { display: block !important; gap: 0 !important; }
+  .schedu-print-entity {
+    box-shadow: none !important; padding: 0 !important;
+    width: auto !important;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
   }
 
-  /* One entity per printed block. Never split a timetable across a page
-     boundary (no partial view); each block carries its own branded header. */
-  .schedu-print-entity { break-inside: avoid; page-break-inside: avoid; }
-  /* Individual scope = one entity per page. */
-  .schedu-print-root[data-scope="individual"] .schedu-print-entity { page-break-after: always; }
-  .schedu-print-root[data-scope="individual"] .schedu-print-entity:last-child { page-break-after: auto; }
+  /* One entity per page — header at top, footer near the bottom. Never split
+     a timetable across a page boundary (no partial view). */
+  .schedu-print-entity { break-inside: avoid; page-break-inside: avoid; page-break-after: always; }
+  .schedu-print-entity:last-child { page-break-after: auto; }
 
   /* Repeat column headers if a single entity is taller than one page. */
   .schedu-print-root thead { display: table-header-group; }

@@ -42,15 +42,22 @@ function esc(v: unknown): string {
 /** schedU mark (white "b" glyph + gold dot) for the print header. */
 export const SCHEDU_MARK = `<svg width="22" height="22" viewBox="0 0 52 52" fill="none"><rect x="12" y="9" width="8" height="33" rx="4" fill="white"/><path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="39" cy="10" r="4.5" fill="#D4920E"/></svg>`
 
-/** Institution name + optional logo, read from the stores (best-effort). */
-export function institutionInfo(): { name: string; logo?: string } {
+/**
+ * Institution branding for print/PDF headers, read from the stores
+ * (best-effort). `isPaid` controls whether the schedU footer watermark shows
+ * (free tier = watermark; pro/enterprise = none).
+ */
+export function institutionInfo(): { name: string; logo?: string; address?: string; isPaid: boolean } {
   const user = useAuthStore.getState().user as any
   const cfg = useTimetableStore.getState().config as any
   const org = (useTimetableStore.getState() as any).organization
   const name =
-    user?.schoolName || org?.name || cfg?.orgName || cfg?.institutionName || 'Your Institution'
+    user?.schoolName || org?.name || cfg?.schoolName || cfg?.orgName || cfg?.institutionName || 'Your Institution'
   const logo = org?.logoUrl || cfg?.logoUrl || user?.logoUrl || undefined
-  return { name, logo }
+  const address = org?.address || cfg?.address || user?.address || undefined
+  const plan = (user?.plan ?? 'free') as string
+  const isPaid = plan === 'pro' || plan === 'enterprise' || plan === 'paid'
+  return { name, logo, address, isPaid }
 }
 
 /**

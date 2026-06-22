@@ -1301,39 +1301,43 @@ export function TimetablePage() {
   const [printOrientation, setPrintOrientation] = useState<"landscape"|"portrait">("landscape")
   const [printPaper, setPrintPaper] = useState<"A4"|"A3"|"Letter"|"Legal">("A4")
 
-  // ── PDF print trigger ────────────────────────────────────
-  // We render the live grids into a top-level portal (.schedu-print-root) and
-  // isolate it for print via display (see index.css). This guarantees ALL
-  // entities appear (no LazyCard / content-visibility skipping), each on a
-  // clean page with a branded header, fit to the chosen paper + orientation.
+  // ── PDF print / preview ──────────────────────────────────
+  // A print action opens an in-app preview (a portal) that renders the live
+  // grids — guaranteeing ALL entities appear (no LazyCard / content-visibility
+  // skipping). The user picks orientation + paper there and hits the big Print
+  // button, which sets @page and calls window.print(). For the actual print we
+  // isolate just the document (.schedu-print-root) via display (see index.css).
   const [printJob, setPrintJob] = useState<{ type: "class"|"teacher"|"room"; scope: "combined"|"individual" } | null>(null)
 
-  const triggerPrint = (type: "class"|"teacher"|"room", scope: "combined"|"individual") => {
-    // Apply the chosen paper size + orientation via a dynamic @page rule.
+  const triggerPrint = (type: "class"|"teacher"|"room", _scope: "combined"|"individual") => {
+    document.body.setAttribute("data-print-doc", type)
+    setPrintJob({ type, scope: "individual" })
+  }
+
+  const closePrintPreview = () => {
+    document.body.removeAttribute("data-print-doc")
+    setPrintJob(null)
+  }
+
+  const doPrint = () => {
+    // Apply the chosen paper size + orientation. Extra bottom margin reserves
+    // room for the fixed footer (watermark / print date-time) on every page.
     let pageStyle = document.getElementById("schedu-print-page") as HTMLStyleElement | null
     if (!pageStyle) {
       pageStyle = document.createElement("style")
       pageStyle.id = "schedu-print-page"
       document.head.appendChild(pageStyle)
     }
-    pageStyle.textContent = `@page { size: ${printPaper} ${printOrientation}; margin: 10mm; }`
-    document.body.setAttribute("data-print-doc", type)
-    setPrintJob({ type, scope })
+    pageStyle.textContent = `@page { size: ${printPaper} ${printOrientation}; margin: 9mm 9mm 18mm; }`
+    window.print()
   }
 
-  // Once the print portal has mounted + laid out, open the print dialog, then
-  // tear the portal down again so it never lingers on screen.
+  // Esc closes the preview.
   useEffect(() => {
     if (!printJob) return
-    let raf2 = 0
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        window.print()
-        document.body.removeAttribute("data-print-doc")
-        setPrintJob(null)
-      })
-    })
-    return () => { cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closePrintPreview() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [printJob])
 
   const org = ORG_CONFIGS[config.orgType ?? "school"]
@@ -3190,47 +3194,124 @@ export function TimetablePage() {
   // ═══════════════════════════════════════════════════════════
   // RENDER: Print document (portal) — branded, paginated, fit-to-page
   // ═══════════════════════════════════════════════════════════
-  const PrintBrandHeader = ({ subtitle }: { subtitle: string }) => {
+  // Page dimensions (mm) for preview sizing. @page margins: 9 / 9 / 18 / 9.
+  const PAGE_MM: Record<string, [number, number]> = {
+    A4: [210, 297], A3: [297, 420], Letter: [215.9, 279.4], Legal: [215.9, 355.6],
+  }
+  const MM_PX = 3.7795
+
+  // Institution header (always printed, foreground): logo + name + address + title.
+  const InstitutionHeader = ({ title }: { title: string }) => {
     const inst = institutionInfo()
     return (
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, borderBottom:"2px solid #7C6FE0", paddingBottom:10, marginBottom:12 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:34, height:34, borderRadius:9, background:"#7C6FE0", display:"flex", alignItems:"center", justifyContent:"center", WebkitPrintColorAdjust:"exact" as any }}
-            dangerouslySetInnerHTML={{ __html: SCHEDU_MARK }} />
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, borderBottom:"2px solid #7C6FE0", paddingBottom:10, marginBottom:12 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {inst.logo && <img src={inst.logo} alt="" style={{ height:42, maxWidth:120, objectFit:"contain" as const }} />}
           <div>
-            <div style={{ fontSize:8, letterSpacing:"0.14em", textTransform:"uppercase" as const, color:"#8B87AD" }}>By Bhusku</div>
-            <div style={{ fontSize:18, fontWeight:800, letterSpacing:"-0.3px", lineHeight:1, color:"#13111E" }}>sched<span style={{ color:"#7C6FE0", fontStyle:"italic" }}>U</span></div>
+            <div style={{ fontSize:19, fontWeight:800, letterSpacing:"-0.3px", color:"#13111E", lineHeight:1.15 }}>{inst.name}</div>
+            {inst.address && <div style={{ fontSize:10.5, color:"#8B87AD", marginTop:2, maxWidth:360 }}>{inst.address}</div>}
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10, textAlign:"right" as const }}>
-          {inst.logo && <img src={inst.logo} alt="" style={{ height:34, maxWidth:120, objectFit:"contain" as const }} />}
-          <div>
-            <div style={{ fontSize:16, fontWeight:700, color:"#13111E" }}>{inst.name}</div>
-            <div style={{ fontSize:11, color:"#8B87AD" }}>{subtitle}</div>
-          </div>
+        <div style={{ textAlign:"right" as const, flexShrink:0 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:"#7C6FE0" }}>{title}</div>
         </div>
       </div>
     )
   }
 
+  // Footer: schedU watermark (free tier only, light, foreground) + the print
+  // date/time rendered as a BACKGROUND graphic so it prints only when Chrome's
+  // "Background graphics" option is enabled (per spec).
+  const PrintFooter = () => {
+    const inst = institutionInfo()
+    const dt = new Date().toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })
+    const dtSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='340' height='14'><text x='340' y='11' text-anchor='end' font-family='Arial, sans-serif' font-size='9.5' fill='#94A3B8'>Printed: ${dt.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text></svg>`
+    const dtBg = `url("data:image/svg+xml;utf8,${encodeURIComponent(dtSvg)}")`
+    return (
+      <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, marginTop:14, paddingTop:8, borderTop:"1px solid #EEE" }}>
+        {!inst.isPaid ? (
+          <div style={{ display:"flex", alignItems:"center", gap:6, opacity:0.5 }}>
+            <div style={{ width:20, height:20, borderRadius:5, background:"#7C6FE0", display:"flex", alignItems:"center", justifyContent:"center", WebkitPrintColorAdjust:"exact" as any }}
+              dangerouslySetInnerHTML={{ __html: SCHEDU_MARK }} />
+            <div style={{ fontSize:8.5, color:"#8B87AD" }}>Generated by sched<span style={{ color:"#7C6FE0", fontWeight:700 }}>U</span> · schedu.bhusku.com</div>
+          </div>
+        ) : <span />}
+        <div className="schedu-print-datetime" style={{ minWidth:200, height:14, backgroundImage:dtBg, backgroundRepeat:"no-repeat", backgroundPosition:"right bottom" }} />
+      </div>
+    )
+  }
+
+  // In-app print preview (portal). Renders the live grids into page-like cards
+  // with a top branded header + bottom footer, a toolbar (orientation/paper)
+  // and a big Print button — all hidden during the actual print.
   const renderPrintDoc = () => {
     if (!printJob) return null
     const { type, scope } = printJob
-    const today = new Date().toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" })
     const typeLabel = type === "class" ? "Class Timetable" : type === "teacher" ? "Teacher Timetable" : "Room Timetable"
     const entities = type === "class" ? sections.map(s => s.name)
       : type === "teacher" ? staff.map(s => s.name)
       : allRooms
     const renderOne = (e: string) =>
       type === "class" ? renderClassTT(e) : type === "teacher" ? renderTeacherTT(e) : renderRoomTT(e)
+
+    const [pw, ph] = PAGE_MM[printPaper] ?? PAGE_MM.A4
+    const [wMM, hMM] = printOrientation === "landscape" ? [Math.max(pw, ph), Math.min(pw, ph)] : [Math.min(pw, ph), Math.max(pw, ph)]
+    const contentW = (wMM - 18) * MM_PX
+    // Slightly less than the true content height (margins 9/18) so the footer
+    // sits near the page bottom without spilling onto a blank extra page.
+    const contentH = (hMM - 32) * MM_PX
+
+    const selStyle: React.CSSProperties = { padding:"5px 8px", borderRadius:7, border:"1px solid #D8D2FF", fontSize:12, color:"#374151", background:"#fff", cursor:"pointer" }
+
     return (
-      <div className="schedu-print-root" data-scope={scope}>
-        {entities.map(e => (
-          <div className="schedu-print-entity" key={e} style={{ padding:"2px 2px 8px" }}>
-            <PrintBrandHeader subtitle={`${typeLabel} · ${today}`} />
-            <div className="warm-tt">{renderOne(e)}</div>
+      <div className="schedu-print-overlay">
+        {/* Toolbar */}
+        <div className="schedu-print-toolbar no-print">
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:14, fontWeight:700, color:"#13111E" }}>Print preview</span>
+            <span style={{ fontSize:12, color:"#8B87AD" }}>{typeLabel} · {entities.length} page{entities.length !== 1 ? "s" : ""}</span>
           </div>
-        ))}
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <label style={{ fontSize:11, color:"#8B87AD", fontWeight:600, display:"flex", flexDirection:"column" as const, gap:2 }}>
+              Orientation
+              <select value={printOrientation} onChange={e => setPrintOrientation(e.target.value as any)} style={selStyle}>
+                <option value="landscape">Landscape</option>
+                <option value="portrait">Portrait</option>
+              </select>
+            </label>
+            <label style={{ fontSize:11, color:"#8B87AD", fontWeight:600, display:"flex", flexDirection:"column" as const, gap:2 }}>
+              Paper
+              <select value={printPaper} onChange={e => setPrintPaper(e.target.value as any)} style={selStyle}>
+                <option value="A4">A4</option><option value="A3">A3</option>
+                <option value="Letter">Letter</option><option value="Legal">Legal</option>
+              </select>
+            </label>
+            <button onClick={doPrint}
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 22px", borderRadius:9, border:"none", background:"#7C6FE0", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 14px rgba(124,111,224,0.4)" }}>
+              🖨️ Print
+            </button>
+            <button onClick={closePrintPreview} title="Close (Esc)"
+              style={{ width:36, height:36, borderRadius:9, border:"1px solid #E5EBF5", background:"#fff", color:"#64748b", fontSize:18, cursor:"pointer", lineHeight:1 }}>✕</button>
+          </div>
+        </div>
+
+        {/* Scrollable page stack */}
+        <div className="schedu-print-scroll">
+          <div className="schedu-print-root" data-scope={scope}>
+            {entities.map(e => (
+              <div className="schedu-print-entity" key={e}
+                style={{ width:contentW, minHeight:contentH, display:"flex", flexDirection:"column" as const }}>
+                <InstitutionHeader title={typeLabel} />
+                <div className="warm-tt">{renderOne(e)}</div>
+                <div style={{ flex:1 }} />
+                <PrintFooter />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Always-visible big Print button (floats over every page) */}
+        <button className="schedu-print-fab no-print" onClick={doPrint}>🖨️ Print</button>
       </div>
     )
   }
@@ -3651,38 +3732,15 @@ export function TimetablePage() {
                   </button>
                 ))}
                 <div style={{ height:1, background:"#E5EBF5", margin:"6px 0" }} />
-                {/* PDF exports */}
-                <div style={{ padding:"4px 14px 4px", fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em" }}>
-                  PDF Export
-                </div>
-                {/* Print properties */}
-                <div style={{ display:"flex", gap:8, padding:"2px 14px 8px" }}>
-                  <label style={{ flex:1, fontSize:10, color:"#94A3B8", fontWeight:600 }}>
-                    Orientation
-                    <select value={printOrientation} onChange={e=>setPrintOrientation(e.target.value as any)}
-                      style={{ width:"100%", marginTop:3, padding:"4px 6px", borderRadius:6, border:"1px solid #E5EBF5", fontSize:11.5, color:"#374151", background:"#fff" }}>
-                      <option value="landscape">Landscape</option>
-                      <option value="portrait">Portrait</option>
-                    </select>
-                  </label>
-                  <label style={{ flex:1, fontSize:10, color:"#94A3B8", fontWeight:600 }}>
-                    Paper
-                    <select value={printPaper} onChange={e=>setPrintPaper(e.target.value as any)}
-                      style={{ width:"100%", marginTop:3, padding:"4px 6px", borderRadius:6, border:"1px solid #E5EBF5", fontSize:11.5, color:"#374151", background:"#fff" }}>
-                      <option value="A4">A4</option>
-                      <option value="A3">A3</option>
-                      <option value="Letter">Letter</option>
-                      <option value="Legal">Legal</option>
-                    </select>
-                  </label>
+                {/* PDF / Print — opens an in-app preview with orientation +
+                    paper-size options and a big Print button. */}
+                <div style={{ padding:"4px 14px 6px", fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em" }}>
+                  Print / PDF
                 </div>
                 {[
-                  ["Class-wise (Combined)",    ()=>triggerPrint("class","combined")],
-                  ["Class-wise (Individual)",  ()=>triggerPrint("class","individual")],
-                  ["Teacher-wise (Combined)",  ()=>triggerPrint("teacher","combined")],
-                  ["Teacher-wise (Individual)",()=>triggerPrint("teacher","individual")],
-                  ["Room-wise (Combined)",     ()=>triggerPrint("room","combined")],
-                  ["Room-wise (Individual)",   ()=>triggerPrint("room","individual")],
+                  ["Class-wise Timetable",   ()=>triggerPrint("class","individual")],
+                  ["Teacher-wise Timetable", ()=>triggerPrint("teacher","individual")],
+                  ["Room-wise Timetable",    ()=>triggerPrint("room","individual")],
                 ].map(([label, fn]) => (
                   <button key={label as string}
                     onClick={() => { (fn as ()=>void)(); setShowExportMenu(false) }}
