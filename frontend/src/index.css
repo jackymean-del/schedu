@@ -166,14 +166,14 @@ select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 18px; background: #fff; border-bottom: 1px solid #E5EBF5; flex-shrink: 0;
 }
-.schedu-print-scroll {
-  flex: 1; overflow: auto; padding: 28px 24px 80px;
-  /* block + margin-auto root keeps pages wider than the viewport fully
-     scrollable (flex centering would clip & strand the left edge). */
-  display: block;
+.schedu-print-scroll { flex: 1; overflow: auto; padding: 28px 24px 80px; display: block; }
+/* The document is one continuous white sheet; the printer paginates it. */
+.schedu-print-root {
+  width: min(1040px, 100%); margin: 0 auto; box-sizing: border-box;
+  background: #fff; box-shadow: 0 6px 26px rgba(0,0,0,0.28); padding: 22px 26px;
 }
-.schedu-print-root { display: flex; flex-direction: column; align-items: center; gap: 22px; width: fit-content; min-width: 100%; margin: 0 auto; box-sizing: border-box; }
-.schedu-print-entity { background: #fff; box-shadow: 0 6px 26px rgba(0,0,0,0.28); padding: 14px 16px; box-sizing: border-box; }
+.schedu-print-entity { box-sizing: border-box; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px dashed #E5E7EB; }
+.schedu-print-entity:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .schedu-print-fab {
   position: fixed; right: 28px; bottom: 26px; z-index: 4100;
   display: flex; align-items: center; gap: 8px;
@@ -192,17 +192,20 @@ select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
     display: block !important; z-index: auto !important;
   }
   .schedu-print-scroll { overflow: visible !important; padding: 0 !important; display: block !important; }
-  .schedu-print-root { display: block !important; gap: 0 !important; }
+  .schedu-print-root { display: block !important; width: auto !important; margin: 0 !important; box-shadow: none !important; padding: 0 !important; }
   .schedu-print-entity {
-    box-shadow: none !important; padding: 0 !important;
-    width: auto !important;
+    width: auto !important; margin: 0 0 6mm !important; padding: 0 !important;
+    border-bottom: none !important;
     -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
   }
 
-  /* One entity per page — header at top, footer near the bottom. Never split
-     a timetable across a page boundary (no partial view). */
-  .schedu-print-entity { break-inside: avoid; page-break-inside: avoid; page-break-after: always; }
-  .schedu-print-entity:last-child { page-break-after: auto; }
+  /* Never split one timetable (header + grid + footer) across a page boundary
+     — no partial views. The footer flows at the bottom of each timetable, so
+     it survives paper-saving packing without overlapping anything. */
+  .schedu-print-entity { break-inside: avoid; page-break-inside: avoid; }
+  /* Paper-saving OFF = one timetable per page. ON = let them pack (default). */
+  .schedu-print-root[data-saving="false"] .schedu-print-entity { page-break-after: always; }
+  .schedu-print-root[data-saving="false"] .schedu-print-entity:last-child { page-break-after: auto; }
 
   /* Repeat column headers if a single entity is taller than one page. */
   .schedu-print-root thead { display: table-header-group; }
