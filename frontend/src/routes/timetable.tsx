@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
-import { createPortal } from "react-dom"
 import { useTimetableStore } from "@/store/timetableStore"
-import { institutionInfo, SCHEDU_MARK } from "@/lib/exportData"
+import { PrintPreview } from "@/components/PrintDoc"
 import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
@@ -1304,40 +1303,10 @@ export function TimetablePage() {
   // button, which sets @page and calls window.print(). For the actual print we
   // isolate just the document (.schedu-print-root) via display (see index.css).
   const [printJob, setPrintJob] = useState<{ type: "class"|"teacher"|"room"; scope: "combined"|"individual" } | null>(null)
-  // Paper-saving = pack as many whole timetables onto a page as fit (default).
-  // Off = one timetable per page.
-  const [paperSaving, setPaperSaving] = useState(true)
 
   const triggerPrint = (type: "class"|"teacher"|"room", _scope: "combined"|"individual") => {
-    document.body.setAttribute("data-print-doc", type)
     setPrintJob({ type, scope: "individual" })
   }
-
-  const closePrintPreview = () => {
-    document.body.removeAttribute("data-print-doc")
-    setPrintJob(null)
-  }
-
-  const doPrint = () => {
-    // Margin only — paper size + orientation are chosen in the printer dialog,
-    // so we don't lock @page size (Chrome keeps its Layout/Paper options).
-    let pageStyle = document.getElementById("schedu-print-page") as HTMLStyleElement | null
-    if (!pageStyle) {
-      pageStyle = document.createElement("style")
-      pageStyle.id = "schedu-print-page"
-      document.head.appendChild(pageStyle)
-    }
-    pageStyle.textContent = `@page { margin: 10mm; }`
-    window.print()
-  }
-
-  // Esc closes the preview.
-  useEffect(() => {
-    if (!printJob) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closePrintPreview() }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [printJob])
 
   const org = ORG_CONFIGS[config.orgType ?? "school"]
   const country = getCountry(config.countryCode ?? "IN")
@@ -3191,53 +3160,8 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Print document (portal) — branded, paper-saving, fit-to-page
+  // RENDER: Print preview — uses the shared, standardized PrintPreview
   // ═══════════════════════════════════════════════════════════
-  // Institution header (always printed, foreground): logo + name + address + title.
-  const InstitutionHeader = ({ title }: { title: string }) => {
-    const inst = institutionInfo()
-    return (
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, borderBottom:"2px solid #7C6FE0", paddingBottom:10, marginBottom:12 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {inst.logo && <img src={inst.logo} alt="" style={{ height:42, maxWidth:120, objectFit:"contain" as const }} />}
-          <div>
-            <div style={{ fontSize:19, fontWeight:800, letterSpacing:"-0.3px", color:"#13111E", lineHeight:1.15 }}>{inst.name}</div>
-            {inst.address && <div style={{ fontSize:10.5, color:"#8B87AD", marginTop:2, maxWidth:360 }}>{inst.address}</div>}
-          </div>
-        </div>
-        <div style={{ textAlign:"right" as const, flexShrink:0 }}>
-          <div style={{ fontSize:14, fontWeight:700, color:"#7C6FE0" }}>{title}</div>
-        </div>
-      </div>
-    )
-  }
-
-  // Footer: schedU watermark (free tier only, light, foreground) + the print
-  // date/time rendered as a BACKGROUND graphic so it prints only when Chrome's
-  // "Background graphics" option is enabled (per spec).
-  const PrintFooter = () => {
-    const inst = institutionInfo()
-    const dt = new Date().toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })
-    const dtSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='340' height='14'><text x='340' y='11' text-anchor='end' font-family='Arial, sans-serif' font-size='9.5' fill='#94A3B8'>Printed: ${dt.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text></svg>`
-    const dtBg = `url("data:image/svg+xml;utf8,${encodeURIComponent(dtSvg)}")`
-    return (
-      <div className="schedu-print-footer" style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, marginTop:10, paddingTop:6, borderTop:"1px solid #EEE" }}>
-        {!inst.isPaid ? (
-          <div style={{ display:"flex", alignItems:"center", gap:6, opacity:0.5 }}>
-            <div style={{ width:18, height:18, borderRadius:5, background:"#7C6FE0", display:"flex", alignItems:"center", justifyContent:"center", WebkitPrintColorAdjust:"exact" as any }}
-              dangerouslySetInnerHTML={{ __html: SCHEDU_MARK }} />
-            <div style={{ fontSize:8.5, color:"#8B87AD" }}>Generated by sched<span style={{ color:"#7C6FE0", fontWeight:700 }}>U</span> · schedu.bhusku.com</div>
-          </div>
-        ) : <span />}
-        <div className="schedu-print-datetime" style={{ minWidth:200, height:14, backgroundImage:dtBg, backgroundRepeat:"no-repeat", backgroundPosition:"right bottom" }} />
-      </div>
-    )
-  }
-
-  // In-app print preview (portal). Renders the live grids into a branded
-  // document. Paper size + orientation are left to the printer dialog; the only
-  // option here is paper-saving (pack timetables vs one per page). The big
-  // Print button opens the browser print/Save-as-PDF dialog.
   const renderPrintDoc = () => {
     if (!printJob) return null
     const { type } = printJob
@@ -3247,47 +3171,15 @@ export function TimetablePage() {
       : allRooms
     const renderOne = (e: string) =>
       type === "class" ? renderClassTT(e) : type === "teacher" ? renderTeacherTT(e) : renderRoomTT(e)
-
+    const items = entities.map(e => ({ key: e, node: <div className="warm-tt">{renderOne(e)}</div> }))
     return (
-      <div className="schedu-print-overlay">
-        {/* Toolbar */}
-        <div className="schedu-print-toolbar no-print">
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ fontSize:14, fontWeight:700, color:"#13111E" }}>Print preview</span>
-            <span style={{ fontSize:12, color:"#8B87AD" }}>{typeLabel} · {entities.length} timetable{entities.length !== 1 ? "s" : ""}</span>
-          </div>
-          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <label title="Pack as many timetables onto each page as fit (saves paper). Off = one per page."
-              style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, fontWeight:600, color:"#4B5275", cursor:"pointer", userSelect:"none" as const }}>
-              <input type="checkbox" checked={paperSaving} onChange={e => setPaperSaving(e.target.checked)}
-                style={{ width:16, height:16, accentColor:"#7C6FE0", cursor:"pointer" }} />
-              🌱 Paper-saving mode
-            </label>
-            <button onClick={doPrint}
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"11px 28px", borderRadius:10, border:"none", background:"#7C6FE0", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 14px rgba(124,111,224,0.4)" }}>
-              🖨️ Print
-            </button>
-            <button onClick={closePrintPreview} title="Close (Esc)"
-              style={{ width:36, height:36, borderRadius:9, border:"1px solid #E5EBF5", background:"#fff", color:"#64748b", fontSize:18, cursor:"pointer", lineHeight:1 }}>✕</button>
-          </div>
-        </div>
-
-        {/* Scrollable document */}
-        <div className="schedu-print-scroll">
-          <div className="schedu-print-root" data-saving={paperSaving ? "true" : "false"}>
-            {entities.map(e => (
-              <div className="schedu-print-entity" key={e}>
-                <InstitutionHeader title={typeLabel} />
-                <div className="warm-tt">{renderOne(e)}</div>
-                <PrintFooter />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Always-visible big Print button (floats over the preview) */}
-        <button className="schedu-print-fab no-print" onClick={doPrint}>🖨️ Print</button>
-      </div>
+      <PrintPreview
+        open
+        title={typeLabel}
+        subtitle={`${typeLabel} · ${entities.length} timetable${entities.length !== 1 ? "s" : ""}`}
+        items={items}
+        onClose={() => setPrintJob(null)}
+      />
     )
   }
 
@@ -4399,8 +4291,8 @@ export function TimetablePage() {
         </div>
       )}
 
-      {/* Print/PDF document — branded, paginated portal (off-screen until print) */}
-      {printJob && createPortal(renderPrintDoc(), document.body)}
+      {/* Print/PDF preview — shared, standardized (PrintPreview portals itself) */}
+      {renderPrintDoc()}
     </div>
   )
 }

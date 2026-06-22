@@ -1,11 +1,12 @@
 /**
  * Reusable export controls — a simple Export dropdown (Excel + PDF) plus a
- * prominent Print button. Paper size + orientation are chosen in the printer
- * dialog, so there are no size/orientation options here. Drop it on any page;
- * pass a lazy `sheets` builder for the data.
+ * prominent Print button. Both PDF and Print open the shared, standardized
+ * PrintPreview (institution header on top, schedU watermark footer, paper-saving
+ * toggle). Paper size + orientation are chosen in the printer dialog.
  */
 import { useState, useRef, useEffect } from 'react'
-import { exportSheetsToXLSX, printSheets, type ExportSheet } from '@/lib/exportData'
+import { exportSheetsToXLSX, type ExportSheet } from '@/lib/exportData'
+import { PrintPreview, DataTable, type PrintItem } from '@/components/PrintDoc'
 
 export function ExportControls({ filename, sheets, title = 'Report' }: {
   filename: string
@@ -14,6 +15,7 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
   title?: string
 }) {
   const [open, setOpen] = useState(false)
+  const [preview, setPreview] = useState<PrintItem[] | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -21,6 +23,12 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
+
+  const openPreview = () => {
+    // One block per table (Classes, Subjects, …) so the printer can pack them.
+    setPreview(sheets().map(sh => ({ key: sh.name, node: <DataTable sheet={sh} /> })))
+    setOpen(false)
+  }
 
   const menuItem: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px',
@@ -42,20 +50,27 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
               onClick={() => { exportSheetsToXLSX(filename, sheets()); setOpen(false) }}>
               <span style={{ fontSize: 15 }}>📊</span> Export to Excel
             </button>
-            <button style={menuItem}
-              onClick={() => { printSheets(sheets(), { title }); setOpen(false) }}>
+            <button style={menuItem} onClick={openPreview}>
               <span style={{ fontSize: 15 }}>📄</span> Export to PDF
             </button>
           </div>
         )}
       </div>
 
-      {/* Prominent Print button — opens the browser print / Save-as-PDF dialog */}
-      <button onClick={() => printSheets(sheets(), { title })}
-        title="Print this page (choose paper size & orientation in the print dialog)"
+      {/* Prominent Print button — opens the shared preview */}
+      <button onClick={openPreview}
+        title="Print this page"
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', border: 'none', borderRadius: 8, background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,111,224,0.35)' }}>
         🖨️ Print
       </button>
+
+      <PrintPreview
+        open={preview !== null}
+        title={title}
+        subtitle={preview ? `${title} · ${preview.length} table${preview.length !== 1 ? 's' : ''}` : ''}
+        items={preview ?? []}
+        onClose={() => setPreview(null)}
+      />
     </div>
   )
 }
