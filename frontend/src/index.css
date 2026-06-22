@@ -149,14 +149,16 @@ select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
    Strategy: hide everything via visibility, show only .warm-tt content
    ========================================================================= */
 @media print {
-  @page { size: A4 landscape; margin: 10mm 8mm; }
+  /* Timetable-only print: hide everything except .warm-tt. SCOPED to
+     body[data-print-type] (set by the timetable's print trigger) so generic
+     page prints (Export → Print) render the page normally instead of blank. */
 
   /* 1. Hide the entire page */
-  * { visibility: hidden !important; }
+  body[data-print-type] * { visibility: hidden !important; }
 
   /* 2. Show only the timetable and its children */
-  .warm-tt,
-  .warm-tt * { visibility: visible !important; }
+  body[data-print-type] .warm-tt,
+  body[data-print-type] .warm-tt * { visibility: visible !important; }
 
   /* 3. Position the timetable at the top-left corner of the page */
   .warm-tt {
