@@ -31,9 +31,11 @@ const FAKE_GOOGLE_USERS = [
 ]
 
 // ── Presentational card (exact UI; backend-agnostic) ──────────
-function LoginCard({ onEmailSignIn, onGoogle }: {
+function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
   onEmailSignIn: (email: string, password: string) => Promise<void>
   onGoogle: () => Promise<void>
+  /** True in local mock mode (no Clerk key) — shows a "demo mode" notice. */
+  mock?: boolean
 }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -90,6 +92,12 @@ function LoginCard({ onEmailSignIn, onGoogle }: {
           </a>
           <p style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>AI-native academic scheduling</p>
         </div>
+
+        {mock && (
+          <div style={{ marginBottom: 18, padding: '9px 12px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12, lineHeight: 1.5 }}>
+            ⚠️ <strong>Demo mode</strong> — real sign-in isn’t configured. Sign-ins here are simulated. Set <code>VITE_CLERK_PUBLISHABLE_KEY</code> to enable real authentication.
+          </div>
+        )}
 
         {/* Heading */}
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#13111E', marginBottom: 20, letterSpacing: '-0.3px' }}>Welcome back</h1>
@@ -193,7 +201,7 @@ function MockLogin() {
     await register(u.name, u.email, 'google-oauth-token', u.school)
     window.location.href = '/dashboard'
   }
-  return <LoginCard onEmailSignIn={onEmailSignIn} onGoogle={onGoogle} />
+  return <LoginCard onEmailSignIn={onEmailSignIn} onGoogle={onGoogle} mock />
 }
 
 export function LoginPage() {
