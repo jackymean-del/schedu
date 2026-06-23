@@ -69,9 +69,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        try { clerkSignOut?.() } catch { /* ignore */ }
-        localStorage.removeItem('auth_token')
+        // Wipe the local session first so nothing can rehydrate it (this also
+        // clears stale mock/demo sessions created before Clerk was enabled).
         set({ user: null, token: null, isAuthenticated: false })
+        try { localStorage.removeItem('auth_token') } catch { /* ignore */ }
+        try { localStorage.removeItem('schedu-auth') } catch { /* ignore */ }
+        // End the Clerk session too (redirects to /login when Clerk is active).
+        try { clerkSignOut?.() } catch { /* ignore */ }
       },
 
       updateUser: (patch) =>
