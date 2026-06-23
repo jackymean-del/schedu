@@ -30,11 +30,13 @@ export function ClerkAuthSync() {
       useAuthStore.setState({ user: null, token: null, isAuthenticated: false })
       return
     }
-    const md = (user.publicMetadata ?? {}) as Record<string, unknown>
+    // Merge metadata: publicMetadata (backend-set) wins over unsafeMetadata
+    // (set by our custom sign-up form for org name, address, etc.).
+    const md = { ...(user.unsafeMetadata ?? {}), ...(user.publicMetadata ?? {}) } as Record<string, unknown>
     const email = user.primaryEmailAddress?.emailAddress ?? ''
     const appUser: AuthUser = {
       id: user.id,
-      name: user.fullName || user.username || email.split('@')[0] || 'User',
+      name: user.fullName || (md.name as string) || user.username || email.split('@')[0] || 'User',
       email,
       schoolName: (md.schoolName as string) || user.organizationMemberships?.[0]?.organization?.name || undefined,
       address: (md.address as string) || undefined,

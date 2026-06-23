@@ -1,19 +1,25 @@
 /**
- * Sign-up page — matches Page 2 mockup
+ * Sign-up page — custom schedU UI, powered by real Clerk auth (custom flow).
  *
  * Left panel  : brand sidebar with 4 feature bullets + trust line
- * Right panel : registration form
- *   First name / Last name · Work email · School name
- *   Board / School type · Password
- *   → Create account (dark)  |  Continue with Google
+ * Right panel : registration form → email-code verification step
+ *   First name / Last name · Work email · Organization name
+ *   State / Country · Contact number · Board / Institution type · Password
+ * Extra (non-Clerk) fields are saved to Clerk unsafeMetadata.
  */
 
 import { useState } from 'react'
-import { SignUp } from '@clerk/clerk-react'
+import { useSignUp } from '@clerk/clerk-react'
 import { useAuthStore } from '@/store/authStore'
-import { CLERK_ENABLED } from '@/lib/clerk'
+import { CLERK_ENABLED, authErrorMessage } from '@/lib/clerk'
 import { Loader2 } from 'lucide-react'
 import { AppFooter } from '@/components/AppFooter'
+
+interface RegFields {
+  firstName: string; lastName: string; email: string; password: string
+  organization: string; state: string; country: string; phone: string
+  board: string; institutionType: string
+}
 
 // ── Google "G" mark ───────────────────────────────────────────
 function GoogleMark() {
@@ -27,111 +33,52 @@ function GoogleMark() {
   )
 }
 
-// ── Sidebar feature icons (inline SVG, no deps) ───────────────
 const FEATURES = [
-  {
-    color: '#0EA5E9',
-    bg: '#E0F2FE',
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-      </svg>
-    ),
-    title: 'AI-generated allocations',
-    desc: 'No manual tables — AI suggests everything from scratch.',
-  },
-  {
-    color: '#3B82F6',
-    bg: '#DBEAFE',
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-      </svg>
-    ),
-    title: 'Spreadsheet-native editing',
-    desc: 'Inline editing, drag-fill, copy-paste from Excel.',
-  },
-  {
-    color: '#F97316',
-    bg: '#FFEDD5',
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-    ),
-    title: 'Conflict-free guarantee',
-    desc: 'Hard constraints enforced. AI flags soft ones.',
-  },
-  {
-    color: '#8B5CF6',
-    bg: '#EDE9FF',
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-      </svg>
-    ),
-    title: 'Export anywhere',
-    desc: 'PDF, Excel, print — class, teacher, or room view.',
-  },
+  { color: '#0EA5E9', bg: '#E0F2FE', title: 'AI-generated allocations', desc: 'No manual tables — AI suggests everything from scratch.',
+    icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>) },
+  { color: '#3B82F6', bg: '#DBEAFE', title: 'Spreadsheet-native editing', desc: 'Inline editing, drag-fill, copy-paste from Excel.',
+    icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>) },
+  { color: '#F97316', bg: '#FFEDD5', title: 'Conflict-free guarantee', desc: 'Hard constraints enforced. AI flags soft ones.',
+    icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>) },
+  { color: '#8B5CF6', bg: '#EDE9FF', title: 'Export anywhere', desc: 'PDF, Excel, print — class, teacher, or room view.',
+    icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>) },
 ]
 
-const BOARDS = [
-  'CBSE', 'ICSE', 'IB (MYP / DP)', 'Cambridge IGCSE',
-  'Common Core', 'GCSE / A-Level', 'State Board', 'Custom / Other',
-]
-const SCHOOL_TYPES = [
-  'Day school', 'Boarding school', 'University', 'College',
-  'Coaching institute', 'Training centre', 'Online', 'Other',
-]
+const BOARDS = ['CBSE', 'ICSE', 'IB (MYP / DP)', 'Cambridge IGCSE', 'Common Core', 'GCSE / A-Level', 'State Board', 'Custom / Other']
+const INSTITUTION_TYPES = ['Day school', 'Boarding school', 'University', 'College', 'Coaching institute', 'Training centre', 'Online', 'Other']
 
 const FAKE_GOOGLE_USERS = [
   { name: 'Alex Johnson',  email: 'alex.johnson@gmail.com',  school: 'Greenwood Academy' },
-  { name: 'Maria Garcia',  email: 'maria.garcia@gmail.com',  school: 'St. Mary\'s College' },
+  { name: 'Maria Garcia',  email: 'maria.garcia@gmail.com',  school: "St. Mary's College" },
   { name: 'James Wilson',  email: 'james.wilson@gmail.com',  school: 'Lincoln High School' },
 ]
 
-export function RegisterPage() {
-  const { register } = useAuthStore()
-
-  const [firstName,   setFirstName]   = useState('')
-  const [lastName,    setLastName]    = useState('')
-  const [email,       setEmail]       = useState('')
-  const [school,      setSchool]      = useState('')
-  const [state,       setState]       = useState('')
-  const [country,     setCountry]     = useState('')
-  const [phone,       setPhone]       = useState('')
-  const [board,       setBoard]       = useState('')
-  const [schoolType,  setSchoolType]  = useState('')
-  const [password,    setPassword]    = useState('')
-  const [loading,     setLoading]     = useState(false)
+// ── Presentational card (exact UI; backend-agnostic) ──────────
+function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onResend }: {
+  phase: 'form' | 'verify'
+  pendingEmail: string
+  onSubmit: (f: RegFields) => Promise<void>
+  onGoogle: () => Promise<void>
+  onVerify: (code: string) => Promise<void>
+  onResend: () => Promise<void>
+}) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [organization, setOrganization] = useState('')
+  const [state, setState] = useState('')
+  const [country, setCountry] = useState('')
+  const [phone, setPhone] = useState('')
+  const [board, setBoard] = useState('')
+  const [institutionType, setInstitutionType] = useState('')
+  const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [error,       setError]       = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [error, setError] = useState('')
 
   const busy = loading || googleLoading
-
-  if (CLERK_ENABLED) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#F5F4F0', display: 'flex', flexDirection: 'column', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif" }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <a href="/" style={{ textDecoration: 'none', display: 'inline-block', marginBottom: 4 }}>
-              <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.4px', color: '#13111E' }}>
-                sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans', Georgia, serif", fontStyle: 'italic' }}>U</span>
-              </span>
-            </a>
-            <p style={{ fontSize: 13, color: '#6B7280', margin: '2px 0 16px' }}>Create your free account</p>
-            <SignUp
-              routing="hash"
-              signInUrl="/login"
-              forceRedirectUrl="/wizard"
-              appearance={{ variables: { colorPrimary: '#7C6FE0' } }}
-            />
-          </div>
-        </div>
-        <AppFooter />
-      </div>
-    )
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,289 +86,191 @@ export function RegisterPage() {
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
     setError(''); setLoading(true)
     try {
-      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
-      await register(fullName, email, password, school || undefined)
-      window.location.href = '/wizard'
-    } catch {
-      setError('Registration failed. Please try again.')
+      await onSubmit({ firstName, lastName, email, password, organization, state, country, phone, board, institutionType })
+    } catch (err) {
+      setError(authErrorMessage(err, 'Registration failed. Please try again.'))
     } finally { setLoading(false) }
   }
 
   const handleGoogle = async () => {
     setGoogleLoading(true); setError('')
-    await new Promise(r => setTimeout(r, 1100))
-    try {
-      const u = FAKE_GOOGLE_USERS[Math.floor(Math.random() * FAKE_GOOGLE_USERS.length)]
-      await register(u.name, u.email, 'google-oauth-token', u.school)
-      window.location.href = '/wizard'
-    } catch {
-      setError('Google sign-in failed. Please try again.')
-      setGoogleLoading(false)
-    }
+    try { await onGoogle() }
+    catch (err) { setError(authErrorMessage(err, 'Google sign-up failed. Please try again.')); setGoogleLoading(false) }
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (code.trim().length < 4) { setError('Enter the code we emailed you'); return }
+    setError(''); setVerifying(true)
+    try { await onVerify(code.trim()) }
+    catch (err) { setError(authErrorMessage(err, 'Invalid or expired code. Please try again.')); setVerifying(false) }
   }
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', minHeight: '100vh',
-      fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif" }}>
     <div style={{ display: 'flex', flex: 1 }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes spin { to { transform: rotate(360deg) } }
-        .reg-input {
-          width: 100%; padding: 10px 12px;
-          border: 1px solid #D1D5DB; border-radius: 6px;
-          font-size: 14px; outline: none; background: #fff;
-          color: #13111E; font-family: inherit;
-          transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .reg-input:focus {
-          border-color: #7C6FE0;
-          box-shadow: 0 0 0 3px rgba(124,111,224,0.10);
-        }
-        .reg-select {
-          width: 100%; padding: 10px 12px;
-          border: 1px solid #D1D5DB; border-radius: 6px;
-          font-size: 14px; outline: none; background: #fff;
-          color: #13111E; font-family: inherit; cursor: pointer;
-          appearance: auto;
-          transition: border-color 0.15s;
-        }
+        .reg-input { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+        .reg-input:focus { border-color: #7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
+        .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; cursor: pointer; appearance: auto; transition: border-color 0.15s; }
         .reg-select:focus { border-color: #7C6FE0; }
-        .reg-google:hover {
-          border-color: #9CA3AF !important;
-          background: #F9FAFB !important;
-        }
+        .reg-google:hover { border-color: #9CA3AF !important; background: #F9FAFB !important; }
       `}</style>
 
-      {/* ════════════════════════════════
-          LEFT SIDEBAR
-      ════════════════════════════════ */}
-      <aside style={{
-        width: 260, flexShrink: 0,
-        background: '#F5F4F0',
-        display: 'flex', flexDirection: 'column',
-        padding: '40px 28px',
-      }}>
-        {/* Logo */}
+      {/* LEFT SIDEBAR */}
+      <aside style={{ width: 260, flexShrink: 0, background: '#F5F4F0', display: 'flex', flexDirection: 'column', padding: '40px 28px' }}>
         <div style={{ marginBottom: 40 }}>
           <a href="/" style={{ textDecoration: 'none' }}>
-            <span style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: 20, fontWeight: 900,
-              letterSpacing: '-0.5px', color: '#13111E',
-            }}>
+            <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', color: '#13111E' }}>
               sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
             </span>
           </a>
         </div>
-
-        {/* Feature bullets */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
           {FEATURES.map(f => (
             <div key={f.title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: 7,
-                background: f.bg, color: f.color,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, marginTop: 1,
-              }}>
-                {f.icon}
-              </div>
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: f.bg, color: f.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{f.icon}</div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', marginBottom: 3, lineHeight: 1.3 }}>
-                  {f.title}
-                </div>
-                <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.55 }}>
-                  {f.desc}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', marginBottom: 3, lineHeight: 1.3 }}>{f.title}</div>
+                <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.55 }}>{f.desc}</div>
               </div>
             </div>
           ))}
         </div>
-
-        {/* Trust line */}
         <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.5, marginTop: 32 }}>
           Trusted by <strong style={{ color: '#13111E' }}>1,200+</strong> schools worldwide
         </div>
       </aside>
 
-      {/* ════════════════════════════════
-          RIGHT — FORM PANEL
-      ════════════════════════════════ */}
-      <main style={{
-        flex: 1, display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'center',
-        padding: '52px 40px',
-        overflowY: 'auto',
-      }}>
+      {/* RIGHT — FORM / VERIFY PANEL */}
+      <main style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '52px 40px', overflowY: 'auto' }}>
         <div style={{ width: '100%', maxWidth: 440 }}>
 
-          {/* Heading */}
-          <h1 style={{
-            fontSize: 26, fontWeight: 700, color: '#13111E',
-            marginBottom: 6, letterSpacing: '-0.3px',
-          }}>
-            Create your account
-          </h1>
-          <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>
-            Set up your institution in under 2 minutes.
-          </p>
+          {phase === 'verify' ? (
+            <>
+              <h1 style={{ fontSize: 26, fontWeight: 700, color: '#13111E', marginBottom: 6, letterSpacing: '-0.3px' }}>Verify your email</h1>
+              <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>
+                Enter the 6-digit code we sent to <strong style={{ color: '#13111E' }}>{pendingEmail}</strong>.
+              </p>
+              <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={lbl}>Verification code</label>
+                  <input className="reg-input" value={code} inputMode="numeric" autoFocus
+                    onChange={e => setCode(e.target.value)} placeholder="123456"
+                    style={{ letterSpacing: '0.3em', fontSize: 18, textAlign: 'center' }} />
+                </div>
+                {error && <div style={{ padding: '9px 12px', borderRadius: 6, fontSize: 13, background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>{error}</div>}
+                <button type="submit" disabled={verifying}
+                  style={{ width: '100%', padding: '11px', borderRadius: 6, border: 'none', background: verifying ? '#374151' : '#111827', color: '#fff', fontSize: 15, fontWeight: 600, cursor: verifying ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 2, fontFamily: 'inherit' }}>
+                  {verifying ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Verifying…</> : 'Verify & continue'}
+                </button>
+              </form>
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginTop: 18 }}>
+                Didn’t get it?{' '}
+                <button type="button" onClick={() => { setError(''); onResend().catch(err => setError(authErrorMessage(err))) }}
+                  style={{ color: '#7C6FE0', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
+                  Resend code
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 style={{ fontSize: 26, fontWeight: 700, color: '#13111E', marginBottom: 6, letterSpacing: '-0.3px' }}>Create your account</h1>
+              <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>Set up your institution in under 2 minutes.</p>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={lbl}>First name</label>
+                    <input className="reg-input" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Aarav" autoFocus />
+                  </div>
+                  <div>
+                    <label style={lbl}>Last name</label>
+                    <input className="reg-input" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Sharma" />
+                  </div>
+                </div>
 
-            {/* First / Last name */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={lbl}>First name</label>
-                <input className="reg-input" value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  placeholder="Aarav" autoFocus />
+                <div>
+                  <label style={lbl}>Work email</label>
+                  <input className="reg-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="principal@yourschool.edu" />
+                </div>
+
+                <div>
+                  <label style={lbl}>Organization name</label>
+                  <input className="reg-input" value={organization} onChange={e => setOrganization(e.target.value)} placeholder="e.g. Lincoln International School" />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={lbl}>State / Province</label>
+                    <input className="reg-input" value={state} onChange={e => setState(e.target.value)} placeholder="e.g. California" />
+                  </div>
+                  <div>
+                    <label style={lbl}>Country</label>
+                    <input className="reg-input" value={country} onChange={e => setCountry(e.target.value)} placeholder="e.g. United States" />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={lbl}>Contact number</label>
+                  <input className="reg-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. +1 415 555 0123" />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={lbl}>Board</label>
+                    <select className="reg-select" value={board} onChange={e => setBoard(e.target.value)}>
+                      <option value="">Select board</option>
+                      {BOARDS.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={lbl}>Institution type</label>
+                    <select className="reg-select" value={institutionType} onChange={e => setInstitutionType(e.target.value)}>
+                      <option value="">Select type</option>
+                      {INSTITUTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={lbl}>Password</label>
+                  <input className="reg-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" />
+                </div>
+
+                {error && <div style={{ padding: '9px 12px', borderRadius: 6, fontSize: 13, background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>{error}</div>}
+
+                <button type="submit" disabled={busy}
+                  style={{ width: '100%', padding: '11px', borderRadius: 6, border: 'none', background: busy ? '#374151' : '#111827', color: '#fff', fontSize: 15, fontWeight: 600, cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 2, fontFamily: 'inherit', transition: 'background 0.15s' }}>
+                  {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Creating account…</> : 'Create account'}
+                </button>
+              </form>
+
+              <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
+                By signing up you agree to the{' '}
+                <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
+                <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Privacy Policy</a>.
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
+                <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
+                <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 500 }}>or</span>
+                <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
               </div>
-              <div>
-                <label style={lbl}>Last name</label>
-                <input className="reg-input" value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  placeholder="Sharma" />
-              </div>
-            </div>
 
-            {/* Work email */}
-            <div>
-              <label style={lbl}>Work email</label>
-              <input className="reg-input" type="email" value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="principal@yourschool.edu" />
-            </div>
+              <button onClick={handleGoogle} disabled={busy} type="button" className="reg-google"
+                style={{ width: '100%', padding: '11px', borderRadius: 6, border: '1px solid #D1D5DB', background: '#fff', fontSize: 14, fontWeight: 500, color: '#374151', cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: 'inherit', transition: 'background 0.15s, border-color 0.15s' }}>
+                {googleLoading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Connecting…</> : <><GoogleMark /> Continue with Google</>}
+              </button>
 
-            {/* School name */}
-            <div>
-              <label style={lbl}>School name</label>
-              <input className="reg-input" value={school}
-                onChange={e => setSchool(e.target.value)}
-                placeholder="e.g. Lincoln International School" />
-            </div>
-
-            {/* State / Country */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={lbl}>State / Province</label>
-                <input className="reg-input" value={state}
-                  onChange={e => setState(e.target.value)}
-                  placeholder="e.g. California" />
-              </div>
-              <div>
-                <label style={lbl}>Country</label>
-                <input className="reg-input" value={country}
-                  onChange={e => setCountry(e.target.value)}
-                  placeholder="e.g. United States" />
-              </div>
-            </div>
-
-            {/* Contact number */}
-            <div>
-              <label style={lbl}>Contact number</label>
-              <input className="reg-input" type="tel" value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="e.g. +1 415 555 0123" />
-            </div>
-
-            {/* Board / Institution type */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={lbl}>Board</label>
-                <select className="reg-select" value={board}
-                  onChange={e => setBoard(e.target.value)}>
-                  <option value="">Select board</option>
-                  {BOARDS.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={lbl}>Institution type</label>
-                <select className="reg-select" value={schoolType}
-                  onChange={e => setSchoolType(e.target.value)}>
-                  <option value="">Select type</option>
-                  {SCHOOL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label style={lbl}>Password</label>
-              <input className="reg-input" type="password" value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Min. 8 characters" />
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div style={{
-                padding: '9px 12px', borderRadius: 6, fontSize: 13,
-                background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626',
-              }}>
-                {error}
-              </div>
-            )}
-
-            {/* Submit */}
-            <button type="submit" disabled={busy} style={{
-              width: '100%', padding: '11px',
-              borderRadius: 6, border: 'none',
-              background: busy ? '#374151' : '#111827',
-              color: '#fff', fontSize: 15, fontWeight: 600,
-              cursor: busy ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              marginTop: 2, fontFamily: 'inherit',
-              transition: 'background 0.15s',
-            }}>
-              {loading
-                ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Creating account…</>
-                : 'Create account'}
-            </button>
-          </form>
-
-          {/* Terms */}
-          <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
-            By signing up you agree to the{' '}
-            <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Terms of Service</a>
-            {' '}and{' '}
-            <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Privacy Policy</a>.
-          </p>
-
-          {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
-            <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 500 }}>or</span>
-            <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
-          </div>
-
-          {/* Google */}
-          <button onClick={handleGoogle} disabled={busy} type="button"
-            className="reg-google"
-            style={{
-              width: '100%', padding: '11px',
-              borderRadius: 6, border: '1px solid #D1D5DB',
-              background: '#fff', fontSize: 14, fontWeight: 500,
-              color: '#374151', cursor: busy ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              fontFamily: 'inherit', transition: 'background 0.15s, border-color 0.15s',
-            }}>
-            {googleLoading
-              ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Connecting…</>
-              : <><GoogleMark /> Continue with Google</>
-            }
-          </button>
-
-          {/* Sign in link */}
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginTop: 20 }}>
-            Already have an account?{' '}
-            <a href="/login" style={{ color: '#7C6FE0', fontWeight: 600, textDecoration: 'none' }}>
-              Sign in
-            </a>
-          </p>
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginTop: 20 }}>
+                Already have an account?{' '}
+                <a href="/login" style={{ color: '#7C6FE0', fontWeight: 600, textDecoration: 'none' }}>Sign in</a>
+              </p>
+            </>
+          )}
 
         </div>
       </main>
@@ -431,8 +280,85 @@ export function RegisterPage() {
   )
 }
 
-// ── Shared label style ────────────────────────────────────────
+// ── Clerk-backed controller ───────────────────────────────────
+function ClerkRegister() {
+  const { isLoaded, signUp, setActive } = useSignUp()
+  const [phase, setPhase] = useState<'form' | 'verify'>('form')
+  const [pendingEmail, setPendingEmail] = useState('')
+
+  const onSubmit = async (f: RegFields) => {
+    if (!isLoaded || !signUp) throw new Error('Authentication is still loading — please try again.')
+    await signUp.create({
+      emailAddress: f.email,
+      password: f.password,
+      unsafeMetadata: {
+        name: [f.firstName, f.lastName].filter(Boolean).join(' '),
+        schoolName: f.organization || undefined,
+        address: [f.state, f.country].filter(Boolean).join(', ') || undefined,
+        phone: f.phone || undefined,
+        board: f.board || undefined,
+        institutionType: f.institutionType || undefined,
+      },
+    })
+    if (signUp.status === 'complete' && signUp.createdSessionId) {
+      await setActive({ session: signUp.createdSessionId })
+      window.location.href = '/wizard'
+      return
+    }
+    await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+    setPendingEmail(f.email)
+    setPhase('verify')
+  }
+
+  const onVerify = async (code: string) => {
+    if (!isLoaded || !signUp) throw new Error('Authentication is still loading — please try again.')
+    const res = await signUp.attemptEmailAddressVerification({ code })
+    if (res.status === 'complete' && res.createdSessionId) {
+      await setActive({ session: res.createdSessionId })
+      window.location.href = '/wizard'
+    } else {
+      throw new Error('Could not verify the code. Please try again.')
+    }
+  }
+
+  const onResend = async () => {
+    if (!isLoaded || !signUp) return
+    await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+  }
+
+  const onGoogle = async () => {
+    if (!isLoaded || !signUp) return
+    await signUp.authenticateWithRedirect({
+      strategy: 'oauth_google',
+      redirectUrl: '/sso-callback',
+      redirectUrlComplete: '/wizard',
+    })
+  }
+
+  return <RegisterCard phase={phase} pendingEmail={pendingEmail} onSubmit={onSubmit} onGoogle={onGoogle} onVerify={onVerify} onResend={onResend} />
+}
+
+// ── Local mock controller (no Clerk key) ──────────────────────
+function MockRegister() {
+  const { register } = useAuthStore()
+  const onSubmit = async (f: RegFields) => {
+    const fullName = [f.firstName, f.lastName].filter(Boolean).join(' ')
+    await register(fullName, f.email, f.password, f.organization || undefined)
+    window.location.href = '/wizard'
+  }
+  const onGoogle = async () => {
+    await new Promise(r => setTimeout(r, 900))
+    const u = FAKE_GOOGLE_USERS[Math.floor(Math.random() * FAKE_GOOGLE_USERS.length)]
+    await register(u.name, u.email, 'google-oauth-token', u.school)
+    window.location.href = '/wizard'
+  }
+  return <RegisterCard phase="form" pendingEmail="" onSubmit={onSubmit} onGoogle={onGoogle} onVerify={async () => {}} onResend={async () => {}} />
+}
+
+export function RegisterPage() {
+  return CLERK_ENABLED ? <ClerkRegister /> : <MockRegister />
+}
+
 const lbl: React.CSSProperties = {
-  display: 'block', fontSize: 13, fontWeight: 500,
-  color: '#374151', marginBottom: 5,
+  display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 5,
 }
