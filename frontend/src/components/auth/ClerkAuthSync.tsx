@@ -9,6 +9,8 @@
 import { useEffect } from 'react'
 import { useUser, useAuth, useClerk } from '@clerk/clerk-react'
 import { useAuthStore, setClerkSignOut, setClerkOpenProfile, type AuthUser } from '@/store/authStore'
+import { useOrgProfile } from '@/store/orgProfile'
+import { useTimetableStore } from '@/store/timetableStore'
 import { setTokenGetter, meApi } from '@/api/client'
 
 export function ClerkAuthSync() {
@@ -49,6 +51,16 @@ export function ClerkAuthSync() {
       createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : new Date().toISOString(),
     }
     useAuthStore.setState({ user: appUser, isAuthenticated: true })
+
+    // ── Per-user clean slate ────────────────────────────────────────────────
+    // The wizard store is persisted per-browser, so a previous account's (or
+    // earlier local-testing) data would otherwise leak in. When the signed-in
+    // account changes, wipe the wizard store and rebind the org profile so each
+    // user genuinely starts fresh.
+    if (useOrgProfile.getState().ownerId !== appUser.id) {
+      useTimetableStore.getState().resetAll()
+      useOrgProfile.getState().resetForOwner(appUser.id)
+    }
 
     void getToken().then((t) => {
       useAuthStore.setState({ token: t })

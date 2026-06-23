@@ -15,6 +15,7 @@ import { CLERK_ENABLED } from '@/lib/clerk'
 import { useTimetableStore } from '@/store/timetableStore'
 import * as ttRepo from '@/api/timetables'
 import { BrandedLoader } from '@/components/BrandedLoader'
+import { useOrgProfile } from '@/store/orgProfile'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
@@ -1006,6 +1007,7 @@ function EditTimetableModal({
 // ══════════════════════════════════════════════════════════════
 export function DashboardPage() {
   const { user, logout, authReady } = useAuthStore()
+  const org = useOrgProfile()
   const store = useTimetableStore() as any
   const { sections, staff } = store
 
@@ -1276,7 +1278,10 @@ export function DashboardPage() {
   if (!user) { window.location.href = '/login'; return null }
 
   const firstName  = user.name?.split(' ')[0] ?? 'there'
-  const schoolName = user.schoolName ?? 'Your School'
+  // Generic, type-neutral org identity from the onboarding profile. No
+  // 'school'/'CBSE'/year assumptions — only what the user actually entered.
+  const orgName = org.name?.trim() || user.schoolName || 'Your organization'
+  const orgSubtitle = [orgName, org.kind, org.period].filter(Boolean).join(' · ')
   // Stats are derived from the wizard store, which is per-browser and may hold
   // stale data from a previous account/local testing. Only trust it when the
   // user actually has timetables; otherwise show a clean empty state. This is
@@ -1405,7 +1410,7 @@ export function DashboardPage() {
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{schoolName}</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{orgName}</span>
           <button className="db-icon-btn" style={{
             width: 32, height: 32, display: 'flex', alignItems: 'center',
             justifyContent: 'center', background: 'none', border: 'none',
@@ -1602,7 +1607,7 @@ export function DashboardPage() {
                 {greeting()}, {firstName}
               </h1>
               <p style={{ fontSize: 13, color: '#6B7280' }}>
-                {schoolName} · AY 2025–26 · {(store.config as any)?.boardName ?? 'CBSE'}
+                {orgSubtitle}
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
