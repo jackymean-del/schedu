@@ -1032,7 +1032,20 @@ export function DashboardPage() {
     if (!SERVER_BACKED || !user) return
     let cancelled = false
     ttRepo.fetchTimetables()
-      .then(list => { if (!cancelled) setTTList(list as TTEntry[]) })
+      .then(list => {
+        if (cancelled) return
+        setTTList(list as TTEntry[])
+        // Clear any stale wizard data left in the persisted store by a previous
+        // account in this browser, unless the active timetable is genuinely one
+        // of THIS user's. Otherwise the dashboard would show another user's
+        // classes/teachers (the persisted schedu-v3 store is per-browser).
+        const activeId = getActiveTTId()
+        const ownsActive = !!activeId && list.some(t => t.id === activeId)
+        if (!ownsActive) {
+          useTimetableStore.getState().resetAll()
+          setActiveTTId(null)
+        }
+      })
       .catch(() => { /* keep whatever's in state; user can retry */ })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1272,21 +1285,21 @@ export function DashboardPage() {
     },
     {
       label: 'Total classes',
-      value: sections.length || 52,
-      sub: sections.length ? `${sections.length} sections` : 'Across I–XII',
+      value: sections.length,
+      sub: sections.length ? `${sections.length} sections` : 'No classes yet',
       red: false,
     },
     {
       label: 'Teachers',
-      value: staff.length || 84,
-      sub: staff.length ? `${staff.length} staff` : '78 allocated',
+      value: staff.length,
+      sub: staff.length ? `${staff.length} staff` : 'No staff yet',
       red: false,
     },
     {
       label: 'Conflicts',
-      value: conflicts || 2,
-      sub: 'Needs attention',
-      red: true,
+      value: conflicts,
+      sub: conflicts ? 'Needs attention' : 'No conflicts',
+      red: conflicts > 0,
     },
   ]
 
@@ -1618,7 +1631,8 @@ export function DashboardPage() {
             ))}
           </div>
 
-          {/* AI insight */}
+          {/* AI insight — only shown once there's real timetable data (demo copy) */}
+          {sections.length > 0 && staff.length > 0 && (
           <div style={{
             background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10,
             padding: '12px 16px', marginBottom: 20,
@@ -1638,6 +1652,7 @@ export function DashboardPage() {
               Fix <ChevronRight size={12} />
             </button>
           </div>
+          )}
 
           {/* Timetables */}
           <div style={{ marginBottom: 24 }}>

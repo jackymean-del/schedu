@@ -18,8 +18,13 @@ function RootLayout() {
   const path = window.location.pathname
   const isWizard  = path.startsWith(WIZARD_PATH)
   const isAppPage = APP_PATHS.some(p => path === p || path.startsWith(p + '/'))
+  // Auth callback renders its own full-screen branded loader — no chrome.
+  const isAuthCallback = path.startsWith('/sso-callback')
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // ── Auth callback: bare outlet, no topbar ─────────────────
+  if (isAuthCallback) return <Outlet />
 
   // ── App pages: dark sidebar + outlet ──────────────────────
   if (isAppPage) {
