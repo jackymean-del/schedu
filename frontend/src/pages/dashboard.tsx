@@ -13,6 +13,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { CLERK_ENABLED } from '@/lib/clerk'
 import { useTimetableStore } from '@/store/timetableStore'
+import * as ttRepo from '@/api/timetables'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
@@ -209,6 +210,18 @@ const TTLIST_KEY     = 'schedu-tt-list'
 const ACTIVE_TT_KEY  = 'schedu-active-tt'
 const TT_SNAPSHOT_PFX = 'schedu-tt-snap-'   // + ttId → full store snapshot per timetable
 
+// When real auth (Clerk) is active, the backend is the source of truth and
+// each user gets their own server-stored timetables. The localStorage entries
+// then act only as an offline cache, namespaced per-user so one account can
+// never read another's cached snapshots in a shared browser. In mock-auth dev
+// (no Clerk), we stay fully local as before.
+const SERVER_BACKED = CLERK_ENABLED
+
+// Per-user cache namespace (set by the dashboard once the user is known).
+let cacheNS = ''
+function setCacheNS(userId: string | undefined) { cacheNS = userId ?? '' }
+function snapKey(id: string) { return `${TT_SNAPSHOT_PFX}${cacheNS}:${id}` }
+
 // ── Per-timetable snapshot helpers ─────────────────────────────
 // Fields that differ per timetable (everything except auth/UI).
 // We save and restore all of these when switching between timetables.
@@ -223,25 +236,37 @@ const TT_SNAPSHOT_FIELDS = [
   'sectionStrengths','subjectGroupingRules','subjectAllocations',
 ] as const
 
+/** Build a plain snapshot object of the current wizard store state. */
+function buildSnapshot(): Record<string, unknown> {
+  const state = useTimetableStore.getState()
+  const snap: Record<string, unknown> = {}
+  TT_SNAPSHOT_FIELDS.forEach(k => { snap[k] = (state as any)[k] })
+  return snap
+}
+
+/** Apply a snapshot object onto the wizard store (reset first, then patch). */
+function applySnapshot(snap: Record<string, unknown>) {
+  const store = useTimetableStore.getState()
+  store.resetWizard()
+  useTimetableStore.setState(snap as any)
+}
+
 function saveTTSnapshot(id: string) {
+  const snap = buildSnapshot()
   try {
-    const state = useTimetableStore.getState()
-    const snap: Record<string, unknown> = {}
-    TT_SNAPSHOT_FIELDS.forEach(k => { snap[k] = (state as any)[k] })
-    localStorage.setItem(TT_SNAPSHOT_PFX + id, JSON.stringify(snap))
+    localStorage.setItem(snapKey(id), JSON.stringify(snap))
   } catch { /* quota full – silently ignore */ }
+  // Push to the server (best-effort; the local cache already succeeded).
+  if (SERVER_BACKED) {
+    ttRepo.saveTimetableSnapshot(id, snap).catch(() => { /* offline / transient */ })
+  }
 }
 
 function restoreTTSnapshot(id: string): boolean {
   try {
-    const raw = localStorage.getItem(TT_SNAPSHOT_PFX + id)
+    const raw = localStorage.getItem(snapKey(id))
     if (!raw) return false
-    const snap = JSON.parse(raw) as Record<string, unknown>
-    // Apply snapshot via Zustand set
-    const store = useTimetableStore.getState()
-    // Use resetWizard to clear first, then patch in saved data
-    store.resetWizard()
-    useTimetableStore.setState(snap as any)
+    applySnapshot(JSON.parse(raw) as Record<string, unknown>)
     return true
   } catch { return false }
 }
@@ -261,7 +286,7 @@ function derivedFromSnapshot(ttId: string): {
   fromGrade?: string; toGrade?: string
 } | null {
   try {
-    const raw = localStorage.getItem(TT_SNAPSHOT_PFX + ttId)
+    const raw = localStorage.getItem(snapKey(ttId))
     if (!raw) return null
     const snap = JSON.parse(raw) as Record<string, any>
 
@@ -311,6 +336,10 @@ const SEED_TT: TTEntry[] = [
 ]
 
 function loadTTList(): TTEntry[] {
+  // Server-backed: start empty; the dashboard loads the user's real list from
+  // the API on mount. No demo seed (that seed is what made every account show
+  // the same drafts).
+  if (SERVER_BACKED) return []
   try {
     const raw = localStorage.getItem(TTLIST_KEY)
     if (raw === null) { saveTTList(SEED_TT); return SEED_TT }
@@ -993,6 +1022,22 @@ export function DashboardPage() {
   const [showCreate,    setShowCreate]    = useState(false)
   const [ttList,        setTTList]        = useState<TTEntry[]>(loadTTList)
 
+  // Namespace the local snapshot cache to this user (prevents one account from
+  // reading another's cached data in a shared browser). Safe to call on every
+  // render — it only sets a module-level string.
+  setCacheNS(user?.id)
+
+  // Server-backed: load this user's real timetables from the API on mount.
+  useEffect(() => {
+    if (!SERVER_BACKED || !user) return
+    let cancelled = false
+    ttRepo.fetchTimetables()
+      .then(list => { if (!cancelled) setTTList(list as TTEntry[]) })
+      .catch(() => { /* keep whatever's in state; user can retry */ })
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
   // Excel export of the saved-schedules list.
   const buildScheduleSheets = (): ExportSheet[] => [{
     name: 'Schedules',
@@ -1046,37 +1091,45 @@ export function DashboardPage() {
       if (prev[idx].wizardStep === storeStep) return prev
       const next = [...prev]
       next[idx] = { ...next[idx], wizardStep: storeStep }
-      saveTTList(next)
+      if (!SERVER_BACKED) saveTTList(next)
       return next
     })
   }, [store.step])
 
   // ── Timetable actions ─────────────────────────────────────────
-  const handleTTCreated = (entry: TTEntry) => {
+  const handleTTCreated = async (entry: TTEntry) => {
     // Save current timetable's full state before switching away
     const currentId = getActiveTTId()
     if (currentId) saveTTSnapshot(currentId)
 
-    const next = [entry, ...ttList]
+    // Server-backed: create the row first so we adopt the server-assigned id
+    // as the canonical timetable id (falls back to the local id on failure).
+    let saved = entry
+    if (SERVER_BACKED) {
+      try { saved = { ...entry, id: await ttRepo.createTimetable(entry) } }
+      catch { /* offline — keep the local id; snapshot sync will retry later */ }
+    }
+
+    const next = [saved, ...ttList]
     setTTList(next)
-    saveTTList(next)
-    setActiveTTId(entry.id)
+    if (!SERVER_BACKED) saveTTList(next)
+    setActiveTTId(saved.id)
     // New timetable: start fresh
     useTimetableStore.getState().resetWizard()
     useTimetableStore.getState().setConfig({
-      timetableName: entry.name,
-      fromGrade:   entry.fromGrade   ?? 'Nursery',
-      toGrade:     entry.toGrade     ?? 'Class XII',
-      numSections: entry.approxClasses,
-      numStaff:    entry.approxTeachers,
-      numSubjects: entry.approxSubjects,
-      numRooms:    entry.approxRooms,
+      timetableName: saved.name,
+      fromGrade:   saved.fromGrade   ?? 'Nursery',
+      toGrade:     saved.toGrade     ?? 'Class XII',
+      numSections: saved.approxClasses,
+      numStaff:    saved.approxTeachers,
+      numSubjects: saved.approxSubjects,
+      numRooms:    saved.approxRooms,
     } as any)
     useTimetableStore.getState().setStep(1)
     window.location.href = '/wizard'
   }
 
-  const handleContinue = (t: TTEntry) => {
+  const handleContinue = async (t: TTEntry) => {
     const currentId = getActiveTTId()
     if (currentId === t.id) {
       // Already the active one — just navigate
@@ -1087,8 +1140,17 @@ export function DashboardPage() {
     if (currentId) saveTTSnapshot(currentId)
 
     setActiveTTId(t.id)
-    // Restore incoming timetable's saved state (or start fresh if none)
-    const restored = restoreTTSnapshot(t.id)
+    // Restore incoming timetable's saved state. Prefer the server snapshot
+    // (authoritative, follows the user across devices); fall back to the local
+    // cache, then to a fresh start keyed off the list metadata.
+    let restored = false
+    if (SERVER_BACKED) {
+      try {
+        const snap = await ttRepo.fetchTimetableSnapshot(t.id)
+        if (snap) { applySnapshot(snap); restored = true }
+      } catch { /* fall through to local cache */ }
+    }
+    if (!restored) restored = restoreTTSnapshot(t.id)
     if (!restored) {
       useTimetableStore.getState().setConfig({ timetableName: t.name } as any)
       useTimetableStore.getState().setStep(Math.max(1, t.wizardStep))
@@ -1120,15 +1182,19 @@ export function DashboardPage() {
   const handleDelete = (id: string) => {
     const next = ttList.filter(t => t.id !== id)
     setTTList(next)
-    saveTTList(next)
+    if (!SERVER_BACKED) saveTTList(next)
     if (getActiveTTId() === id) setActiveTTId(null)
     setConfirmDelete(null)
+    if (SERVER_BACKED) {
+      ttRepo.deleteTimetable(id).catch(() => { /* best-effort; row may reappear on next load */ })
+    }
   }
 
   const handleSaveEdit = (updated: TTEntry) => {
     const next = ttList.map(t => t.id === updated.id ? updated : t)
     setTTList(next)
-    saveTTList(next)
+    if (!SERVER_BACKED) saveTTList(next)
+    else ttRepo.updateTimetableMeta(updated).catch(() => { /* best-effort */ })
     setEditingTT(null)
 
     const ta = updated.approxTeachers
@@ -1146,8 +1212,8 @@ export function DashboardPage() {
     //       the non-active case (where `restoreTTSnapshot` is called and would
     //       bring back the old counts).
     try {
-      const snapKey = TT_SNAPSHOT_PFX + updated.id
-      const raw = localStorage.getItem(snapKey)
+      const key = snapKey(updated.id)
+      const raw = localStorage.getItem(key)
       const snap: Record<string, any> = raw ? JSON.parse(raw) : {}
       snap.config = {
         ...(snap.config ?? {}),
@@ -1160,7 +1226,8 @@ export function DashboardPage() {
       if (Array.isArray(snap.subjects)) snap.subjects = trimArr(snap.subjects, ts)
       if (Array.isArray(snap.rooms))    snap.rooms    = trimArr(snap.rooms,    tr)
       if (Array.isArray(snap.sections)) snap.sections = trimArr(snap.sections, tc)
-      localStorage.setItem(snapKey, JSON.stringify(snap))
+      localStorage.setItem(key, JSON.stringify(snap))
+      if (SERVER_BACKED) ttRepo.saveTimetableSnapshot(updated.id, snap).catch(() => { /* best-effort */ })
     } catch { /* ignore storage errors */ }
 
     // ── 2. If this timetable is the live active one, also patch the Zustand
