@@ -1272,7 +1272,14 @@ export function DashboardPage() {
 
   const firstName  = user.name?.split(' ')[0] ?? 'there'
   const schoolName = user.schoolName ?? 'Your School'
-  const conflicts  = (store.conflicts ?? []).length
+  // Stats are derived from the wizard store, which is per-browser and may hold
+  // stale data from a previous account/local testing. Only trust it when the
+  // user actually has timetables; otherwise show a clean empty state. This is
+  // deterministic (no dependency on the async list fetch / store reset).
+  const hasTimetables = ttList.length > 0
+  const classCount    = hasTimetables ? sections.length : 0
+  const teacherCount  = hasTimetables ? staff.length : 0
+  const conflicts     = hasTimetables ? (store.conflicts ?? []).length : 0
   const activeTTs  = ttList.filter(t => t.status === 'active').length
   const draftTTs   = ttList.filter(t => t.status === 'draft').length
 
@@ -1285,14 +1292,14 @@ export function DashboardPage() {
     },
     {
       label: 'Total classes',
-      value: sections.length,
-      sub: sections.length ? `${sections.length} sections` : 'No classes yet',
+      value: classCount,
+      sub: classCount ? `${classCount} sections` : 'No classes yet',
       red: false,
     },
     {
       label: 'Teachers',
-      value: staff.length,
-      sub: staff.length ? `${staff.length} staff` : 'No staff yet',
+      value: teacherCount,
+      sub: teacherCount ? `${teacherCount} staff` : 'No staff yet',
       red: false,
     },
     {
@@ -1632,7 +1639,7 @@ export function DashboardPage() {
           </div>
 
           {/* AI insight — only shown once there's real timetable data (demo copy) */}
-          {sections.length > 0 && staff.length > 0 && (
+          {hasTimetables && sections.length > 0 && staff.length > 0 && (
           <div style={{
             background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10,
             padding: '12px 16px', marginBottom: 20,
