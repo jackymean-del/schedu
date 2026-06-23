@@ -33,6 +33,11 @@ function makeToken() { return `schedu_${makeId()}${makeId()}` }
 let clerkSignOut: (() => void) | null = null
 export function setClerkSignOut(fn: (() => void) | null) { clerkSignOut = fn }
 
+// Likewise for Clerk's profile editor (change name / email / password).
+let clerkOpenProfile: (() => void) | null = null
+export function setClerkOpenProfile(fn: (() => void) | null) { clerkOpenProfile = fn }
+export function openUserProfile() { try { clerkOpenProfile?.() } catch { /* ignore */ } }
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({

@@ -10,7 +10,8 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, openUserProfile } from '@/store/authStore'
+import { CLERK_ENABLED } from '@/lib/clerk'
 import { useTimetableStore } from '@/store/timetableStore'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
@@ -19,7 +20,7 @@ import {
   Home, CalendarDays, Calendar, BarChart2,
   Users, Database, Settings,
   LifeBuoy, BookOpen, Video,
-  Bell, Plus, Sparkles, MoreHorizontal,
+  Bell, Plus, Sparkles,
   ChevronRight, ArrowRight, ChevronLeft,
   Zap, X, Trash2, Pencil, LogOut,
 } from 'lucide-react'
@@ -1335,15 +1336,6 @@ export function DashboardPage() {
               }}>
               {initials}
             </button>
-            <button onClick={() => setUserMenuOpen(o => !o)} aria-label="Account menu"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: 4, color: '#6B7280',
-                display: 'flex', alignItems: 'center',
-              }}>
-              <MoreHorizontal size={18} />
-            </button>
-
             {userMenuOpen && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 400,
@@ -1354,6 +1346,16 @@ export function DashboardPage() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>{user?.name ?? 'Account'}</div>
                   {user?.email && <div style={{ fontSize: 11.5, color: '#8B87AD', marginTop: 1 }}>{user.email}</div>}
                 </div>
+                {CLERK_ENABLED && (
+                  <button onClick={() => { setUserMenuOpen(false); openUserProfile() }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                      padding: '9px 14px', border: 'none', background: 'none',
+                      textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#374151', cursor: 'pointer',
+                    }}>
+                    <Settings size={15} /> Edit profile
+                  </button>
+                )}
                 <button onClick={() => { setUserMenuOpen(false); logout(); window.location.href = '/login' }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 9, width: '100%',

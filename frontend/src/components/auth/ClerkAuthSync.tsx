@@ -8,20 +8,21 @@
  */
 import { useEffect } from 'react'
 import { useUser, useAuth, useClerk } from '@clerk/clerk-react'
-import { useAuthStore, setClerkSignOut, type AuthUser } from '@/store/authStore'
+import { useAuthStore, setClerkSignOut, setClerkOpenProfile, type AuthUser } from '@/store/authStore'
 import { setTokenGetter, meApi } from '@/api/client'
 
 export function ClerkAuthSync() {
   const { isLoaded, isSignedIn, user } = useUser()
   const { getToken } = useAuth()
-  const { signOut } = useClerk()
+  const { signOut, openUserProfile } = useClerk()
 
-  // Wire the API client + logout buttons to Clerk.
+  // Wire the API client + logout/profile buttons to Clerk.
   useEffect(() => {
     setTokenGetter(() => getToken())
     setClerkSignOut(() => { void signOut({ redirectUrl: '/login' }) })
-    return () => { setTokenGetter(null); setClerkSignOut(null) }
-  }, [getToken, signOut])
+    setClerkOpenProfile(() => { openUserProfile() })
+    return () => { setTokenGetter(null); setClerkSignOut(null); setClerkOpenProfile(null) }
+  }, [getToken, signOut, openUserProfile])
 
   // Mirror the Clerk user into the app store.
   useEffect(() => {
