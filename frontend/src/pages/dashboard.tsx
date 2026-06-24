@@ -16,6 +16,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import * as ttRepo from '@/api/timetables'
 import { BrandedLoader } from '@/components/BrandedLoader'
 import { useOrgProfile } from '@/store/orgProfile'
+import { parseGradeLevel, toRoman } from '@/lib/gradeParse'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
@@ -58,39 +59,7 @@ const BOARD_SUBJECTS: Record<BoardKey, number> = {
 }
 
 // ── Adaptive grade parsing ─────────────────────────────────────
-// Users type their own class naming ("Class I", "Grade 1", "Form 1", "Year 7").
-// We parse a numeric level from whatever they type so the preview adapts to
-// their convention. Pre-primary keywords map to <= 0.
-function romanToInt(s: string): number {
-  const m: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }
-  let total = 0
-  for (let i = 0; i < s.length; i++) {
-    const cur = m[s[i]]; const next = m[s[i + 1]]
-    if (!cur) return 0
-    total += next && cur < next ? -cur : cur
-  }
-  return total
-}
-function toRoman(n: number): string {
-  if (n <= 0) return ''
-  const table: [number, string][] = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]
-  let res = ''
-  for (const [v, sym] of table) while (n >= v) { res += sym; n -= v }
-  return res
-}
-/** Numeric grade level from free text. Pre-primary → <= 0; null if unparseable. */
-function parseGradeLevel(raw: string): number | null {
-  const s = (raw || '').trim().toLowerCase()
-  if (!s) return null
-  if (/\b(nursery|playgroup|pre[\s-]?nursery|pre[\s-]?k|prek)\b/.test(s)) return -2
-  if (/\b(lkg|jr\.?\s*kg|junior)\b/.test(s)) return -1
-  if (/\b(ukg|sr\.?\s*kg|senior\s*kg|kindergarten|kg|reception)\b/.test(s)) return 0
-  const ar = s.match(/(\d+)/)
-  if (ar) return parseInt(ar[1], 10)
-  const rom = s.match(/\b([ivxlcdm]+)\b/i)
-  if (rom) { const r = romanToInt(rom[1].toUpperCase()); if (r > 0) return r }
-  return null
-}
+// Shared parser (handles "Class I", "Grade 1", "Nursery", "KG1", "PP2", …).
 /** Short label for a numeric level, preserving the user's pre-primary names. */
 function levelLabel(n: number): string {
   if (n === -2) return 'Nursery'

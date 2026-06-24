@@ -35,6 +35,7 @@ import {
   type CSSProperties,
 } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
+import { parseGradeLevel } from '@/lib/gradeParse'
 import {
   Plus, Sparkles, ChevronLeft, ChevronRight,
   Trash2, Coffee, X, Calendar, Clock, AlertTriangle, SlidersHorizontal, Layers,
@@ -159,31 +160,11 @@ const GRADE_TO_KEY: Record<string, string> = {
   'Class XI':'xi','Class XII':'xii',
 }
 const WIZARD_GRADES = ['Nursery','LKG','UKG','Class I','Class II','Class III','Class IV','Class V','Class VI','Class VII','Class VIII','Class IX','Class X','Class XI','Class XII']
-/** Numeric grade level from free text (pre-primary <= 0); null if unparseable.
- *  Matches the New-timetable dialog so any naming the user types is honored
- *  ("Class I", "Class-I", "I", "1", "Grade 1", "Form 1", "Nursery"). */
-function gradeLvl(raw: string): number | null {
-  const s = (raw ?? '').trim().toLowerCase()
-  if (!s) return null
-  if (/\b(nursery|playgroup|pre[\s-]?nursery|pre[\s-]?k|prek)\b/.test(s)) return -2
-  if (/\b(lkg|jr\.?\s*kg|junior)\b/.test(s)) return -1
-  if (/\b(ukg|sr\.?\s*kg|senior\s*kg|kindergarten|kg|reception)\b/.test(s)) return 0
-  const ar = s.match(/(\d+)/); if (ar) return parseInt(ar[1], 10)
-  const rom = s.match(/\b([ivxlcdm]+)\b/i)
-  if (rom) {
-    const m: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 }
-    const str = rom[1].toLowerCase(); let t = 0
-    for (let i = 0; i < str.length; i++) { const c = m[str[i]]; const n = m[str[i + 1]]; if (!c) return null; t += n && c < n ? -c : c }
-    if (t > 0) return t
-  }
-  return null
-}
-
 function classesFromGradeRange(from: string, to: string): typeof CLASSES {
-  const f = gradeLvl(from), t = gradeLvl(to)
+  const f = parseGradeLevel(from), t = parseGradeLevel(to)
   if (f == null || t == null || f > t) return CLASSES
   const keys = WIZARD_GRADES
-    .filter(g => { const l = gradeLvl(g); return l != null && l >= f && l <= t })
+    .filter(g => { const l = parseGradeLevel(g); return l != null && l >= f && l <= t })
     .map(g => GRADE_TO_KEY[g]).filter(Boolean)
   const subset = CLASSES.filter(c => keys.includes(c.key))
   return subset.length > 0 ? subset : CLASSES

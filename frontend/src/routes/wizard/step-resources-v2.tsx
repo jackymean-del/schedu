@@ -20,6 +20,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { generateStaff, generateSubjects, generateBreaks } from '@/lib/orgData'
 import type { Section, Subject, Staff } from '@/types'
 import { ScopeMatrixModal } from '@/components/DataGrid/ScopeMatrixModal'
+import { parseGradeLevel } from '@/lib/gradeParse'
 import { makeId } from '@/components/master/EntityGrids'
 import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
@@ -96,36 +97,16 @@ function gradesForGroup(group: string): string[] {
   return []
 }
 
-/** Numeric grade level from free text (pre-primary <= 0), matching the
- *  New-timetable dialog's parser so the range the user typed is honored
- *  regardless of convention ("I", "1", "Class I", "Grade 1", "Form 1"). */
-function rangeRomanVal(s: string): number {
-  const m: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }
-  let t = 0
-  for (let i = 0; i < s.length; i++) { const c = m[s[i]]; const n = m[s[i + 1]]; if (!c) return 0; t += n && c < n ? -c : c }
-  return t
-}
-function rangeLevel(raw?: string): number | null {
-  const s = (raw ?? '').trim().toLowerCase()
-  if (!s) return null
-  if (/\b(nursery|playgroup|pre[\s-]?nursery|pre[\s-]?k|prek)\b/.test(s)) return -2
-  if (/\b(lkg|jr\.?\s*kg|junior)\b/.test(s)) return -1
-  if (/\b(ukg|sr\.?\s*kg|senior\s*kg|kindergarten|kg|reception)\b/.test(s)) return 0
-  const ar = s.match(/(\d+)/); if (ar) return parseInt(ar[1], 10)
-  const rom = s.match(/\b([ivxlcdm]+)\b/i); if (rom) { const r = rangeRomanVal(rom[1].toUpperCase()); if (r > 0) return r }
-  return null
-}
-
 /** Grades in the configured range: explicit grades → from/to → grade groups. */
 function rangeGradesFromConfig(cfg: any): string[] {
   const explicit = Array.isArray(cfg?.grades) ? cfg.grades.map(normRangeGrade).filter(Boolean) : []
   if (explicit.length) return explicit
-  // Adaptive: map the typed from/to to numeric levels, then to grade labels.
-  const f = rangeLevel(cfg?.fromGrade)
-  const t = rangeLevel(cfg?.toGrade)
+  // Adaptive: parse the typed from/to to levels, then select the canonical
+  // grade labels whose level falls in range (shared parser handles any naming).
+  const f = parseGradeLevel(cfg?.fromGrade)
+  const t = parseGradeLevel(cfg?.toGrade)
   if (f !== null && t !== null && f <= t) {
-    const out: string[] = []
-    for (let n = f; n <= t; n++) { const lab = FULL_GRADE_ORDER[n + 2]; if (lab) out.push(lab) }
+    const out = FULL_GRADE_ORDER.filter(g => { const l = parseGradeLevel(g); return l != null && l >= f && l <= t })
     if (out.length) return out
   }
   if (Array.isArray(cfg?.gradeGroups) && cfg.gradeGroups.length) {
