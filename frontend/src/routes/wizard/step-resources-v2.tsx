@@ -708,37 +708,21 @@ export function StepResourcesV2() {
     // ── 4. Rooms ─────────────────────────────────────────────────────────────
     const newRooms = buildDefaultRooms().slice(0, targetRooms)
 
-    // ── 5. For srSec-only (XI-XII) schools: stream-assign subjects via AI ────
-    const presentGroups = new Set(
-      updatedSections.map((s: any) => getGradeGroup(getGrade(s.name)))
-    )
-    const srSecOnly = presentGroups.size > 0 &&
-      [...presentGroups].every(g => g === 'srSec')
-
-    if (srSecOnly) {
-      const assigned = runAIAssignment(newSubjects, updatedSections, newStaff, newRooms, board)
-      setStaff(assigned.staff)
-      setSubjects(assigned.subjects)
-      setRooms(assigned.rooms)
-      // Update class-teachers from AI result if it improved them
-      if (sections.length > 0) setSections(assigned.sections)
-      store.setConfig?.({
-        ...config,
-        numStaff: assigned.staff.length,
-        numSubjects: assigned.subjects.length,
-        numRooms: assigned.rooms.length,
-      })
-    } else {
-      setStaff(newStaff)
-      setSubjects(newSubjects)
-      setRooms(newRooms)
-      store.setConfig?.({
-        ...config,
-        numStaff: newStaff.length,
-        numSubjects: newSubjects.length,
-        numRooms: newRooms.length,
-      })
-    }
+    // ── 5. Assign subjects → classes and balance teacher load for EVERY grade
+    //       range (previously only senior-secondary). Without this, generated
+    //       teachers have empty subject lists, so the solver can't match a
+    //       teacher to a subject and leaves "no eligible teacher" gaps. ────────
+    const assigned = runAIAssignment(newSubjects, updatedSections, newStaff, newRooms, board)
+    setStaff(assigned.staff)
+    setSubjects(assigned.subjects)
+    setRooms(assigned.rooms)
+    if (sections.length > 0) setSections(assigned.sections)
+    store.setConfig?.({
+      ...config,
+      numStaff: assigned.staff.length,
+      numSubjects: assigned.subjects.length,
+      numRooms: assigned.rooms.length,
+    })
 
     setGenerating(false)
   }
