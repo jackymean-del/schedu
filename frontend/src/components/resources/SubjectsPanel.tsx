@@ -130,7 +130,7 @@ const BUILTIN_CATS = ['Scholastic', 'Co-scholastic']
 /** Heuristic category from a subject's name — used by the "AI Categorize" bulk button.
  *  Co-scholastic = PE / arts / music / CCA / library / assembly / pre-school activities.
  *  Everything academic → Scholastic. */
-function inferCategory(sub: Subject): string {
+export function inferCategory(sub: Subject): string {
   const n = sub.name.toLowerCase()
   const has = (kws: string[]) => kws.some(kw => n.includes(kw))
   if (has([
@@ -1603,14 +1603,6 @@ export function SubjectsPanel({
               onClose={() => setCatMgrOpen(false)}
             />
           )}
-          {/* AI Categorize — bulk-assign categories from subject names */}
-          <button
-            onClick={() => { undoHistory.push(subjects); setSubjects(subjects.map(s => ({ ...s, category: inferCategory(s) as any }))) }}
-            title="AI auto-assign categories based on subject names (undo with Ctrl+Z)"
-            style={outlineBtn}
-            onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
-          >✦ AI Categorize</button>
           {onScopeClick && (
             <button
               title="Set availability scope for all subjects"
