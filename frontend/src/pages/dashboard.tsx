@@ -57,57 +57,106 @@ const BOARD_SUBJECTS: Record<BoardKey, number> = {
   CBSE: 38, ICSE: 42, IB: 30, State: 35, Custom: 30,
 }
 
-// Compute approximate section count from grade range
-function computeApproxSections(from: string, to: string): number {
-  const fi = GRADES.indexOf(from)
-  const ti = GRADES.indexOf(to)
-  if (fi < 0 || ti < 0 || fi > ti) return 0
+// ── Adaptive grade parsing ─────────────────────────────────────
+// Users type their own class naming ("Class I", "Grade 1", "Form 1", "Year 7").
+// We parse a numeric level from whatever they type so the preview adapts to
+// their convention. Pre-primary keywords map to <= 0.
+function romanToInt(s: string): number {
+  const m: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }
   let total = 0
-  if (fi <= 2 && ti >= 0) total += Math.min(ti, 2) - fi + 1
-  if (fi <= 7 && ti >= 3) total += (Math.min(ti, 7) - Math.max(fi, 3) + 1) * 4
-  if (fi <= 12 && ti >= 8) total += (Math.min(ti, 12) - Math.max(fi, 8) + 1) * 4
-  if (fi <= 14 && ti >= 13) total += (Math.min(ti, 14) - Math.max(fi, 13) + 1) * 4
+  for (let i = 0; i < s.length; i++) {
+    const cur = m[s[i]]; const next = m[s[i + 1]]
+    if (!cur) return 0
+    total += next && cur < next ? -cur : cur
+  }
   return total
 }
-
-// Auto-generate section tags from grade range
-function buildSectionTags(from: string, to: string, board: BoardKey): string[] {
-  const fi = GRADES.indexOf(from)
-  const ti = GRADES.indexOf(to)
-  if (fi < 0 || ti < 0 || fi > ti) return []
+function toRoman(n: number): string {
+  if (n <= 0) return ''
+  const table: [number, string][] = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]
+  let res = ''
+  for (const [v, sym] of table) while (n >= v) { res += sym; n -= v }
+  return res
+}
+/** Numeric grade level from free text. Pre-primary → <= 0; null if unparseable. */
+function parseGradeLevel(raw: string): number | null {
+  const s = (raw || '').trim().toLowerCase()
+  if (!s) return null
+  if (/\b(nursery|playgroup|pre[\s-]?nursery|pre[\s-]?k|prek)\b/.test(s)) return -2
+  if (/\b(lkg|jr\.?\s*kg|junior)\b/.test(s)) return -1
+  if (/\b(ukg|sr\.?\s*kg|senior\s*kg|kindergarten|kg|reception)\b/.test(s)) return 0
+  const ar = s.match(/(\d+)/)
+  if (ar) return parseInt(ar[1], 10)
+  const rom = s.match(/\b([ivxlcdm]+)\b/i)
+  if (rom) { const r = romanToInt(rom[1].toUpperCase()); if (r > 0) return r }
+  return null
+}
+/** Short label for a numeric level, preserving the user's pre-primary names. */
+function levelLabel(n: number): string {
+  if (n === -2) return 'Nursery'
+  if (n === -1) return 'LKG'
+  if (n === 0) return 'UKG'
+  return toRoman(n)
+}
+/** Distribute `total` sections across `count` levels as evenly as possible;
+ *  any remainder goes to the highest (top) levels. */
+function distributeSections(count: number, total: number): number[] {
+  if (count <= 0) return []
+  if (total <= 0) return Array(count).fill(0)
+  const base = Math.floor(total / count)
+  let rem = total - base * count
+  const arr = Array(count).fill(base)
+  for (let i = count - 1; rem > 0; i--, rem--) arr[i] += 1
+  return arr
+}
+/** Band index by numeric level: pre-primary 0 · primary(1–5) 1 · middle(6–10) 2 · senior(11+) 3. */
+function bandOf(level: number): number {
+  if (level <= 0) return 0
+  if (level <= 5) return 1
+  if (level <= 10) return 2
+  return 3
+}
+/** Board-aware subject estimate that grows with the highest grade reached. */
+function estimateSubjects(toLevel: number | null, board: BoardKey): number {
+  if (toLevel === null) return 0
+  const base = BOARD_SUBJECTS[board]
+  if (toLevel <= 0) return Math.round(base * 0.25)
+  if (toLevel <= 5) return Math.round(base * 0.45)
+  if (toLevel <= 8) return Math.round(base * 0.7)
+  if (toLevel <= 10) return Math.round(base * 0.9)
+  return base
+}
+/** Total sections implied by the entered range + class count (0 if none). */
+function previewSectionTotal(fromGrade: string, toGrade: string, classCount: number): number {
+  const f = parseGradeLevel(fromGrade); const t = parseGradeLevel(toGrade)
+  if (f === null || t === null || f > t || classCount <= 0) return 0
+  return classCount
+}
+/** Dynamic "auto-create" preview chips from the user's range, count and board. */
+function buildPreview(fromGrade: string, toGrade: string, classCount: number, board: BoardKey): string[] {
+  const f = parseGradeLevel(fromGrade); const t = parseGradeLevel(toGrade)
+  if (f === null || t === null || f > t) return []
+  const levels: number[] = []
+  for (let n = f; n <= t; n++) levels.push(n)
 
   const tags: string[] = []
-  // Pre-K group
-  if (fi <= 2 && ti >= 0) {
-    const end = Math.min(ti, 2)
-    const names = GRADES.slice(fi, end + 1)
-    const label = names.length === 1 ? names[0] : `${names[0]}–${names[names.length - 1]}`
-    const cls = names.length
-    tags.push(`${label} (${cls} class${cls > 1 ? 'es' : ''})`)
+  if (classCount > 0) {
+    const per = distributeSections(levels.length, classCount)
+    // Group consecutive levels into bands, summing their sections.
+    const bands: { from: number; to: number; sum: number }[] = []
+    levels.forEach((lvl, i) => {
+      const b = bandOf(lvl)
+      const last = bands[bands.length - 1]
+      if (last && bandOf(last.to) === b) { last.to = lvl; last.sum += per[i] }
+      else bands.push({ from: lvl, to: lvl, sum: per[i] })
+    })
+    for (const { from, to, sum } of bands) {
+      const label = from === to ? levelLabel(from) : `${levelLabel(from)}–${levelLabel(to)}`
+      tags.push(`${label} (${sum} section${sum !== 1 ? 's' : ''})`)
+    }
   }
-  // Primary I–V
-  if (fi <= 7 && ti >= 3) {
-    const s = Math.max(fi, 3); const e = Math.min(ti, 7)
-    const cnt = e - s + 1
-    const rn = `${GRADES[s].replace('Class ', '')}–${GRADES[e].replace('Class ', '')}`
-    tags.push(`${rn} (${cnt * 4} sections)`)
-  }
-  // Middle VI–X
-  if (fi <= 12 && ti >= 8) {
-    const s = Math.max(fi, 8); const e = Math.min(ti, 12)
-    const cnt = e - s + 1
-    const rn = `${GRADES[s].replace('Class ', '')}–${GRADES[e].replace('Class ', '')}`
-    tags.push(`${rn} (${cnt * 4} sections)`)
-  }
-  // Senior XI–XII
-  if (fi <= 14 && ti >= 13) {
-    const s = Math.max(fi, 13); const e = Math.min(ti, 14)
-    const cnt = e - s + 1
-    const rn = `${GRADES[s].replace('Class ', '')}–${GRADES[e].replace('Class ', '')}`
-    tags.push(`${rn} (${cnt * 4} sections)`)
-  }
-
-  tags.push(`${BOARD_SUBJECTS[board]} ${board} subjects`)
+  const subj = estimateSubjects(t, board)
+  if (subj > 0) tags.push(`${subj} ${board === 'Custom' ? 'subjects' : board + ' subjects'}`)
   tags.push('Bell timings')
   tags.push('Room types')
   return tags
@@ -388,25 +437,25 @@ function CreateTimetableModal({
   const [startDate,  setStartDate]  = useState(`${thisYear}-04-01`)
   const [endDate,    setEndDate]    = useState(`${nextYear}-03-31`)
   const [board,      setBoard]      = useState<BoardKey>('CBSE')
-  const [fromGrade,  setFromGrade]  = useState('Nursery')
-  const [toGrade,    setToGrade]    = useState('Class XII')
-  const [classes,    setClasses]    = useState(52)
-  const [subjects,   setSubjects]   = useState(38)
-  const [teachers,   setTeachers]   = useState(84)
-  const [rooms,      setRooms]      = useState(60)
+  const [fromGrade,  setFromGrade]  = useState('')
+  const [toGrade,    setToGrade]    = useState('')
+  // Counts start blank — nothing is invented until the user enters a number.
+  const [classes,    setClasses]    = useState<number | ''>('')
+  const [teachers,   setTeachers]   = useState<number | ''>('')
+  const [rooms,      setRooms]      = useState<number | ''>('')
 
-  const handleBoard = (b: BoardKey) => { setBoard(b); setSubjects(BOARD_SUBJECTS[b]) }
+  const handleBoard = (b: BoardKey) => setBoard(b)
+  const classCount = typeof classes === 'number' ? classes : 0
 
+  // Preview adapts live to the entered range, class count and board.
   const tags = useMemo(
-    () => buildSectionTags(fromGrade, toGrade, board),
-    [fromGrade, toGrade, board],
+    () => buildPreview(fromGrade, toGrade, classCount, board),
+    [fromGrade, toGrade, classCount, board],
   )
-
-  // Auto-update classes count when grade range changes
-  useEffect(() => {
-    const n = computeApproxSections(fromGrade, toGrade)
-    if (n > 0) setClasses(n)
-  }, [fromGrade, toGrade])
+  const subjects = useMemo(
+    () => estimateSubjects(parseGradeLevel(toGrade), board),
+    [toGrade, board],
+  )
 
   const fmt = (iso: string) => {
     const d = new Date(iso + 'T00:00:00')
@@ -421,10 +470,10 @@ function CreateTimetableModal({
       name:            name.trim() || 'Untitled Timetable',
       status:          'draft',
       wizardStep:      0,
-      approxClasses:   classes,
-      approxTeachers:  teachers,
+      approxClasses:   classCount,
+      approxTeachers:  typeof teachers === 'number' ? teachers : 0,
       approxSubjects:  subjects,
-      approxRooms:     rooms,
+      approxRooms:     typeof rooms === 'number' ? rooms : 0,
       board,
       startDate,
       endDate,
@@ -594,25 +643,20 @@ function CreateTimetableModal({
           <label style={lbl}>Class range <span style={{ color: '#EF4444' }}>*</span></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <input
-              className="ct-select"
-              list="schedu-grade-options"
+              className="ct-input"
               value={fromGrade}
               onChange={e => setFromGrade(e.target.value)}
-              placeholder="From — e.g. Nursery"
+              placeholder="From — e.g. Class I"
             />
             <input
-              className="ct-select"
-              list="schedu-grade-options"
+              className="ct-input"
               value={toGrade}
               onChange={e => setToGrade(e.target.value)}
-              placeholder="To — e.g. Class XII"
+              placeholder="To — e.g. Class X"
             />
           </div>
-          <datalist id="schedu-grade-options">
-            {GRADES.map(g => <option key={g} value={g} />)}
-          </datalist>
           <p style={{ fontSize: 12, color: '#6B7280', marginTop: 6 }}>
-            Pick a standard grade or type your own (e.g. “Grade R”, “Form 1”). schedU groups them automatically.
+            Type your own naming — “Class I”, “Grade 1”, “Form 1”, “Year 7”. schedU adapts to your convention and groups the levels automatically.
           </p>
         </div>
 
@@ -639,8 +683,9 @@ function CreateTimetableModal({
                   className="ct-num"
                   type="number"
                   min={1}
+                  placeholder="—"
                   value={f.value}
-                  onChange={e => f.set(Number(e.target.value))}
+                  onChange={e => { const v = e.target.value; f.set(v === '' ? '' : Math.max(0, Number(v))) }}
                 />
               </div>
             ))}
