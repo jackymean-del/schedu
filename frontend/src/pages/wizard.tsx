@@ -27,6 +27,32 @@ import { StepAllocation }    from '@/routes/wizard/step-allocation'
 import { StepStudentGroups } from '@/routes/wizard/step-student-groups'
 import { Step6Generate }     from '@/routes/wizard/step6-generate'
 import { CheckCircle2 }      from 'lucide-react'
+import { StepGuide }         from '@/components/StepGuide'
+
+// Inline guide content per step (index = step - 1). Matches the STEPS order.
+const STEP_GUIDES: { title: string; tips: string[] }[] = [
+  { title: 'Step 1 · Resources', tips: [
+    'Add your classes, teachers, subjects and rooms — the building blocks of every timetable.',
+    'In a hurry? Use “Generate” to create an editable starting set from your setup, then refine.',
+    'Switch tabs to enter each type, or use + Add to enter rows manually.',
+  ] },
+  { title: 'Step 2 · Shift & Timing', tips: [
+    'Define your daily periods and breaks — start/end times, period length and lunch.',
+    'Set the working days and any shifts; this becomes the grid every class is scheduled into.',
+  ] },
+  { title: 'Step 3 · Allocation', tips: [
+    'Decide how many periods each subject gets per class, and which teacher takes it.',
+    'Period and teacher allocations stay in sync — edit either side and the other reflows.',
+  ] },
+  { title: 'Step 4 · Groups & Combos', tips: [
+    'Set up electives and combined groups (students pick one option, or classes merge for a subject).',
+    'Skip this step if your classes don’t share subjects across sections.',
+  ] },
+  { title: 'Step 5 · Review & Generate', tips: [
+    'Review your setup, then generate a conflict-free timetable.',
+    'You can re-generate or hand-edit any cell afterwards.',
+  ] },
+]
 
 // ── Step registry ─────────────────────────────────────────────
 const STEPS = [StepResourcesV2, StepBell, StepAllocation, StepStudentGroups, Step6Generate]
@@ -87,7 +113,7 @@ export function WizardPage() {
   const total = STEPS.length
 
   const ttName = (config as any).timetableName
-    || (user?.schoolName ? `${user.schoolName} · Timetable` : 'AY 2025–26 · Main Timetable')
+    || (user?.schoolName ? `${user.schoolName} · Timetable` : 'Untitled timetable')
 
   return (
     <div style={{
@@ -195,6 +221,11 @@ export function WizardPage() {
         flex: 1, overflowY: 'auto',
         background: '#F5F4F0',
       }}>
+        {STEP_GUIDES[step - 1] && (
+          <div style={{ padding: '14px 20px 0' }}>
+            <StepGuide title={STEP_GUIDES[step - 1].title} tips={STEP_GUIDES[step - 1].tips} />
+          </div>
+        )}
         <StepErrorBoundary step={step}>
           <CurrentStep />
         </StepErrorBoundary>

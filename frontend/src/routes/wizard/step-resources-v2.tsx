@@ -20,7 +20,6 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { generateStaff, generateSubjects, generateBreaks } from '@/lib/orgData'
 import type { Section, Subject, Staff } from '@/types'
 import { ScopeMatrixModal } from '@/components/DataGrid/ScopeMatrixModal'
-import { StepGuide } from '@/components/StepGuide'
 import { makeId } from '@/components/master/EntityGrids'
 import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
@@ -821,15 +820,6 @@ export function StepResourcesV2() {
       {/* ══ Content area ═════════════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <div style={{ flex: 1, padding: '12px 18px 6px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-
-          <StepGuide
-            title="Step 1 · Resources"
-            tips={[
-              'Add your classes, teachers, subjects and rooms — the building blocks every timetable needs.',
-              'In a hurry? Use “Generate” to create an editable starting set from your setup, then refine.',
-              'Switch tabs above to enter each type, or use + Add to enter rows manually.',
-            ]}
-          />
 
           {/* ── Empty state ───────────────────────────────────────────────── */}
           {!hasAnyData && (
