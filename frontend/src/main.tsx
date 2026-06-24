@@ -7,6 +7,7 @@ import './index.css'
 import { router } from './routeTree.gen'
 import { CLERK_PUBLISHABLE_KEY } from './lib/clerk'
 import { ClerkAuthSync } from './components/auth/ClerkAuthSync'
+import { OnboardingGuide } from './components/OnboardingGuide'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +18,9 @@ const queryClient = new QueryClient({
 const app = (
   <QueryClientProvider client={queryClient}>
     <RouterProvider router={router} />
+    {/* Global, route-independent: shows the org-setup guide on every page for
+        signed-in users (gates itself on auth internally). */}
+    <OnboardingGuide />
   </QueryClientProvider>
 )
 

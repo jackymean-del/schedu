@@ -831,12 +831,12 @@ export function StepResourcesV2() {
                 <Sparkles size={24} color={P} />
               </div>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0F0E1A', margin: '0 0 7px', letterSpacing: '-0.3px' }}>
-                AI-generate your school resources
+                Add your resources
               </h2>
               <p style={{ fontSize: 12.5, color: '#6B7280', margin: '0 0 24px', lineHeight: 1.6 }}>
                 {configuredClassDefs?.length
-                  ? `One click generates ${configuredClassDefs.length * 3} sections (3 per class, ${configuredClassDefs.length} classes from Shift & Timing), teachers, subjects and rooms — with class teacher assignments pre-filled.`
-                  : 'One click generates 52 classes (Nursery–XII), 84 teachers, 38 subjects and 60 rooms — with subject expertise, class teacher assignments, and room mappings pre-filled.'
+                  ? `Generate ${configuredClassDefs.length * 3} sections (3 per class, ${configuredClassDefs.length} classes from your setup), plus teachers, subjects and rooms — with class-teacher assignments pre-filled.`
+                  : 'Generate your classes, teachers, subjects and rooms in one click based on your setup — or switch to a tab and use + Add to enter them manually.'
                 }
               </p>
               <button

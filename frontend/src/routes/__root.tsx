@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { Topbar } from '@/components/layout/Topbar'
 import { AppSidebar } from '@/components/layout/AppSidebar'
-import { OnboardingGuide } from '@/components/OnboardingGuide'
 import { useTimetableStore } from '@/store/timetableStore'
 
 export const Route = createRootRoute({
@@ -38,7 +37,6 @@ function RootLayout() {
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minWidth: 0 }}>
           <Outlet />
         </div>
-        <OnboardingGuide />
       </div>
     )
   }
@@ -52,7 +50,6 @@ function RootLayout() {
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <Outlet />
         </div>
-        <OnboardingGuide />
       </div>
     )
   }

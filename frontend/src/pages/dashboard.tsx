@@ -1013,7 +1013,7 @@ export function DashboardPage() {
 
   const [activeTab,     setActiveTab]     = useState<NavTab>('dashboard')
   const [activeSideKey, setActiveSideKey] = useState<SideNavKey>('dashboard')
-  const [sidebarOpen,   setSidebarOpen]   = useState(false)
+  const [sidebarOpen,   setSidebarOpen]   = useState(true)
   const [userMenuOpen,  setUserMenuOpen]  = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
