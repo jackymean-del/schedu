@@ -16,7 +16,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import * as ttRepo from '@/api/timetables'
 import { BrandedLoader } from '@/components/BrandedLoader'
 import { useOrgProfile } from '@/store/orgProfile'
-import { parseGradeLevel, toRoman } from '@/lib/gradeParse'
+import { parseGradeLevel, toRoman, tidyGradeLabel } from '@/lib/gradeParse'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
@@ -26,7 +26,7 @@ import {
   LifeBuoy, BookOpen, Video,
   Bell, Plus, Sparkles,
   ChevronRight, ArrowRight, ChevronLeft,
-  Zap, X, Trash2, Pencil, LogOut,
+  Zap, X, Trash2, Pencil, LogOut, Copy,
 } from 'lucide-react'
 
 // ── helpers ────────────────────────────────────────────────────
@@ -337,19 +337,31 @@ const SEED_TT: TTEntry[] = [
   },
 ]
 
-function loadTTList(): TTEntry[] {
-  // Server-backed: start empty; the dashboard loads the user's real list from
-  // the API on mount. No demo seed (that seed is what made every account show
-  // the same drafts).
-  if (SERVER_BACKED) return []
+// Per-user local cache of the timetable list. In server-backed mode this is a
+// resilient mirror so a freshly-created/generated draft is shown immediately
+// and never lost if a server round-trip is slow or fails — the server stays
+// authoritative and is merged in on load.
+function ttListKey() { return `${TTLIST_KEY}:${cacheNS}` }
+function loadLocalTTList(): TTEntry[] {
   try {
-    const raw = localStorage.getItem(TTLIST_KEY)
-    if (raw === null) { saveTTList(SEED_TT); return SEED_TT }
+    const raw = localStorage.getItem(SERVER_BACKED ? ttListKey() : TTLIST_KEY)
+    if (raw === null) return SERVER_BACKED ? [] : (saveTTList(SEED_TT), SEED_TT)
     return JSON.parse(raw) as TTEntry[]
-  } catch { return SEED_TT }
+  } catch { return SERVER_BACKED ? [] : SEED_TT }
+}
+function loadTTList(): TTEntry[] {
+  // Initial render: server-backed starts empty (the mount effect merges local
+  // cache + server once the user — and cache namespace — are known).
+  return SERVER_BACKED ? [] : loadLocalTTList()
 }
 function saveTTList(list: TTEntry[]) {
-  localStorage.setItem(TTLIST_KEY, JSON.stringify(list))
+  localStorage.setItem(SERVER_BACKED ? ttListKey() : TTLIST_KEY, JSON.stringify(list))
+}
+/** Merge server list (authoritative) with local-only drafts not yet on it. */
+function mergeTTLists(server: TTEntry[], local: TTEntry[]): TTEntry[] {
+  const ids = new Set(server.map(t => t.id))
+  const localOnly = local.filter(t => !ids.has(t.id))
+  return [...localOnly, ...server].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
 }
 function getActiveTTId(): string | null {
   return localStorage.getItem(ACTIVE_TT_KEY)
@@ -595,19 +607,28 @@ function CreateTimetableModal({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <input
               className="ct-input"
+              list="schedu-grade-suggestions"
               value={fromGrade}
               onChange={e => setFromGrade(e.target.value)}
-              placeholder="From — e.g. Class I"
+              onBlur={e => setFromGrade(tidyGradeLabel(e.target.value))}
+              placeholder="From — e.g. Class-I"
             />
             <input
               className="ct-input"
+              list="schedu-grade-suggestions"
               value={toGrade}
               onChange={e => setToGrade(e.target.value)}
-              placeholder="To — e.g. Class X"
+              onBlur={e => setToGrade(tidyGradeLabel(e.target.value))}
+              placeholder="To — e.g. Class-X"
             />
           </div>
+          <datalist id="schedu-grade-suggestions">
+            {['Nursery', 'LKG', 'UKG', ...Array.from({ length: 12 }, (_, i) => `Class-${toRoman(i + 1)}`)].map(g => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
           <p style={{ fontSize: 12, color: '#6B7280', marginTop: 6 }}>
-            Type your own naming — “Class I”, “Grade 1”, “Form 1”, “Year 7”. schedU adapts to your convention and groups the levels automatically.
+            Type your own naming — “Class-I”, “Grade 1”, “KG1”, “PP2”, “Nursery”, “Form 1”, “Year 7”. schedU adapts to your convention, tidies the spacing, and groups the levels automatically.
           </p>
         </div>
 
@@ -1028,26 +1049,30 @@ export function DashboardPage() {
   // render — it only sets a module-level string.
   setCacheNS(user?.id)
 
-  // Server-backed: load this user's real timetables from the API on mount.
+  // Server-backed: show the local cache instantly, then merge in the server.
   useEffect(() => {
     if (!SERVER_BACKED || !user) return
     let cancelled = false
+    // Instant: render any locally-cached drafts so nothing flashes empty.
+    const local = loadLocalTTList()
+    if (local.length) setTTList(local)
     ttRepo.fetchTimetables()
-      .then(list => {
+      .then(serverList => {
         if (cancelled) return
-        setTTList(list as TTEntry[])
-        // Clear any stale wizard data left in the persisted store by a previous
-        // account in this browser, unless the active timetable is genuinely one
-        // of THIS user's. Otherwise the dashboard would show another user's
-        // classes/teachers (the persisted schedu-v3 store is per-browser).
+        const merged = mergeTTLists(serverList as TTEntry[], local)
+        setTTList(merged)
+        saveTTList(merged)
+        // Only reset the wizard store when the active timetable belongs to no
+        // one in the MERGED list (prevents wiping a freshly-created draft that
+        // hasn't finished syncing to the server yet).
         const activeId = getActiveTTId()
-        const ownsActive = !!activeId && list.some(t => t.id === activeId)
+        const ownsActive = !!activeId && merged.some(t => t.id === activeId)
         if (!ownsActive) {
           useTimetableStore.getState().resetAll()
           setActiveTTId(null)
         }
       })
-      .catch(() => { /* keep whatever's in state; user can retry */ })
+      .catch(() => { /* offline — local cache already shown */ })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
@@ -1105,7 +1130,7 @@ export function DashboardPage() {
       if (prev[idx].wizardStep === storeStep) return prev
       const next = [...prev]
       next[idx] = { ...next[idx], wizardStep: storeStep }
-      if (!SERVER_BACKED) saveTTList(next)
+      saveTTList(next)
       return next
     })
   }, [store.step])
@@ -1126,7 +1151,7 @@ export function DashboardPage() {
 
     const next = [saved, ...ttList]
     setTTList(next)
-    if (!SERVER_BACKED) saveTTList(next)
+    saveTTList(next)
     setActiveTTId(saved.id)
     // New timetable: start fresh
     useTimetableStore.getState().resetWizard()
@@ -1196,7 +1221,7 @@ export function DashboardPage() {
   const handleDelete = (id: string) => {
     const next = ttList.filter(t => t.id !== id)
     setTTList(next)
-    if (!SERVER_BACKED) saveTTList(next)
+    saveTTList(next)
     if (getActiveTTId() === id) setActiveTTId(null)
     setConfirmDelete(null)
     if (SERVER_BACKED) {
@@ -1204,11 +1229,36 @@ export function DashboardPage() {
     }
   }
 
+  const handleDuplicate = async (tt: TTEntry) => {
+    const copy: TTEntry = {
+      ...tt,
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: `${tt.name} (copy)`,
+      status: 'draft',
+      createdAt: Date.now(),
+    }
+    let saved = copy
+    if (SERVER_BACKED) {
+      try { saved = { ...copy, id: await ttRepo.createTimetable(copy) } } catch { /* keep local id */ }
+    }
+    // Copy the source timetable's wizard snapshot so the duplicate is a full clone.
+    try {
+      const raw = localStorage.getItem(snapKey(tt.id))
+      if (raw) {
+        localStorage.setItem(snapKey(saved.id), raw)
+        if (SERVER_BACKED) ttRepo.saveTimetableSnapshot(saved.id, JSON.parse(raw)).catch(() => {})
+      }
+    } catch { /* ignore */ }
+    const next = [saved, ...ttList]
+    setTTList(next)
+    saveTTList(next)
+  }
+
   const handleSaveEdit = (updated: TTEntry) => {
     const next = ttList.map(t => t.id === updated.id ? updated : t)
     setTTList(next)
-    if (!SERVER_BACKED) saveTTList(next)
-    else ttRepo.updateTimetableMeta(updated).catch(() => { /* best-effort */ })
+    saveTTList(next)
+    if (SERVER_BACKED) ttRepo.updateTimetableMeta(updated).catch(() => { /* best-effort */ })
     setEditingTT(null)
 
     const ta = updated.approxTeachers
@@ -1792,6 +1842,22 @@ export function DashboardPage() {
                       onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
                     >
                       <Pencil size={13} />
+                    </button>
+
+                    {/* Duplicate button — all rows */}
+                    <button
+                      onClick={() => handleDuplicate(tt)}
+                      title="Duplicate timetable"
+                      style={{
+                        width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'transparent', border: '1px solid transparent',
+                        cursor: 'pointer', color: '#D1D5DB', transition: 'all 0.13s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#7C6FE0'; e.currentTarget.style.borderColor = '#C4B5FD'; e.currentTarget.style.background = '#F5F3FF' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <Copy size={13} />
                     </button>
 
                     {/* Delete button — all rows */}

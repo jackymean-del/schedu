@@ -39,6 +39,45 @@ export function toRoman(n: number): string {
   return r
 }
 
+/**
+ * Tidy a typed grade label into a clean canonical form, fixing odd spacing /
+ * hyphenation ("std-  i" / "Std - I" → "Std-I", "grade 1" → "Grade-1",
+ * "class i" → "Class-I"). Pre-primary names become standard short forms.
+ * Unrecognized input is just whitespace-collapsed (never destroyed).
+ */
+export function tidyGradeLabel(raw?: string): string {
+  const s = (raw ?? '').trim().replace(/\s+/g, ' ')
+  if (!s) return ''
+  const low = s.toLowerCase()
+
+  // Pre-primary canonical forms
+  if (/\bplay\s*group\b/.test(low)) return 'Playgroup'
+  if (/\bpre[\s-]*nursery\b/.test(low)) return 'Pre-Nursery'
+  if (/\bnursery\b/.test(low)) return 'Nursery'
+  if (/\b(lkg|lower\s*kg|jr\.?\s*kg|junior\s*kg)\b/.test(low)) return 'LKG'
+  if (/\b(ukg|upper\s*kg|sr\.?\s*kg|senior\s*kg)\b/.test(low)) return 'UKG'
+  if (/\bpre[\s-]*k(?!g)\b/.test(low)) return 'Pre-K'
+  if (/\breception\b/.test(low)) return 'Reception'
+  if (/\bkindergarten\b/.test(low)) return 'Kindergarten'
+  const ppn = low.match(/\b(kg|k|pp|pre[\s-]*primary|preprimary)\s*[-\s]?([12])\b/)
+  if (ppn) {
+    const fam = /^p/.test(ppn[1]) ? 'PP' : ppn[1] === 'k' ? 'K' : 'KG'
+    return `${fam}${ppn[2]}`
+  }
+
+  // Prefixed grade: Class/Grade/Std/Standard/Year/Form/Level + roman|arabic
+  const m = low.match(/^(class|grade|standard|std|year|form|level|grd|cls|cl)\s*[-\s]*([ivxlcdm]+|\d+)$/)
+  if (m) {
+    const pref: Record<string, string> = {
+      class: 'Class', cls: 'Class', cl: 'Class', grade: 'Grade', grd: 'Grade',
+      standard: 'Standard', std: 'Std', year: 'Year', form: 'Form', level: 'Level',
+    }
+    const num = /^\d+$/.test(m[2]) ? m[2] : m[2].toUpperCase()
+    return `${pref[m[1]] ?? m[1]}-${num}`
+  }
+  return s
+}
+
 /** Parse a grade/class label into a numeric level; null if unrecognizable. */
 export function parseGradeLevel(raw?: string): number | null {
   let s = (raw ?? '').trim().toLowerCase()
