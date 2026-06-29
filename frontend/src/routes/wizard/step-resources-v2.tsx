@@ -176,6 +176,7 @@ const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number; short?: 
   { name: 'Nursery Rhymes & Stories', cat: 'Activity',     ppw: 3 },
   { name: 'Activity / Free Play',     cat: 'Activity',     ppw: 4 },
   { name: 'EVS',                      cat: 'Compulsory',   ppw: 4 },
+  { name: 'Computer',                 cat: 'Compulsory',   ppw: 2,  short: 'COMP' },
   // ── Lower school (I–VIII) ────────────────────────────────────────────────────
   { name: 'Science',                  cat: 'Compulsory',   ppw: 5 },
   { name: 'Social Science',           cat: 'Compulsory',   ppw: 5,  short: 'SSC'  },
@@ -227,7 +228,7 @@ function buildDefaultSubjects(board: CurriculumBoard = 'CBSE', sections: Section
 
   // Subjects that only make sense below sr. secondary (exclude from XI-XII-only schools)
   const PRIMARY_ONLY_SUBJECTS = new Set([
-    'Number Work','Nursery Rhymes & Stories','Activity / Free Play','EVS',
+    'Number Work','Nursery Rhymes & Stories','Activity / Free Play','EVS','Computer',
   ])
   // Pre-primary-only subjects — exclude when there are no pre-primary sections.
   const PREK_ONLY_SUBJECTS = new Set([
@@ -294,7 +295,7 @@ function buildDefaultRooms(): RoomExt[] {
   const specials = [
     { name: 'Science Lab 1', type: 'Lab',          cap: 35, floor: '1st',    subjects: ['Physics', 'Chemistry', 'Biology'] },
     { name: 'Science Lab 2', type: 'Lab',          cap: 35, floor: '1st',    subjects: ['Chemistry', 'Biology'] },
-    { name: 'Computer Lab',  type: 'Computer Lab', cap: 40, floor: '2nd',    subjects: ['Computer Science', 'Informatics Practices'] },
+    { name: 'Computer Lab',  type: 'Computer Lab', cap: 40, floor: '2nd',    subjects: ['Computer', 'Computer Science', 'Informatics Practices'] },
     { name: 'Library',       type: 'Library',      cap: 60, floor: 'Ground', subjects: ['Library'] },
     { name: 'Art Room',      type: 'Other',        cap: 35, floor: '1st',    subjects: ['Art & Craft', 'Drawing'] },
     { name: 'Music Room',    type: 'Other',        cap: 30, floor: '1st',    subjects: ['Music'] },

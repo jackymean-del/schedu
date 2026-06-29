@@ -215,6 +215,7 @@ export const SHORT_MAP: Record<string, string> = {
   'Japanese':                 'JPN',
   'Mandarin':                 'MAN',
   // Technology
+  'Computer':                 'COMP',
   'Computer Science':         'CS',
   'Informatics Practices':    'IP',
   'Artificial Intelligence':  'AI',
@@ -508,12 +509,17 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     slots: { primary: 3, middle: 4, secondary: 4, srSec: 5 },
     hint: 'Language subject — Islamic schools, international schools, Middle East campuses',
   },
+  'Computer': {
+    grades: ['preK','primary'],
+    slots: { preK: 1, primary: 2 },
+    hint: 'Basic computer literacy — junior grades (Nursery–V); becomes "Computer Science" as a formal subject from middle school.',
+  },
   'Computer Science': {
-    grades: ['primary','middle','secondary','srSec'],
+    grades: ['middle','secondary','srSec'],
     streams: ['science','general','commerce'],  // Science + untagged + Commerce; NOT Spark (pcb) or Humanities
-    slots:    { primary: 2, middle: 3, secondary: 3, srSec: 5 },
-    ibSlots:  { primary: 2, middle: 3, secondary: 4, srSec: 6 },
-    hint: 'CBSE: Class III+ basics, full CS from VI; standalone subject at XI–XII for Science and Commerce. NOT assigned to Spark (PCB) or Humanities.',
+    slots:    { middle: 3, secondary: 3, srSec: 5 },
+    ibSlots:  { middle: 3, secondary: 4, srSec: 6 },
+    hint: 'Formal Computer Science — middle school (VI) onward; standalone subject at XI–XII for Science and Commerce. Junior grades use "Computer" instead. NOT assigned to Spark (PCB) or Humanities.',
   },
 
   // ── Middle school (VI–VIII) ────────────────────────────────────────────────────
@@ -952,14 +958,14 @@ const STD_PREK = [
 /** Junior Primary (I–II) — EVS still combines science + social themes. */
 const STD_PRIMARY_JUNIOR = [
   'English', 'Mathematics', 'EVS', 'Hindi',
-  'Computer Science', 'G.K.', 'Art & Craft', 'Music',
+  'Computer', 'G.K.', 'Art & Craft', 'Music',
   'Physical Education', 'Library',
 ]
 
 /** Senior Primary (III–V) — EVS splits into Science + Social Science. */
 const STD_PRIMARY_SENIOR = [
   'English', 'Mathematics', 'Science', 'Social Science', 'Hindi',
-  'Computer Science', 'G.K.', 'Art & Craft', 'Music',
+  'Computer', 'G.K.', 'Art & Craft', 'Music',
   'Physical Education', 'Library',
 ]
 
