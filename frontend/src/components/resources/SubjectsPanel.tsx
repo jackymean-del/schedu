@@ -1318,7 +1318,6 @@ export function SubjectsPanel({
   }, [sections])
 
   const allCatOrder = useMemo(() => [...BUILTIN_CATS, ...extraCats], [extraCats])
-  const allExpanded = collapsedCats.size === 0
   function toggleCat(cat: string) {
     setCollapsedCats(prev => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n })
   }
@@ -1467,7 +1466,7 @@ export function SubjectsPanel({
       <ResourceGlobalStyles />
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 7, flexShrink: 0, flexWrap: 'nowrap', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 7, flexShrink: 0, flexWrap: 'wrap', rowGap: 6 }}>
 
         {/* Title + counts */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
@@ -1534,24 +1533,6 @@ export function SubjectsPanel({
         >
           ↑Z Sort
         </button>
-
-        {/* Expand / collapse all categories */}
-        {groupedByCategory.length > 1 && (
-          <button
-            onClick={() => setCollapsedCats(allExpanded ? new Set(groupedByCategory.map(([c]) => c)) : new Set())}
-            title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
-              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#8B87AD',
-              fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#8B87AD' }}
-          >
-            {allExpanded ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
-            {allExpanded ? 'Collapse' : 'Expand'}
-          </button>
-        )}
 
         {/* Load Unit selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: '#F5F3FF', border: '1.5px solid #DDD8FF', borderRadius: 7, padding: '2px 8px', height: 34, boxSizing: 'border-box' as const }}>
