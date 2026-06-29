@@ -1067,6 +1067,11 @@ export function DashboardPage() {
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('new') === '1'
   )
   const [ttList,        setTTList]        = useState<TTEntry[]>(loadTTList)
+  // Surfaces a visible banner when the server is unreachable / rejecting our
+  // auth, instead of silently degrading to local-only (which looked like data
+  // loss with no explanation). Carries the HTTP status when known so a
+  // recurring 401 (vs. a network blip) is easy to tell apart at a glance.
+  const [syncIssue, setSyncIssue] = useState<string | null>(null)
 
   // Namespace the local snapshot cache to this user (prevents one account from
   // reading another's cached data in a shared browser). Safe to call on every
@@ -1112,8 +1117,16 @@ export function DashboardPage() {
 
         setTTList(merged)
         saveTTList(merged)
+        setSyncIssue(null)
       })
-      .catch(() => { /* offline — local cache already shown */ })
+      .catch((err: any) => {
+        if (cancelled) return
+        const status = err?.response?.status
+        setSyncIssue(
+          status === 401 ? 'auth-401' : status ? `http-${status}` : 'offline'
+        )
+        // offline — local cache already shown
+      })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
@@ -1743,6 +1756,19 @@ export function DashboardPage() {
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E' }}>Your timetables</h2>
               <span style={{ fontSize: 12, color: '#9CA3AF' }}>{ttList.length} total</span>
             </div>
+
+            {syncIssue && (
+              <div style={{
+                background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10,
+                padding: '10px 14px', marginBottom: 10, fontSize: 12.5, color: '#92400E',
+              }}>
+                {syncIssue === 'auth-401'
+                  ? '⚠️ Couldn’t verify your sign-in with the server (401). Showing locally-saved timetables only — they may not be backed up yet. This usually means the backend auth key is out of date.'
+                  : syncIssue === 'offline'
+                  ? '⚠️ Couldn’t reach the server — showing locally-saved timetables only.'
+                  : `⚠️ Server error (${syncIssue.replace('http-', '')}) — showing locally-saved timetables only.`}
+              </div>
+            )}
 
             {/* Delete confirmation overlay */}
             {confirmDelete && (
