@@ -28,6 +28,8 @@ import {
   buildFlatSheet,
   buildPrintHTML,
 } from '@/lib/timetableExport'
+import { useTimetableStore } from '@/store/timetableStore'
+import { markActiveTimetablePublished } from '@/lib/ttRegistry'
 
 // ─── Props ────────────────────────────────────────────────
 
@@ -199,6 +201,12 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
         setDone(d => [...d, 'print'])
       }
 
+      // The button reads "Publish & Export" — actually mark the timetable
+      // published once the chosen exports have succeeded (previously nothing
+      // in the app ever set this, so a "published" timetable still showed as
+      // a draft on the dashboard).
+      useTimetableStore.getState().setTimetableStatus('published')
+      markActiveTimetablePublished()
     } catch (err: any) {
       setError(err?.message ?? 'Export failed. Please try again.')
     } finally {
