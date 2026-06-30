@@ -584,7 +584,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClick, onAIFix, aiLoading, aiApplied }: {
+export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClick, onAIFix, aiLoading, aiApplied, hasGaps }: {
   staff: Staff[]
   setStaff: (s: Staff[]) => void
   sections: Section[]
@@ -593,6 +593,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   onAIFix?: () => void
   aiLoading?: boolean
   aiApplied?: boolean
+  hasGaps?: boolean
 }) {
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
@@ -763,31 +764,53 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
           >⬆ Import</button>
           {onAIFix && (
-            <button
-              onClick={aiLoading ? undefined : onAIFix}
-              disabled={aiLoading}
-              title="AI-assign subjects, classes and workloads to all educators"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                background: aiApplied ? '#059669' : aiLoading ? '#9b8fef' : P,
-                color: '#fff', border: 'none', borderRadius: 7,
-                padding: '6px 14px', fontSize: 11.5, fontWeight: 700,
-                cursor: aiLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                boxShadow: '0 2px 6px rgba(124,111,224,0.28)',
-                whiteSpace: 'nowrap', height: 34, boxSizing: 'border-box' as const,
-                opacity: aiLoading ? 0.85 : 1,
-                transition: 'background 0.2s',
-              }}
-            >
-              {aiLoading
-                ? <><span style={{ display:'inline-block', width:10, height:10, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Applying…</>
-                : aiApplied
-                  ? <>✓ Applied</>
-                  : <>⚡ AI Fix</>
-              }
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+              {hasGaps && !aiApplied && !aiLoading && (
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#DC2626', animation: 'fadeInDown 0.3s ease' }}>
+                  ↓ Click to auto-assign missing teachers
+                </span>
+              )}
+              <button
+                onClick={aiLoading ? undefined : onAIFix}
+                disabled={aiLoading}
+                title="AI-assign subjects, classes and workloads to all educators"
+                className={hasGaps && !aiApplied && !aiLoading ? 'ai-fix-pulse' : ''}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: aiApplied ? '#059669' : aiLoading ? '#9b8fef' : P,
+                  color: '#fff', border: hasGaps && !aiApplied && !aiLoading ? '2px solid #fff' : 'none',
+                  borderRadius: 7,
+                  padding: '6px 14px', fontSize: 11.5, fontWeight: 700,
+                  cursor: aiLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                  boxShadow: hasGaps && !aiApplied && !aiLoading
+                    ? '0 0 0 3px rgba(220,38,38,0.4), 0 2px 10px rgba(124,111,224,0.4)'
+                    : '0 2px 6px rgba(124,111,224,0.28)',
+                  whiteSpace: 'nowrap', height: 34, boxSizing: 'border-box' as const,
+                  opacity: aiLoading ? 0.85 : 1,
+                  transition: 'background 0.2s, box-shadow 0.2s',
+                }}
+              >
+                {aiLoading
+                  ? <><span style={{ display:'inline-block', width:10, height:10, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Applying…</>
+                  : aiApplied
+                    ? <>✓ Applied</>
+                    : <>⚡ AI Fix</>
+                }
+              </button>
+            </div>
           )}
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          <style>{`
+            @keyframes spin { to { transform: rotate(360deg) } }
+            @keyframes aiFixPulse {
+              0%,100% { box-shadow: 0 0 0 3px rgba(220,38,38,0.4), 0 2px 10px rgba(124,111,224,0.4); }
+              50%      { box-shadow: 0 0 0 6px rgba(220,38,38,0.2), 0 4px 20px rgba(124,111,224,0.5); }
+            }
+            @keyframes fadeInDown {
+              from { opacity: 0; transform: translateY(-4px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+            .ai-fix-pulse { animation: aiFixPulse 1.4s ease-in-out infinite; }
+          `}</style>
         </div>
       </div>
 

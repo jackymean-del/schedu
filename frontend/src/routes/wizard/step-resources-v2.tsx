@@ -970,6 +970,7 @@ export function StepResourcesV2() {
                   onAIFix={handleFacultyAIAssign}
                   aiLoading={aiLoading && activeTab === 'teachers'}
                   aiApplied={facultyAiApplied}
+                  hasGaps={staffingGaps.length > 0}
                 />
               </div>
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'rooms' ? 'flex' : 'none', flexDirection: 'column' }}>
