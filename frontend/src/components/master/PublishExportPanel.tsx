@@ -56,7 +56,7 @@ const FORMATS: Format[] = [
   {
     id: 'class-xlsx',
     icon: <FileSpreadsheet size={20} />,
-    label: 'Class Timetables',
+    label: 'Class Schedules',
     sublabel: 'One sheet per section · XLSX',
     accent: '#16A34A',
     bg: '#F0FDF4',
@@ -65,7 +65,7 @@ const FORMATS: Format[] = [
   {
     id: 'teacher-xlsx',
     icon: <Users2 size={20} />,
-    label: 'Teacher Timetables',
+    label: 'Teacher Schedules',
     sublabel: 'One sheet per teacher · XLSX',
     accent: '#7C6FE0',
     bg: '#F5F3FF',

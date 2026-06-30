@@ -10,7 +10,7 @@ import type { SharedTimetable } from '@/lib/share'
 export function SharedTimetablePage() {
   const token = window.location.pathname.split('/').filter(Boolean).pop() ?? ''
   const [data, setData] = useState<SharedTimetable | null>(null)
-  const [title, setTitle] = useState('Shared timetable')
+  const [title, setTitle] = useState('Shared schedule')
   const [status, setStatus] = useState<'loading' | 'ready' | 'restricted' | 'error'>('loading')
 
   // Email gate (restricted shares) — two steps: request code, then verify it
@@ -29,7 +29,7 @@ export function SharedTimetablePage() {
       })
       .then(json => {
         if (!active) return
-        setTitle(json.title || json.timetable?.title || 'Shared timetable')
+        setTitle(json.title || json.timetable?.title || 'Shared schedule')
         if (json.restricted) {
           setStatus('restricted')
           return
@@ -83,7 +83,7 @@ export function SharedTimetablePage() {
       }
       const json = await res.json()
       setData(json.timetable as SharedTimetable)
-      setTitle(json.title || 'Shared timetable')
+      setTitle(json.title || 'Shared schedule')
       setStatus('ready')
     } catch (err) {
       setAccessError(err instanceof Error ? err.message : 'Could not verify this code.')
@@ -95,8 +95,8 @@ export function SharedTimetablePage() {
   return (
     <div data-mk className="flex min-h-screen flex-col bg-white text-[#13111E]">
       <Seo
-        title={`${title} · Shared timetable`}
-        description="A read-only timetable shared via schedU."
+        title={`${title} · Shared schedule`}
+        description="A read-only schedule shared via schedU."
         path={`/share/${token}`}
         noindex
       />
@@ -124,7 +124,7 @@ export function SharedTimetablePage() {
       </header>
 
       <main className="flex-1 px-6 py-8">
-        {status === 'loading' && <p className="py-20 text-center text-[#8B87AD]">Loading timetable…</p>}
+        {status === 'loading' && <p className="py-20 text-center text-[#8B87AD]">Loading schedule…</p>}
 
         {status === 'restricted' && (
           <div className="mx-auto max-w-[420px] py-20 text-center">
@@ -174,7 +174,7 @@ export function SharedTimetablePage() {
                     disabled={unlocking}
                     className="rounded-[9px] bg-[#7C6FE0] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {unlocking ? 'Checking…' : 'View timetable'}
+                    {unlocking ? 'Checking…' : 'View schedule'}
                   </button>
                   {accessError && <p className="text-[12px] text-[#DC2626]">{accessError}</p>}
                   <button
@@ -212,7 +212,7 @@ export function SharedTimetablePage() {
             </p>
 
             {data.sections.length === 0 && (
-              <p className="mt-10 text-[#8B87AD]">This shared timetable has no sections.</p>
+              <p className="mt-10 text-[#8B87AD]">This shared schedule has no sections.</p>
             )}
 
             {data.sections.map(sec => (

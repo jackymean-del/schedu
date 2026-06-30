@@ -584,7 +584,7 @@ export function Step6Generate() {
   // ── Start generation ─────────────────────────────────────────
   const startGenerate = () => {
     // Persist timetable identity into config before running
-    setConfig({ timetableName: ttName.trim() || "My Timetable", timetableStartDate: ttStart, timetableEndDate: ttEnd })
+    setConfig({ timetableName: ttName.trim() || "My Schedule", timetableStartDate: ttStart, timetableEndDate: ttEnd })
     setTimetableStatus('generating')
 
     const jobId    = crypto.randomUUID()
@@ -1047,15 +1047,15 @@ export function Step6Generate() {
               ⚠️ This will <strong>replace</strong> your existing timetable. Make sure you've reviewed the draft first.
             </div>
           )}
-          <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", marginBottom:14 }}>📋 Timetable Details</div>
+          <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", marginBottom:14 }}>📋 Schedule Details</div>
           <div style={{ display:"flex", flexDirection:"column" as const, gap:12 }}>
 
             {/* Name */}
             <div>
-              <label style={{ fontSize:11, fontWeight:600, color:"#4B5275", display:"block", marginBottom:4 }}>Timetable Name</label>
+              <label style={{ fontSize:11, fontWeight:600, color:"#4B5275", display:"block", marginBottom:4 }}>Schedule Name</label>
               <input
                 value={ttName} onChange={e => setTtName(e.target.value)}
-                placeholder="e.g. Annual Timetable 2025-26"
+                placeholder="e.g. Annual Schedule 2025-26"
                 style={{ width:"100%", padding:"9px 12px", border:"1px solid #E8E4FF", borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box" as const, background:"#fff" }}
               />
             </div>

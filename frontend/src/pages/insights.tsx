@@ -22,7 +22,7 @@ export function InsightsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
-      <PageHeader icon="📊" title="Insights" description="Workload, utilization and conflict analytics across your timetables." />
+      <PageHeader icon="📊" title="Insights" description="Workload, utilization and conflict analytics across your schedules." />
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 28px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 24 }}>
           {metrics.map(m => (
@@ -37,8 +37,8 @@ export function InsightsPage() {
           <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '48px 24px', textAlign: 'center' }}>
             <BarChart3 size={32} color="#C9C3EC" />
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#13111E', margin: '12px 0 6px' }}>No insights yet</h3>
-            <p style={{ fontSize: 13, color: '#8B87AD', margin: '0 0 16px' }}>Create and generate a timetable, and workload &amp; utilization analytics will appear here.</p>
-            <a href="/wizard" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#7C6FE0', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>+ New timetable</a>
+            <p style={{ fontSize: 13, color: '#8B87AD', margin: '0 0 16px' }}>Create and generate a schedule, and workload &amp; utilization analytics will appear here.</p>
+            <a href="/wizard" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#7C6FE0', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>+ New schedule</a>
           </div>
         )}
       </div>

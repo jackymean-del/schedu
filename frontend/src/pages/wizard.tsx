@@ -32,7 +32,7 @@ import { StepGuide }         from '@/components/StepGuide'
 // Inline guide content per step (index = step - 1). Matches the STEPS order.
 const STEP_GUIDES: { title: string; tips: string[] }[] = [
   { title: 'Step 1 · Resources', tips: [
-    'Add your classes, teachers, subjects and rooms — the building blocks of every timetable.',
+    'Add your classes, teachers, subjects and rooms — the building blocks of every schedule.',
     'In a hurry? Use “Generate” to create an editable starting set from your setup, then refine.',
     'Switch tabs to enter each type, or use + Add to enter rows manually.',
   ] },
@@ -49,7 +49,7 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
     'Skip this step if your classes don’t share subjects across sections.',
   ] },
   { title: 'Step 5 · Review & Generate', tips: [
-    'Review your setup, then generate a conflict-free timetable.',
+    'Review your setup, then generate a conflict-free schedule.',
     'You can re-generate or hand-edit any cell afterwards.',
   ] },
 ]
@@ -62,7 +62,7 @@ const STEP_META = [
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
   { label: 'Allocation',        sub: 'Period × subject + teacher assignment' },
   { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules' },
-  { label: 'Review & generate', sub: 'AI builds your timetable'             },
+  { label: 'Review & generate', sub: 'AI builds your schedule'              },
 ]
 
 // ── Error boundary ────────────────────────────────────────────
@@ -128,7 +128,7 @@ function WizardSetupGate() {
         <a href="/dashboard?new=1" style={{
           display: 'inline-block', padding: '11px 22px', borderRadius: 9,
           background: '#7C6FE0', color: '#fff', fontSize: 13.5, fontWeight: 700, textDecoration: 'none',
-        }}>+ Create a timetable</a>
+        }}>+ Create a schedule</a>
       </div>
     </div>
   )
@@ -143,7 +143,7 @@ export function WizardPage() {
   const total = STEPS.length
 
   const ttName = (config as any).timetableName
-    || (user?.schoolName ? `${user.schoolName} · Timetable` : 'Untitled timetable')
+    || (user?.schoolName ? `${user.schoolName} · Schedule` : 'Untitled schedule')
 
   // ── Step-0 gate ──────────────────────────────────────────────
   // The wizard needs a configured timetable (name + class range/counts), which

@@ -301,7 +301,7 @@ export function ReviewDashboard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <button
               onClick={() => setSwapOpen(true)}
-              title="Interactively swap or move cells on the timetable grid"
+              title="Interactively swap or move cells on the schedule grid"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 13px', borderRadius: 8,
