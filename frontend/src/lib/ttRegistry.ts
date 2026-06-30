@@ -9,6 +9,7 @@
  * 'schedu-active-tt'), so both stay in sync purely through storage.
  */
 import { useAuthStore } from '@/store/authStore'
+import { useTimetableStore } from '@/store/timetableStore'
 import { timetableApi } from '@/api/client'
 import { CLERK_ENABLED } from '@/lib/clerk'
 
@@ -72,11 +73,10 @@ const TT_SNAPSHOT_FIELDS = [
  * if the user didn't come via the dashboard's "Continue" button.
  * No-op when the store already has data (classTT non-empty).
  */
-export async function loadActiveTimetableIntoStore(): Promise<void> {
+export function loadActiveTimetableIntoStore(): void {
   const id = getActiveTimetableId()
   if (!id) return
 
-  const { useTimetableStore } = await import('@/store/timetableStore')
   const state = useTimetableStore.getState()
 
   // Already populated — nothing to do.
