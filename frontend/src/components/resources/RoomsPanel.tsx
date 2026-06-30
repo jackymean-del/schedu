@@ -20,7 +20,14 @@ import {
 import type { ChipOption } from './shared'
 import { seedStandardRooms } from './aiEngine'
 
-export type RoomExt = RoomRow & { subjectMappings?: string[]; notes?: string }
+export type RoomExt = RoomRow & {
+  subjectMappings?: string[]
+  notes?: string
+  /** Many-to-many: sections that can use this room (home or special-subject) */
+  assignedSections?: string[]
+  /** When true, multiple sections may share a period in this room simultaneously */
+  parallelEnabled?: boolean
+}
 
 function makeId() { return Math.random().toString(36).slice(2, 9) }
 
@@ -206,27 +213,33 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
 }
 
 // ─── Room row ─────────────────────────────────────────────────────────────────
-function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, onUpdate, onUpdateSections, onDelete, onScopeClick }: {
+function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeSections, onUpdate, onUpdateSections, onDelete, onScopeClick }: {
   room: RoomExt
   blocks: string[]
   classOpts: ChipOption[]
   subjectOpts: ChipOption[]
   assignedClasses: string[]
+  /** Sections whose primary home classroom is this room */
+  homeSections: string[]
   onUpdate: (p: Partial<RoomExt>) => void
   onUpdateSections: (add: string[], remove: string[]) => void
   onDelete: () => void
   onScopeClick?: (room: RoomExt, rect: DOMRect) => void
 }) {
   const meta = TYPE_META[room.type] ?? TYPE_META.Other
+  const parallel = !!room.parallelEnabled
+  const hasMultiSections = assignedClasses.length > 1
+  const hasSpecialSubjects = (room.subjectMappings ?? []).length > 0
 
   function handleClassChange(next: string[]) {
-    const prev    = assignedClasses
+    const prev     = assignedClasses
     const toAdd    = next.filter(v => !prev.includes(v))
     const toRemove = prev.filter(v => !next.includes(v))
     onUpdateSections(toAdd, toRemove)
   }
 
   return (
+    <>
     <tr
       style={{ transition: 'background 0.08s' }}
       onMouseEnter={e => (e.currentTarget.style.background = '#F6F4FF')}
@@ -270,26 +283,60 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, onUpd
         />
       </td>
 
-      {/* Assigned Classes — 3 chips visible, +N more on overflow */}
+      {/* Assigned Classes — home badge + multi-room safe chip picker */}
       <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>
-        <InlineChipSelect
-          selected={assignedClasses}
-          options={classOpts}
-          onChange={handleClassChange}
-          placeholder="+ Assign class"
-          maxChips={3}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {/* Home sections badge row */}
+          {homeSections.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#059669', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.05em', textTransform: 'uppercase', flexShrink: 0 }}>
+                Home
+              </span>
+              {homeSections.map(s => (
+                <span key={s} style={{ fontSize: 11, fontWeight: 600, color: '#065F46', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 4, padding: '1px 6px' }}>{s}</span>
+              ))}
+            </div>
+          )}
+          <InlineChipSelect
+            selected={assignedClasses}
+            options={classOpts}
+            onChange={handleClassChange}
+            placeholder="+ Assign class"
+            maxChips={3}
+          />
+        </div>
       </td>
 
-      {/* Special Subjects — 3 chips visible, +N more on overflow */}
+      {/* Special Subjects + Parallel toggle */}
       <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>
-        <InlineChipSelect
-          selected={room.subjectMappings ?? []}
-          options={subjectOpts}
-          onChange={v => onUpdate({ subjectMappings: v })}
-          placeholder="+ Special subjects"
-          maxChips={3}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <InlineChipSelect
+            selected={room.subjectMappings ?? []}
+            options={subjectOpts}
+            onChange={v => onUpdate({ subjectMappings: v })}
+            placeholder="+ Special subjects"
+            maxChips={3}
+          />
+          {/* Parallel toggle — shown when room has 2+ sections or special subjects */}
+          {(hasMultiSections || hasSpecialSubjects) && (
+            <button
+              title={parallel
+                ? 'Parallel sharing ON — multiple sections can use this room in the same period. Click to turn off.'
+                : 'Turn on parallel sharing — allow multiple sections to use this room simultaneously (e.g. combined Art & Craft, PE assembly)'}
+              onClick={() => onUpdate({ parallelEnabled: !parallel })}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+                padding: '2px 7px', borderRadius: 4, border: `1px solid ${parallel ? '#7C6FE0' : '#DDD8FF'}`,
+                background: parallel ? '#EDE9FF' : 'transparent',
+                color: parallel ? P_D : '#B4ADDD',
+                fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'all 0.12s',
+              }}
+            >
+              ⇌ {parallel ? 'Parallel ON' : 'Parallel OFF'}
+            </button>
+          )}
+        </div>
       </td>
 
       {/* Actions */}
@@ -310,6 +357,28 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, onUpd
         </div>
       </td>
     </tr>
+
+    {/* Parallel info row — shown below when parallel is ON */}
+    {parallel && assignedClasses.length > 0 && (
+      <tr>
+        <td colSpan={6} style={{ padding: '0 36px 8px', borderBottom: '1px solid #F0ECFE' }}>
+          <div style={{
+            background: '#F5F2FF', border: '1px solid #DDD8FF', borderRadius: 6,
+            padding: '6px 10px', fontSize: 11, color: '#5B4FB5', lineHeight: 1.5,
+          }}>
+            <span style={{ fontWeight: 700 }}>⇌ Parallel sessions allowed —</span>{' '}
+            {assignedClasses.length > 1
+              ? <>{assignedClasses.join(' · ')} can share a period in this room simultaneously</>
+              : <>{assignedClasses[0]} is assigned; add more sections above to allow combined periods</>
+            }
+            {hasSpecialSubjects && (
+              <span> · applies to: <strong>{(room.subjectMappings ?? []).join(', ')}</strong></span>
+            )}
+          </div>
+        </td>
+      </tr>
+    )}
+    </>
   )
 }
 
@@ -335,10 +404,17 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
 
   // Smart-create rooms: a homeroom per section + special rooms (labs, library)
   // implied by the subjects present, with lab→subject mappings pre-wired.
+  // Also sets section.room so the scheduling engine knows each section's home.
   function handleSmartCreate() {
     if (!sections.length) return
     undoHistory.push(rooms)
-    setRooms(seedStandardRooms(sections, subjects))
+    const newRooms = seedStandardRooms(sections, subjects)
+    setRooms(newRooms)
+    // Wire section.room for each home classroom
+    setSections(sections.map(sec => {
+      const homeRoom = newRooms.find(r => (r.assignedSections ?? []).includes(sec.name))
+      return homeRoom ? { ...sec, room: homeRoom.name } : sec
+    }))
   }
 
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -407,12 +483,32 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
     [subjects]
   )
 
+  // roomClassMap reads from room.assignedSections (many-to-many).
+  // Falls back to deriving from section.room for rooms that pre-date this
+  // field (backward compat with stored timetables that have no assignedSections).
   const roomClassMap = useMemo(() => {
     const map = new Map<string, string[]>()
-    rooms.forEach(r => map.set(r.name, []))
-    sections.forEach(s => {
-      if (s.room && map.has(s.room)) map.get(s.room)!.push(s.name)
+    rooms.forEach(r => {
+      if (r.assignedSections !== undefined) {
+        map.set(r.name, [...r.assignedSections])
+      } else {
+        map.set(r.name, [])
+      }
     })
+    // Populate legacy rooms (no assignedSections) from section.room
+    sections.forEach(s => {
+      if (!s.room) return
+      const r = rooms.find(rm => rm.name === s.room)
+      if (r && r.assignedSections === undefined) map.get(r.name)!.push(s.name)
+    })
+    return map
+  }, [rooms, sections])
+
+  // homeSectionMap: sectionName → home room name (from section.room)
+  const homeSectionMap = useMemo(() => {
+    const map = new Map<string, string[]>() // roomName → home sections
+    rooms.forEach(r => map.set(r.name, []))
+    sections.forEach(s => { if (s.room && map.has(s.room)) map.get(s.room)!.push(s.name) })
     return map
   }, [rooms, sections])
 
@@ -421,11 +517,18 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
     setRooms(rooms.map(r => r.id === id ? { ...r, ...p } : r))
   }
 
+  // updateSections now writes to room.assignedSections — does NOT touch section.room,
+  // so the same section can be added to multiple rooms without removing it from others.
   function updateSections(roomName: string, toAdd: string[], toRemove: string[]) {
-    setSections(sections.map(s => {
-      if (toAdd.includes(s.name))    return { ...s, room: roomName }
-      if (toRemove.includes(s.name)) return { ...s, room: '' }
-      return s
+    undoHistory.push(rooms)
+    setRooms(rooms.map(r => {
+      if (r.name !== roomName) return r
+      const current = r.assignedSections ?? (homeSectionMap.get(r.name) ?? [])
+      const next = [
+        ...current.filter(s => !toRemove.includes(s)),
+        ...toAdd.filter(s => !current.includes(s)),
+      ]
+      return { ...r, assignedSections: next }
     }))
   }
 
@@ -658,6 +761,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
                         classOpts={classOpts}
                         subjectOpts={subjectOpts}
                         assignedClasses={roomClassMap.get(room.name) ?? []}
+                        homeSections={homeSectionMap.get(room.name) ?? []}
                         onUpdate={p => updateRoom(room.id, p)}
                         onUpdateSections={(add, rem) => updateSections(room.name, add, rem)}
                         onDelete={() => removeRoom(room.id)}

@@ -27,7 +27,7 @@ import { ClassesPanel }  from '@/components/resources/ClassesPanel'
 import { SubjectsPanel, generateShortName, inferCategory } from '@/components/resources/SubjectsPanel'
 import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, subjectAppliesToSections, type CurriculumBoard } from '@/components/resources/curriculum'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
-import { runAIAssignment, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
+import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
 import {
   Sparkles, Users, BookOpen, Building2, GraduationCap,
   ChevronLeft, ChevronRight, RefreshCw, CheckCircle2,
@@ -297,7 +297,7 @@ function buildDefaultRooms(): RoomExt[] {
     { name: 'Science Lab 2', type: 'Lab',          cap: 35, floor: '1st',    subjects: ['Chemistry', 'Biology'] },
     { name: 'Computer Lab',  type: 'Computer Lab', cap: 40, floor: '2nd',    subjects: ['Computer', 'Computer Science', 'Informatics Practices'] },
     { name: 'Library',       type: 'Library',      cap: 60, floor: 'Ground', subjects: ['Library'] },
-    { name: 'Art Room',      type: 'Other',        cap: 35, floor: '1st',    subjects: ['Art & Craft', 'Drawing'] },
+    { name: 'Art Room',      type: 'Other',        cap: 35, floor: '1st',    subjects: ['Art & Craft', 'Fine Arts'] },
     { name: 'Music Room',    type: 'Other',        cap: 30, floor: '1st',    subjects: ['Music'] },
     { name: 'Dance Hall',    type: 'Hall',         cap: 50, floor: 'Ground', subjects: ['Dance'] },
     { name: 'Activity Hall', type: 'Hall',         cap: 80, floor: 'Ground', subjects: ['Physical Education', 'Scout & Guide'] },
@@ -745,19 +745,31 @@ export function StepResourcesV2() {
       .map((s: any) => ({ ...s, category: inferCategory(s) }))
     const newSubjects = targetSubjects ? allSubjects.slice(0, targetSubjects) : allSubjects
 
-    // ── 4. Rooms ─────────────────────────────────────────────────────────────
-    const newRooms = buildDefaultRooms().slice(0, targetRooms)
+    // ── 4. Rooms — one home classroom per section + subject-implied specials ──
+    // seedStandardRooms pre-wires assignedSections so rooms know their home
+    // class without relying on the exclusive section.room field.
+    const newRooms = seedStandardRooms(updatedSections, newSubjects)
+
+    // Also set section.room (scheduling engine uses this for home classroom).
+    const sectionsWithRooms = updatedSections.map((sec: any) => {
+      const homeRoom = newRooms.find((r: any) => (r.assignedSections ?? []).includes(sec.name))
+      return homeRoom ? { ...sec, room: homeRoom.name } : sec
+    })
 
     // ── 5. Assign subjects → classes and balance teacher load for EVERY grade
     //       range (previously only senior-secondary). Without this, generated
     //       teachers have empty subject lists, so the solver can't match a
     //       teacher to a subject and leaves "no eligible teacher" gaps. ────────
-    const assigned = runAIAssignment(newSubjects, updatedSections, newStaff, newRooms, board)
+    const assigned = runAIAssignment(newSubjects, sectionsWithRooms, newStaff, newRooms, board)
     setStaff(assigned.staff)
     setSubjects(assigned.subjects)
     setRooms(assigned.rooms)
     setStaffingGaps(assigned.staffingGaps)
-    if (sections.length > 0) setSections(assigned.sections)
+    setSections(assigned.sections.map((s: any) => {
+      // Preserve the home room we just set (runAIAssignment doesn't change section.room)
+      const withRoom = sectionsWithRooms.find((sr: any) => sr.id === s.id)
+      return withRoom?.room ? { ...s, room: withRoom.room } : s
+    }))
     store.setConfig?.({
       ...config,
       numStaff: assigned.staff.length,

@@ -476,6 +476,9 @@ export function seedStandardRooms(sections: Section[], subjects: Subject[]): Roo
     floor: '',
     subjectMappings: [],
     notes: '',
+    // Pre-wire the home section so the room shows its class immediately,
+    // and so the assignment is many-to-many safe from the start.
+    assignedSections: [sec.name],
   } as RoomExt))
 
   const present = new Set(subjects.map(s => s.name))
