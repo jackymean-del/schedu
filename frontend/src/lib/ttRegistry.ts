@@ -56,3 +56,49 @@ export function patchActiveTimetableEntry(patch: Record<string, unknown>): void 
 export function markActiveTimetablePublished(): void {
   patchActiveTimetableEntry({ status: 'active', wizardStep: 5 })
 }
+
+const TT_SNAPSHOT_PFX = 'schedu-tt-snap-'
+const TT_SNAPSHOT_FIELDS = [
+  'step','config','sections','staff','subjects','breaks','periods',
+  'classTT','teacherTT','substitutions','conflicts','suggestions',
+  'optionalConfigs','subjectPools','participantPools','rooms',
+  'facilities','teacherPools',
+]
+
+/**
+ * Load the active timetable's snapshot into the store.
+ * Called by pages (Calendar, Reports, etc.) that read store data but aren't
+ * the wizard — so after a page refresh the timetable data is available even
+ * if the user didn't come via the dashboard's "Continue" button.
+ * No-op when the store already has data (classTT non-empty).
+ */
+export function loadActiveTimetableIntoStore(): void {
+  const id = getActiveTimetableId()
+  if (!id) return
+
+  // Avoid importing the store at module level (circular dep risk) — use dynamic import.
+  const { useTimetableStore } = require('@/store/timetableStore')
+  const state = useTimetableStore.getState()
+
+  // Already populated — nothing to do.
+  if (Object.keys(state.classTT ?? {}).length > 0) return
+
+  // Try the per-user namespaced snapshot key first, then the un-namespaced one.
+  const uid = useAuthStore.getState().user?.id ?? ''
+  const keys = [`${TT_SNAPSHOT_PFX}${uid}:${id}`, `${TT_SNAPSHOT_PFX}:${id}`, `${TT_SNAPSHOT_PFX}${id}`]
+  let snap: Record<string, unknown> | null = null
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k)
+      if (raw) { snap = JSON.parse(raw); break }
+    } catch { /* ignore */ }
+  }
+  if (!snap) return
+
+  TT_SNAPSHOT_FIELDS.forEach(field => {
+    const setter = `set${field.charAt(0).toUpperCase()}${field.slice(1)}`
+    if (typeof (state as any)[setter] === 'function' && snap![field] !== undefined) {
+      ;(state as any)[setter](snap![field])
+    }
+  })
+}

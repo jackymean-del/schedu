@@ -3,10 +3,11 @@
  * The timetable section reads from the active timetable store so the
  * generated schedule is visible without leaving the calendar page.
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useTimetableStore } from '@/store/timetableStore'
+import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { ChevronLeft, ChevronRight, CalendarDays, BookOpen } from 'lucide-react'
 
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -39,6 +40,10 @@ export function CalendarPage() {
   const store = useTimetableStore()
   const today = new Date()
   const [view, setView] = useState({ y: today.getFullYear(), m: today.getMonth() })
+
+  // Load the active timetable snapshot on mount so the Class Schedule grid
+  // appears even when the user navigates here directly (not via Continue →).
+  useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
   // ── month grid ──────────────────────────────────────────────────
   const first = new Date(view.y, view.m, 1).getDay()

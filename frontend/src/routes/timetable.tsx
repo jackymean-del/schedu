@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
+import { markActiveTimetablePublished } from "@/lib/ttRegistry"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
@@ -4385,7 +4386,7 @@ export function TimetablePage() {
                 style={{ padding:"9px 20px", borderRadius:8, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
                 Cancel
               </button>
-              <button onClick={() => { setTimetableStatus("published"); setPublishConfirm(false) }}
+              <button onClick={() => { setTimetableStatus("published"); markActiveTimetablePublished(); setPublishConfirm(false) }}
                 style={{ padding:"9px 24px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 14px rgba(124,111,224,0.3)" }}>
                 ✅ Publish
               </button>
