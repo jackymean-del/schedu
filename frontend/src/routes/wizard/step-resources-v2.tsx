@@ -765,6 +765,10 @@ export function StepResourcesV2() {
       numRooms: assigned.rooms.length,
     })
 
+    // If there are staffing gaps, switch to the Teachers tab so the alert
+    // and the pulsing AI Fix button are immediately visible to the user.
+    if (assigned.staffingGaps.length > 0) setActiveTab('teachers')
+
     setGenerating(false)
   }
 
@@ -834,6 +838,14 @@ export function StepResourcesV2() {
               ) : (
                 <span style={{ fontSize: 11, color: '#E0D4FF', fontWeight: 700 }}>—</span>
               )}
+              {/* Red gap badge on Teachers tab */}
+              {tab.key === 'teachers' && staffingGaps.length > 0 && (
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                  background: '#EF4444',
+                  boxShadow: '0 0 0 2px #FEE2E2',
+                }} title={`${staffingGaps.reduce((a,g)=>a+g.classes.length,0)} classes need teachers`} />
+              )}
             </button>
           )
         })}
@@ -874,30 +886,32 @@ export function StepResourcesV2() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <div style={{ flex: 1, padding: '12px 18px 6px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
-          {/* ── Staffing gaps — classes that couldn't get a teacher within a
-                safe workload. Never silently overloaded; always surfaced. ──── */}
-          {staffingGaps.length > 0 && (
+          {/* ── Staffing gaps — only shown on the Teachers tab ──────────── */}
+          {staffingGaps.length > 0 && activeTab === 'teachers' && (
             <div style={{
               background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 9,
-              padding: '11px 14px', marginBottom: 14,
+              padding: '12px 14px', marginBottom: 14,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#991B1B' }}>
-                  ⚠ More teachers needed — {staffingGaps.reduce((a, g) => a + g.classes.length, 0)} class{staffingGaps.reduce((a, g) => a + g.classes.length, 0) !== 1 ? 'es' : ''} couldn't be assigned within a safe workload
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#991B1B', marginBottom: 6 }}>
+                    ⚠ Allocation pending — {staffingGaps.reduce((a, g) => a + g.classes.length, 0)} class{staffingGaps.reduce((a, g) => a + g.classes.length, 0) !== 1 ? 'es' : ''} have no teacher within a safe workload
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
+                    {staffingGaps.map(g => (
+                      <div key={g.subject} style={{ fontSize: 11.5, color: '#7F1D1D' }}>
+                        <strong>{g.subject}</strong> — need ~{g.suggestedExtraTeachers} more teacher{g.suggestedExtraTeachers !== 1 ? 's' : ''}
+                        {' '}({g.unmetPeriods} periods/week short) for {g.classes.slice(0, 6).join(', ')}{g.classes.length > 6 ? ` +${g.classes.length - 6} more` : ''}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#B91C1C', lineHeight: 1.5 }}>
+                    Add teachers for these subjects manually using <strong>+ Add Teacher</strong>,
+                    or click the highlighted <strong>⚡ AI Fix</strong> button above to auto-generate all missing teachers with correct subject &amp; class assignments in one go.
+                  </div>
                 </div>
                 <button onClick={() => setStaffingGaps([])}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontSize: 13, padding: 0 }}>×</button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {staffingGaps.map(g => (
-                  <div key={g.subject} style={{ fontSize: 12, color: '#7F1D1D' }}>
-                    <strong>{g.subject}</strong> — need ~{g.suggestedExtraTeachers} more teacher{g.suggestedExtraTeachers !== 1 ? 's' : ''}
-                    {' '}({g.unmetPeriods} periods/week short) for {g.classes.slice(0, 6).join(', ')}{g.classes.length > 6 ? ` +${g.classes.length - 6} more` : ''}
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: '#B91C1C', marginTop: 6 }}>
-                Add more teachers for these subjects, then re-run Generate — no class will be assigned a teacher beyond their safe weekly workload.
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontSize: 16, padding: '0 2px', lineHeight: 1, flexShrink: 0 }}>×</button>
               </div>
             </div>
           )}
