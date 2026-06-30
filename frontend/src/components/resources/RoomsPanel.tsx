@@ -218,8 +218,9 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
   blocks: string[]
   classOpts: ChipOption[]
   subjectOpts: ChipOption[]
+  /** Sections in room.assignedSections — additional/shared-use (many-to-many) */
   assignedClasses: string[]
-  /** Sections whose primary home classroom is this room */
+  /** Sections whose section.room === this room name — the true 1-to-1 home sections */
   homeSections: string[]
   onUpdate: (p: Partial<RoomExt>) => void
   onUpdateSections: (add: string[], remove: string[]) => void
@@ -230,6 +231,11 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
   const parallel = !!room.parallelEnabled
   const hasMultiSections = assignedClasses.length > 1
   const hasSpecialSubjects = (room.subjectMappings ?? []).length > 0
+
+  // Home badge: shown only when exactly 1 section has this as home (correct 1-to-1).
+  // If 2+ sections share this home (stale data), show a warning instead.
+  const singleHome = homeSections.length === 1 ? homeSections[0] : null
+  const homeConflict = homeSections.length > 1
 
   function handleClassChange(next: string[]) {
     const prev     = assignedClasses
@@ -245,12 +251,29 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
       onMouseEnter={e => (e.currentTarget.style.background = '#F6F4FF')}
       onMouseLeave={e => (e.currentTarget.style.background = '')}
     >
-      {/* Name + block pill */}
+      {/* Name + block pill + home badge */}
       <td style={{ ...TD, paddingLeft: 36 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <NameCell value={room.name} onSave={v => onUpdate({ name: v })} />
           <BlockPill block={blockOf(room)} blocks={blocks} onMove={b => onUpdate({ building: b })} />
         </div>
+        {/* Home classroom badge — shown under room name, 1-to-1 */}
+        {singleHome && (
+          <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#059669', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Home
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#065F46' }}>{singleHome}</span>
+          </div>
+        )}
+        {homeConflict && (
+          <div style={{ marginTop: 3 }}>
+            <span title={`Multiple sections share this home room (${homeSections.join(', ')}). Use Smart Create to reset home rooms.`}
+              style={{ fontSize: 9.5, fontWeight: 700, color: '#92400E', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 4, padding: '1px 6px', cursor: 'help' }}>
+              ⚠ {homeSections.length} homes — reset needed
+            </span>
+          </div>
+        )}
       </td>
 
       {/* Type — colored badge select */}
@@ -283,28 +306,15 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
         />
       </td>
 
-      {/* Assigned Classes — home badge + multi-room safe chip picker */}
+      {/* Assigned Classes — additional/shared sections (room.assignedSections, many-to-many) */}
       <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {/* Home sections badge row */}
-          {homeSections.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#059669', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.05em', textTransform: 'uppercase', flexShrink: 0 }}>
-                Home
-              </span>
-              {homeSections.map(s => (
-                <span key={s} style={{ fontSize: 11, fontWeight: 600, color: '#065F46', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 4, padding: '1px 6px' }}>{s}</span>
-              ))}
-            </div>
-          )}
-          <InlineChipSelect
-            selected={assignedClasses}
-            options={classOpts}
-            onChange={handleClassChange}
-            placeholder="+ Assign class"
-            maxChips={3}
-          />
-        </div>
+        <InlineChipSelect
+          selected={assignedClasses}
+          options={classOpts}
+          onChange={handleClassChange}
+          placeholder="+ Add section"
+          maxChips={3}
+        />
       </td>
 
       {/* Special Subjects + Parallel toggle */}
@@ -402,18 +412,18 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
   const searchRef   = useRef<HTMLInputElement>(null)
   const undoHistory = useUndoHistory<RoomExt[]>()
 
-  // Smart-create rooms: a homeroom per section + special rooms (labs, library)
-  // implied by the subjects present, with lab→subject mappings pre-wired.
-  // Also sets section.room so the scheduling engine knows each section's home.
+  // Smart-create rooms: ONE dedicated home classroom per section + special rooms (labs, library).
+  // Each section's section.room is updated to point to its unique home classroom.
+  // Existing rooms are replaced entirely so stale home assignments are cleared.
   function handleSmartCreate() {
     if (!sections.length) return
     undoHistory.push(rooms)
     const newRooms = seedStandardRooms(sections, subjects)
     setRooms(newRooms)
-    // Wire section.room for each home classroom
+    // Wire section.room — each section gets exactly ONE home classroom (1-to-1)
     setSections(sections.map(sec => {
       const homeRoom = newRooms.find(r => (r.assignedSections ?? []).includes(sec.name))
-      return homeRoom ? { ...sec, room: homeRoom.name } : sec
+      return homeRoom ? { ...sec, room: homeRoom.name } : { ...sec, room: '' }
     }))
   }
 
@@ -439,6 +449,12 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
   }
 
   const [sortAZ, setSortAZ] = useState(false)
+
+  // Detect stale home-room data: any room where multiple sections share the same home.
+  // Correct state is 1-to-1 (each section has exactly ONE unique home classroom).
+  const hasHomeConflicts = useMemo(() =>
+    rooms.some(r => (homeMap.get(r.name) ?? []).length > 1)
+  , [rooms, homeMap])
 
   // All block names currently in use (for datalists + the "+ Block" affordance)
   const blocks = useMemo(() => {
@@ -483,30 +499,20 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
     [subjects]
   )
 
-  // roomClassMap reads from room.assignedSections (many-to-many).
-  // Falls back to deriving from section.room for rooms that pre-date this
-  // field (backward compat with stored timetables that have no assignedSections).
+  // roomClassMap: roomName → sections in room.assignedSections (additive/shared use).
+  // This is SEPARATE from the home room (section.room). These are additional sections
+  // that can use this room for special subjects, parallel sessions, etc.
   const roomClassMap = useMemo(() => {
     const map = new Map<string, string[]>()
-    rooms.forEach(r => {
-      if (r.assignedSections !== undefined) {
-        map.set(r.name, [...r.assignedSections])
-      } else {
-        map.set(r.name, [])
-      }
-    })
-    // Populate legacy rooms (no assignedSections) from section.room
-    sections.forEach(s => {
-      if (!s.room) return
-      const r = rooms.find(rm => rm.name === s.room)
-      if (r && r.assignedSections === undefined) map.get(r.name)!.push(s.name)
-    })
+    rooms.forEach(r => map.set(r.name, [...(r.assignedSections ?? [])]))
     return map
-  }, [rooms, sections])
+  }, [rooms])
 
-  // homeSectionMap: sectionName → home room name (from section.room)
-  const homeSectionMap = useMemo(() => {
-    const map = new Map<string, string[]>() // roomName → home sections
+  // homeMap: roomName → the ONE section whose home classroom is this room (from section.room).
+  // This is 1-to-1: each section has exactly one home room. If more than one section points
+  // to the same room (stale data), we surface a warning instead of showing all as HOME.
+  const homeMap = useMemo(() => {
+    const map = new Map<string, string[]>() // roomName → sections with section.room === roomName
     rooms.forEach(r => map.set(r.name, []))
     sections.forEach(s => { if (s.room && map.has(s.room)) map.get(s.room)!.push(s.name) })
     return map
@@ -517,13 +523,14 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
     setRooms(rooms.map(r => r.id === id ? { ...r, ...p } : r))
   }
 
-  // updateSections now writes to room.assignedSections — does NOT touch section.room,
-  // so the same section can be added to multiple rooms without removing it from others.
+  // updateSections writes to room.assignedSections (additive/shared-use).
+  // Does NOT touch section.room (the exclusive home room field).
+  // Same section can thus appear in multiple rooms for different subjects.
   function updateSections(roomName: string, toAdd: string[], toRemove: string[]) {
     undoHistory.push(rooms)
     setRooms(rooms.map(r => {
       if (r.name !== roomName) return r
-      const current = r.assignedSections ?? (homeSectionMap.get(r.name) ?? [])
+      const current = r.assignedSections ?? []
       const next = [
         ...current.filter(s => !toRemove.includes(s)),
         ...toAdd.filter(s => !current.includes(s)),
@@ -637,6 +644,20 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.color = '#6B6891' }}
           >⬆ Import</button>
+          {hasHomeConflicts && (
+            <button
+              onClick={handleSmartCreate}
+              title="Home classroom data is misconfigured — one room is showing as home for multiple sections. Click to recreate one dedicated home classroom per section."
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: '#FEF3C7', color: '#92400E',
+                border: '1.5px solid #FCD34D', borderRadius: 7,
+                padding: '6px 14px', fontSize: 11.5, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                whiteSpace: 'nowrap', height: 34, boxSizing: 'border-box' as const,
+              }}
+            >🏠 Fix Home Rooms</button>
+          )}
           {onAIFix && (
             <button
               onClick={aiLoading ? undefined : onAIFix}
@@ -688,6 +709,24 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         />
       )}
 
+      {/* Home-room conflict banner */}
+      {hasHomeConflicts && (
+        <div style={{
+          flexShrink: 0, margin: '0 0 8px', padding: '9px 14px',
+          background: '#FFFBEB', border: '1.5px solid #FCD34D', borderRadius: 8,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <div style={{ flex: 1, fontSize: 12, color: '#78350F', lineHeight: 1.5 }}>
+            <strong>Home classroom misconfiguration detected.</strong> One or more rooms are shown as the home for multiple sections — but each class-section must have its own dedicated home classroom (1-to-1). Click <strong>"Fix Home Rooms"</strong> above to auto-assign one unique home classroom per section and clear the conflict.
+          </div>
+          <button onClick={handleSmartCreate}
+            style={{ background: '#F59E0B', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+            Fix Now
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div style={TABLE_CARD}>
         {rooms.length === 0 && !search && !manualMode ? (
@@ -721,7 +760,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
                 <th style={TH}>Room</th>
                 <th style={TH}>Type</th>
                 <th style={{ ...TH, textAlign: 'center' }}>Cap</th>
-                <th style={TH}>Assigned Classes</th>
+                <th style={TH}>Also Used By</th>
                 <th style={TH}>Special Subjects</th>
                 <th style={{ ...TH, textAlign: 'center', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
@@ -761,7 +800,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
                         classOpts={classOpts}
                         subjectOpts={subjectOpts}
                         assignedClasses={roomClassMap.get(room.name) ?? []}
-                        homeSections={homeSectionMap.get(room.name) ?? []}
+                        homeSections={homeMap.get(room.name) ?? []}
                         onUpdate={p => updateRoom(room.id, p)}
                         onUpdateSections={(add, rem) => updateSections(room.name, add, rem)}
                         onDelete={() => removeRoom(room.id)}
