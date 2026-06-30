@@ -338,13 +338,31 @@ function sectionKey(sectionName: string): string {
   return sectionName.split(/[\s-]/)[0].toLowerCase()
 }
 
-/** Teaching periods a section actually has, per a set of bell rows (null = unknown). */
+/** Teaching periods a section actually has, per a set of bell rows (null = unknown).
+ *
+ * Returns a count ONLY when the bell explicitly excludes this class from some
+ * teaching rows — i.e. the class genuinely disperses earlier than others.
+ * If every teaching row either has no class filter or still includes this class,
+ * the class has a full day and we return null so no slots are locked.
+ */
 function teachCountFromRows(secName: string, rows: any[] | undefined): number | null {
   if (!rows?.length) return null
   const key = sectionKey(secName)
-  if (!rows.some((r: any) => r.type === 'teaching' && (r.classes ?? []).includes(key))) return null
-  return rows.filter((r: any) =>
-    r.type === 'teaching' && (!(r.classes ?? []).length || r.classes.includes(key))).length
+  const teachRows = rows.filter((r: any) => r.type === 'teaching')
+  // Class must appear in at least one row to be relevant
+  if (!teachRows.some((r: any) => (r.classes ?? []).includes(key))) return null
+  // Only apply early-dispersal logic when some row EXPLICITLY excludes this class.
+  // Class-wise breaks that merely shift timing still include every class in each
+  // period row — those must NOT trigger locking.
+  const excludedBySomeRow = teachRows.some((r: any) => {
+    const cls: string[] = r.classes ?? []
+    return cls.length > 0 && !cls.includes(key)
+  })
+  if (!excludedBySomeRow) return null
+  return teachRows.filter((r: any) => {
+    const cls: string[] = r.classes ?? []
+    return cls.length === 0 || cls.includes(key)
+  }).length
 }
 
 /**
