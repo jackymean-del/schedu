@@ -27,19 +27,20 @@ interface NavItem {
   count?: number
 }
 
-// Flat 7-item nav per the schedU wireframe spec — bullet-dot pill style.
-// Two groups visually separated by a hairline, no group labels.
 const NAV_PRIMARY: NavItem[] = [
-  { icon: <span />, label: 'Create new',   href: '/dashboard?new=1' },
-  { icon: <span />, label: 'Guide',        href: '/guide' },
-  { icon: <span />, label: 'Master',       href: '/master-data' },
+  { icon: <span />, label: 'Dashboard',   href: '/dashboard' },
+  { icon: <span />, label: 'Timetable',   href: '/timetable' },
+  { icon: <span />, label: 'Calendar',    href: '/calendar' },
+  { icon: <span />, label: 'Master Data', href: '/master-data' },
+  { icon: <span />, label: 'Insights',    href: '/insights' },
 ]
 
 const NAV_SECONDARY: NavItem[] = [
+  { icon: <span />, label: 'Users',        href: '/users' },
   { icon: <span />, label: 'Settings',     href: '/settings' },
-  { icon: <span />, label: 'Configure',    href: '/configure' },
   { icon: <span />, label: 'Profile',      href: '/profile' },
   { icon: <span />, label: 'Subscription', href: '/subscription' },
+  { icon: <span />, label: 'Help',         href: '/support' },
 ]
 
 interface AppSidebarProps {

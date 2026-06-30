@@ -26,7 +26,8 @@ export function RootLayout() {
 
   // Pages requiring a signed-in user (real auth via Clerk; open in mock mode).
   const PROTECTED = ['/dashboard', '/wizard', '/timetable', '/master-data',
-    '/settings', '/insights', '/users', '/calendar', '/support']
+    '/settings', '/insights', '/users', '/calendar', '/support',
+    '/guide', '/profile', '/subscription', '/configure']
   const isProtected = PROTECTED.some(p => path === p || path.startsWith(p + '/'))
 
   // These pages own their full-screen layout — no app topbar

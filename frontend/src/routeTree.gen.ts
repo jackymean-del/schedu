@@ -19,7 +19,11 @@ import { SettingsPage }  from "./pages/settings"
 import { InsightsPage }  from "./pages/insights"
 import { UsersPage }     from "./pages/users"
 import { CalendarPage }  from "./pages/calendar"
-import { SupportPage }   from "./pages/support"
+import { SupportPage }      from "./pages/support"
+import { GuidePage }        from "./pages/guide"
+import { ProfilePage }      from "./pages/profile"
+import { SubscriptionPage } from "./pages/subscription"
+import { ConfigurePage }    from "./pages/configure"
 
 const rootRoute      = createRootRoute({ component: RootLayout })
 const indexRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/",           component: HomePage })
@@ -40,8 +44,12 @@ const ssoCallbackRoute = createRoute({ getParentRoute: () => rootRoute, path: "/
 const settingsRoute   = createRoute({ getParentRoute: () => rootRoute, path: "/settings",   component: SettingsPage })
 const insightsRoute   = createRoute({ getParentRoute: () => rootRoute, path: "/insights",   component: InsightsPage })
 const usersRoute      = createRoute({ getParentRoute: () => rootRoute, path: "/users",      component: UsersPage })
-const calendarRoute   = createRoute({ getParentRoute: () => rootRoute, path: "/calendar",   component: CalendarPage })
-const supportRoute    = createRoute({ getParentRoute: () => rootRoute, path: "/support",    component: SupportPage })
+const calendarRoute      = createRoute({ getParentRoute: () => rootRoute, path: "/calendar",      component: CalendarPage })
+const supportRoute       = createRoute({ getParentRoute: () => rootRoute, path: "/support",       component: SupportPage })
+const guideRoute         = createRoute({ getParentRoute: () => rootRoute, path: "/guide",         component: GuidePage })
+const profileRoute       = createRoute({ getParentRoute: () => rootRoute, path: "/profile",       component: ProfilePage })
+const subscriptionRoute  = createRoute({ getParentRoute: () => rootRoute, path: "/subscription",  component: SubscriptionPage })
+const configureRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/configure",     component: ConfigurePage })
 
 export const routeTree = rootRoute.addChildren([
   indexRoute, loginRoute, registerRoute, dashboardRoute,
@@ -49,6 +57,7 @@ export const routeTree = rootRoute.addChildren([
   featuresRoute, pricingRoute, docsRoute, docArticleRoute, contactRoute,
   sharedRoute, ssoCallbackRoute,
   settingsRoute, insightsRoute, usersRoute, calendarRoute, supportRoute,
+  guideRoute, profileRoute, subscriptionRoute, configureRoute,
 ])
 export const router = createRouter({ routeTree })
 
