@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=1280"/>
+<title>Bhusku Brand Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;height:900px;overflow:hidden;font-family:'Inter',sans-serif}
+
+/* ── THEME VARS ───────────────────────────────── */
+.t-ember  { --dk:#171210; --dk2:#241A16; --pri:#C44B1B; --pril:#E8600A; --gold:#D4920E; --goldl:#F5A623; --ok:#2A6B47; --bg:#FAF8F5; --card:#FFFFFF; --bd:#EDE7DF; --bd2:#D9D0C7; --tx:#1A1208; --tx2:#6B5A50; --tx3:#9C8B82; --sand:#F5EFE8; --acc-lang:#C44B1B; --acc-sci:#2A6B47; --acc-hum:#D4920E; --acc-art:#7B5EA7; --acc-spt:#0B7285; }
+.t-sage   { --dk:#0E1814; --dk2:#172A1F; --pri:#1B7A4E; --pril:#22A066; --gold:#CA8A04; --goldl:#EAB308; --ok:#1B7A4E; --bg:#F6FAF8; --card:#FFFFFF; --bd:#D8EFE3; --bd2:#B6DCC8; --tx:#0D1F17; --tx2:#3D6B52; --tx3:#7A9B88; --sand:#EAF5EF; --acc-lang:#1B7A4E; --acc-sci:#0B7285; --acc-hum:#CA8A04; --acc-art:#7B5EA7; --acc-spt:#C44B1B; }
+.t-cognac { --dk:#18110A; --dk2:#261A0E; --pri:#92400E; --pril:#B45309; --gold:#C9940A; --goldl:#E8A020; --ok:#2A6B47; --bg:#FAF7F3; --card:#FFFFFF; --bd:#EDE0D0; --bd2:#D9C5A8; --tx:#18110A; --tx2:#6B5438; --tx3:#9C8060; --sand:#F5EAD8; --acc-lang:#92400E; --acc-sci:#2A6B47; --acc-hum:#C9940A; --acc-art:#7B5EA7; --acc-spt:#0B7285; }
+
+/* ── TAB BAR ──────────────────────────────────── */
+#tabbar {
+  position:fixed; top:0; left:0; right:0; height:44px;
+  background:#1A1208; display:flex; align-items:center;
+  padding:0 20px; gap:8px; z-index:999;
+  border-bottom:1px solid #2D2218;
+}
+.tab-logo { font-family:'DM Serif Display',serif; font-size:16px; color:#fff; margin-right:12px; }
+.tab-logo span { color:#E8600A; }
+.tab-btn {
+  padding:5px 16px; border-radius:6px; border:1.5px solid #3D2D22;
+  background:transparent; color:#9C8B82; font-size:12px; font-weight:600;
+  cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s;
+}
+.tab-btn.active { border-color:var(--tab-c); background:var(--tab-bg); color:var(--tab-c); }
+#tab-a { --tab-c:#E8600A; --tab-bg:#2D1A10; }
+#tab-b { --tab-c:#22A066; --tab-bg:#0E2018; }
+#tab-c { --tab-c:#E8A020; --tab-bg:#271A08; }
+.tab-hint { margin-left:auto; font-size:10px; color:#4B3D35; letter-spacing:0.06em; text-transform:uppercase; }
+
+/* ── THEME PANELS ─────────────────────────────── */
+.theme-panel { display:none; position:fixed; top:44px; left:0; right:0; bottom:0; }
+.theme-panel.active { display:flex; flex-direction:column; }
+
+/* ── SPLIT LAYOUT ─────────────────────────────── */
+.split { flex:1; display:flex; overflow:hidden; }
+
+/* ─── LEFT: Palette + Logo ─────────────────────── */
+.left-info {
+  width:320px; flex-shrink:0;
+  background:var(--dk); display:flex; flex-direction:column;
+  border-right:1px solid var(--dk2); overflow-y:auto; padding:20px 18px;
+}
+
+.info-section { margin-bottom:20px; }
+.info-label {
+  font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+  color:#4B5563; margin-bottom:10px; padding-bottom:6px;
+  border-bottom:1px solid var(--dk2);
+}
+
+/* Palette chips */
+.chip-row { display:flex; flex-wrap:wrap; gap:6px; }
+.chip {
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06);
+  border-radius:6px; padding:5px 8px; min-width:0;
+}
+.chip-dot { width:18px; height:18px; border-radius:4px; flex-shrink:0; }
+.chip-text { min-width:0; }
+.chip-name { font-size:10px; font-weight:600; color:#E5E7EB; white-space:nowrap; }
+.chip-hex  { font-size:9px; color:#6B7280; font-family:'DM Mono',monospace; }
+
+/* Logo concepts */
+.logo-row { display:flex; gap:10px; flex-wrap:wrap; }
+.logo-card {
+  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+  border-radius:10px; padding:14px 12px; flex:1; min-width:120px;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+}
+.logo-card-label { font-size:9px; color:#6B7280; text-align:center; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; }
+.wm-serif { font-family:'DM Serif Display',serif; font-size:17px; color:#fff; letter-spacing:-0.3px; }
+.wm-sans  { font-family:'Inter',sans-serif; font-size:15px; font-weight:800; color:#fff; letter-spacing:-0.8px; }
+.wm-sub   { font-size:8px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#6B7280; margin-top:2px; text-align:center; }
+
+/* Type samples */
+.type-row { display:flex; flex-direction:column; gap:8px; }
+.type-item { }
+.type-tag { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#4B5563; margin-bottom:3px; }
+
+/* Buttons row */
+.btn-row { display:flex; flex-wrap:wrap; gap:6px; }
+.pbtn {
+  padding:7px 13px; border-radius:7px; border:none; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:11px; font-weight:600;
+  display:inline-flex; align-items:center; gap:5px;
+}
+
+/* ─── RIGHT: App Shell ─────────────────────────── */
+.app-shell { flex:1; display:flex; background:var(--bg); overflow:hidden; }
+
+/* SIDEBAR */
+.sb { width:210px; flex-shrink:0; background:var(--dk); display:flex; flex-direction:column; border-right:1px solid var(--dk2); }
+.sb-top { padding:13px 14px; border-bottom:1px solid var(--dk2); display:flex; align-items:center; gap:8px; }
+.sb-logotype { font-family:'DM Serif Display',serif; font-size:15px; color:#fff; }
+.sb-logotype em { font-style:normal; color:var(--pril); }
+.sb-info-block { padding:10px 14px; border-bottom:1px solid var(--dk2); }
+.sb-ws { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#4B5563; margin-bottom:4px; }
+.sb-school { font-size:12px; font-weight:600; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sb-user-name { font-size:10px; color:#6B7280; margin-top:1px; }
+.sb-nav { flex:1; padding:8px 0; }
+.sb-grp-label { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#374151; padding:8px 14px 3px; }
+.nav-i {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; margin:1px 6px; border-radius:6px;
+  border-left:3px solid transparent; font-size:11px; color:#6B7280;
+  cursor:pointer;
+}
+.nav-i.on { background:rgba(255,255,255,0.07); border-left-color:var(--pril); color:#fff; font-weight:600; }
+.nav-icon { font-size:12px; opacity:0.7; }
+.nav-i.on .nav-icon { opacity:1; }
+.sb-foot { border-top:1px solid var(--dk2); padding:9px 12px; display:flex; align-items:center; gap:8px; }
+.av { width:28px; height:28px; border-radius:50%; background:var(--pri); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; }
+.av-name { font-size:11px; font-weight:600; color:#E5E7EB; }
+.av-role { font-size:9px; color:#6B7280; }
+
+/* MAIN CONTENT */
+.main-c { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.page-hd { height:42px; background:var(--card); border-bottom:1px solid var(--bd); display:flex; align-items:center; padding:0 18px; gap:8px; flex-shrink:0; }
+.ph-title { font-size:13px; font-weight:700; color:var(--tx); }
+.ph-desc  { font-size:11px; color:var(--tx3); }
+.ph-badge { padding:3px 10px; border-radius:20px; font-size:10px; font-weight:600; background:rgba(0,0,0,0.04); border:1px solid var(--bd); color:var(--tx2); }
+.ph-saved { margin-left:auto; font-size:10px; color:var(--tx3); display:flex; align-items:center; gap:4px; }
+.dot-g { width:5px; height:5px; border-radius:50%; background:#22c55e; }
+
+.content-body { flex:1; display:grid; grid-template-columns:220px 1fr; gap:12px; padding:14px 16px; overflow:hidden; }
+
+/* LEFT PANEL */
+.lp { display:flex; flex-direction:column; gap:8px; }
+.stat-g { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.stat-c { background:var(--card); border:1px solid var(--bd); border-radius:9px; padding:11px; display:flex; align-items:center; gap:8px; }
+.stat-ic { width:30px; height:30px; border-radius:7px; background:var(--sand); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.stat-n  { font-size:18px; font-weight:700; color:var(--tx); font-family:'DM Mono',monospace; line-height:1; }
+.stat-l  { font-size:9px; color:var(--tx3); margin-top:2px; }
+
+.act-c { border-radius:9px; padding:10px 12px; display:flex; align-items:center; gap:9px; cursor:pointer; }
+.act-c.pri { background:var(--pri); border:1px solid var(--pri); }
+.act-c.sec { background:var(--card); border:1px solid var(--bd); }
+.act-c.wrn { background:#FFFBEB; border:1.5px solid #FCD34D; }
+.act-ic { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.act-c.pri .act-ic { background:rgba(255,255,255,0.15); }
+.act-c.sec .act-ic { background:var(--sand); }
+.act-c.wrn .act-ic { background:#FEF3C7; }
+.act-t { font-size:11px; font-weight:600; }
+.act-c.pri .act-t { color:#fff; }
+.act-c.sec .act-t { color:var(--tx); }
+.act-c.wrn .act-t { color:#92400E; }
+.act-s { font-size:9px; margin-top:1px; }
+.act-c.pri .act-s { color:rgba(255,255,255,0.7); }
+.act-c.sec .act-s { color:var(--tx3); }
+.act-c.wrn .act-s { color:#B45309; }
+.act-arr { margin-left:auto; font-size:13px; }
+.act-c.pri .act-arr { color:rgba(255,255,255,0.5); }
+.act-c.sec .act-arr { color:var(--tx3); }
+
+/* TIMETABLE PANEL */
+.tt-panel { background:var(--card); border:1px solid var(--bd); border-radius:11px; overflow:hidden; display:flex; flex-direction:column; }
+.tt-hd { background:var(--dk); padding:0 12px; height:30px; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.tt-hd-t { font-size:11px; font-weight:700; color:#fff; }
+.tt-hd-chip { font-size:9px; padding:2px 8px; border-radius:10px; background:rgba(255,255,255,0.08); color:#9CA3AF; border:1px solid rgba(255,255,255,0.1); }
+.tt-hd-date { margin-left:auto; font-size:9px; color:#6B7280; font-family:'DM Mono',monospace; }
+.tt-body { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.tt-ch { display:grid; grid-template-columns:48px repeat(5,1fr) 36px repeat(2,1fr); background:var(--sand); border-bottom:1.5px solid var(--bd); flex-shrink:0; }
+.tt-ch-c { padding:4px 5px; font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--tx2); text-align:center; border-right:1px solid var(--bd); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.tt-ch-c .t { font-size:7px; font-weight:400; color:var(--tx3); font-family:'DM Mono',monospace; margin-top:1px; }
+.tt-ch-c.brk { color:var(--tx3); font-size:7px; }
+.tt-row { display:grid; grid-template-columns:48px repeat(5,1fr) 36px repeat(2,1fr); border-bottom:1px solid var(--bd); flex:1; }
+.tt-day { padding:3px 5px; background:var(--sand); border-right:1px solid var(--bd); display:flex; flex-direction:column; justify-content:center; }
+.tt-day .d { font-size:9px; font-weight:700; color:var(--tx); }
+.tt-day .dt { font-size:7px; color:var(--tx3); font-family:'DM Mono',monospace; margin-top:1px; }
+.tt-c { padding:4px 6px; border-right:1px solid var(--bd); border-left:3px solid transparent; display:flex; flex-direction:column; justify-content:center; background:var(--card); }
+.tt-c.cl { border-left-color:var(--acc-lang); }
+.tt-c.cs { border-left-color:var(--acc-sci); }
+.tt-c.ch { border-left-color:var(--acc-hum); }
+.tt-c.ca { border-left-color:var(--acc-art); }
+.tt-c.cp { border-left-color:var(--acc-spt); }
+.tt-c.bk { background:var(--sand); border-left-color:transparent; align-items:center; justify-content:center; }
+.tt-c .s { font-size:8px; font-weight:700; color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tt-c .c { font-size:7px; color:var(--tx2); margin-top:1px; }
+.tt-c .tc{ font-size:6px; color:var(--tx3); margin-top:1px; }
+.tt-c.bk .s { font-size:7px; color:var(--tx3); font-weight:500; }
+
+/* ── WIZARD PREVIEW (bottom strip) ─────────── */
+.wiz-strip { height:52px; background:var(--dk); border-top:2px solid rgba(255,255,255,0.04); display:flex; align-items:center; gap:0; flex-shrink:0; }
+.wiz-step { display:flex; align-items:center; gap:8px; padding:0 16px; border-right:1px solid rgba(255,255,255,0.05); height:100%; flex:1; cursor:pointer; transition:background 0.12s; }
+.wiz-step:hover { background:rgba(255,255,255,0.03); }
+.wiz-step.ws-done .ws-circle { background:var(--ok); border-color:var(--ok); }
+.wiz-step.ws-active .ws-circle { background:var(--pri); border-color:var(--pri); }
+.ws-circle { width:22px; height:22px; border-radius:50%; border:1.5px solid #374151; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:9px; font-weight:700; color:#6B7280; }
+.wiz-step.ws-done .ws-circle { color:#fff; }
+.wiz-step.ws-active .ws-circle { color:#fff; }
+.ws-label { font-size:10px; font-weight:500; color:#6B7280; }
+.wiz-step.ws-done .ws-label { color:#9CA3AF; }
+.wiz-step.ws-active .ws-label { color:#fff; font-weight:600; }
+.ws-sub { font-size:8px; color:#374151; margin-top:1px; }
+.wiz-step.ws-active .ws-sub { color:#9CA3AF; }
+.wiz-progress { padding:0 16px; display:flex; align-items:center; gap:10px; min-width:120px; }
+.wp-bar { flex:1; height:3px; background:#1F2937; border-radius:2px; overflow:hidden; }
+.wp-fill { height:100%; background:var(--pri); border-radius:2px; }
+.wp-pct { font-size:9px; color:#6B7280; font-family:'DM Mono',monospace; white-space:nowrap; }
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     TAB BAR
+══════════════════════════════════════════ -->
+<div id="tabbar">
+  <div class="tab-logo">Bhu<span>sku</span></div>
+  <button class="tab-btn active" id="tab-a" onclick="show('a')">🔥 A — Ember</button>
+  <button class="tab-btn" id="tab-b" onclick="show('b')">🌿 B — Slate Sage</button>
+  <button class="tab-btn" id="tab-c" onclick="show('c')">🥃 C — Cognac</button>
+  <span class="tab-hint">Brand Identity Preview · Bhusku / SchedU</span>
+</div>
+
+<!-- ══════════════════════════════════════════
+     THEME A — EMBER
+══════════════════════════════════════════ -->
+<div class="theme-panel t-ember active" id="panel-a">
+  <div class="split">
+
+    <!-- LEFT INFO -->
+    <div class="left-info">
+
+      <div class="info-section">
+        <div class="info-label">Palette — Ember</div>
+        <div class="chip-row">
+          <div class="chip"><div class="chip-dot" style="background:#171210; border:1px solid #333;"></div><div class="chip-text"><div class="chip-name">Ink Dark</div><div class="chip-hex">#171210</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#C44B1B;"></div><div class="chip-text"><div class="chip-name">Ember</div><div class="chip-hex">#C44B1B</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#E8600A;"></div><div class="chip-text"><div class="chip-name">Ember Lt</div><div class="chip-hex">#E8600A</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#D4920E;"></div><div class="chip-text"><div class="chip-name">Mahua Gold</div><div class="chip-hex">#D4920E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#2A6B47;"></div><div class="chip-text"><div class="chip-name">Sal Forest</div><div class="chip-hex">#2A6B47</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#FAF8F5; border:1px solid #D9D0C7;"></div><div class="chip-text"><div class="chip-name">Ivory BG</div><div class="chip-hex">#FAF8F5</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#EDE7DF; border:1px solid #D9D0C7;"></div><div class="chip-text"><div class="chip-name">Stone</div><div class="chip-hex">#EDE7DF</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#6B5A50;"></div><div class="chip-text"><div class="chip-name">Bark</div><div class="chip-hex">#6B5A50</div></div></div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-label">Logo Concepts</div>
+        <div class="logo-row">
+          <div class="logo-card">
+            <!-- Grid mark -->
+            <svg width="36" height="36" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="12" fill="#C44B1B"/>
+              <rect x="11" y="13" width="8" height="8" rx="2" fill="white"/>
+              <rect x="22" y="13" width="8" height="8" rx="2" fill="white" opacity=".7"/>
+              <rect x="33" y="13" width="8" height="8" rx="2" fill="#D4920E"/>
+              <rect x="11" y="24" width="16" height="8" rx="2" fill="white" opacity=".9"/>
+              <rect x="30" y="24" width="11" height="8" rx="2" fill="white" opacity=".45"/>
+              <rect x="11" y="35" width="8" height="8" rx="2" fill="white" opacity=".45"/>
+              <rect x="22" y="35" width="19" height="8" rx="2" fill="white" opacity=".8"/>
+            </svg>
+            <div>
+              <div class="wm-serif">Bhu<span style="color:#E8600A">sku</span></div>
+              <div class="wm-sub">SchedU Platform</div>
+            </div>
+            <div class="logo-card-label">Grid Mark</div>
+          </div>
+          <div class="logo-card">
+            <!-- Monogram -->
+            <svg width="36" height="36" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="12" fill="#171210"/>
+              <text x="9" y="38" font-family="Georgia,serif" font-size="30" font-weight="900" fill="white">B</text>
+              <circle cx="40" cy="18" r="5" fill="#C44B1B"/>
+              <circle cx="40" cy="30" r="4" fill="#D4920E"/>
+            </svg>
+            <div>
+              <div class="wm-serif"><span style="color:#E8600A">B</span>husku</div>
+              <div class="wm-sub">by Bhusku</div>
+            </div>
+            <div class="logo-card-label">Monogram</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-label">Typography</div>
+        <div class="type-row">
+          <div class="type-item">
+            <div class="type-tag">Display · DM Serif Display</div>
+            <div style="font-family:'DM Serif Display',serif; font-size:20px; color:#E5E7EB; line-height:1.2;">Smarter <em style="color:#E8600A;">timetables</em>,<br/>built for you.</div>
+          </div>
+          <div class="type-item" style="margin-top:8px;">
+            <div class="type-tag">UI · Inter 700/400</div>
+            <div style="font-size:13px; font-weight:700; color:#E5E7EB;">Resources — Classes &amp; Teachers</div>
+            <div style="font-size:11px; color:#6B7280; margin-top:2px; line-height:1.5;">AI generated 4 classes, 8 teachers, 8 subjects.</div>
+          </div>
+          <div class="type-item" style="margin-top:8px;">
+            <div class="type-tag">Data · DM Mono</div>
+            <div style="font-family:'DM Mono',monospace; font-size:13px; color:#E5E7EB;">09:00 — 09:40 · P1 · 40 min</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-label">Buttons &amp; Badges</div>
+        <div class="btn-row">
+          <button class="pbtn" style="background:#C44B1B; color:#fff;">✨ New Timetable</button>
+          <button class="pbtn" style="background:#F5EFE8; color:#1A1208; border:1px solid #EDE7DF;">View →</button>
+          <button class="pbtn" style="background:transparent; color:#E8600A; border:1.5px solid #C44B1B;">Export</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#FEF5F2; color:#C44B1B; border:1px solid #FECDB7;">📋 Draft</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#F0FDF4; color:#2A6B47; border:1px solid #BBF7D0;">✓ Published</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#FFFBEB; color:#D4920E; border:1px solid #FDE68A;">⚠ 3 conflicts</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#F5EFE8; color:#6B5A50; border:1px solid #EDE7DF;">🔄 Substitute</span>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-label">Timetable Color Key</div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:14px; height:14px; border-radius:2px; background:#C44B1B;"></div>
+            <span style="font-size:10px; color:#9CA3AF;">Languages — border left only</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:14px; height:14px; border-radius:2px; background:#2A6B47;"></div>
+            <span style="font-size:10px; color:#9CA3AF;">Science / Maths</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:14px; height:14px; border-radius:2px; background:#D4920E;"></div>
+            <span style="font-size:10px; color:#9CA3AF;">Humanities / EVS</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:14px; height:14px; border-radius:2px; background:#7B5EA7;"></div>
+            <span style="font-size:10px; color:#9CA3AF;">Arts / Music / CCA</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:14px; height:14px; border-radius:2px; background:#0B7285;"></div>
+            <span style="font-size:10px; color:#9CA3AF;">Physical / Sports</span>
+          </div>
+          <div style="font-size:9px; color:#4B5563; margin-top:4px; line-height:1.5;">White cell BG + 3px left border only. No rainbow fills.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: App Shell -->
+    <div class="app-shell">
+      <!-- Sidebar -->
+      <div class="sb">
+        <div class="sb-top">
+          <svg width="24" height="24" viewBox="0 0 52 52" fill="none">
+            <rect width="52" height="52" rx="12" fill="#C44B1B"/>
+            <rect x="11" y="13" width="8" height="8" rx="2" fill="white"/>
+            <rect x="22" y="13" width="8" height="8" rx="2" fill="white" opacity=".7"/>
+            <rect x="33" y="13" width="8" height="8" rx="2" fill="#D4920E"/>
+            <rect x="11" y="24" width="16" height="8" rx="2" fill="white" opacity=".9"/>
+            <rect x="30" y="24" width="11" height="8" rx="2" fill="white" opacity=".45"/>
+            <rect x="11" y="35" width="8" height="8" rx="2" fill="white" opacity=".45"/>
+            <rect x="22" y="35" width="19" height="8" rx="2" fill="white" opacity=".8"/>
+          </svg>
+          <span class="sb-logotype">Bhu<em>sku</em></span>
+        </div>
+        <div class="sb-info-block">
+          <div class="sb-ws">My Workspace</div>
+          <div class="sb-school">DAV Public School</div>
+          <div class="sb-user-name">Anita Verma</div>
+        </div>
+        <div class="sb-nav">
+          <div class="sb-grp-label">MAIN</div>
+          <div class="nav-i on"><span class="nav-icon">⊞</span> Dashboard</div>
+          <div class="nav-i"><span class="nav-icon">📋</span> My Timetables</div>
+          <div class="nav-i"><span class="nav-icon">📅</span> Calendar</div>
+          <div class="nav-i"><span class="nav-icon">📊</span> Reports</div>
+          <div style="height:1px; background:#1F2937; margin:5px 12px;"></div>
+          <div class="sb-grp-label">MANAGEMENT</div>
+          <div class="nav-i"><span class="nav-icon">👥</span> Resources</div>
+          <div class="nav-i"><span class="nav-icon">⚙</span> Settings</div>
+        </div>
+        <div class="sb-foot">
+          <div class="av">A</div>
+          <div><div class="av-name">Anita Verma</div><div class="av-role">Owner</div></div>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div class="main-c">
+        <div class="page-hd">
+          <span style="font-size:15px;">🏠</span>
+          <span class="ph-title">Good evening, Anita</span>
+          <span class="ph-desc">— DAV Public School</span>
+          <span class="ph-badge">Owner</span>
+          <div class="ph-saved"><div class="dot-g"></div> Auto-saved</div>
+        </div>
+        <div class="content-body">
+          <div class="lp">
+            <div class="stat-g">
+              <div class="stat-c"><div class="stat-ic">📅</div><div><div class="stat-n">1</div><div class="stat-l">Timetables</div></div></div>
+              <div class="stat-c"><div class="stat-ic">👥</div><div><div class="stat-n">8</div><div class="stat-l">Teachers</div></div></div>
+              <div class="stat-c"><div class="stat-ic">📚</div><div><div class="stat-n">4</div><div class="stat-l">Classes</div></div></div>
+              <div class="stat-c"><div class="stat-ic">📖</div><div><div class="stat-n">8</div><div class="stat-l">Subjects</div></div></div>
+            </div>
+            <div class="act-c pri"><div class="act-ic">✨</div><div><div class="act-t">New Timetable</div><div class="act-s">AI-powered generation</div></div><div class="act-arr">›</div></div>
+            <div class="act-c sec"><div class="act-ic">📋</div><div><div class="act-t">View Timetable</div><div class="act-s">4 classes · 8 teachers</div></div><div class="act-arr">›</div></div>
+            <div class="act-c wrn"><div class="act-ic">🔄</div><div><div class="act-t">Substitutions</div><div class="act-s">Mark absent teachers</div></div><div class="act-arr">›</div></div>
+          </div>
+          <div class="tt-panel">
+            <div class="tt-hd">
+              <span class="tt-hd-t">My Schedule</span>
+              <span class="tt-hd-chip">📋 Draft</span>
+              <span class="tt-hd-date">11 – 17 May 2025</span>
+            </div>
+            <div class="tt-body">
+              <div class="tt-ch">
+                <div class="tt-ch-c">Day</div>
+                <div class="tt-ch-c">P1<div class="t">9:00</div></div>
+                <div class="tt-ch-c">P2<div class="t">9:40</div></div>
+                <div class="tt-ch-c">P3<div class="t">10:20</div></div>
+                <div class="tt-ch-c">P4<div class="t">11:00</div></div>
+                <div class="tt-ch-c">P5<div class="t">11:40</div></div>
+                <div class="tt-ch-c brk">☕<div class="t">12:20</div></div>
+                <div class="tt-ch-c">P6<div class="t">1:00</div></div>
+                <div class="tt-ch-c">P7<div class="t">1:40</div></div>
+              </div>
+              <div class="tt-row">
+                <div class="tt-day"><div class="d">Mon</div><div class="dt">11 May</div></div>
+                <div class="tt-c cl"><div class="s">Mathematics</div><div class="c">I-A</div><div class="tc">Teacher 1</div></div>
+                <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="c">I-A</div><div class="tc">Teacher 6</div></div>
+                <div class="tt-c ch"><div class="s">G.K.</div><div class="c">I-A</div><div class="tc">Teacher 8</div></div>
+                <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="c">I-A</div><div class="tc">Teacher 6</div></div>
+                <div class="tt-c ch"><div class="s">EVS</div><div class="c">I-A</div><div class="tc">Teacher 4</div></div>
+                <div class="tt-c bk"><div class="s">Lunch</div></div>
+                <div class="tt-c cl"><div class="s">English</div><div class="c">I-A</div><div class="tc">Teacher 2</div></div>
+                <div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="c">I-A</div><div class="tc">Teacher 5</div></div>
+              </div>
+              <div class="tt-row">
+                <div class="tt-day"><div class="d">Tue</div><div class="dt">12 May</div></div>
+                <div class="tt-c cl"><div class="s">English</div><div class="c">I-A</div><div class="tc">Teacher 2</div></div>
+                <div class="tt-c cs"><div class="s">Mathematics</div><div class="c">I-A</div><div class="tc">Teacher 1</div></div>
+                <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="c">I-A</div><div class="tc">Teacher 5</div></div>
+                <div class="tt-c ch"><div class="s">G.K.</div><div class="c">I-A</div><div class="tc">Teacher 8</div></div>
+                <div class="tt-c ca"><div class="s">Music</div><div class="c">I-A</div><div class="tc">Teacher 7</div></div>
+                <div class="tt-c bk"><div class="s">Lunch</div></div>
+                <div class="tt-c ch"><div class="s">EVS</div><div class="c">I-A</div><div class="tc">Teacher 4</div></div>
+                <div class="tt-c cl"><div class="s">Hindi</div><div class="c">I-A</div><div class="tc">Teacher 3</div></div>
+              </div>
+              <div class="tt-row">
+                <div class="tt-day"><div class="d">Wed</div><div class="dt">13 May</div></div>
+                <div class="tt-c cs"><div class="s">Mathematics</div><div class="c">I-A</div><div class="tc">Teacher 1</div></div>
+                <div class="tt-c cl"><div class="s">Hindi</div><div class="c">I-A</div><div class="tc">Teacher 3</div></div>
+                <div class="tt-c cl"><div class="s">English</div><div class="c">I-A</div><div class="tc">Teacher 2</div></div>
+                <div class="tt-c ca"><div class="s">Music</div><div class="c">I-A</div><div class="tc">Teacher 7</div></div>
+                <div class="tt-c ch"><div class="s">EVS</div><div class="c">I-A</div><div class="tc">Teacher 4</div></div>
+                <div class="tt-c bk"><div class="s">Lunch</div></div>
+                <div class="tt-c ch"><div class="s">EVS</div><div class="c">I-A</div><div class="tc">Teacher 4</div></div>
+                <div class="tt-c cs"><div class="s">Mathematics</div><div class="c">I-A</div><div class="tc">Teacher 1</div></div>
+              </div>
+              <div class="tt-row" style="border-bottom:none;">
+                <div class="tt-day"><div class="d">Thu</div><div class="dt">14 May</div></div>
+                <div class="tt-c cl"><div class="s">Hindi</div><div class="c">I-A</div><div class="tc">Teacher 3</div></div>
+                <div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="c">I-A</div><div class="tc">Teacher 5</div></div>
+                <div class="tt-c cs"><div class="s">Mathematics</div><div class="c">I-A</div><div class="tc">Teacher 1</div></div>
+                <div class="tt-c cl"><div class="s">English</div><div class="c">I-A</div><div class="tc">Teacher 2</div></div>
+                <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="c">I-A</div><div class="tc">Teacher 6</div></div>
+                <div class="tt-c bk"><div class="s">Lunch</div></div>
+                <div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="c">I-A</div><div class="tc">Teacher 5</div></div>
+                <div class="tt-c ch"><div class="s">G.K.</div><div class="c">I-A</div><div class="tc">Teacher 8</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Wizard strip -->
+        <div class="wiz-strip">
+          <div class="wiz-step ws-done"><div class="ws-circle">✓</div><div><div class="ws-label">School</div><div class="ws-sub">Board, grades &amp; scale</div></div></div>
+          <div class="wiz-step ws-done"><div class="ws-circle">✓</div><div><div class="ws-label">Schedule</div><div class="ws-sub">Days, periods &amp; breaks</div></div></div>
+          <div class="wiz-step ws-active"><div class="ws-circle">3</div><div><div class="ws-label">Resources</div><div class="ws-sub">Classes, teachers &amp; subjects</div></div></div>
+          <div class="wiz-step"><div class="ws-circle">4</div><div><div class="ws-label">Generate</div><div class="ws-sub">Build &amp; review timetable</div></div></div>
+          <div class="wiz-progress"><div class="wp-bar"><div class="wp-fill" style="width:67%"></div></div><div class="wp-pct">67%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- THEME B & C use same structure with different CSS vars -->
+<div class="theme-panel t-sage" id="panel-b">
+  <div class="split">
+    <div class="left-info">
+      <div class="info-section">
+        <div class="info-label">Palette — Slate Sage</div>
+        <div class="chip-row">
+          <div class="chip"><div class="chip-dot" style="background:#0E1814; border:1px solid #333;"></div><div class="chip-text"><div class="chip-name">Deep Forest</div><div class="chip-hex">#0E1814</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#1B7A4E;"></div><div class="chip-text"><div class="chip-name">Forest</div><div class="chip-hex">#1B7A4E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#22A066;"></div><div class="chip-text"><div class="chip-name">Forest Lt</div><div class="chip-hex">#22A066</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#CA8A04;"></div><div class="chip-text"><div class="chip-name">Harvest Gold</div><div class="chip-hex">#CA8A04</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#F6FAF8; border:1px solid #D8EFE3;"></div><div class="chip-text"><div class="chip-name">Mint BG</div><div class="chip-hex">#F6FAF8</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#D8EFE3; border:1px solid #ccc;"></div><div class="chip-text"><div class="chip-name">Sage Border</div><div class="chip-hex">#D8EFE3</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#3D6B52;"></div><div class="chip-text"><div class="chip-name">Moss</div><div class="chip-hex">#3D6B52</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#7A9B88;"></div><div class="chip-text"><div class="chip-name">Sage</div><div class="chip-hex">#7A9B88</div></div></div>
+        </div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">Mood</div>
+        <div style="font-size:11px; color:#9CA3AF; line-height:1.7;">Calm authority · Forest precision · Trust without coldness. Feels like a premium medical tool or environmental tech platform. Every element breathes.</div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">Buttons</div>
+        <div class="btn-row">
+          <button class="pbtn" style="background:#1B7A4E; color:#fff;">✨ New Timetable</button>
+          <button class="pbtn" style="background:#EAF5EF; color:#0D1F17; border:1px solid #D8EFE3;">View →</button>
+          <button class="pbtn" style="background:transparent; color:#22A066; border:1.5px solid #1B7A4E;">Export</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#EAF5EF; color:#1B7A4E; border:1px solid #B6DCC8;">📋 Draft</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#F0FDF4; color:#1B7A4E; border:1px solid #BBF7D0;">✓ Published</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#FFFBEB; color:#CA8A04; border:1px solid #FDE68A;">⚠ Conflicts</span>
+        </div>
+      </div>
+    </div>
+    <div class="app-shell">
+      <div class="sb">
+        <div class="sb-top">
+          <svg width="24" height="24" viewBox="0 0 52 52" fill="none"><rect width="52" height="52" rx="12" fill="#1B7A4E"/><rect x="11" y="13" width="8" height="8" rx="2" fill="white"/><rect x="22" y="13" width="8" height="8" rx="2" fill="white" opacity=".7"/><rect x="33" y="13" width="8" height="8" rx="2" fill="#CA8A04"/><rect x="11" y="24" width="16" height="8" rx="2" fill="white" opacity=".9"/><rect x="30" y="24" width="11" height="8" rx="2" fill="white" opacity=".45"/><rect x="11" y="35" width="8" height="8" rx="2" fill="white" opacity=".45"/><rect x="22" y="35" width="19" height="8" rx="2" fill="white" opacity=".8"/></svg>
+          <span class="sb-logotype">Bhu<em>sku</em></span>
+        </div>
+        <div class="sb-info-block"><div class="sb-ws">My Workspace</div><div class="sb-school">DAV Public School</div><div class="sb-user-name">Anita Verma</div></div>
+        <div class="sb-nav">
+          <div class="sb-grp-label">MAIN</div>
+          <div class="nav-i on"><span class="nav-icon">⊞</span> Dashboard</div>
+          <div class="nav-i"><span class="nav-icon">📋</span> My Timetables</div>
+          <div class="nav-i"><span class="nav-icon">📅</span> Calendar</div>
+          <div class="nav-i"><span class="nav-icon">📊</span> Reports</div>
+          <div style="height:1px; background:#1F2937; margin:5px 12px;"></div>
+          <div class="sb-grp-label">MANAGEMENT</div>
+          <div class="nav-i"><span class="nav-icon">👥</span> Resources</div>
+          <div class="nav-i"><span class="nav-icon">⚙</span> Settings</div>
+        </div>
+        <div class="sb-foot"><div class="av">A</div><div><div class="av-name">Anita Verma</div><div class="av-role">Owner</div></div></div>
+      </div>
+      <div class="main-c">
+        <div class="page-hd"><span style="font-size:15px;">🏠</span><span class="ph-title">Good evening, Anita</span><span class="ph-desc">— DAV Public School</span><span class="ph-badge">Owner</span><div class="ph-saved"><div class="dot-g"></div> Auto-saved</div></div>
+        <div class="content-body">
+          <div class="lp">
+            <div class="stat-g">
+              <div class="stat-c"><div class="stat-ic">📅</div><div><div class="stat-n">1</div><div class="stat-l">Timetables</div></div></div>
+              <div class="stat-c"><div class="stat-ic">👥</div><div><div class="stat-n">8</div><div class="stat-l">Teachers</div></div></div>
+              <div class="stat-c"><div class="stat-ic">📚</div><div><div class="stat-n">4</div><div class="stat-l">Classes</div></div></div>
+              <div class="stat-c"><div class="stat-ic">📖</div><div><div class="stat-n">8</div><div class="stat-l">Subjects</div></div></div>
+            </div>
+            <div class="act-c pri"><div class="act-ic">✨</div><div><div class="act-t">New Timetable</div><div class="act-s">AI-powered generation</div></div><div class="act-arr">›</div></div>
+            <div class="act-c sec"><div class="act-ic">📋</div><div><div class="act-t">View Timetable</div><div class="act-s">4 classes · 8 teachers</div></div><div class="act-arr">›</div></div>
+            <div class="act-c wrn"><div class="act-ic">🔄</div><div><div class="act-t">Substitutions</div><div class="act-s">Mark absent teachers</div></div><div class="act-arr">›</div></div>
+          </div>
+          <div class="tt-panel">
+            <div class="tt-hd"><span class="tt-hd-t">My Schedule</span><span class="tt-hd-chip">📋 Draft</span><span class="tt-hd-date">11 – 17 May 2025</span></div>
+            <div class="tt-body">
+              <div class="tt-ch"><div class="tt-ch-c">Day</div><div class="tt-ch-c">P1<div class="t">9:00</div></div><div class="tt-ch-c">P2<div class="t">9:40</div></div><div class="tt-ch-c">P3<div class="t">10:20</div></div><div class="tt-ch-c">P4<div class="t">11:00</div></div><div class="tt-ch-c">P5<div class="t">11:40</div></div><div class="tt-ch-c brk">☕</div><div class="tt-ch-c">P6<div class="t">1:00</div></div><div class="tt-ch-c">P7<div class="t">1:40</div></div></div>
+              <div class="tt-row"><div class="tt-day"><div class="d">Mon</div><div class="dt">11 May</div></div><div class="tt-c cl"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div><div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="tc">Teacher 5</div></div></div>
+              <div class="tt-row"><div class="tt-day"><div class="d">Tue</div><div class="dt">12 May</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 5</div></div><div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div><div class="tt-c ca"><div class="s">Music</div><div class="tc">Teacher 7</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div></div>
+              <div class="tt-row"><div class="tt-day"><div class="d">Wed</div><div class="dt">13 May</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c ca"><div class="s">Music</div><div class="tc">Teacher 7</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div></div>
+              <div class="tt-row" style="border-bottom:none;"><div class="tt-day"><div class="d">Thu</div><div class="dt">14 May</div></div><div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div><div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="tc">Teacher 5</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="tc">Teacher 5</div></div><div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="wiz-strip"><div class="wiz-step ws-done"><div class="ws-circle">✓</div><div><div class="ws-label">School</div><div class="ws-sub">Board &amp; grades</div></div></div><div class="wiz-step ws-done"><div class="ws-circle">✓</div><div><div class="ws-label">Schedule</div><div class="ws-sub">Days &amp; periods</div></div></div><div class="wiz-step ws-active"><div class="ws-circle">3</div><div><div class="ws-label">Resources</div><div class="ws-sub">Classes &amp; teachers</div></div></div><div class="wiz-step"><div class="ws-circle">4</div><div><div class="ws-label">Generate</div><div class="ws-sub">Build timetable</div></div></div><div class="wiz-progress"><div class="wp-bar"><div class="wp-fill" style="width:67%"></div></div><div class="wp-pct">67%</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- THEME C — COGNAC -->
+<div class="theme-panel t-cognac" id="panel-c">
+  <div class="split">
+    <div class="left-info">
+      <div class="info-section">
+        <div class="info-label">Palette — Cognac</div>
+        <div class="chip-row">
+          <div class="chip"><div class="chip-dot" style="background:#18110A; border:1px solid #333;"></div><div class="chip-text"><div class="chip-name">Cognac Dark</div><div class="chip-hex">#18110A</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#92400E;"></div><div class="chip-text"><div class="chip-name">Cognac</div><div class="chip-hex">#92400E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#B45309;"></div><div class="chip-text"><div class="chip-name">Cognac Lt</div><div class="chip-hex">#B45309</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#C9940A;"></div><div class="chip-text"><div class="chip-name">Honey Gold</div><div class="chip-hex">#C9940A</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#FAF7F3; border:1px solid #EDE0D0;"></div><div class="chip-text"><div class="chip-name">Parchment</div><div class="chip-hex">#FAF7F3</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#EDE0D0; border:1px solid #ccc;"></div><div class="chip-text"><div class="chip-name">Tan Border</div><div class="chip-hex">#EDE0D0</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#2A6B47;"></div><div class="chip-text"><div class="chip-name">Forest</div><div class="chip-hex">#2A6B47</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#6B5438;"></div><div class="chip-text"><div class="chip-name">Bark</div><div class="chip-hex">#6B5438</div></div></div>
+        </div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">Mood</div>
+        <div style="font-size:11px; color:#9CA3AF; line-height:1.7;">Ultra warm · Aged premium · Whisky-bar meets premium stationery. The deepest, most luxurious of the three. Feels exclusive. Aged amber tones evoke knowledge and heritage.</div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">Buttons</div>
+        <div class="btn-row">
+          <button class="pbtn" style="background:#92400E; color:#fff;">✨ New Timetable</button>
+          <button class="pbtn" style="background:#F5EAD8; color:#18110A; border:1px solid #EDE0D0;">View →</button>
+          <button class="pbtn" style="background:transparent; color:#B45309; border:1.5px solid #92400E;">Export</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#FDF5E8; color:#92400E; border:1px solid #EDE0D0;">📋 Draft</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#F0FDF4; color:#2A6B47; border:1px solid #BBF7D0;">✓ Published</span>
+          <span style="padding:3px 9px; border-radius:20px; font-size:9px; font-weight:700; background:#FFFBEB; color:#C9940A; border:1px solid #FDE68A;">⚠ Conflicts</span>
+        </div>
+      </div>
+    </div>
+    <div class="app-shell">
+      <div class="sb">
+        <div class="sb-top">
+          <svg width="24" height="24" viewBox="0 0 52 52" fill="none"><rect width="52" height="52" rx="12" fill="#92400E"/><rect x="11" y="13" width="8" height="8" rx="2" fill="white"/><rect x="22" y="13" width="8" height="8" rx="2" fill="white" opacity=".7"/><rect x="33" y="13" width="8" height="8" rx="2" fill="#C9940A"/><rect x="11" y="24" width="16" height="8" rx="2" fill="white" opacity=".9"/><rect x="30" y="24" width="11" height="8" rx="2" fill="white" opacity=".45"/><rect x="11" y="35" width="8" height="8" rx="2" fill="white" opacity=".45"/><rect x="22" y="35" width="19" height="8" rx="2" fill="white" opacity=".8"/></svg>
+          <span class="sb-logotype">Bhu<em>sku</em></span>
+        </div>
+        <div class="sb-info-block"><div class="sb-ws">My Workspace</div><div class="sb-school">DAV Public School</div><div class="sb-user-name">Anita Verma</div></div>
+        <div class="sb-nav">
+          <div class="sb-grp-label">MAIN</div>
+          <div class="nav-i on"><span class="nav-icon">⊞</span> Dashboard</div>
+          <div class="nav-i"><span class="nav-icon">📋</span> My Timetables</div>
+          <div class="nav-i"><span class="nav-icon">📅</span> Calendar</div>
+          <div class="nav-i"><span class="nav-icon">📊</span> Reports</div>
+          <div style="height:1px; background:#1F2937; margin:5px 12px;"></div>
+          <div class="sb-grp-label">MANAGEMENT</div>
+          <div class="nav-i"><span class="nav-icon">👥</span> Resources</div>
+          <div class="nav-i"><span class="nav-icon">⚙</span> Settings</div>
+        </div>
+        <div class="sb-foot"><div class="av">A</div><div><div class="av-name">Anita Verma</div><div class="av-role">Owner</div></div></div>
+      </div>
+      <div class="main-c">
+        <div class="page-hd"><span style="font-size:15px;">🏠</span><span class="ph-title">Good evening, Anita</span><span class="ph-desc">— DAV Public School</span><span class="ph-badge">Owner</span><div class="ph-saved"><div class="dot-g"></div> Auto-saved</div></div>
+        <div class="content-body">
+          <div class="lp">
+            <div class="stat-g">
+              <div class="stat-c"><div class="stat-ic">📅</div><div><div class="stat-n">1</div><div class="stat-l">Timetables</div></div></div>
+              <div class="stat-c"><div class="stat-ic">👥</div><div><div class="stat-n">8</div><div class="stat-l">Teachers</div></div></div>
+              <div class="stat-c"><div class="stat-ic">📚</div><div><div class="stat-n">4</div><div class="stat-l">Classes</div></div></div>
+              <div class="stat-c"><div class="stat-ic">📖</div><div><div class="stat-n">8</div><div class="stat-l">Subjects</div></div></div>
+            </div>
+            <div class="act-c pri"><div class="act-ic">✨</div><div><div class="act-t">New Timetable</div><div class="act-s">AI-powered generation</div></div><div class="act-arr">›</div></div>
+            <div class="act-c sec"><div class="act-ic">📋</div><div><div class="act-t">View Timetable</div><div class="act-s">4 classes · 8 teachers</div></div><div class="act-arr">›</div></div>
+            <div class="act-c wrn"><div class="act-ic">🔄</div><div><div class="act-t">Substitutions</div><div class="act-s">Mark absent teachers</div></div><div class="act-arr">›</div></div>
+          </div>
+          <div class="tt-panel">
+            <div class="tt-hd"><span class="tt-hd-t">My Schedule</span><span class="tt-hd-chip">📋 Draft</span><span class="tt-hd-date">11 – 17 May 2025</span></div>
+            <div class="tt-body">
+              <div class="tt-ch"><div class="tt-ch-c">Day</div><div class="tt-ch-c">P1</div><div class="tt-ch-c">P2</div><div class="tt-ch-c">P3</div><div class="tt-ch-c">P4</div><div class="tt-ch-c">P5</div><div class="tt-ch-c brk">☕</div><div class="tt-ch-c">P6</div><div class="tt-ch-c">P7</div></div>
+              <div class="tt-row"><div class="tt-day"><div class="d">Mon</div><div class="dt">11 May</div></div><div class="tt-c cl"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div><div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="tc">Teacher 5</div></div></div>
+              <div class="tt-row"><div class="tt-day"><div class="d">Tue</div><div class="dt">12 May</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 5</div></div><div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div><div class="tt-c ca"><div class="s">Music</div><div class="tc">Teacher 7</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div></div>
+              <div class="tt-row"><div class="tt-day"><div class="d">Wed</div><div class="dt">13 May</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c ca"><div class="s">Music</div><div class="tc">Teacher 7</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div></div>
+              <div class="tt-row" style="border-bottom:none;"><div class="tt-day"><div class="d">Thu</div><div class="dt">14 May</div></div><div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div><div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="tc">Teacher 5</div></div><div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div><div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div><div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div><div class="tt-c bk"><div class="s">Lunch</div></div><div class="tt-c ca"><div class="s">Art &amp; Craft</div><div class="tc">Teacher 5</div></div><div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="wiz-strip"><div class="wiz-step ws-done"><div class="ws-circle">✓</div><div><div class="ws-label">School</div><div class="ws-sub">Board &amp; grades</div></div></div><div class="wiz-step ws-done"><div class="ws-circle">✓</div><div><div class="ws-label">Schedule</div><div class="ws-sub">Days &amp; periods</div></div></div><div class="wiz-step ws-active"><div class="ws-circle">3</div><div><div class="ws-label">Resources</div><div class="ws-sub">Classes &amp; teachers</div></div></div><div class="wiz-step"><div class="ws-circle">4</div><div><div class="ws-label">Generate</div><div class="ws-sub">Build timetable</div></div></div><div class="wiz-progress"><div class="wp-bar"><div class="wp-fill" style="width:67%"></div></div><div class="wp-pct">67%</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.theme-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>

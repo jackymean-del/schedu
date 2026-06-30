@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=1280, initial-scale=1"/>
+<title>Bhusku Brand System — SchedU</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  /* ── Bhusku / SchedU — Lavender Modern ── */
+  --pri:    #7C6FE0;   /* Lavender Violet   */
+  --pril:   #9B8EF5;   /* Soft Violet       */
+  --pri-d:  #6056C8;   /* Deep Violet       */
+  --pri-bg: #EDE9FF;   /* Lavender Mist     */
+  --pri-bm: #D8D2FF;   /* Lavender Border   */
+
+  --dk:     #13111E;   /* Ink Purple        */
+  --dk2:    #1E1B2E;   /* Deep Aubergine    */
+  --dk3:    #2A2642;   /* Purple Ash        */
+  --dk4:    #3B3660;   /* Muted Violet      */
+
+  --bg:     #F9F8FF;   /* Near-white (lavender) */
+  --bg2:    #F3F0FF;   /* Soft lavender bg  */
+  --card:   #FFFFFF;
+  --bd:     #E8E4FF;   /* Lavender border   */
+  --bd2:    #D4CCFF;   /* Stronger border   */
+
+  --tx:     #13111E;   /* Deep ink          */
+  --tx2:    #4A4580;   /* Purple mid        */
+  --tx3:    #8B87AD;   /* Purple light      */
+  --tx4:    #B8B4D4;   /* Purple dim        */
+
+  --gold:   #D4920E;   /* Mahua Gold        */
+  --goldl:  #F5A623;
+  --ok:     #22C55E;
+  --warn:   #F59E0B;
+  --err:    #EF4444;
+
+  /* Timetable subject accents */
+  --acc-lang: #7C6FE0;
+  --acc-sci:  #22A066;
+  --acc-hum:  #D4920E;
+  --acc-art:  #D946EF;
+  --acc-spt:  #0B7285;
+}
+
+html, body {
+  height: 100vh; width: 100vw;
+  min-width: 1280px; min-height: 900px;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  background: var(--dk);
+}
+
+/* ── TAB BAR ─────────────────────────────────────── */
+#tabbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 48px;
+  background: var(--dk); border-bottom: 1px solid var(--dk2);
+  display: flex; align-items: center; padding: 0 22px; gap: 4px;
+  z-index: 999;
+}
+.tab-logo {
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 900;
+  letter-spacing: -0.5px; color: #fff; margin-right: 16px;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab-logo .b-mark {
+  width: 24px; height: 24px; border-radius: 7px; background: var(--pri);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Serif Display', serif; font-size: 15px; color: #fff;
+  line-height: 1;
+}
+.tab-logo .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); margin-left: 1px; flex-shrink: 0; }
+.tab-btn {
+  padding: 5px 16px; border-radius: 7px; border: 1px solid transparent;
+  background: transparent; color: var(--tx3); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.14s;
+  letter-spacing: 0.01em;
+}
+.tab-btn:hover { background: var(--dk2); color: var(--tx4); }
+.tab-btn.active { background: var(--dk3); border-color: var(--dk4); color: #fff; }
+.tab-hint { margin-left: auto; font-size: 10px; color: var(--dk4); letter-spacing: 0.07em; text-transform: uppercase; }
+
+/* ── PANELS ──────────────────────────────────────── */
+.panel {
+  display: none; position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+}
+.panel.active { display: flex; }
+
+/* ── SPLIT (left info + right content) ───────────── */
+.split {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ── LEFT INFO PANEL ─────────────────────────────── */
+.left-info {
+  width: 300px; flex-shrink: 0; background: var(--dk2);
+  border-right: 1px solid var(--dk3);
+  display: flex; flex-direction: column;
+  overflow-y: auto; padding: 20px 16px; gap: 18px;
+}
+.sec { }
+.sec-label {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--dk4);
+  margin-bottom: 10px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--dk3);
+}
+
+/* ── RIGHT AREA ──────────────────────────────────── */
+.right-area {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--bg); overflow: hidden;
+}
+
+/* ── APP SHELL ───────────────────────────────────── */
+.app-shell {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* Sidebar in mockup */
+.sb {
+  width: 200px; flex-shrink: 0; background: var(--dk);
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--dk2);
+}
+.sb-brand {
+  padding: 13px 14px; border-bottom: 1px solid var(--dk2);
+  display: flex; align-items: center; gap: 8px;
+}
+.sb-mark {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: var(--pri); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-wordmark { }
+.sb-wordmark .by {
+  font-size: 7px; color: var(--dk4); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  line-height: 1;
+}
+.sb-wordmark .product {
+  font-family: 'Inter', sans-serif; font-size: 14px;
+  font-weight: 800; color: #fff; letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.sb-wordmark .product span { color: var(--pril); }
+.sb-info { padding: 9px 14px; border-bottom: 1px solid var(--dk2); }
+.sb-ws { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dk4); margin-bottom: 3px; }
+.sb-school { font-size: 12px; font-weight: 600; color: #fff; }
+.sb-user { font-size: 10px; color: var(--tx3); margin-top: 1px; }
+.sb-nav { flex: 1; padding: 8px 0; }
+.sb-group { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dk4); padding: 8px 14px 3px; }
+.nav-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; margin: 1px 6px; border-radius: 7px;
+  border-left: 3px solid transparent;
+  font-size: 11px; color: var(--tx3); cursor: pointer;
+}
+.nav-row.on {
+  background: rgba(124,111,224,0.12);
+  border-left-color: var(--pril);
+  color: #fff; font-weight: 600;
+}
+.nav-row .ico { font-size: 12px; opacity: 0.7; }
+.nav-row.on .ico { opacity: 1; }
+.sb-foot {
+  border-top: 1px solid var(--dk2); padding: 9px 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.av {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--pri); display: flex; align-items: center;
+  justify-content: center; color: #fff; font-size: 10px;
+  font-weight: 700; flex-shrink: 0;
+}
+.av-info .name { font-size: 11px; font-weight: 600; color: #E5E7EB; }
+.av-info .role { font-size: 9px; color: var(--tx3); }
+
+/* Main content area in mockup */
+.main-c { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.page-hdr {
+  height: 44px; background: var(--card); border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; padding: 0 18px; gap: 10px; flex-shrink: 0;
+}
+.page-title { font-size: 13px; font-weight: 700; color: var(--tx); }
+.page-desc { font-size: 11px; color: var(--tx3); }
+.page-badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 10px;
+  font-weight: 600; background: var(--pri-bg); color: var(--pri);
+  border: 1px solid var(--pri-bm);
+}
+.page-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); }
+.page-saved { margin-left: auto; font-size: 10px; color: var(--tx3); display: flex; align-items: center; gap: 4px; }
+
+.content-grid { flex: 1; display: grid; grid-template-columns: 210px 1fr; gap: 12px; padding: 13px 14px; overflow: hidden; }
+
+/* Stat cards */
+.stat-g { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.stat-c {
+  background: var(--card); border: 1px solid var(--bd);
+  border-radius: 9px; padding: 10px 9px;
+  display: flex; align-items: center; gap: 7px;
+}
+.stat-ic {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--pri-bg); display: flex; align-items: center;
+  justify-content: center; font-size: 12px; flex-shrink: 0;
+}
+.stat-n { font-size: 17px; font-weight: 700; color: var(--tx); font-family: 'DM Mono', monospace; line-height: 1; }
+.stat-l { font-size: 9px; color: var(--tx3); margin-top: 1px; }
+
+/* Action buttons */
+.act { border-radius: 9px; padding: 9px 11px; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 7px; }
+.act.pri { background: var(--pri); border: 1px solid var(--pri-d); }
+.act.sec { background: var(--card); border: 1px solid var(--bd); }
+.act.warn{ background: #FFFBEB; border: 1.5px solid #FCD34D; }
+.act-ic { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.act.pri .act-ic { background: rgba(255,255,255,0.18); }
+.act.sec .act-ic { background: var(--pri-bg); }
+.act.warn .act-ic { background: #FEF3C7; }
+.act-t { font-size: 11px; font-weight: 600; }
+.act.pri .act-t { color: #fff; }
+.act.sec .act-t { color: var(--tx); }
+.act.warn .act-t { color: #92400E; }
+.act-s { font-size: 9px; }
+.act.pri .act-s { color: rgba(255,255,255,0.7); }
+.act.sec .act-s { color: var(--tx3); }
+.act.warn .act-s { color: #B45309; }
+.act-arr { margin-left: auto; font-size: 13px; }
+.act.pri .act-arr { color: rgba(255,255,255,0.5); }
+.act.sec .act-arr { color: var(--tx3); }
+
+/* Timetable */
+.tt {
+  background: var(--card); border: 1px solid var(--bd);
+  border-radius: 11px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.tt-hdr {
+  background: var(--dk); padding: 0 12px; height: 30px;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.tt-hdr-t { font-size: 11px; font-weight: 700; color: #fff; }
+.tt-chip {
+  font-size: 9px; padding: 2px 8px; border-radius: 10px;
+  background: rgba(124,111,224,0.2); color: var(--pril);
+  border: 1px solid rgba(124,111,224,0.3);
+}
+.tt-date { margin-left: auto; font-size: 9px; color: var(--dk4); font-family: 'DM Mono', monospace; }
+.tt-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.tt-ch {
+  display: grid; grid-template-columns: 46px repeat(5,1fr) 30px repeat(2,1fr);
+  background: var(--bg2); border-bottom: 1.5px solid var(--bd); flex-shrink: 0;
+}
+.tt-ch-c {
+  padding: 4px 4px; font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--tx2); text-align: center;
+  border-right: 1px solid var(--bd); display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.tt-ch-c .t { font-size: 7px; font-weight: 400; color: var(--tx3); font-family: 'DM Mono', monospace; margin-top: 1px; }
+.tt-ch-c.brk { color: var(--tx3); font-size: 7px; }
+.tt-row { display: grid; grid-template-columns: 46px repeat(5,1fr) 30px repeat(2,1fr); border-bottom: 1px solid var(--bd); flex: 1; }
+.tt-day { padding: 3px 5px; background: var(--bg2); border-right: 1px solid var(--bd); display: flex; flex-direction: column; justify-content: center; }
+.tt-day .d { font-size: 9px; font-weight: 700; color: var(--tx); }
+.tt-day .dt { font-size: 7px; color: var(--tx3); font-family: 'DM Mono', monospace; margin-top: 1px; }
+.tt-c {
+  padding: 4px 5px; border-right: 1px solid var(--bd);
+  border-left: 3px solid transparent; display: flex;
+  flex-direction: column; justify-content: center;
+  background: var(--card);
+}
+.tt-c.cl { border-left-color: var(--acc-lang); }
+.tt-c.cs { border-left-color: var(--acc-sci); }
+.tt-c.ch { border-left-color: var(--acc-hum); }
+.tt-c.ca { border-left-color: var(--acc-art); }
+.tt-c.cp { border-left-color: var(--acc-spt); }
+.tt-c.bk { background: var(--bg2); border-left-color: transparent; align-items: center; justify-content: center; }
+.tt-c .s { font-size: 8px; font-weight: 700; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-c .c { font-size: 7px; color: var(--tx2); margin-top: 1px; }
+.tt-c .tc { font-size: 6px; color: var(--tx3); margin-top: 1px; }
+.tt-c.bk .s { font-size: 7px; color: var(--tx3); font-weight: 500; }
+
+/* Wizard strip */
+.wiz-strip {
+  height: 50px; background: var(--dk); border-top: 1px solid var(--dk2);
+  display: flex; align-items: center; flex-shrink: 0;
+}
+.wiz-s {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  padding: 0 14px; border-right: 1px solid var(--dk2); height: 100%;
+  cursor: pointer;
+}
+.wiz-s:hover { background: rgba(255,255,255,0.02); }
+.wiz-circle {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--dk3); display: flex; align-items: center;
+  justify-content: center; font-size: 9px; font-weight: 700;
+  color: var(--dk4); flex-shrink: 0;
+}
+.wiz-s.done .wiz-circle { background: var(--ok); border-color: var(--ok); color: #fff; }
+.wiz-s.act .wiz-circle  { background: var(--pri); border-color: var(--pri); color: #fff; }
+.wiz-slabel { font-size: 10px; font-weight: 500; color: var(--dk4); }
+.wiz-s.done .wiz-slabel { color: #6B7280; }
+.wiz-s.act .wiz-slabel  { color: #fff; font-weight: 600; }
+.wiz-ssub { font-size: 8px; color: var(--dk3); margin-top: 1px; }
+.wiz-s.act .wiz-ssub { color: #4B5563; }
+.wiz-prog { padding: 0 14px; display: flex; align-items: center; gap: 8px; min-width: 100px; }
+.wp-bar { flex: 1; height: 3px; background: var(--dk3); border-radius: 2px; overflow: hidden; }
+.wp-fill { height: 100%; background: var(--pri); border-radius: 2px; }
+.wp-pct { font-size: 9px; color: var(--dk4); font-family: 'DM Mono', monospace; white-space: nowrap; }
+
+/* ── LOGO CARDS ──────────────────────────────────── */
+.logo-row { display: flex; gap: 10px; }
+.logo-card {
+  flex: 1; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--dk3); border-radius: 10px;
+  padding: 14px 10px; display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+}
+.logo-card.recommended { border-color: var(--pri); background: rgba(124,111,224,0.07); }
+.logo-lbl { font-size: 8px; color: var(--dk4); text-align: center; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.logo-card.recommended .logo-lbl { color: var(--pril); }
+.wm { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+.wm span { color: var(--pril); }
+.wm-serif { font-family: 'DM Serif Display', serif; font-size: 16px; color: #fff; }
+.wm-serif span { color: var(--pril); font-style: normal; }
+.wm-sub { font-size: 8px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dk4); margin-top: 1px; text-align: center; }
+
+/* ── CHIPS ───────────────────────────────────────── */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--dk3);
+  border-radius: 7px; padding: 5px 7px;
+}
+.chip-dot { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+.chip-name { font-size: 9px; font-weight: 600; color: #E5E7EB; white-space: nowrap; }
+.chip-hex  { font-size: 8px; color: var(--tx3); font-family: 'DM Mono', monospace; }
+
+/* ── TYPO SAMPLES ────────────────────────────────── */
+.type-stack { display: flex; flex-direction: column; gap: 9px; }
+.type-tag { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dk4); margin-bottom: 3px; }
+
+/* ── BUTTONS ─────────────────────────────────────── */
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pbtn {
+  padding: 6px 12px; border-radius: 7px; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+}
+.badge-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.badge { padding: 3px 9px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+
+/* ── SCHEDU WORDMARK (big) ───────────────────────── */
+.schedu-big {
+  display: flex; align-items: baseline; gap: 0;
+  font-family: 'Inter', sans-serif; letter-spacing: -2px;
+}
+.schedu-big .sched-part {
+  font-size: 48px; font-weight: 900; color: var(--dk);
+}
+.schedu-big .u-part {
+  font-size: 52px; font-weight: 900; color: var(--pri);
+  font-family: 'DM Serif Display', serif; font-style: italic;
+  letter-spacing: -3px;
+}
+
+/* On-dark version */
+.schedu-big.on-dark .sched-part { color: #fff; }
+
+/* Sub-brand label */
+.by-bhusku {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--tx3);
+  margin-top: 4px;
+}
+.by-bhusku span { color: var(--gold); }
+
+/* Smaller wordmark variant */
+.schedu-sm {
+  font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 800;
+  color: #fff; letter-spacing: -0.5px;
+}
+.schedu-sm .u { color: var(--pril); font-family: 'DM Serif Display', serif; font-size: 18px; font-style: italic; }
+
+/* ── WIDE CONTENT (for SchedU tab right panel) ───── */
+.brand-showcase {
+  flex: 1; background: var(--bg); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 28px; padding: 32px;
+  overflow: auto;
+}
+.showcase-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; }
+
+/* b logo on light */
+.logo-on-light {
+  width: 80px; height: 80px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 24px rgba(124,111,224,0.25);
+}
+.logo-on-light.var-a { background: var(--pri); }
+.logo-on-light.var-b { background: var(--dk); }
+.logo-on-light.var-c { background: linear-gradient(135deg, var(--pri) 0%, #4F3FC0 100%); }
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     TAB BAR
+════════════════════════════════════ -->
+<div id="tabbar">
+  <div class="tab-logo">
+    <div class="b-mark">b</div>
+    bhusku
+    <div class="dot"></div>
+  </div>
+  <button class="tab-btn active" id="tab-a" onclick="show('a')">① Bhusku Brand</button>
+  <button class="tab-btn" id="tab-b" onclick="show('b')">② SchedU Product</button>
+  <button class="tab-btn" id="tab-c" onclick="show('c')">③ App Preview</button>
+  <span class="tab-hint">Brand Identity System · 2026</span>
+</div>
+
+
+<!-- ════════════════════════════════════
+     PANEL A — BHUSKU BRAND
+════════════════════════════════════ -->
+<div class="panel active" id="panel-a">
+  <div class="split">
+
+    <!-- LEFT: Bhusku info -->
+    <div class="left-info">
+
+      <div class="sec">
+        <div class="sec-label">About Bhusku</div>
+        <div style="font-size:11px; color:#6B7280; line-height:1.6;">
+          Creative-tech studio. Apps, design, audio, automation. <em style="color:var(--pril);">SchedU</em> is product #1.
+        </div>
+        <div style="font-size:9px; color:var(--dk4); margin-top:8px; line-height:1.5;">
+          "Bhusku" — Sambalpuri (western Odisha) — means <em style="color:#D4A0FF;">fat with knowledge</em>. More capable than others.
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Logo Options</div>
+        <div class="logo-row">
+
+          <!-- Option 1: Solid Lavender -->
+          <div class="logo-card recommended">
+            <svg width="44" height="44" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="13" fill="#7C6FE0"/>
+              <!-- stem -->
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+              <!-- bowl arc -->
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42"
+                    stroke="white" stroke-width="8" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- gold accent -->
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+            <div>
+              <div class="wm">bhu<span>sku</span></div>
+              <div class="wm-sub">Creative Studio</div>
+            </div>
+            <div class="logo-lbl">★ Lavender Mark</div>
+          </div>
+
+          <!-- Option 2: Dark Grid -->
+          <div class="logo-card">
+            <svg width="44" height="44" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="13" fill="#13111E"/>
+              <!-- stem in lavender -->
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="#7C6FE0"/>
+              <!-- bowl as 2×2 grid blocks (abstract/modular) -->
+              <rect x="23" y="20" width="8" height="8" rx="2.5" fill="#7C6FE0"/>
+              <rect x="33" y="20" width="8" height="8" rx="2.5" fill="#9B8EF5" opacity="0.7"/>
+              <rect x="23" y="31" width="8" height="8" rx="2.5" fill="#9B8EF5" opacity="0.5"/>
+              <rect x="33" y="31" width="8" height="8" rx="2.5" fill="#D4920E"/>
+            </svg>
+            <div>
+              <div class="wm">bhu<span>sku</span></div>
+              <div class="wm-sub">Grid Modules</div>
+            </div>
+            <div class="logo-lbl">Dark Mark</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Color Palette</div>
+        <div class="chips">
+          <div class="chip"><div class="chip-dot" style="background:#7C6FE0;"></div><div><div class="chip-name">Lavender</div><div class="chip-hex">#7C6FE0</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#9B8EF5;"></div><div><div class="chip-name">Violet Lt</div><div class="chip-hex">#9B8EF5</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#13111E; border:1px solid #2A2642;"></div><div><div class="chip-name">Ink Purple</div><div class="chip-hex">#13111E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#D4920E;"></div><div><div class="chip-name">Mahua Gold</div><div class="chip-hex">#D4920E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#F9F8FF; border:1px solid #D4CCFF;"></div><div><div class="chip-name">Near White</div><div class="chip-hex">#F9F8FF</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#EDE9FF; border:1px solid #D8D2FF;"></div><div><div class="chip-name">Lav. Mist</div><div class="chip-hex">#EDE9FF</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#4A4580;"></div><div><div class="chip-name">Purple Mid</div><div class="chip-hex">#4A4580</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#8B87AD;"></div><div><div class="chip-name">Purple Dim</div><div class="chip-hex">#8B87AD</div></div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Typography</div>
+        <div class="type-stack">
+          <div>
+            <div class="type-tag">Display · DM Serif Display</div>
+            <div style="font-family:'DM Serif Display',serif; font-size:20px; color:#E5E7EB; line-height:1.2;">Build smarter,<br/><em style="color:var(--pril);">do more.</em></div>
+          </div>
+          <div>
+            <div class="type-tag">UI · Inter 800/600/400</div>
+            <div style="font-size:13px; font-weight:800; color:#E5E7EB; letter-spacing:-0.3px;">Resources — Classes & Teachers</div>
+            <div style="font-size:11px; color:#6B7280; margin-top:2px;">AI generated 4 classes, 8 teachers.</div>
+          </div>
+          <div>
+            <div class="type-tag">Data · DM Mono</div>
+            <div style="font-family:'DM Mono',monospace; font-size:12px; color:#E5E7EB;">09:00 — 09:40 · P1 · 40 min</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Large Bhusku identity showcase -->
+    <div class="brand-showcase">
+
+      <!-- Big wordmark -->
+      <div style="text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:16px;">
+          <!-- Large b logo -->
+          <svg width="80" height="80" viewBox="0 0 52 52" fill="none">
+            <rect width="52" height="52" rx="14" fill="#7C6FE0"/>
+            <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+            <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42"
+                  stroke="white" stroke-width="8" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+          </svg>
+          <div style="text-align:left;">
+            <div style="font-family:'Inter',sans-serif; font-size:52px; font-weight:900; color:var(--tx); letter-spacing:-2.5px; line-height:1;">bhusku</div>
+            <div style="font-size:12px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; color:var(--tx3); margin-top:4px;">Creative Technology Studio</div>
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--tx3); max-width:480px; line-height:1.7; margin:0 auto;">
+          Apps · Design · Audio · Automation — A studio built to make powerful, beautiful tools that punch above their weight. <em style="color:var(--pri); font-style:normal; font-weight:600;">Fat with knowledge.</em>
+        </div>
+      </div>
+
+      <!-- Logo on different backgrounds -->
+      <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="logo-on-light var-a">
+            <svg width="48" height="48" viewBox="0 0 52 52" fill="none">
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+          </div>
+          <div style="font-size:9px; color:var(--tx3);">On Lavender</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="logo-on-light var-b">
+            <svg width="48" height="48" viewBox="0 0 52 52" fill="none">
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="#9B8EF5"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="#9B8EF5" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+          </div>
+          <div style="font-size:9px; color:var(--tx3);">On Dark</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div style="width:80px;height:80px;border-radius:20px;background:var(--bg2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;">
+            <svg width="48" height="48" viewBox="0 0 52 52" fill="none">
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="#7C6FE0"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="#7C6FE0" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+          </div>
+          <div style="font-size:9px; color:var(--tx3);">On White</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div style="width:80px;height:80px;border-radius:20px;background:var(--pri);display:flex;align-items:center;justify-content:center;">
+            <div style="font-family:'Inter';font-size:40px;font-weight:900;color:rgba(255,255,255,0.2);letter-spacing:-2px;margin-top:4px;">b</div>
+          </div>
+          <div style="font-size:9px; color:var(--tx3);">Flat Type</div>
+        </div>
+      </div>
+
+      <!-- Products under Bhusku -->
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+        <div style="background:var(--card);border:1.5px solid var(--pri-bm);border-radius:12px;padding:14px 20px;text-align:center;min-width:140px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--pri);margin-bottom:6px;">Product #1</div>
+          <div style="font-family:'Inter';font-size:22px;font-weight:900;color:var(--tx);letter-spacing:-1px;">Sched<span style="color:var(--pri);font-family:'DM Serif Display';font-style:italic;">U</span></div>
+          <div style="font-size:9px;color:var(--tx3);margin-top:4px;">Timetable &amp; Scheduling</div>
+        </div>
+        <div style="background:var(--card);border:1px dashed var(--bd);border-radius:12px;padding:14px 20px;text-align:center;min-width:140px;opacity:0.5;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px;">Coming Soon</div>
+          <div style="font-size:22px;color:var(--tx3);">♪ Audio</div>
+          <div style="font-size:9px;color:var(--tx3);margin-top:4px;">Compose &amp; Produce</div>
+        </div>
+        <div style="background:var(--card);border:1px dashed var(--bd);border-radius:12px;padding:14px 20px;text-align:center;min-width:140px;opacity:0.5;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px;">Coming Soon</div>
+          <div style="font-size:22px;color:var(--tx3);">⚙ Automate</div>
+          <div style="font-size:9px;color:var(--tx3);margin-top:4px;">Excel &amp; Workflows</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     PANEL B — SCHEDU PRODUCT
+════════════════════════════════════ -->
+<div class="panel" id="panel-b">
+  <div class="split">
+
+    <!-- LEFT: SchedU info -->
+    <div class="left-info">
+      <div class="sec">
+        <div class="sec-label">SchedU Identity</div>
+        <div style="font-size:11px; color:#6B7280; line-height:1.6;">
+          Inherits Bhusku DNA. Lavender as primary. The <strong style="color:var(--pril);">U</strong> in the wordmark is the brand hook — it means <em style="color:var(--pril);">You</em>.
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Product Colors</div>
+        <div class="chips">
+          <div class="chip"><div class="chip-dot" style="background:#7C6FE0;"></div><div><div class="chip-name">Primary</div><div class="chip-hex">#7C6FE0</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#EDE9FF; border:1px solid #D8D2FF;"></div><div><div class="chip-name">Lav. Mist</div><div class="chip-hex">#EDE9FF</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#13111E; border:1px solid #2A2642;"></div><div><div class="chip-name">Sidebar</div><div class="chip-hex">#13111E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#F9F8FF; border:1px solid #E8E4FF;"></div><div><div class="chip-name">App BG</div><div class="chip-hex">#F9F8FF</div></div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Buttons &amp; Badges</div>
+        <div class="btn-row">
+          <button class="pbtn" style="background:#7C6FE0;color:#fff;">✨ New Timetable</button>
+          <button class="pbtn" style="background:#EDE9FF;color:#13111E;border:1px solid #D8D2FF;">View →</button>
+          <button class="pbtn" style="background:transparent;color:#7C6FE0;border:1.5px solid #7C6FE0;">Export</button>
+        </div>
+        <div class="badge-row">
+          <span class="badge" style="background:#EDE9FF;color:#7C6FE0;border:1px solid #D8D2FF;">📋 Draft</span>
+          <span class="badge" style="background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0;">✓ Published</span>
+          <span class="badge" style="background:#FFFBEB;color:#D4920E;border:1px solid #FDE68A;">⚠ 3 Conflicts</span>
+          <span class="badge" style="background:#F9F8FF;color:#8B87AD;border:1px solid #E8E4FF;">🔄 Substitute</span>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Timetable Color Key</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:3px;height:14px;border-radius:2px;background:var(--acc-lang);"></div><span style="font-size:10px;color:#9CA3AF;">Languages — <code style="font-size:9px;color:var(--pril);">#7C6FE0</code></span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:3px;height:14px;border-radius:2px;background:var(--acc-sci);"></div><span style="font-size:10px;color:#9CA3AF;">Science / Maths</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:3px;height:14px;border-radius:2px;background:var(--acc-hum);"></div><span style="font-size:10px;color:#9CA3AF;">Humanities / EVS</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:3px;height:14px;border-radius:2px;background:var(--acc-art);"></div><span style="font-size:10px;color:#9CA3AF;">Arts / Music</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:3px;height:14px;border-radius:2px;background:var(--acc-spt);"></div><span style="font-size:10px;color:#9CA3AF;">Physical / Sports</span></div>
+          <div style="font-size:9px;color:var(--dk4);margin-top:3px;">White cell + 3px left border only. No fills.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SchedU wordmark showcase -->
+    <div class="brand-showcase">
+
+      <!-- Big SchedU wordmark -->
+      <div style="text-align:center;">
+        <div class="schedu-big" style="justify-content:center;">
+          <span class="sched-part">Sched</span><span class="u-part">U</span>
+        </div>
+        <div class="by-bhusku">by <span>bhusku</span></div>
+      </div>
+
+      <!-- Wordmark variants -->
+      <div style="display:flex;gap:20px;align-items:stretch;flex-wrap:wrap;justify-content:center;">
+
+        <!-- On dark bg -->
+        <div style="background:var(--dk);border-radius:14px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--dk4);margin-bottom:4px;">On Dark</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="32" height="32" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="13" fill="#7C6FE0"/>
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+            <div>
+              <div style="font-size:9px;color:var(--dk4);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">by bhusku</div>
+              <div class="schedu-sm" style="font-size:24px;">Sched<span class="u" style="font-size:26px;">U</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- On white bg -->
+        <div style="background:#fff;border:1px solid var(--bd);border-radius:14px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--tx3);margin-bottom:4px;">On White</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="32" height="32" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="13" fill="#7C6FE0"/>
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+            <div>
+              <div style="font-size:9px;color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">by bhusku</div>
+              <div style="font-family:'Inter';font-size:24px;font-weight:900;color:var(--tx);letter-spacing:-1px;">Sched<span style="color:var(--pri);font-family:'DM Serif Display';font-style:italic;font-size:26px;">U</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compact App variant -->
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--tx3);margin-bottom:4px;">App Topbar</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+              <rect width="52" height="52" rx="13" fill="#7C6FE0"/>
+              <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            </svg>
+            <div style="font-family:'Inter';font-size:16px;font-weight:900;color:var(--tx);letter-spacing:-0.5px;">Sched<span style="color:var(--pri);font-family:'DM Serif Display';font-style:italic;font-size:17px;">U</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Taglines -->
+      <div style="text-align:center;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--tx3);margin-bottom:12px;">Tagline Options</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--tx);">Timetables, built <em style="color:var(--pri);">for you.</em></div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--tx);">Smart scheduling, <em style="color:var(--pri);">your way.</em></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     PANEL C — APP PREVIEW
+════════════════════════════════════ -->
+<div class="panel" id="panel-c">
+  <div class="split">
+
+    <!-- LEFT: App style info -->
+    <div class="left-info">
+
+      <div class="sec">
+        <div class="sec-label">App Color System</div>
+        <div class="chips">
+          <div class="chip"><div class="chip-dot" style="background:#13111E; border:1px solid #2A2642;"></div><div><div class="chip-name">Sidebar BG</div><div class="chip-hex">#13111E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#7C6FE0;"></div><div><div class="chip-name">Accent</div><div class="chip-hex">#7C6FE0</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#F9F8FF; border:1px solid #E8E4FF;"></div><div><div class="chip-name">App BG</div><div class="chip-hex">#F9F8FF</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#EDE9FF; border:1px solid #D8D2FF;"></div><div><div class="chip-name">Lav. Mist</div><div class="chip-hex">#EDE9FF</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#D4920E;"></div><div><div class="chip-name">Gold Warn</div><div class="chip-hex">#D4920E</div></div></div>
+          <div class="chip"><div class="chip-dot" style="background:#22C55E;"></div><div><div class="chip-name">Success</div><div class="chip-hex">#22C55E</div></div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Sidebar Structure</div>
+        <div style="font-size:10px; color:#6B7280; line-height:1.7;">
+          Dark ink-purple sidebar <code style="color:var(--pril); font-size:9px;">#13111E</code><br/>
+          Active item: lavender left border + tint bg<br/>
+          Nav text: muted → full white on hover/active<br/>
+          User card: avatar in lavender
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Dashboard Layout</div>
+        <div style="font-size:10px; color:#6B7280; line-height:1.7;">
+          Two-column grid · 220px left + flex right<br/>
+          Stat cards: white + lavender icon bg<br/>
+          Primary CTA: solid lavender<br/>
+          Timetable: white cells + border-left stripe<br/>
+          Wizard strip: dark bottom bar
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">What Changed</div>
+        <div style="font-size:10px; color:#6B7280; line-height:1.8;">
+          ✦ Sidebar accent: green → lavender<br/>
+          ✦ Sidebar BG: #111827 → #13111E<br/>
+          ✦ App BG: grey → #F9F8FF<br/>
+          ✦ Buttons: green/blue → lavender<br/>
+          ✦ Brand: SchedU logo in topbar<br/>
+          ✦ Bhusku "by" label in sidebar
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Full app shell mockup -->
+    <div class="right-area">
+      <div class="app-shell">
+
+        <!-- Sidebar -->
+        <div class="sb">
+          <div class="sb-brand">
+            <div class="sb-mark">
+              <svg width="16" height="16" viewBox="0 0 52 52" fill="none">
+                <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
+                <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+                <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+              </svg>
+            </div>
+            <div class="sb-wordmark">
+              <div class="by">by bhusku</div>
+              <div class="product">Sched<span>U</span></div>
+            </div>
+          </div>
+          <div class="sb-info">
+            <div class="sb-ws">My Workspace</div>
+            <div class="sb-school">DAV Public School</div>
+            <div class="sb-user">Anita Verma · Owner</div>
+          </div>
+          <div class="sb-nav">
+            <div class="sb-group">MAIN</div>
+            <div class="nav-row on"><span class="ico">⊞</span> Dashboard</div>
+            <div class="nav-row"><span class="ico">📋</span> My Timetables</div>
+            <div class="nav-row"><span class="ico">📅</span> Calendar</div>
+            <div class="nav-row"><span class="ico">📊</span> Reports</div>
+            <div style="height:1px;background:var(--dk2);margin:5px 12px;"></div>
+            <div class="sb-group">MANAGE</div>
+            <div class="nav-row"><span class="ico">👥</span> Resources</div>
+            <div class="nav-row"><span class="ico">⚙</span> Settings</div>
+          </div>
+          <div class="sb-foot">
+            <div class="av">A</div>
+            <div class="av-info">
+              <div class="name">Anita Verma</div>
+              <div class="role">Owner</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="main-c">
+          <div class="page-hdr">
+            <span style="font-size:15px;">🏠</span>
+            <span class="page-title">Good evening, Anita</span>
+            <span class="page-desc">— DAV Public School</span>
+            <span class="page-badge">Owner</span>
+            <div class="page-saved"><div class="page-dot"></div> Saved</div>
+          </div>
+          <div class="content-grid">
+
+            <!-- Left col -->
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <div class="stat-g">
+                <div class="stat-c"><div class="stat-ic">📅</div><div><div class="stat-n">1</div><div class="stat-l">Timetables</div></div></div>
+                <div class="stat-c"><div class="stat-ic">👥</div><div><div class="stat-n">8</div><div class="stat-l">Teachers</div></div></div>
+                <div class="stat-c"><div class="stat-ic">📚</div><div><div class="stat-n">4</div><div class="stat-l">Classes</div></div></div>
+                <div class="stat-c"><div class="stat-ic">📖</div><div><div class="stat-n">8</div><div class="stat-l">Subjects</div></div></div>
+              </div>
+              <div class="act pri"><div class="act-ic">✨</div><div><div class="act-t">New Timetable</div><div class="act-s">AI-powered</div></div><div class="act-arr">›</div></div>
+              <div class="act sec"><div class="act-ic">📋</div><div><div class="act-t">View Timetable</div><div class="act-s">4 classes</div></div><div class="act-arr">›</div></div>
+              <div class="act warn"><div class="act-ic">🔄</div><div><div class="act-t">Substitutions</div><div class="act-s">Mark absent</div></div><div class="act-arr">›</div></div>
+            </div>
+
+            <!-- Right col: timetable -->
+            <div class="tt">
+              <div class="tt-hdr">
+                <span class="tt-hdr-t">My Schedule</span>
+                <span class="tt-chip">📋 Draft</span>
+                <span class="tt-date">12 – 16 May 2025</span>
+              </div>
+              <div class="tt-body">
+                <div class="tt-ch">
+                  <div class="tt-ch-c">Day</div>
+                  <div class="tt-ch-c">P1<div class="t">9:00</div></div>
+                  <div class="tt-ch-c">P2<div class="t">9:40</div></div>
+                  <div class="tt-ch-c">P3<div class="t">10:20</div></div>
+                  <div class="tt-ch-c">P4<div class="t">11:00</div></div>
+                  <div class="tt-ch-c">P5<div class="t">11:40</div></div>
+                  <div class="tt-ch-c brk">☕</div>
+                  <div class="tt-ch-c">P6<div class="t">1:00</div></div>
+                  <div class="tt-ch-c">P7<div class="t">1:40</div></div>
+                </div>
+                <div class="tt-row">
+                  <div class="tt-day"><div class="d">Mon</div><div class="dt">12 May</div></div>
+                  <div class="tt-c cl"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div>
+                  <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div>
+                  <div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div>
+                  <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div>
+                  <div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div>
+                  <div class="tt-c bk"><div class="s">Lunch</div></div>
+                  <div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div>
+                  <div class="tt-c ca"><div class="s">Art</div><div class="tc">Teacher 5</div></div>
+                </div>
+                <div class="tt-row">
+                  <div class="tt-day"><div class="d">Tue</div><div class="dt">13 May</div></div>
+                  <div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div>
+                  <div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div>
+                  <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 5</div></div>
+                  <div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div>
+                  <div class="tt-c ca"><div class="s">Music</div><div class="tc">Teacher 7</div></div>
+                  <div class="tt-c bk"><div class="s">Lunch</div></div>
+                  <div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div>
+                  <div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div>
+                </div>
+                <div class="tt-row">
+                  <div class="tt-day"><div class="d">Wed</div><div class="dt">14 May</div></div>
+                  <div class="tt-c cs"><div class="s">Mathematics</div><div class="tc">Teacher 1</div></div>
+                  <div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div>
+                  <div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div>
+                  <div class="tt-c ca"><div class="s">Music</div><div class="tc">Teacher 7</div></div>
+                  <div class="tt-c ch"><div class="s">EVS</div><div class="tc">Teacher 4</div></div>
+                  <div class="tt-c bk"><div class="s">Lunch</div></div>
+                  <div class="tt-c ch"><div class="s">Social</div><div class="tc">Teacher 4</div></div>
+                  <div class="tt-c cs"><div class="s">Maths</div><div class="tc">Teacher 1</div></div>
+                </div>
+                <div class="tt-row" style="border-bottom:none;">
+                  <div class="tt-day"><div class="d">Thu</div><div class="dt">15 May</div></div>
+                  <div class="tt-c cl"><div class="s">Hindi</div><div class="tc">Teacher 3</div></div>
+                  <div class="tt-c ca"><div class="s">Art</div><div class="tc">Teacher 5</div></div>
+                  <div class="tt-c cs"><div class="s">Maths</div><div class="tc">Teacher 1</div></div>
+                  <div class="tt-c cl"><div class="s">English</div><div class="tc">Teacher 2</div></div>
+                  <div class="tt-c cp"><div class="s">Phys. Ed.</div><div class="tc">Teacher 6</div></div>
+                  <div class="tt-c bk"><div class="s">Lunch</div></div>
+                  <div class="tt-c ca"><div class="s">Art</div><div class="tc">Teacher 5</div></div>
+                  <div class="tt-c ch"><div class="s">G.K.</div><div class="tc">Teacher 8</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Wizard strip -->
+          <div class="wiz-strip">
+            <div class="wiz-s done"><div class="wiz-circle">✓</div><div><div class="wiz-slabel">School</div><div class="wiz-ssub">Board &amp; grades</div></div></div>
+            <div class="wiz-s done"><div class="wiz-circle">✓</div><div><div class="wiz-slabel">Schedule</div><div class="wiz-ssub">Days &amp; periods</div></div></div>
+            <div class="wiz-s act"><div class="wiz-circle">3</div><div><div class="wiz-slabel">Resources</div><div class="wiz-ssub">Classes &amp; teachers</div></div></div>
+            <div class="wiz-s"><div class="wiz-circle">4</div><div><div class="wiz-slabel">Generate</div><div class="wiz-ssub">Build timetable</div></div></div>
+            <div class="wiz-prog"><div class="wp-bar"><div class="wp-fill" style="width:67%;"></div></div><div class="wp-pct">67%</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>

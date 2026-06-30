@@ -1,0 +1,6 @@
+.git
+*.log
+.env
+.env.*
+smartsched-api
+tmp
