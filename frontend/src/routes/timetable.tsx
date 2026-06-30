@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
-import { markActiveTimetablePublished } from "@/lib/ttRegistry"
+import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore } from "@/lib/ttRegistry"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
@@ -1210,6 +1210,11 @@ export function TimetablePage() {
     setShowTeacher, setShowRoom, setEditMode,
     setPeriods, setClassTT, setTeacherTT, setSubstitutions,
   } = store
+
+  // Hydrate the active timetable's snapshot when opened directly (e.g. the
+  // dashboard "View" button or a page refresh) so the grid is never empty.
+  // No-op when the store already has data.
+  useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
   // ── Block-wise (per-shift) view ────────────────────────────
   // When the timetable was generated block-wise, config.blockMeta holds each block's
@@ -3854,11 +3859,18 @@ export function TimetablePage() {
           </div>
 
           {/* ── Publish ── */}
-          <div style={{ display:"flex", alignItems:"center", paddingLeft:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, paddingLeft:8 }}>
             {timetableStatus === "published" ? (
-              <span style={{ padding:"5px 12px", borderRadius:6, border:"1px solid #D8D2FF", background:"#f0fdf4", color:"#166534", fontSize:11, fontWeight:700 }}>
-                🔒 Saved
-              </span>
+              <>
+                <span style={{ padding:"5px 12px", borderRadius:6, border:"1px solid #D8D2FF", background:"#f0fdf4", color:"#166534", fontSize:11, fontWeight:700 }}>
+                  🔒 Published
+                </span>
+                <button onClick={() => { setTimetableStatus("draft"); markActiveTimetableUnpublished() }}
+                  title="Revert to draft — removes it from the active schedule"
+                  style={{ padding:"5px 12px", borderRadius:6, border:"1px solid #E5EBF5", background:"#fff", color:"#64748b", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                  Unpublish
+                </button>
+              </>
             ) : (
               <button onClick={() => setPublishConfirm(true)}
                 style={{ padding:"5px 14px", borderRadius:6, border:"none", background:"#7C6FE0", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>

@@ -1224,6 +1224,39 @@ export function DashboardPage() {
     window.location.href = '/wizard'
   }
 
+  // Open a generated timetable in the full read/edit VIEW (filters, faculty/room
+  // toggles, substitution tools) rather than the wizard. Restores the snapshot
+  // first so the view is never empty when opened from the dashboard.
+  const handleViewTimetable = async (t: TTEntry) => {
+    const currentId = getActiveTTId()
+    if (currentId !== t.id) {
+      if (currentId) saveTTSnapshot(currentId)
+      setActiveTTId(t.id)
+      let restored = false
+      if (SERVER_BACKED) {
+        try {
+          const snap = await ttRepo.fetchTimetableSnapshot(t.id)
+          if (snap) { applySnapshot(snap); restored = true }
+        } catch { /* fall through to local cache */ }
+      }
+      if (!restored) restoreTTSnapshot(t.id)
+    }
+    window.location.href = '/timetable'
+  }
+
+  // Revert a published timetable back to a draft. Mirrors the publish action:
+  // updates the list status (what the dashboard renders) and, if it's the
+  // active one, the live store status too.
+  const handleUnpublish = (t: TTEntry) => {
+    const next = ttList.map(x => x.id === t.id ? { ...x, status: 'draft' as TTStatus } : x)
+    setTTList(next)
+    saveTTList(next)
+    if (SERVER_BACKED) {
+      ttRepo.updateTimetableMeta({ ...t, status: 'draft' }).catch(() => { /* best-effort */ })
+    }
+    if (getActiveTTId() === t.id) useTimetableStore.getState().setTimetableStatus('draft')
+  }
+
   // ── Snapshot repair ───────────────────────────────────────────
   // Called when user clicks "Restore Data" on a timetable card.
   // Saves the CURRENT store state (which still contains the classTT/staff/
@@ -1848,7 +1881,8 @@ export function DashboardPage() {
                     {/* Action buttons */}
                     {tt.status === 'active' && (
                       <>
-                        <TtBtn onClick={() => handleContinue(tt)}>Open</TtBtn>
+                        <TtBtn primary onClick={() => handleViewTimetable(tt)}>View</TtBtn>
+                        <TtBtn onClick={() => handleUnpublish(tt)}>Unpublish</TtBtn>
                         <TtBtn onClick={() => {}}>Export</TtBtn>
                       </>
                     )}
@@ -1858,11 +1892,14 @@ export function DashboardPage() {
                       </TtBtn>
                     )}
                     {tt.status === 'archived' && (
-                      <TtBtn onClick={() => { window.location.href = '/timetable' }}>View</TtBtn>
+                      <TtBtn onClick={() => handleViewTimetable(tt)}>View</TtBtn>
                     )}
-                    {/* Restore Data — shown when this timetable's data may have been
-                        overwritten by another timetable's config (no snapshot yet) */}
-                    {!localStorage.getItem(TT_SNAPSHOT_PFX + tt.id) && (
+                    {/* Restore Data — only when this timetable genuinely has NO saved
+                        snapshot (data may have been overwritten by another timetable's
+                        config). Active/generated timetables always have one, so this
+                        never shows for them. Uses snapKey() — the namespaced key the
+                        snapshot is actually stored under. */}
+                    {tt.status !== 'active' && !localStorage.getItem(snapKey(tt.id)) && (
                       <TtBtn onClick={() => handleRepairSnapshot(tt)}>
                         🔧 Restore data
                       </TtBtn>

@@ -58,6 +58,12 @@ export function markActiveTimetablePublished(): void {
   patchActiveTimetableEntry({ status: 'active', wizardStep: 5 })
 }
 
+/** Revert the active timetable to a draft (dashboard shows it as "Draft").
+ *  Keeps wizardStep at 5 so the generated work is preserved and re-publishable. */
+export function markActiveTimetableUnpublished(): void {
+  patchActiveTimetableEntry({ status: 'draft', wizardStep: 5 })
+}
+
 const TT_SNAPSHOT_PFX = 'schedu-tt-snap-'
 const TT_SNAPSHOT_FIELDS = [
   'step','config','sections','staff','subjects','breaks','periods',
