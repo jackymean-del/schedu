@@ -326,8 +326,12 @@ function NameCell({ value, onSave }: { value: string; onSave: (v: string) => voi
     />
   )
   return (
-    <span onClick={() => setE(true)} title="Click to edit"
-      style={{ cursor: 'text', fontSize: 12.5, fontWeight: 600, color: '#111028', padding: '2px 4px', borderRadius: 3, display: 'inline-block' }}
+    <span onClick={() => setE(true)} title={value}
+      style={{
+        cursor: 'text', fontSize: 12.5, fontWeight: 600, color: '#111028',
+        padding: '2px 4px', borderRadius: 3, display: 'block',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}
       onMouseEnter={ev => (ev.currentTarget.style.background = '#F0ECFE')}
       onMouseLeave={ev => (ev.currentTarget.style.background = '')}
     >{value}</span>
@@ -468,10 +472,10 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
         onMouseLeave={e => (e.currentTarget.style.background = '')}
       >
         {/* Name + avatar */}
-        <td style={{ ...TD, padding: '7px 12px', whiteSpace: 'nowrap' }}>
+        <td style={{ ...TD, padding: '7px 12px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             <Avatar name={t.name} />
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
               <NameCell value={t.name} onSave={v => onUpdate({ name: v })} />
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                 <ShortNameCell value={t.shortName} onSave={v => onUpdate({ shortName: v })} />
@@ -850,12 +854,12 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '25%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '26%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '16%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '16%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '20%' }} />
             </colgroup>
             <thead>
               <tr>

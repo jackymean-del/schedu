@@ -1327,13 +1327,10 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
             <div style={{ fontSize: 11.5, color: '#C4C0DC' }}>Use “Bulk Create”, “+ Stream” or “+ Group” above to add classes.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              {/* Class: sizes to content, gets extra space */}
               <col />
-              {/* Strength — tight */}
-              <col style={{ width: 90 }} />
-              {/* Actions — Scope + gap + delete */}
+              <col style={{ width: 110 }} />
               <col style={{ width: 160 }} />
             </colgroup>
             <thead>
