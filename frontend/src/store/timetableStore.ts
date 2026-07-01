@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
+import { DEFAULT_SUBSTITUTION_SETTINGS, type SubstitutionSettings } from '@/lib/substitutionSettings'
 import type {
   AndComboGroup,
   ElectiveSlot,
@@ -188,6 +189,7 @@ interface ScheduState {
   classTT: ClassTimetable
   teacherTT: Record<string, TeacherSchedule>
   substitutions: Record<string, string>
+  substitutionSettings: SubstitutionSettings
   conflicts: Conflict[]
   suggestions: Suggestion[]
   participantPools: ParticipantPool[]
@@ -338,6 +340,7 @@ interface ScheduState {
   setClassTT: (tt: ClassTimetable) => void
   setTeacherTT: (tt: Record<string, TeacherSchedule>) => void
   setSubstitutions: (s: Record<string, string>) => void
+  setSubstitutionSettings: (s: SubstitutionSettings) => void
   setConflicts: (c: Conflict[]) => void
   setSuggestions: (s: Suggestion[]) => void
   setParticipantPools: (p: ParticipantPool[]) => void
@@ -420,7 +423,7 @@ const initialState: Omit<ScheduState,
   | 'setSessionInstances' | 'setTimetableStatus' | 'setTimetableHealthScore'
   | 'setViewTab' | 'setTransposed' | 'setShowTeacher' | 'setShowRoom' | 'setEditMode' | 'setSidebarTab'
   | 'setSections' | 'setLegacySubjects' | 'setStaff' | 'setBreaks' | 'setPeriods'
-  | 'setClassTT' | 'setTeacherTT' | 'setSubstitutions' | 'setConflicts' | 'setSuggestions'
+  | 'setClassTT' | 'setTeacherTT' | 'setSubstitutions' | 'setSubstitutionSettings' | 'setConflicts' | 'setSuggestions'
   | 'setParticipantPools' | 'setFacilities' | 'setTeacherPools' | 'setRooms'
   | 'setOptionalConfigs' | 'setSubjectPools' | 'setSubjectGroups' | 'setSchedulingMode' | 'setWorkingDaysPerYear'
   | 'togglePeriodShiftable' | 'updateCell'
@@ -480,6 +483,7 @@ const initialState: Omit<ScheduState,
   classTT: {},
   teacherTT: {},
   substitutions: {},
+  substitutionSettings: DEFAULT_SUBSTITUTION_SETTINGS,
   conflicts: [],
   suggestions: [],
   participantPools: [],
@@ -646,6 +650,7 @@ export const useTimetableStore = create<ScheduState>()(
         setClassTT: (classTT) => set({ classTT }),
         setTeacherTT: (teacherTT) => set({ teacherTT }),
         setSubstitutions: (substitutions) => set({ substitutions }),
+        setSubstitutionSettings: (substitutionSettings) => set({ substitutionSettings }),
         setConflicts: (conflicts) => set({ conflicts }),
         setSuggestions: (suggestions) => set({ suggestions }),
         setParticipantPools: (participantPools) => set({ participantPools }),
@@ -798,7 +803,7 @@ export const useTimetableStore = create<ScheduState>()(
           step: 1,
           config: defaultWizardConfig,
           sections: [], staff: [], breaks: [], periods: [],
-          classTT: {}, teacherTT: {}, substitutions: {}, conflicts: [],
+          classTT: {}, teacherTT: {}, substitutions: {}, substitutionSettings: DEFAULT_SUBSTITUTION_SETTINGS, conflicts: [],
           suggestions: [], optionalConfigs: [], subjectPools: [],
         }),
 
@@ -863,6 +868,13 @@ export const useTimetableStore = create<ScheduState>()(
           periods: state.periods,
           classTT: state.classTT,
           teacherTT: state.teacherTT,
+          // Must be persisted here too, not just in the per-timetable snapshot:
+          // loadActiveTimetableIntoStore() no-ops once classTT is populated, and
+          // classTT rehydrates from THIS generic persist on a plain page reload —
+          // so any field only captured in the snapshot (not here) would silently
+          // vanish on refresh even though the snapshot itself still has it.
+          substitutions: state.substitutions,
+          substitutionSettings: state.substitutionSettings,
           participantPools: state.participantPools,
           facilities: state.facilities,
           teacherPools: state.teacherPools,

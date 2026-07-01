@@ -14,6 +14,11 @@ import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore, saveActiveTimetableSnapshot } from '@/lib/ttRegistry'
 import { type CalLeave, LEAVE_KEY, loadLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
 import {
+  type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
+  overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
+} from '@/lib/substitutionSettings'
+import { SubstitutionSettingsModal } from '@/components/calendar/SubstitutionSettingsModal'
+import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
   X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
@@ -68,7 +73,8 @@ interface CalEvent {
   date: string; start?: string; end?: string
 }
 interface SubCandidate {
-  name: string; match: boolean; todayReg: number; todaySub: number; weekLoad: number; streak: number
+  name: string; staffId: string; tier: MatchTier
+  todayReg: number; todaySub: number; weekLoad: number; streak: number; score: number
 }
 const LEAVE_TYPES = ['Sick Leave', 'Casual Leave', 'Official Duty', 'Training', 'Personal', 'Other']
 const DURATIONS = [
@@ -177,7 +183,13 @@ export function CalendarPage() {
   }
   const [leaveFor, setLeaveFor] = useState<string | null>(null)   // teacher → Mark Leave modal
   const [subFor, setSubFor]     = useState<string | null>(null)   // teacher → Substitute panel
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
+  const substitutionSettings: SubstitutionSettings = store.substitutionSettings ?? DEFAULT_SUBSTITUTION_SETTINGS
+  const updateSettings = (next: SubstitutionSettings) => {
+    store.setSubstitutionSettings(next)
+    saveActiveTimetableSnapshot()
+  }
   const isoDate = toISODate(date)
   const onLeave = (teacher: string) => isOnLeaveOn(leaves, teacher, isoDate)
 
@@ -214,9 +226,26 @@ export function CalendarPage() {
     return { reg, sub }
   }
 
-  // Ranked substitute candidates for one slot: free that period, same-subject first,
-  // then lightest load. Includes today/week load + consecutive-run ("in a row").
-  const candidatesFor = (periodId: string, subject: string, absent: string): SubCandidate[] => {
+  // Does `name` teach `section` (any subject) / `subject` (any section) anywhere
+  // in the WEEK's schedule — the ground truth for familiarity, not just today.
+  const teachesSectionInWeek = (name: string, section: string): boolean =>
+    workDays.some(d => Object.values(classTT[section]?.[d] ?? {}).some((c: any) => c?.teacher === name))
+  const teachesSubjectInWeek = (name: string, subject: string): boolean =>
+    sections.some((s: any) => workDays.some(d =>
+      Object.values(classTT[s.name]?.[d] ?? {}).some((c: any) => c?.subject === subject && c?.teacher === name)))
+  const teachesExactInWeek = (name: string, section: string, subject: string): boolean =>
+    workDays.some(d => Object.values(classTT[section]?.[d] ?? {}).some((c: any) => c?.subject === subject && c?.teacher === name))
+
+  const matchTier = (name: string, section: string, subject: string): MatchTier => {
+    if (teachesExactInWeek(name, section, subject)) return 'exact'
+    if (teachesSectionInWeek(name, section)) return 'class'
+    if (teachesSubjectInWeek(name, subject)) return 'subject'
+    return 'none'
+  }
+
+  // Ranked substitute candidates for one slot: eligible (can-sub, under daily/
+  // weekly sub caps and daily period cap), scored by the configured priorities.
+  const candidatesFor = (section: string, periodId: string, subject: string, absent: string): SubCandidate[] => {
     const busy = new Set<string>()
     for (const s of sections) {
       const c = classTT[s.name]?.[dayKey]?.[periodId]
@@ -226,19 +255,34 @@ export function CalendarPage() {
       const [, d, pid] = k.split('|'); if (d === dayKey && pid === periodId) busy.add(v)
     })
     const pIdx = classPeriods.findIndex((p: any) => p.id === periodId)
+
     return staff
       .filter((st: any) => st.name !== absent && !busy.has(st.name))
+      .filter((st: any) => {
+        const ov = overrideFor(substitutionSettings, st.id)
+        if (!ov.canSub) return false
+        const today = loadOn(st.name, dayKey)
+        if (today.reg + today.sub >= substitutionSettings.defaults.maxPeriodsPerDay) return false
+        if (today.sub >= effectiveMaxPerDay(substitutionSettings, st.id)) return false
+        const weekSubs = workDays.reduce((a, d) => a + loadOn(st.name, d).sub, 0)
+        if (weekSubs >= effectiveMaxPerWeek(substitutionSettings, st.id)) return false
+        return true
+      })
       .map((st: any): SubCandidate => {
-        const match = (st.subjects ?? []).some((s: string) => s === subject || s.endsWith(`::${subject}`))
+        const tier = matchTier(st.name, section, subject)
         const today = loadOn(st.name, dayKey)
         const weekLoad = workDays.reduce((a, d) => { const l = loadOn(st.name, d); return a + l.reg + l.sub }, 0)
+        const weekSubs = workDays.reduce((a, d) => a + loadOn(st.name, d).sub, 0)
         // consecutive run this assignment would create (neighbours already taught)
         let streak = 1
         for (let i = pIdx - 1; i >= 0; i--) { if (teachesAt(st.name, classPeriods[i]?.id)) streak++; else break }
         for (let i = pIdx + 1; i < classPeriods.length; i++) { if (teachesAt(st.name, classPeriods[i]?.id)) streak++; else break }
-        return { name: st.name, match, todayReg: today.reg, todaySub: today.sub, weekLoad, streak }
+        const score = scoreCandidate(substitutionSettings.weights, {
+          tier, todayLoad: today.reg + today.sub, weekLoad, todaySubs: today.sub, weekSubs,
+        })
+        return { name: st.name, staffId: st.id, tier, todayReg: today.reg, todaySub: today.sub, weekLoad, streak, score }
       })
-      .sort((a, b) => (b.match ? 1 : 0) - (a.match ? 1 : 0) || (a.todayReg + a.todaySub) - (b.todayReg + b.todaySub) || a.weekLoad - b.weekLoad)
+      .sort((a, b) => substitutionSettings.defaults.autoSuggestionsEnabled ? b.score - a.score : a.name.localeCompare(b.name))
     function teachesAt(name: string, pid?: string): boolean {
       if (!pid) return false
       return sections.some((s: any) => {
@@ -259,14 +303,16 @@ export function CalendarPage() {
     store.setSubstitutions(next)
     saveActiveTimetableSnapshot()
   }
-  // Auto-assign the best candidate to every uncovered slot of the absent teacher.
+  // Auto-assign the best candidate to every uncovered slot of the absent
+  // teacher — only among faculty flagged Auto (not Manual) in Faculty Settings.
   const autoAssign = (teacher: string) => {
     const next = { ...substitutions }
     const usedThisPeriod: Record<string, Set<string>> = {}
     for (const slot of slotsOf(teacher)) {
       const key = `${slot.section}|${dayKey}|${slot.periodId}`
       if (next[key]) continue
-      const cands = candidatesFor(slot.periodId, slot.subject, teacher)
+      const cands = candidatesFor(slot.section, slot.periodId, slot.subject, teacher)
+        .filter(c => overrideFor(substitutionSettings, c.staffId).autoAssign)
         .filter(c => !usedThisPeriod[slot.periodId]?.has(c.name))
       const best = cands[0]
       if (best) {
@@ -408,7 +454,7 @@ export function CalendarPage() {
             >
               <Plus size={18} strokeWidth={2.6} /> Add Event
             </button>
-            <button title="Settings" style={iconBtn}><Settings size={17} /></button>
+            <button title="Substitution Settings" onClick={() => setSettingsOpen(true)} style={iconBtn}><Settings size={17} /></button>
             <button title="Share" style={iconBtn}><Share2 size={17} /></button>
           </div>
         </div>
@@ -610,6 +656,16 @@ export function CalendarPage() {
           onClear={clearSub}
           onAutoAssign={() => autoAssign(subFor)}
           onClose={() => setSubFor(null)}
+          settings={substitutionSettings}
+        />
+      )}
+
+      {settingsOpen && (
+        <SubstitutionSettingsModal
+          settings={substitutionSettings}
+          staff={staff.map((s: any) => ({ id: s.id, name: s.name }))}
+          onChange={updateSettings}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
     </div>
@@ -885,17 +941,26 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
   )
 }
 
+const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: string; bg: string }> = {
+  exact:   { label: 'Exact Match',    color: '#16A34A', bg: '#DCFCE7' },
+  class:   { label: 'Knows Class',    color: '#2563EB', bg: '#E8F0FF' },
+  subject: { label: 'Knows Subject',  color: '#7C6FE0', bg: '#EDE9FF' },
+}
+
 // ── Substitute panel ───────────────────────────────────────────
-function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose }: {
+function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
   teacher: string; dayLabel: string
   slots: { section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
   subAt: (section: string, periodId: string) => string | undefined
-  candidatesFor: (periodId: string, subject: string, absent: string) => SubCandidate[]
+  candidatesFor: (section: string, periodId: string, subject: string, absent: string) => SubCandidate[]
   onAssign: (section: string, periodId: string, name: string) => void
   onClear: (section: string, periodId: string) => void
   onAutoAssign: () => void
   onClose: () => void
+  settings: SubstitutionSettings
 }) {
+  const showRanking = settings.defaults.autoSuggestionsEnabled
+  const maxShow = settings.defaults.maxSuggestionsToShow ?? Infinity
   const covered = slots.filter(s => subAt(s.section, s.periodId)).length
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -911,7 +976,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            {slots.length > 0 && (
+            {slots.length > 0 && showRanking && (
               <button onClick={onAutoAssign}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 800,
                   background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', color: '#fff', boxShadow: '0 6px 16px rgba(124,111,224,0.3)' }}>
@@ -934,7 +999,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {slots.map(slot => {
                 const current = subAt(slot.section, slot.periodId)
-                const cands = candidatesFor(slot.periodId, slot.subject, teacher)
+                const cands = candidatesFor(slot.section, slot.periodId, slot.subject, teacher)
                 return (
                   <div key={`${slot.section}|${slot.periodId}`} style={{ display: 'flex', gap: 14, background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16 }}>
                     {/* slot info */}
@@ -959,16 +1024,17 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
                         <div style={{ fontSize: 12.5, color: '#9A95BC', padding: '10px 0' }}>No free teacher this period.</div>
                       ) : (
                         <div className="cal-scroll" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-                          {cands.slice(0, 12).map(c => {
+                          {cands.slice(0, maxShow).map(c => {
                             const active = current === c.name
+                            const badge = showRanking && c.tier !== 'none' ? TIER_BADGE[c.tier] : null
                             return (
                               <button key={c.name} onClick={() => onAssign(slot.section, slot.periodId, c.name)}
                                 style={{ width: 178, flexShrink: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
                                   border: active ? '1.5px solid #2563EB' : '1.5px solid #ECE9FB', background: active ? '#F5F9FF' : '#fff',
                                   borderRadius: 12, padding: 12 }}>
                                 <div style={{ fontSize: 13.5, fontWeight: 800, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                                {c.match && (
-                                  <span style={{ display: 'inline-block', marginTop: 5, fontSize: 10, fontWeight: 700, color: '#2563EB', background: '#E8F0FF', padding: '2px 8px', borderRadius: 12 }}>Same Subject</span>
+                                {badge && (
+                                  <span style={{ display: 'inline-block', marginTop: 5, fontSize: 10, fontWeight: 700, color: badge.color, background: badge.bg, padding: '2px 8px', borderRadius: 12 }}>{badge.label}</span>
                                 )}
                                 <div style={{ display: 'flex', gap: 12, marginTop: 9 }}>
                                   <div>
