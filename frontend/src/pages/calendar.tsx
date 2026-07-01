@@ -15,7 +15,7 @@ import { loadActiveTimetableIntoStore, saveActiveTimetableSnapshot } from '@/lib
 import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
-  X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise,
+  X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
 } from 'lucide-react'
 
 // ── constants ──────────────────────────────────────────────────
@@ -59,7 +59,7 @@ const ROW_H      = 108   // entity row height
 const RULER_H    = 54    // time-ruler header height
 const CELL_GAP   = 9
 
-type Mode = 'class' | 'teacher' | 'room'
+type Mode = 'class' | 'teacher' | 'room' | 'subject'
 type View = 'day' | 'month'
 
 interface CalEvent {
@@ -131,6 +131,7 @@ export function CalendarPage() {
   const sections: any[] = store.sections ?? []
   const staff: any[]    = store.staff ?? []
   const rooms: any[]    = store.rooms ?? []
+  const subjects: any[] = store.subjects ?? store.legacySubjects ?? []
   const periods: any[]  = store.periods ?? []
   const classTT         = store.classTT ?? {}
   const config          = store.config ?? {}
@@ -291,7 +292,7 @@ export function CalendarPage() {
         const c = sd[p.id]
         if (!c?.subject) continue
         const s = subAt(entity, p.id)
-        out.push(mkBlock(p.id, p.id, c.subject, s || c.teacher || '', c.room ?? '', entity, s))
+        out.push(mkBlock(p.id, p.id, c.subject, s || c.teacher || '', c.room ?? '', c.subject, s))
       }
     } else if (mode === 'teacher') {
       for (const s of sections) {
@@ -304,7 +305,7 @@ export function CalendarPage() {
           if (effective === entity) out.push(mkBlock(`${s.name}|${p.id}`, p.id, c.subject, s.name, c.room ?? '', c.subject, sub && sub === entity ? sub : undefined))
         }
       }
-    } else {
+    } else if (mode === 'room') {
       for (const s of sections) {
         const sd = classTT[s.name]?.[dayKey] ?? {}
         for (const p of periods) {
@@ -314,11 +315,23 @@ export function CalendarPage() {
           out.push(mkBlock(`${s.name}|${p.id}`, p.id, c.subject, s.name, sub || c.teacher || '', c.subject, sub))
         }
       }
+    } else {
+      // subject mode: this subject's periods across every class — block shows
+      // the class name (bold) and the covering teacher underneath.
+      for (const s of sections) {
+        const sd = classTT[s.name]?.[dayKey] ?? {}
+        for (const p of periods) {
+          const c = sd[p.id]
+          if (!c?.subject || c.subject !== entity) continue
+          const sub = subAt(s.name, p.id)
+          out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, sub || c.teacher || '', c.room ?? '', s.name, sub))
+        }
+      }
     }
     return out
-    function mkBlock(key: string, periodId: string, subject: string, line2: string, room: string, colorSeed: string, sub?: string): Block {
+    function mkBlock(key: string, periodId: string, title: string, line2: string, room: string, colorSeed: string, sub?: string): Block {
       const t = periodTimes[periodId] ?? { startMin: dayStart, endMin: dayStart + 45, type: 'teaching' }
-      return { key, title: subject, line2, room, startMin: t.startMin, endMin: t.endMin, idx: hashIndex(colorSeed), sub: sub || undefined }
+      return { key, title, line2, room, startMin: t.startMin, endMin: t.endMin, idx: hashIndex(colorSeed), sub: sub || undefined }
     }
   }
 
@@ -326,15 +339,26 @@ export function CalendarPage() {
     let list: { id: string; name: string }[]
     if (mode === 'class')   list = sections.map(s => ({ id: s.name, name: s.name }))
     else if (mode === 'teacher') list = staff.map(s => ({ id: s.name, name: s.name }))
-    else list = rooms.map(r => {
+    else if (mode === 'room') list = rooms.map(r => {
       const n = r.actualName || r.generatedName || r.name || 'Room'
       return { id: n, name: n }
     })
+    else {
+      // Union of the configured subject list and whatever subject names
+      // actually appear in today's schedule, so the tab is never empty even
+      // if a class cell references a subject that isn't in the master list.
+      const names = new Set<string>(subjects.map((s: any) => s.name).filter(Boolean))
+      for (const s of sections) {
+        const sd = classTT[s.name]?.[dayKey] ?? {}
+        Object.values(sd).forEach((c: any) => { if (c?.subject) names.add(c.subject) })
+      }
+      list = Array.from(names).sort().map(n => ({ id: n, name: n }))
+    }
     const q = query.trim().toLowerCase()
     return q ? list.filter(e => e.name.toLowerCase().includes(q)) : list
-  }, [mode, sections, staff, rooms, query])
+  }, [mode, sections, staff, rooms, subjects, classTT, dayKey, query])
 
-  const colLabel = mode === 'class' ? 'Class' : mode === 'teacher' ? 'Teacher' : 'Room'
+  const colLabel = mode === 'class' ? 'Class' : mode === 'teacher' ? 'Teacher' : mode === 'room' ? 'Room' : 'Subject'
 
   // Current-time cursor position (only when viewing today and within the span).
   const todayISO = toISODate(now)
@@ -427,12 +451,13 @@ export function CalendarPage() {
                 </button>
               ))}
             </div>
-            {/* Faculty / Classes / Rooms */}
+            {/* Faculty / Classes / Subjects / Rooms */}
             <div style={pillGroup}>
               {([
-                { m: 'teacher' as Mode, label: 'Faculty', icon: <Users size={14} /> },
-                { m: 'class'   as Mode, label: 'Classes', icon: <GraduationCap size={14} /> },
-                { m: 'room'    as Mode, label: 'Rooms',   icon: <Building2 size={14} /> },
+                { m: 'teacher' as Mode, label: 'Faculty',  icon: <Users size={14} /> },
+                { m: 'class'   as Mode, label: 'Classes',  icon: <GraduationCap size={14} /> },
+                { m: 'subject' as Mode, label: 'Subjects', icon: <BookOpen size={14} /> },
+                { m: 'room'    as Mode, label: 'Rooms',    icon: <Building2 size={14} /> },
               ]).map(t => (
                 <button key={t.m} className="cal-tab" onClick={() => setMode(t.m)}
                   style={{ ...pillBtn(mode === t.m), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
