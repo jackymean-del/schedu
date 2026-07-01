@@ -21,6 +21,7 @@ import { GradeInput } from '@/components/GradeInput'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
 import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
+import { DashboardPulse } from '@/components/DashboardPulse'
 import { loadLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary } from '@/lib/scheduleToday'
 import type { ExportSheet } from '@/lib/exportData'
@@ -1411,33 +1412,6 @@ export function DashboardPage() {
   const onLeaveCount   = todaySummary?.teachersOnLeave.length ?? 0
   const uncoveredCount = todaySummary?.uncoveredSlots.length ?? 0
 
-  const stats = [
-    {
-      label: "Today's periods",
-      value: todaySummary?.periodsToday ?? 0,
-      sub: !hasTimetables ? 'No schedule yet' : todaySummary?.isWorkDay ? 'scheduled today' : 'No classes today',
-      red: false,
-    },
-    {
-      label: 'Teachers on leave',
-      value: onLeaveCount,
-      sub: onLeaveCount ? 'tap to view' : 'All present',
-      red: false,
-    },
-    {
-      label: 'Uncovered periods',
-      value: uncoveredCount,
-      sub: uncoveredCount ? 'Needs a sub' : 'All covered',
-      red: uncoveredCount > 0,
-    },
-    {
-      label: 'Conflicts',
-      value: conflicts,
-      sub: conflicts ? 'Needs attention' : 'No conflicts',
-      red: conflicts > 0,
-    },
-  ]
-
   const SW = sidebarOpen ? W_EXPANDED : W_COLLAPSED
   const initials = (user.name ?? 'U')
     .split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
@@ -1746,25 +1720,19 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-            {stats.map(s => (
-              <div key={s.label} style={{
-                background: '#fff', borderRadius: 10,
-                border: '1px solid #E5E7EB', padding: '14px 16px',
-              }}>
-                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>{s.label}</div>
-                <div style={{
-                  fontSize: 28, fontWeight: 800, lineHeight: 1,
-                  color: s.red ? '#EF4444' : '#13111E',
-                  fontFamily: "'DM Mono', monospace", marginBottom: 5,
-                }}>
-                  {s.value}
-                </div>
-                <div style={{ fontSize: 12, color: '#9CA3AF' }}>{s.sub}</div>
-              </div>
-            ))}
-          </div>
+          {/* Pulse — one plain-language status line + the action that matters */}
+          <DashboardPulse
+            hasSchedule={hasTimetables}
+            isWorkDay={todaySummary?.isWorkDay ?? false}
+            periodsToday={todaySummary?.periodsToday ?? 0}
+            uncovered={uncoveredCount}
+            onLeave={onLeaveCount}
+            covered={todaySummary?.coveredSlots.length ?? 0}
+            conflicts={conflicts}
+            classes={sections.length}
+            teachers={staff.length}
+            onNewSchedule={() => setShowCreate(true)}
+          />
 
           {/* Timetables */}
           <div style={{ marginBottom: 24 }}>
