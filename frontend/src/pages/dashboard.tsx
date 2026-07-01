@@ -20,7 +20,9 @@ import { parseGradeLevel, toRoman, tidyGradeLabel } from '@/lib/gradeParse'
 import { GradeInput } from '@/components/GradeInput'
 import { AppFooter } from '@/components/AppFooter'
 import { ExportControls } from '@/components/ExportControls'
-import { DashboardTimetablePanel } from '@/components/DashboardTimetablePanel'
+import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
+import { loadLeaves } from '@/lib/leaveUtils'
+import { computeTodaySummary } from '@/lib/scheduleToday'
 import type { ExportSheet } from '@/lib/exportData'
 import {
   Home, CalendarDays, Calendar, BarChart2,
@@ -1396,30 +1398,37 @@ export function DashboardPage() {
   // user actually has timetables; otherwise show a clean empty state. This is
   // deterministic (no dependency on the async list fetch / store reset).
   const hasTimetables = ttList.length > 0
-  const classCount    = hasTimetables ? sections.length : 0
-  const teacherCount  = hasTimetables ? staff.length : 0
   const conflicts     = hasTimetables ? (store.conflicts ?? []).length : 0
-  const activeTTs  = ttList.filter(t => t.status === 'active').length
-  const draftTTs   = ttList.filter(t => t.status === 'draft').length
+
+  // "Today" stats — actionable, day-specific numbers (what's running, who's
+  // out, what still needs a sub) instead of static institution-wide counts
+  // that just repeat what the schedules list below already shows.
+  const todaySummary = hasTimetables ? computeTodaySummary({
+    periods: store.periods ?? [], sections, classTT: store.classTT ?? {}, config: store.config ?? {},
+    substitutions: store.substitutions ?? {}, leaves: loadLeaves(user?.id ?? ''),
+    conflicts, date: new Date(),
+  }) : null
+  const onLeaveCount   = todaySummary?.teachersOnLeave.length ?? 0
+  const uncoveredCount = todaySummary?.uncoveredSlots.length ?? 0
 
   const stats = [
     {
-      label: 'Schedules',
-      value: ttList.filter(t => t.status !== 'archived').length,
-      sub: [activeTTs && `${activeTTs} active`, draftTTs && `${draftTTs} draft`].filter(Boolean).join(' · ') || 'None yet',
+      label: "Today's periods",
+      value: todaySummary?.periodsToday ?? 0,
+      sub: !hasTimetables ? 'No schedule yet' : todaySummary?.isWorkDay ? 'scheduled today' : 'No classes today',
       red: false,
     },
     {
-      label: 'Total classes',
-      value: classCount,
-      sub: classCount ? `${classCount} sections` : 'No classes yet',
+      label: 'Teachers on leave',
+      value: onLeaveCount,
+      sub: onLeaveCount ? 'tap to view' : 'All present',
       red: false,
     },
     {
-      label: 'Teachers',
-      value: teacherCount,
-      sub: teacherCount ? `${teacherCount} staff` : 'No staff yet',
-      red: false,
+      label: 'Uncovered periods',
+      value: uncoveredCount,
+      sub: uncoveredCount ? 'Needs a sub' : 'All covered',
+      red: uncoveredCount > 0,
     },
     {
       label: 'Conflicts',
@@ -1967,10 +1976,12 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Active timetable — inline read-only view (Section/Faculty/Subject/
-              Room filters + faculty/room toggles). Renders only when an active
-              timetable with data exists. */}
-          <DashboardTimetablePanel />
+          {/* A calm glance at today's schedule — no toolbar, no filters, just
+              today's periods and anything needing attention. The full editor
+              (Traditional/Calendar toggle, print, share, substitution, etc.)
+              lives at /timetable, one click away, rather than being duplicated
+              here. Renders only when an active schedule with data exists. */}
+          <DashboardTodayPanel />
 
           {/* Quick actions */}
           <div>

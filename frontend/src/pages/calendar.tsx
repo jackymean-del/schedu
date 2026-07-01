@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore, saveActiveTimetableSnapshot } from '@/lib/ttRegistry'
+import { type CalLeave, LEAVE_KEY, loadLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
 import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
@@ -66,14 +67,9 @@ interface CalEvent {
   id: string; title: string; description?: string; type: string
   date: string; start?: string; end?: string
 }
-interface CalLeave {
-  id: string; teacher: string; date: string
-  duration: 'full' | 'half' | 'long'; endDate?: string; type: string; reason?: string
-}
 interface SubCandidate {
   name: string; match: boolean; todayReg: number; todaySub: number; weekLoad: number; streak: number
 }
-const LEAVE_KEY = 'schedu-cal-leave'
 const LEAVE_TYPES = ['Sick Leave', 'Casual Leave', 'Official Duty', 'Training', 'Personal', 'Other']
 const DURATIONS = [
   { key: 'full' as const, label: 'Full Day', icon: Sun },
@@ -174,9 +170,7 @@ export function CalendarPage() {
   const subAt = (section: string, periodId: string) => substitutions[`${section}|${dayKey}|${periodId}`]
 
   // ── Leave & substitution ──
-  const [leaves, setLeaves] = useState<CalLeave[]>(() => {
-    try { return JSON.parse(localStorage.getItem(`${LEAVE_KEY}:${uid}`) || '[]') } catch { return [] }
-  })
+  const [leaves, setLeaves] = useState<CalLeave[]>(() => loadLeaves(uid))
   const saveLeaves = (next: CalLeave[]) => {
     setLeaves(next)
     try { localStorage.setItem(`${LEAVE_KEY}:${uid}`, JSON.stringify(next)) } catch { /* quota */ }
@@ -185,7 +179,7 @@ export function CalendarPage() {
   const [subFor, setSubFor]     = useState<string | null>(null)   // teacher → Substitute panel
 
   const isoDate = toISODate(date)
-  const onLeave = (teacher: string) => leaves.some(l => l.teacher === teacher && l.date === isoDate)
+  const onLeave = (teacher: string) => isOnLeaveOn(leaves, teacher, isoDate)
 
   const classPeriods = periods.filter((p: any) => p.type !== 'break')
 
