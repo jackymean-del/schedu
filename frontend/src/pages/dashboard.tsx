@@ -19,12 +19,10 @@ import { useOrgProfile } from '@/store/orgProfile'
 import { parseGradeLevel, toRoman, tidyGradeLabel } from '@/lib/gradeParse'
 import { GradeInput } from '@/components/GradeInput'
 import { AppFooter } from '@/components/AppFooter'
-import { ExportControls } from '@/components/ExportControls'
 import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
 import { DashboardPulse } from '@/components/DashboardPulse'
 import { loadLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary } from '@/lib/scheduleToday'
-import type { ExportSheet } from '@/lib/exportData'
 import {
   Home, CalendarDays, Calendar, BarChart2,
   Users, Database, Settings,
@@ -1108,19 +1106,6 @@ export function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
-  // Excel export of the saved-schedules list.
-  const buildScheduleSheets = (): ExportSheet[] => [{
-    name: 'Schedules',
-    rows: [
-      ['Name', 'Status', 'Board', 'Classes', 'Teachers', 'Start', 'End', 'Created'],
-      ...ttList.map(tt => [
-        tt.name ?? '', tt.status ?? '', tt.board ?? '',
-        tt.approxClasses ?? '', tt.approxTeachers ?? '',
-        tt.startDate ?? '', tt.endDate ?? '',
-        tt.createdAt ? new Date(tt.createdAt).toLocaleDateString() : '',
-      ]),
-    ],
-  }]
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [editingTT,     setEditingTT]     = useState<TTEntry | null>(null)
 
@@ -1727,19 +1712,19 @@ export function DashboardPage() {
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <ExportControls filename="schedu-schedules.xlsx" sheets={buildScheduleSheets} title="Saved Schedules" />
               <button
                 onClick={() => setShowCreate(true)}
                 className="db-new-btn"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7,
-                  padding: '8px 16px', borderRadius: 8,
-                  border: '1px solid #D1D5DB', background: '#fff',
-                  fontSize: 13, fontWeight: 600, color: '#13111E',
+                  padding: '10px 18px', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)',
+                  fontSize: 14, fontWeight: 700, color: '#fff',
                   cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 6px 16px rgba(124,111,224,0.28)',
                 }}
               >
-                <Plus size={14} /> New schedule
+                <Plus size={16} strokeWidth={2.6} /> New schedule
               </button>
             </div>
           </div>
