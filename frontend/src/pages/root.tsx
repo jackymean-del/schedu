@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router"
 import { Topbar } from "@/components/layout/Topbar"
 import { useTimetableStore } from "@/store/timetableStore"
 import { AuthGuard } from "@/components/auth/AuthGuard"
+import { AppShell } from "@/components/layout/AppShell"
 
 const STEP_LABELS = [
   'Resources',
@@ -16,7 +17,6 @@ export function RootLayout() {
   const path = window.location.pathname
   const isWizard    = path.startsWith('/wizard')
   const isAuthPage  = path === '/login' || path === '/register'
-  const isDashboard = path === '/dashboard'
   const isHome      = path === '/'
   // Public marketing pages bring their own nav/footer (MarketingChrome)
   const isMarketing =
@@ -30,8 +30,17 @@ export function RootLayout() {
     '/guide', '/profile', '/subscription', '/configure']
   const isProtected = PROTECTED.some(p => path === p || path.startsWith(p + '/'))
 
-  // These pages own their full-screen layout — no app topbar
-  const inner = (isAuthPage || isDashboard || isHome || isMarketing)
+  // Signed-in app pages (everything protected except the wizard, which runs its
+  // own focused chrome) share the persistent AppShell sidebar.
+  const isAppShell = isProtected && !isWizard
+
+  if (isAppShell) {
+    return <AuthGuard><AppShell><Outlet /></AppShell></AuthGuard>
+  }
+
+  // Auth / home / marketing pages own their full-screen layout; the wizard and
+  // any other page get the slim topbar.
+  const inner = (isAuthPage || isHome || isMarketing)
     ? <Outlet />
     : (
       <div style={{ minHeight:'100vh', background:'#F9F8FF', display:'flex', flexDirection:'column' }}>
