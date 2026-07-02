@@ -1417,6 +1417,25 @@ export function DashboardPage() {
     ? `${roomClashes[0].sections.join(' & ')} share ${roomClashes[0].room} at ${fmt12(roomClashes[0].startMin)}.`
     : undefined
 
+  // Distinct venues in play: defined venues unioned with any referenced in the
+  // schedule, so the count is truthful even when venues were assigned inline
+  // rather than added to the venue list.
+  const venueCount = (() => {
+    const names = new Set<string>()
+    for (const r of (store.rooms ?? [])) {
+      const n = r.actualName || r.generatedName || r.name
+      if (n) names.add(n)
+    }
+    for (const days of Object.values(store.classTT ?? {}) as any[]) {
+      for (const day of Object.values(days ?? {}) as any[]) {
+        for (const cell of Object.values(day ?? {}) as any[]) {
+          if (cell?.room) names.add(cell.room)
+        }
+      }
+    }
+    return names.size
+  })()
+
   const SW = sidebarOpen ? W_EXPANDED : W_COLLAPSED
   const initials = (user.name ?? 'U')
     .split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
@@ -1738,6 +1757,7 @@ export function DashboardPage() {
             conflicts={conflicts}
             classes={sections.length}
             teachers={staff.length}
+            venues={venueCount}
             onNewSchedule={() => setShowCreate(true)}
           />
 

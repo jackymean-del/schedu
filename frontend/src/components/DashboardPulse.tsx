@@ -25,6 +25,7 @@ interface Props {
   conflicts: number
   classes: number
   teachers: number
+  venues: number
   onNewSchedule: () => void
 }
 
@@ -131,6 +132,8 @@ export function DashboardPulse(p: Props) {
             <Fact value={p.classes} label={`class${p.classes === 1 ? '' : 'es'}`} />
             <Dotsep />
             <Fact value={p.teachers} label={`teacher${s(p.teachers)}`} />
+            <Dotsep />
+            <Fact value={p.venues} label={`venue${s(p.venues)}`} />
             <Dotsep />
             {p.conflicts > 0 ? (
               <a href="/timetable" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: '#DC2626', textDecoration: 'none' }}>
