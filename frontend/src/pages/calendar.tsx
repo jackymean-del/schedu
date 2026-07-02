@@ -23,6 +23,7 @@ import {
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
   X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
 } from 'lucide-react'
+import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -30,22 +31,8 @@ const DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_KEY = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']
 
-// Soft cell palette (bg / accent text) — vivid but low-contrast for calm density.
-const PALETTE = [
-  '#E9FBEF','#FFEFE6','#EAF1FF','#F3ECFF','#FCE9F3',
-  '#E6F7FF','#FEF6E0','#EAF7EE','#FFF0EA','#EEF2FF',
-  '#E8FBF1','#FFF4E0','#EAF3FF','#FCEEF6',
-]
-const ACCENT = [
-  '#16A34A','#EA580C','#2563EB','#7C3AED','#DB2777',
-  '#0891B2','#CA8A04','#15803D','#C2410C','#4F46E5',
-  '#059669','#D97706','#1D4ED8','#BE185D',
-]
-function hashIndex(name: string): number {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
-  return h % PALETTE.length
-}
+// Colour encodes SUBJECT only (see lib/subjectColors): one deterministic
+// colour per subject everywhere; teachers/venues are identified by text.
 
 const EVENT_TYPES = [
   { key: 'meeting',  label: 'Meeting',  color: '#2563EB' },
@@ -83,9 +70,13 @@ const DURATIONS = [
   { key: 'long' as const, label: 'Long Duration', icon: CalendarDays },
 ]
 interface Block {
-  key: string; title: string; line2: string; room: string
-  startMin: number; endMin: number; idx: number
-  sub?: string   // substitute teacher name when this period is covered
+  key: string
+  title: string          // primary line — the CLASS in faculty/venue lenses, the subject in class lens
+  chip?: string          // subject shown as a coloured chip when it isn't the title
+  line2: string; room: string
+  startMin: number; endMin: number
+  color: SubjectColor    // always derived from the subject
+  sub?: string           // substitute teacher name when this period is covered
 }
 
 const EVENTS_KEY = 'schedu-cal-events'
@@ -329,14 +320,17 @@ export function CalendarPage() {
   const blocksFor = (entity: string): Block[] => {
     const out: Block[] = []
     if (mode === 'class') {
+      // Class lens: the subject IS the primary line (coloured).
       const sd = classTT[entity]?.[dayKey] ?? {}
       for (const p of periods) {
         const c = sd[p.id]
         if (!c?.subject) continue
         const s = subAt(entity, p.id)
-        out.push(mkBlock(p.id, p.id, c.subject, s || c.teacher || '', c.room ?? '', c.subject, s))
+        out.push(mkBlock(p.id, p.id, c.subject, undefined, s || c.teacher || '', c.room ?? '', c.subject, s))
       }
     } else if (mode === 'teacher') {
+      // Faculty lens: the CLASS is primary (a teacher asks "who am I with?"),
+      // subject demoted to a coloured chip.
       for (const s of sections) {
         const sd = classTT[s.name]?.[dayKey] ?? {}
         for (const p of periods) {
@@ -344,36 +338,37 @@ export function CalendarPage() {
           if (!c?.subject) continue
           const sub = subAt(s.name, p.id)
           const effective = sub || c.teacher
-          if (effective === entity) out.push(mkBlock(`${s.name}|${p.id}`, p.id, c.subject, s.name, c.room ?? '', c.subject, sub && sub === entity ? sub : undefined))
+          if (effective === entity) out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, c.subject, '', c.room ?? '', c.subject, sub && sub === entity ? sub : undefined))
         }
       }
     } else if (mode === 'room') {
+      // Venue lens: the CLASS occupying it is primary, subject as chip.
       for (const s of sections) {
         const sd = classTT[s.name]?.[dayKey] ?? {}
         for (const p of periods) {
           const c = sd[p.id]
           if (!c?.subject || (c.room ?? '') !== entity) continue
           const sub = subAt(s.name, p.id)
-          out.push(mkBlock(`${s.name}|${p.id}`, p.id, c.subject, s.name, sub || c.teacher || '', c.subject, sub))
+          out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, c.subject, sub || c.teacher || '', '', c.subject, sub))
         }
       }
     } else {
-      // subject mode: this subject's periods across every class — block shows
-      // the class name (bold) and the covering teacher underneath.
+      // Subject lens: rows are subjects, so the class is primary; colour
+      // stays the row-subject's colour for a consistent band per row.
       for (const s of sections) {
         const sd = classTT[s.name]?.[dayKey] ?? {}
         for (const p of periods) {
           const c = sd[p.id]
           if (!c?.subject || c.subject !== entity) continue
           const sub = subAt(s.name, p.id)
-          out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, sub || c.teacher || '', c.room ?? '', s.name, sub))
+          out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, undefined, sub || c.teacher || '', c.room ?? '', entity, sub))
         }
       }
     }
     return out
-    function mkBlock(key: string, periodId: string, title: string, line2: string, room: string, colorSeed: string, sub?: string): Block {
+    function mkBlock(key: string, periodId: string, title: string, chip: string | undefined, line2: string, room: string, subjectName: string, sub?: string): Block {
       const t = periodTimes[periodId] ?? { startMin: dayStart, endMin: dayStart + 45, type: 'teaching' }
-      return { key, title, line2, room, startMin: t.startMin, endMin: t.endMin, idx: hashIndex(colorSeed), sub: sub || undefined }
+      return { key, title, chip, line2, room, startMin: t.startMin, endMin: t.endMin, color: subjectColor(subjectName), sub: sub || undefined }
     }
   }
 
@@ -381,10 +376,21 @@ export function CalendarPage() {
     let list: { id: string; name: string }[]
     if (mode === 'class')   list = sections.map(s => ({ id: s.name, name: s.name }))
     else if (mode === 'teacher') list = staff.map(s => ({ id: s.name, name: s.name }))
-    else if (mode === 'room') list = rooms.map(r => {
-      const n = r.actualName || r.generatedName || r.name || 'Room'
-      return { id: n, name: n }
-    })
+    else if (mode === 'room') {
+      // Union of defined venues and any venue referenced inline in the
+      // schedule, so a playground assigned on a cell still gets a row — and
+      // shows as "Empty now" in Live when unoccupied.
+      const names = new Set<string>()
+      for (const r of rooms) {
+        const n = r.actualName || r.generatedName || r.name
+        if (n) names.add(n)
+      }
+      for (const s of sections) {
+        const sd = classTT[s.name]?.[dayKey] ?? {}
+        Object.values(sd).forEach((c: any) => { if (c?.room) names.add(c.room) })
+      }
+      list = Array.from(names).sort().map(n => ({ id: n, name: n }))
+    }
     else {
       // Union of the configured subject list and whatever subject names
       // actually appear in today's schedule, so the tab is never empty even
@@ -417,6 +423,29 @@ export function CalendarPage() {
   const dayEvents = events
     .filter(e => e.date === toISODate(date))
     .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
+
+  // Month view: what each weekday actually holds — session count plus the
+  // distinct classes / teachers / venues / subjects in play that day.
+  const statsByDay = useMemo(() => {
+    const out: Record<string, { sessions: number; classes: number; teachers: number; venues: number; subjects: number }> = {}
+    for (const dk of DAY_KEY) {
+      if (!workDays.includes(dk)) continue
+      let sessions = 0
+      const cls = new Set<string>(), tch = new Set<string>(), ven = new Set<string>(), sub = new Set<string>()
+      for (const s of sections) {
+        const sd = classTT[s.name]?.[dk] ?? {}
+        for (const c of Object.values(sd) as any[]) {
+          if (!c?.subject) continue
+          sessions++
+          cls.add(s.name); sub.add(c.subject)
+          if (c.teacher) tch.add(c.teacher)
+          if (c.room) ven.add(c.room)
+        }
+      }
+      out[dk] = { sessions, classes: cls.size, teachers: tch.size, venues: ven.size, subjects: sub.size }
+    }
+    return out
+  }, [sections, classTT, workDays])
 
   const shift = (d: number) => setDate(prev => { const n = new Date(prev); n.setDate(n.getDate() + d); return n })
 
@@ -542,7 +571,7 @@ export function CalendarPage() {
 
         {/* ── Main ───────────────────────────────────────────── */}
         {view === 'month'
-          ? <MonthGrid date={date} setDate={setDate} events={events} onAdd={() => setAddOpen(true)} />
+          ? <MonthGrid date={date} setDate={setDate} events={events} onAdd={() => setAddOpen(true)} statsByDay={statsByDay} />
           : !hasTimetable
           ? <EmptyState />
           : !isWorkDay
@@ -696,7 +725,14 @@ export function CalendarPage() {
 //  progress ring per session. In the Faculty and Venue lenses it also
 //  surfaces who's free / what's empty right now — an original take, not a grid.
 // ══════════════════════════════════════════════════════════════
-interface LiveActivity { id: string; title: string; sub: string; idx: number; elapsed: number; total: number }
+interface LiveActivity {
+  id: string
+  title: string          // primary: class in faculty/venue lens, subject otherwise
+  chip?: string          // subject chip when the primary is a class
+  sub: string
+  color: SubjectColor
+  elapsed: number; total: number
+}
 
 function LiveBoard(props: {
   scrub: number; onScrub: (m: number) => void; onNow: () => void; following: boolean
@@ -720,24 +756,25 @@ function LiveBoard(props: {
   const at = active ? periodTimes[active.id] : null
   const isBreak = active?.type === 'break'
 
-  // Compute each entity's activity at this moment.
+  // Compute each entity's activity at this moment. Faculty/Venue lenses lead
+  // with the CLASS (the "who/where am I with?" answer); subject rides as a chip.
   const busy: LiveActivity[] = []
   const idle: string[] = []
   if (active && !isBreak) {
     for (const ent of entities) {
-      let a: { title: string; sub: string; seed: string } | null = null
+      let a: { title: string; chip?: string; sub: string; seed: string } | null = null
       if (mode === 'class') {
         const c = classTT[ent.id]?.[dayKey]?.[active.id]
         if (c?.subject) a = { title: c.subject, sub: [effTeacher(ent.id, active.id, c), c.room].filter(Boolean).join(' · '), seed: c.subject }
       } else if (mode === 'teacher') {
         for (const s of sections) {
           const c = classTT[s.name]?.[dayKey]?.[active.id]
-          if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: c.subject, sub: [s.name, c.room].filter(Boolean).join(' · '), seed: c.subject }; break }
+          if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: s.name, chip: c.subject, sub: c.room ?? '', seed: c.subject }; break }
         }
       } else if (mode === 'room') {
         for (const s of sections) {
           const c = classTT[s.name]?.[dayKey]?.[active.id]
-          if (c?.subject && (c.room ?? '') === ent.id) { a = { title: c.subject, sub: [s.name, effTeacher(s.name, active.id, c)].filter(Boolean).join(' · '), seed: c.subject }; break }
+          if (c?.subject && (c.room ?? '') === ent.id) { a = { title: s.name, chip: c.subject, sub: effTeacher(s.name, active.id, c), seed: c.subject }; break }
         }
       } else {
         const classes: string[] = []
@@ -747,12 +784,26 @@ function LiveBoard(props: {
         }
         if (classes.length) a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name }
       }
-      if (a) busy.push({ id: ent.id, title: a.title, sub: a.sub, idx: hashIndex(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
+      if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
       else idle.push(ent.name)
     }
   }
 
   const idleLabel = mode === 'teacher' ? 'Free now' : mode === 'room' ? 'Empty now' : mode === 'subject' ? 'Not running' : 'No class'
+
+  // Timeline segments: per period, the share of classes actually in session.
+  // A break period is all-amber; a teaching period where only some classes
+  // have a lesson renders as a violet/amber horizontal split.
+  const segments: ScrubSegment[] = periods.map((p: any) => {
+    const t = periodTimes[p.id] ?? { startMin: dayStart, endMin: dayStart, type: p.type }
+    const isBrk = p.type === 'break'
+    let teachFrac = 0
+    if (!isBrk && sections.length) {
+      const teaching = sections.filter((s: any) => classTT[s.name]?.[dayKey]?.[p.id]?.subject).length
+      teachFrac = teaching / sections.length
+    }
+    return { id: p.id, name: p.name, startMin: t.startMin, endMin: t.endMin, isBreak: isBrk, teachFrac }
+  })
 
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
@@ -780,7 +831,11 @@ function LiveBoard(props: {
       {/* Scrubber */}
       <div style={{ padding: '0 18px 14px' }}>
         <MomentScrubber dayStart={dayStart} dayEnd={dayEnd} value={scrub} onChange={onScrub}
-          nowMin={viewingToday ? nowMin : null} periods={periods} periodTimes={periodTimes} h24={h24} />
+          nowMin={viewingToday ? nowMin : null} segments={segments} h24={h24} />
+        <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
+          <ScrubLegend swatch={TEACH_BAND} label="Teaching" />
+          <ScrubLegend swatch={BREAK_BAND} label="Break / free" />
+        </div>
       </div>
 
       {/* Board */}
@@ -818,7 +873,7 @@ function LiveBoard(props: {
 }
 
 function LiveCard({ entity, a }: { entity: string; a: LiveActivity }) {
-  const bg = PALETTE[a.idx], accent = ACCENT[a.idx]
+  const { accent, bg } = a.color
   const pct = a.total > 0 ? Math.max(0, Math.min(1, a.elapsed / a.total)) : 0
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 13, padding: '12px 13px', display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -833,11 +888,24 @@ function LiveCard({ entity, a }: { entity: string; a: LiveActivity }) {
       </div>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#9A95BC', marginBottom: 2 }}>{entity}</div>
-        <div style={{ fontSize: 13.5, fontWeight: 800, color: accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: bg, display: 'inline-block', padding: '1px 8px', borderRadius: 6, maxWidth: '100%', boxSizing: 'border-box' }}>{a.title}</div>
+        {a.chip ? (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#25213B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</div>
+            <span style={{ display: 'inline-block', marginTop: 3, maxWidth: '100%', fontSize: 10.5, fontWeight: 800, color: '#fff', background: accent, padding: '1.5px 8px', borderRadius: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>{a.chip}</span>
+          </>
+        ) : (
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: bg, display: 'inline-block', padding: '1px 8px', borderRadius: 6, maxWidth: '100%', boxSizing: 'border-box' }}>{a.title}</div>
+        )}
         {a.sub && <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.sub}</div>}
       </div>
     </div>
   )
+}
+
+function ScrubLegend({ swatch, label }: { swatch: string; label: string }) {
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: '#8B87AD' }}>
+    <span style={{ width: 10, height: 10, borderRadius: 3, background: swatch, border: '1px solid rgba(19,17,30,0.08)' }} />{label}
+  </span>
 }
 
 function SectionLabel({ text, tone }: { text: string; tone: string }) {
@@ -852,12 +920,21 @@ function Idle({ icon, text }: { icon: string; text: string }) {
   </div>
 }
 
-// Draggable day timeline: click or drag anywhere to seek; shows period bands,
-// break gaps, and a live "now" tick.
-function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, periods, periodTimes, h24 }: {
+// One band per period on the scrubber, coloured by what the school is doing:
+// violet = teaching, amber = break. A mixed moment (some classes in class,
+// others on break / without a period) renders as horizontal strips whose
+// heights are proportional to each share — so the timeline itself tells the
+// day's story at a glance.
+interface ScrubSegment { id: string; name?: string; startMin: number; endMin: number; isBreak: boolean; teachFrac: number }
+
+const TEACH_BAND = '#B9AFF0'   // violet — darker in grayscale
+const BREAK_BAND = '#F7D9A0'   // amber — clearly lighter in grayscale
+
+// Draggable day timeline: click or drag anywhere to seek; shows activity
+// bands, break shares, and a live "now" tick.
+function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h24 }: {
   dayStart: number; dayEnd: number; value: number; onChange: (m: number) => void
-  nowMin: number | null; periods: any[]
-  periodTimes: Record<string, { startMin: number; endMin: number; type: string }>; h24: boolean
+  nowMin: number | null; segments: ScrubSegment[]; h24: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const span = Math.max(1, dayEnd - dayStart)
@@ -879,12 +956,29 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, periods, pe
   return (
     <div>
       <div ref={ref} onPointerDown={onDown} style={{ position: 'relative', height: 46, borderRadius: 12, background: '#F4F2FE', border: '1px solid #ECE9FB', cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}>
-        {/* period bands */}
-        {periods.map(p => {
-          const t = periodTimes[p.id]; if (!t) return null
-          const left = pct(t.startMin), w = pct(t.endMin) - pct(t.startMin)
-          const brk = p.type === 'break'
-          return <div key={p.id} title={p.name} style={{ position: 'absolute', left: `${left}%`, width: `${w}%`, top: 6, bottom: 6, borderRadius: 6, background: brk ? 'transparent' : '#E6E1FA', border: brk ? '1px dashed #D8D2F2' : '1px solid #DED8F5' }} />
+        {/* activity bands */}
+        {segments.map(seg => {
+          const left = pct(seg.startMin), w = pct(seg.endMin) - pct(seg.startMin)
+          const teachPct = seg.isBreak ? 0 : Math.round(seg.teachFrac * 100)
+          const title = seg.isBreak ? (seg.name ?? 'Break')
+            : teachPct >= 100 ? (seg.name ?? 'Period')
+            : `${seg.name ?? 'Period'} — ${teachPct}% of classes in session`
+          return (
+            <div key={seg.id} title={title} style={{
+              position: 'absolute', left: `${left}%`, width: `${w}%`, top: 6, bottom: 6,
+              borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+              border: '1px solid rgba(19,17,30,0.07)', pointerEvents: 'none',
+            }}>
+              {seg.isBreak
+                ? <div style={{ flex: 1, background: BREAK_BAND }} />
+                : (
+                  <>
+                    {seg.teachFrac > 0.02 && <div style={{ flex: seg.teachFrac, background: TEACH_BAND }} />}
+                    {seg.teachFrac < 0.98 && <div style={{ flex: 1 - seg.teachFrac, background: BREAK_BAND }} />}
+                  </>
+                )}
+            </div>
+          )
         })}
         {/* now tick */}
         {nowMin !== null && nowMin >= dayStart && nowMin <= dayEnd && (
@@ -904,28 +998,32 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, periods, pe
 }
 
 // ── Session cell ───────────────────────────────────────────────
-// Three calm lines, never more: title (wraps to 2 lines instead of
-// truncating), one combined meta line (who/where), then the time range.
+// Calm lines, never more than three: primary (class or subject, wraps to
+// 2 lines), subject chip when the primary is a class, one meta line, time.
+// The subject NAME is always visible as text, so grayscale prints stay legible.
 function SessionCell({ b, dayStart, h24 }: { b: Block; dayStart: number; h24: boolean }) {
   const left = (b.startMin - dayStart) * PX_PER_MIN + CELL_GAP / 2
   const width = Math.max(76, (b.endMin - b.startMin) * PX_PER_MIN - CELL_GAP)
-  const bg = PALETTE[b.idx], accent = ACCENT[b.idx]
+  const { accent, bg } = b.color
   const meta = [b.line2, b.room].filter(Boolean).join(' · ')
   return (
     <div style={{
       position: 'absolute', left, width, top: 6, height: ROW_H - 12,
       background: bg, borderRadius: 12, borderLeft: `3px solid ${accent}`,
-      padding: '9px 11px', overflow: 'hidden', boxSizing: 'border-box',
+      padding: '8px 11px', overflow: 'hidden', boxSizing: 'border-box',
       display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3,
     }}>
       {b.sub && (
         <span style={{ position: 'absolute', top: 7, right: 8, fontSize: 8.5, fontWeight: 800, letterSpacing: '0.04em', color: '#fff', background: '#2563EB', padding: '1.5px 6px', borderRadius: 5 }}>SUB</span>
       )}
       <div style={{
-        fontSize: 12.5, fontWeight: 800, color: accent, lineHeight: 1.28,
+        fontSize: 12.5, fontWeight: 800, color: b.chip ? '#25213B' : accent, lineHeight: 1.28,
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         overflow: 'hidden', paddingRight: b.sub ? 30 : 0,
       }}>{b.title}</div>
+      {b.chip && (
+        <span style={{ alignSelf: 'flex-start', maxWidth: '100%', fontSize: 10.5, fontWeight: 800, color: '#fff', background: accent, padding: '1.5px 8px', borderRadius: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>{b.chip}</span>
+      )}
       {meta && <div style={{ fontSize: 11, fontWeight: 600, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
       <div style={{ fontSize: 10, color: '#9A95BC' }}>{fmtClock(b.startMin, h24)} – {fmtClock(b.endMin, h24)}</div>
     </div>
@@ -963,8 +1061,12 @@ function RestDay({ day }: { day: string }) {
 }
 
 // ── Month grid (planning view) ─────────────────────────────────
-function MonthGrid({ date, setDate, events, onAdd }: {
+/** What a day-of-week actually holds in the schedule — shown on month cells. */
+interface DayStats { sessions: number; classes: number; teachers: number; venues: number; subjects: number }
+
+function MonthGrid({ date, setDate, events, onAdd, statsByDay }: {
   date: Date; setDate: (d: Date) => void; events: CalEvent[]; onAdd: () => void
+  statsByDay: Record<string, DayStats>
 }) {
   const y = date.getFullYear(), m = date.getMonth()
   const first = new Date(y, m, 1).getDay()
@@ -984,21 +1086,35 @@ function MonthGrid({ date, setDate, events, onAdd }: {
         {cells.map((c, i) => {
           const isToday = c === today.getDate() && m === today.getMonth() && y === today.getFullYear()
           const evs = c ? (evByDay[c] ?? []) : []
+          const st = c ? statsByDay[DAY_KEY[new Date(y, m, c).getDay()]] : undefined
           return (
             <div key={i}
               onClick={() => c && setDate(new Date(y, m, c))}
               onDoubleClick={() => c && onAdd()}
               style={{
-                minHeight: 92, borderRadius: 10, padding: 8, cursor: c ? 'pointer' : 'default',
+                minHeight: 96, borderRadius: 10, padding: 8, cursor: c ? 'pointer' : 'default',
                 background: isToday ? '#F1ECFF' : c ? '#FBFAFF' : 'transparent',
                 border: isToday ? '1.5px solid #7C6FE0' : c ? '1px solid #F2F0FB' : 'none',
               }}>
-              {c && <div style={{ fontSize: 12.5, fontWeight: isToday ? 800 : 600, color: isToday ? '#7C6FE0' : '#13111E', marginBottom: 4 }}>{c}</div>}
-              {evs.slice(0, 3).map(ev => {
+              {c && (
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: isToday ? 800 : 600, color: isToday ? '#7C6FE0' : '#13111E' }}>{c}</span>
+                  {st && st.sessions > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#7C6FE0', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
+                  )}
+                </div>
+              )}
+              {/* Day workload — sessions badge above; classes/teachers/venues/subjects below */}
+              {st && st.sessions > 0 && (
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: '#9A95BC', lineHeight: 1.5, marginBottom: evs.length ? 4 : 0 }}>
+                  {st.classes} cls · {st.teachers} tch<br />{st.venues} ven · {st.subjects} sub
+                </div>
+              )}
+              {evs.slice(0, 2).map(ev => {
                 const meta = EVENT_TYPES.find(t => t.key === ev.type) ?? EVENT_TYPES[5]
                 return <div key={ev.id} style={{ fontSize: 10.5, fontWeight: 600, color: '#fff', background: meta.color, borderRadius: 5, padding: '2px 6px', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
               })}
-              {evs.length > 3 && <div style={{ fontSize: 10, color: '#8B87AD' }}>+{evs.length - 3} more</div>}
+              {evs.length > 2 && <div style={{ fontSize: 10, color: '#8B87AD' }}>+{evs.length - 2} more</div>}
             </div>
           )
         })}
