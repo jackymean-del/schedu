@@ -66,7 +66,7 @@ const RULER_H    = 54    // time-ruler header height
 const CELL_GAP   = 9
 
 type Mode = 'class' | 'teacher' | 'room' | 'subject'
-type View = 'day' | 'month'
+type View = 'live' | 'day' | 'month'
 
 interface CalEvent {
   id: string; title: string; description?: string; type: string
@@ -108,7 +108,9 @@ export function CalendarPage() {
 
   // ── selection state ──
   const [date, setDate] = useState(() => new Date())
-  const [view, setView] = useState<View>('day')
+  const [view, setView] = useState<View>('live')
+  // Scrubbed moment for the Live view (minutes since midnight); null = follow now.
+  const [scrub, setScrub] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('class')
   const [query, setQuery] = useState('')
 
@@ -407,6 +409,11 @@ export function CalendarPage() {
   const showCursor = view === 'day' && viewingToday && nowMin >= dayStart && nowMin <= dayEnd
   const cursorLeft = (nowMin - dayStart) * PX_PER_MIN
 
+  // Live view: the moment being inspected. null follows the clock (clamped to
+  // the school day); dragging the timeline pins it to a specific minute.
+  const clampDay = (m: number) => Math.max(dayStart, Math.min(dayEnd, m))
+  const activeScrub = scrub ?? clampDay(nowMin)
+
   const dayEvents = events
     .filter(e => e.date === toISODate(date))
     .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
@@ -482,12 +489,12 @@ export function CalendarPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            {/* Month / Day */}
+            {/* Live / Day / Month */}
             <div style={pillGroup}>
-              {(['month','day'] as View[]).map(v => (
-                <button key={v} className="cal-tab" onClick={() => setView(v)}
+              {(['live','day','month'] as View[]).map(v => (
+                <button key={v} className="cal-tab" onClick={() => { setView(v); setScrub(null) }}
                   style={pillBtn(view === v)}>
-                  {v === 'month' ? 'Month' : 'Day'}
+                  {v === 'live' ? '● Live' : v === 'day' ? 'Day' : 'Month'}
                 </button>
               ))}
             </div>
@@ -509,7 +516,7 @@ export function CalendarPage() {
         </div>
 
         {/* ── Day events strip ───────────────────────────────── */}
-        {view === 'day' && dayEvents.length > 0 && (
+        {view !== 'month' && dayEvents.length > 0 && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
             {dayEvents.map(ev => {
               const meta = EVENT_TYPES.find(t => t.key === ev.type) ?? EVENT_TYPES[5]
@@ -540,6 +547,16 @@ export function CalendarPage() {
           ? <EmptyState />
           : !isWorkDay
           ? <RestDay day={DOW_FULL[date.getDay()]} />
+          : view === 'live'
+          ? (
+            <LiveBoard
+              scrub={activeScrub} onScrub={setScrub} onNow={() => setScrub(null)}
+              following={scrub === null} nowMin={nowMin} viewingToday={viewingToday}
+              dayStart={dayStart} dayEnd={dayEnd} periods={periods} periodTimes={periodTimes}
+              classTT={classTT} dayKey={dayKey} mode={mode} colLabel={colLabel}
+              entities={entityList} sections={sections} substitutions={substitutions} h24={h24}
+            />
+          )
           : (
             <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
               <div className="cal-scroll" style={{ overflowX: 'auto' }}>
@@ -668,6 +685,220 @@ export function CalendarPage() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Live view — the schedule as a scrubbable moment in time.
+//  Drag the timeline to travel through the day; the board shows what
+//  every class / teacher / venue is doing at that exact minute, with a
+//  progress ring per session. In the Faculty and Venue lenses it also
+//  surfaces who's free / what's empty right now — an original take, not a grid.
+// ══════════════════════════════════════════════════════════════
+interface LiveActivity { id: string; title: string; sub: string; idx: number; elapsed: number; total: number }
+
+function LiveBoard(props: {
+  scrub: number; onScrub: (m: number) => void; onNow: () => void; following: boolean
+  nowMin: number; viewingToday: boolean
+  dayStart: number; dayEnd: number; periods: any[]
+  periodTimes: Record<string, { startMin: number; endMin: number; type: string }>
+  classTT: Record<string, any>; dayKey: string; mode: Mode; colLabel: string
+  entities: { id: string; name: string }[]; sections: any[]
+  substitutions: Record<string, string>; h24: boolean
+}) {
+  const { scrub, onScrub, onNow, following, nowMin, viewingToday, dayStart, dayEnd,
+    periods, periodTimes, classTT, dayKey, mode, colLabel, entities, sections, substitutions, h24 } = props
+
+  const effTeacher = (section: string, pid: string, cell: any) =>
+    substitutions[`${section}|${dayKey}|${pid}`] || cell?.teacher || ''
+
+  // The period slot containing the scrubbed minute.
+  const active = periods.find(p => {
+    const t = periodTimes[p.id]; return t && scrub >= t.startMin && scrub < t.endMin
+  })
+  const at = active ? periodTimes[active.id] : null
+  const isBreak = active?.type === 'break'
+
+  // Compute each entity's activity at this moment.
+  const busy: LiveActivity[] = []
+  const idle: string[] = []
+  if (active && !isBreak) {
+    for (const ent of entities) {
+      let a: { title: string; sub: string; seed: string } | null = null
+      if (mode === 'class') {
+        const c = classTT[ent.id]?.[dayKey]?.[active.id]
+        if (c?.subject) a = { title: c.subject, sub: [effTeacher(ent.id, active.id, c), c.room].filter(Boolean).join(' · '), seed: c.subject }
+      } else if (mode === 'teacher') {
+        for (const s of sections) {
+          const c = classTT[s.name]?.[dayKey]?.[active.id]
+          if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: c.subject, sub: [s.name, c.room].filter(Boolean).join(' · '), seed: c.subject }; break }
+        }
+      } else if (mode === 'room') {
+        for (const s of sections) {
+          const c = classTT[s.name]?.[dayKey]?.[active.id]
+          if (c?.subject && (c.room ?? '') === ent.id) { a = { title: c.subject, sub: [s.name, effTeacher(s.name, active.id, c)].filter(Boolean).join(' · '), seed: c.subject }; break }
+        }
+      } else {
+        const classes: string[] = []
+        for (const s of sections) {
+          const c = classTT[s.name]?.[dayKey]?.[active.id]
+          if (c?.subject === ent.id) classes.push(s.name)
+        }
+        if (classes.length) a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name }
+      }
+      if (a) busy.push({ id: ent.id, title: a.title, sub: a.sub, idx: hashIndex(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
+      else idle.push(ent.name)
+    }
+  }
+
+  const idleLabel = mode === 'teacher' ? 'Free now' : mode === 'room' ? 'Empty now' : mode === 'subject' ? 'Not running' : 'No class'
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
+      {/* Moment header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '16px 18px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <div style={{ fontSize: 30, fontWeight: 800, color: '#13111E', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>{fmtClock(scrub, h24)}</div>
+          <div style={{ fontSize: 13.5, color: '#6B7280' }}>
+            {!active ? (scrub < dayStart ? 'Before school' : 'After school')
+              : isBreak ? (active.name ?? 'Break')
+              : <>{active.name ?? 'Period'} · <span style={{ color: '#16A34A', fontWeight: 700 }}>{Math.max(0, at!.endMin - scrub)} min left</span></>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {viewingToday && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: following ? '#16A34A' : '#9A95BC' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: following ? '#16A34A' : '#CBC9DA' }} />
+              {following ? 'Live' : 'Paused'}
+            </span>
+          )}
+          <button onClick={onNow} style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #E3DEF7', background: '#fff', fontSize: 12.5, fontWeight: 700, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit' }}>Now</button>
+        </div>
+      </div>
+
+      {/* Scrubber */}
+      <div style={{ padding: '0 18px 14px' }}>
+        <MomentScrubber dayStart={dayStart} dayEnd={dayEnd} value={scrub} onChange={onScrub}
+          nowMin={viewingToday ? nowMin : null} periods={periods} periodTimes={periodTimes} h24={h24} />
+      </div>
+
+      {/* Board */}
+      <div style={{ borderTop: '1px solid #F2F0FB', padding: 18, background: '#FBFAFF' }}>
+        {!active ? (
+          <Idle icon="🌙" text={scrub < dayStart ? 'The school day hasn’t started yet.' : 'The school day has ended.'} />
+        ) : isBreak ? (
+          <Idle icon="☕" text={`${active.name ?? 'Break'} — no classes in session right now.`} />
+        ) : (
+          <>
+            {busy.length > 0 && (
+              <div style={{ marginBottom: idle.length ? 18 : 0 }}>
+                <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
+                  {busy.map(b => <LiveCard key={b.id} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                </div>
+              </div>
+            )}
+            {idle.length > 0 && (
+              <div>
+                <SectionLabel text={`${idleLabel} · ${idle.length}`} tone="#9A95BC" />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {idle.map(name => (
+                    <span key={name} style={{ padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>{name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {busy.length === 0 && idle.length === 0 && <Idle icon="📋" text={`No ${colLabel.toLowerCase()} data for this moment.`} />}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LiveCard({ entity, a }: { entity: string; a: LiveActivity }) {
+  const bg = PALETTE[a.idx], accent = ACCENT[a.idx]
+  const pct = a.total > 0 ? Math.max(0, Math.min(1, a.elapsed / a.total)) : 0
+  return (
+    <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 13, padding: '12px 13px', display: 'flex', gap: 12, alignItems: 'center' }}>
+      {/* progress ring */}
+      <div style={{ position: 'relative', width: 40, height: 40, flexShrink: 0 }}>
+        <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#F0EEFA" strokeWidth="4" />
+          <circle cx="20" cy="20" r="16" fill="none" stroke={accent} strokeWidth="4" strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 16}`} strokeDashoffset={`${2 * Math.PI * 16 * (1 - pct)}`} />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: accent }}>{Math.round(pct * 100)}%</div>
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#9A95BC', marginBottom: 2 }}>{entity}</div>
+        <div style={{ fontSize: 13.5, fontWeight: 800, color: accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: bg, display: 'inline-block', padding: '1px 8px', borderRadius: 6, maxWidth: '100%', boxSizing: 'border-box' }}>{a.title}</div>
+        {a.sub && <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.sub}</div>}
+      </div>
+    </div>
+  )
+}
+
+function SectionLabel({ text, tone }: { text: string; tone: string }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 800, color: tone, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+    <span style={{ width: 7, height: 7, borderRadius: 4, background: tone }} />{text}
+  </div>
+}
+function Idle({ icon, text }: { icon: string; text: string }) {
+  return <div style={{ textAlign: 'center', padding: '34px 20px' }}>
+    <div style={{ fontSize: 30, marginBottom: 8 }}>{icon}</div>
+    <div style={{ fontSize: 13.5, color: '#6B7280', fontWeight: 600 }}>{text}</div>
+  </div>
+}
+
+// Draggable day timeline: click or drag anywhere to seek; shows period bands,
+// break gaps, and a live "now" tick.
+function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, periods, periodTimes, h24 }: {
+  dayStart: number; dayEnd: number; value: number; onChange: (m: number) => void
+  nowMin: number | null; periods: any[]
+  periodTimes: Record<string, { startMin: number; endMin: number; type: string }>; h24: boolean
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const span = Math.max(1, dayEnd - dayStart)
+  const pct = (m: number) => ((m - dayStart) / span) * 100
+  const seek = (clientX: number) => {
+    const r = ref.current?.getBoundingClientRect(); if (!r) return
+    const m = dayStart + ((clientX - r.left) / r.width) * span
+    onChange(Math.max(dayStart, Math.min(dayEnd, Math.round(m))))
+  }
+  const onDown = (e: React.PointerEvent) => {
+    seek(e.clientX)
+    const move = (ev: PointerEvent) => seek(ev.clientX)
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
+  }
+  const hours: number[] = []
+  for (let t = Math.ceil(dayStart / 60) * 60; t <= dayEnd; t += 60) hours.push(t)
+
+  return (
+    <div>
+      <div ref={ref} onPointerDown={onDown} style={{ position: 'relative', height: 46, borderRadius: 12, background: '#F4F2FE', border: '1px solid #ECE9FB', cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}>
+        {/* period bands */}
+        {periods.map(p => {
+          const t = periodTimes[p.id]; if (!t) return null
+          const left = pct(t.startMin), w = pct(t.endMin) - pct(t.startMin)
+          const brk = p.type === 'break'
+          return <div key={p.id} title={p.name} style={{ position: 'absolute', left: `${left}%`, width: `${w}%`, top: 6, bottom: 6, borderRadius: 6, background: brk ? 'transparent' : '#E6E1FA', border: brk ? '1px dashed #D8D2F2' : '1px solid #DED8F5' }} />
+        })}
+        {/* now tick */}
+        {nowMin !== null && nowMin >= dayStart && nowMin <= dayEnd && (
+          <div style={{ position: 'absolute', left: `${pct(nowMin)}%`, top: 0, bottom: 0, width: 2, background: '#EF4444', opacity: 0.5, pointerEvents: 'none' }} />
+        )}
+        {/* handle */}
+        <div style={{ position: 'absolute', left: `${pct(value)}%`, top: -3, bottom: -3, width: 3, background: '#7C6FE0', borderRadius: 3, transform: 'translateX(-50%)', pointerEvents: 'none', boxShadow: '0 0 0 3px rgba(124,111,224,0.18)' }} />
+        <div style={{ position: 'absolute', left: `${pct(value)}%`, top: '50%', width: 15, height: 15, background: '#7C6FE0', borderRadius: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', border: '2.5px solid #fff', boxShadow: '0 2px 6px rgba(124,111,224,0.4)' }} />
+      </div>
+      <div style={{ position: 'relative', height: 14, marginTop: 3 }}>
+        {hours.map(t => (
+          <span key={t} style={{ position: 'absolute', left: `${pct(t)}%`, transform: 'translateX(-50%)', fontSize: 9.5, fontWeight: 700, color: '#A9A4C8', whiteSpace: 'nowrap' }}>{fmtClock(t, h24).replace(':00', '')}</span>
+        ))}
+      </div>
     </div>
   )
 }
