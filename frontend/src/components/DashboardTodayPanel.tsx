@@ -20,7 +20,7 @@ import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { loadLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary, type AffectedSlot } from '@/lib/scheduleToday'
-import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight } from 'lucide-react'
+import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight, DoorOpen } from 'lucide-react'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -51,7 +51,8 @@ export function DashboardTodayPanel() {
     substitutions: store.substitutions ?? {}, leaves,
     conflicts: (store.conflicts ?? []).length, date: today,
   })
-  const allClear = summary.isWorkDay && summary.uncoveredSlots.length === 0 && summary.teachersOnLeave.length === 0
+  const allClear = summary.isWorkDay && summary.uncoveredSlots.length === 0
+    && summary.teachersOnLeave.length === 0 && summary.roomClashes.length === 0
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -103,6 +104,37 @@ export function DashboardTodayPanel() {
                 h24={h24}
                 cta="Arrange"
               />
+            )}
+            {summary.roomClashes.length > 0 && (
+              <div style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#C2410C', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <DoorOpen size={13} /> Room clashes · {summary.roomClashes.length}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {summary.roomClashes.map(rc => (
+                    <a key={`${rc.room}|${rc.periodId}`} href="/timetable" style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 12px', borderRadius: 9, background: '#FFF7ED',
+                      border: '1px solid #FED7AA', textDecoration: 'none',
+                    }}>
+                      <div style={{ width: 72, flexShrink: 0, fontSize: 11, fontWeight: 700, color: '#C2410C' }}>
+                        {fmtClock(rc.startMin, h24)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {rc.room} double-booked
+                        </div>
+                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 1 }}>
+                          {rc.sections.join(' & ')} share this room
+                        </div>
+                      </div>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11.5, fontWeight: 700, color: '#C2410C', flexShrink: 0 }}>
+                        Reassign <ArrowRight size={12} />
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
             {summary.coveredSlots.length > 0 && (
               <SlotSection

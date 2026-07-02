@@ -20,6 +20,8 @@ interface Props {
   uncovered: number
   onLeave: number
   covered: number
+  roomClashes: number
+  roomClashText?: string   // short human description of the first clash
   conflicts: number
   classes: number
   teachers: number
@@ -36,17 +38,39 @@ const TONE: Record<PulseState, { dot: string; glow: string; wash: string }> = {
 
 export function DashboardPulse(p: Props) {
   const s = (n: number) => (n === 1 ? '' : 's')
+  const hasCover = p.uncovered > 0
+  const hasRoom = p.roomClashes > 0
+  const needsAttention = p.hasSchedule && p.isWorkDay && (hasCover || hasRoom)
+
   const state: PulseState =
     !p.hasSchedule ? 'setup'
     : !p.isWorkDay ? 'rest'
-    : p.uncovered > 0 ? 'attention'
+    : needsAttention ? 'attention'
     : p.onLeave > 0 ? 'covered'
     : 'clear'
+
+  // Attention copy adapts to which problems exist — coverage, room clashes,
+  // or both — so the one headline always names the real issue.
+  const attentionCopy = (): { head: string; sub: string } => {
+    if (hasCover && hasRoom) {
+      return {
+        head: `${p.uncovered + p.roomClashes} issues need attention`,
+        sub: `${p.uncovered} period${s(p.uncovered)} to cover · ${p.roomClashes} room clash${s(p.roomClashes)}.`,
+      }
+    }
+    if (hasCover) {
+      return { head: `${p.uncovered} period${s(p.uncovered)} need cover`, sub: `${p.onLeave} teacher${s(p.onLeave)} out today — arrange a substitute.` }
+    }
+    return {
+      head: `${p.roomClashes} room clash${s(p.roomClashes)} today`,
+      sub: p.roomClashText ?? 'Two classes are booked into the same room — reassign one.',
+    }
+  }
 
   const copyMap: Record<PulseState, { head: string; sub: string }> = {
     setup:     { head: 'Build your first schedule', sub: 'Add classes, teachers and subjects — schedU generates the rest.' },
     rest:      { head: 'No classes today', sub: 'Enjoy the day off.' },
-    attention: { head: `${p.uncovered} period${s(p.uncovered)} need cover`, sub: `${p.onLeave} teacher${s(p.onLeave)} out today — arrange a substitute.` },
+    attention: attentionCopy(),
     covered:   { head: 'All absences covered', sub: `${p.onLeave} out today · ${p.covered} substitution${s(p.covered)} arranged.` },
     clear:     { head: 'Everything’s running smoothly', sub: `${p.periodsToday} period${s(p.periodsToday)} today · fully staffed.` },
   }
@@ -54,9 +78,13 @@ export function DashboardPulse(p: Props) {
 
   const tone = TONE[state]
 
+  // Send the reader to where the fix lives: coverage → Calendar, a pure room
+  // clash → the editor where the cell's room can be reassigned.
   const action =
     state === 'setup'     ? { kind: 'button' as const, label: 'New schedule', icon: <Plus size={16} strokeWidth={2.6} /> }
-    : state === 'attention' ? { kind: 'link' as const, href: '/calendar', label: 'Arrange cover', icon: <ArrowRight size={16} /> }
+    : state === 'attention' ? (hasCover
+        ? { kind: 'link' as const, href: '/calendar', label: 'Arrange cover', icon: <ArrowRight size={16} /> }
+        : { kind: 'link' as const, href: '/timetable', label: 'Fix rooms', icon: <ArrowRight size={16} /> })
     : state === 'rest'      ? null
     : { kind: 'link' as const, href: '/calendar', label: 'View day', icon: <ArrowRight size={16} /> }
 

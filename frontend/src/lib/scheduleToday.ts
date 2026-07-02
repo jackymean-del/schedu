@@ -25,6 +25,13 @@ export interface AffectedSlot {
   coveredBy?: string   // set once a substitute is arranged
 }
 
+/** A room used by two different classes (different teachers) in the same
+ *  period today — a genuine double-booking, not a merged/combined block. */
+export interface RoomClash {
+  room: string; periodId: string; periodName: string
+  startMin: number; endMin: number; sections: string[]
+}
+
 export interface TodaySummary {
   dayKey: string
   isWorkDay: boolean
@@ -33,6 +40,7 @@ export interface TodaySummary {
   teachersOnLeave: string[]
   uncoveredSlots: AffectedSlot[]
   coveredSlots: AffectedSlot[]
+  roomClashes: RoomClash[]
   conflicts: number
 }
 
@@ -64,8 +72,35 @@ export function computeTodaySummary(params: {
   const uncoveredSlots: AffectedSlot[] = []
   const coveredSlots: AffectedSlot[] = []
   const uncoveredByPeriod: Record<string, number> = {}
+  const roomClashes: RoomClash[] = []
 
   if (isWorkDay) {
+    // Per period, group booked cells by room. A room holding two different
+    // classes (distinct sections AND distinct effective teachers) at the same
+    // time is a genuine double-booking; two sections sharing a room with the
+    // same teacher is a merged/combined block, not a clash.
+    for (const p of periods) {
+      if (p.type === 'break') continue
+      const byRoom: Record<string, { section: string; teacher: string }[]> = {}
+      for (const s of sections) {
+        const c = classTT[s.name]?.[dayKey]?.[p.id]
+        if (!c?.subject) continue
+        const room = (c.room ?? '').trim()
+        if (!room) continue
+        const teacher = substitutions[`${s.name}|${dayKey}|${p.id}`] || c.teacher || ''
+        ;(byRoom[room] ??= []).push({ section: s.name, teacher })
+      }
+      const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
+      for (const [room, users] of Object.entries(byRoom)) {
+        const sects = [...new Set(users.map(u => u.section))]
+        const teachers = [...new Set(users.map(u => u.teacher).filter(Boolean))]
+        if (sects.length > 1 && teachers.length > 1) {
+          roomClashes.push({ room, periodId: p.id, periodName: p.name ?? p.id, startMin: t.startMin, endMin: t.endMin, sections: sects })
+        }
+      }
+    }
+    roomClashes.sort((a, b) => a.startMin - b.startMin)
+
     for (const s of sections) {
       const sd = classTT[s.name]?.[dayKey] ?? {}
       for (const p of periods) {
@@ -101,7 +136,7 @@ export function computeTodaySummary(params: {
   return {
     dayKey, isWorkDay, periodRows,
     periodsToday: isWorkDay ? periodRows.filter(r => !r.isBreak).length : 0,
-    teachersOnLeave, uncoveredSlots, coveredSlots, conflicts,
+    teachersOnLeave, uncoveredSlots, coveredSlots, roomClashes, conflicts,
   }
 }
 

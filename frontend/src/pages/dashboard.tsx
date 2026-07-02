@@ -1411,6 +1411,11 @@ export function DashboardPage() {
   }) : null
   const onLeaveCount   = todaySummary?.teachersOnLeave.length ?? 0
   const uncoveredCount = todaySummary?.uncoveredSlots.length ?? 0
+  const roomClashes    = todaySummary?.roomClashes ?? []
+  const fmt12 = (min: number) => { const h = Math.floor(min / 60) % 12 || 12, m = min % 60, ap = Math.floor(min / 60) >= 12 ? 'PM' : 'AM'; return `${h}:${String(m).padStart(2, '0')} ${ap}` }
+  const roomClashText = roomClashes[0]
+    ? `${roomClashes[0].sections.join(' & ')} share ${roomClashes[0].room} at ${fmt12(roomClashes[0].startMin)}.`
+    : undefined
 
   const SW = sidebarOpen ? W_EXPANDED : W_COLLAPSED
   const initials = (user.name ?? 'U')
@@ -1728,6 +1733,8 @@ export function DashboardPage() {
             uncovered={uncoveredCount}
             onLeave={onLeaveCount}
             covered={todaySummary?.coveredSlots.length ?? 0}
+            roomClashes={roomClashes.length}
+            roomClashText={roomClashText}
             conflicts={conflicts}
             classes={sections.length}
             teachers={staff.length}
