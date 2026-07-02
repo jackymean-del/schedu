@@ -108,7 +108,7 @@ export function DashboardTodayPanel() {
             {summary.roomClashes.length > 0 && (
               <div style={{ marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#C2410C', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <DoorOpen size={13} /> Room clashes · {summary.roomClashes.length}
+                  <DoorOpen size={13} /> Venue clashes · {summary.roomClashes.length}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {summary.roomClashes.map(rc => (

@@ -398,7 +398,7 @@ export function CalendarPage() {
     return q ? list.filter(e => e.name.toLowerCase().includes(q)) : list
   }, [mode, sections, staff, rooms, subjects, classTT, dayKey, query])
 
-  const colLabel = mode === 'class' ? 'Class' : mode === 'teacher' ? 'Teacher' : mode === 'room' ? 'Room' : 'Subject'
+  const colLabel = mode === 'class' ? 'Class' : mode === 'teacher' ? 'Teacher' : mode === 'room' ? 'Venue' : 'Subject'
 
   // Current-time cursor position (only when viewing today and within the span).
   const todayISO = toISODate(now)
@@ -497,7 +497,7 @@ export function CalendarPage() {
                 { m: 'teacher' as Mode, label: 'Faculty',  icon: <Users size={14} /> },
                 { m: 'class'   as Mode, label: 'Classes',  icon: <GraduationCap size={14} /> },
                 { m: 'subject' as Mode, label: 'Subjects', icon: <BookOpen size={14} /> },
-                { m: 'room'    as Mode, label: 'Rooms',    icon: <Building2 size={14} /> },
+                { m: 'room'    as Mode, label: 'Venues',   icon: <Building2 size={14} /> },
               ]).map(t => (
                 <button key={t.m} className="cal-tab" onClick={() => setMode(t.m)}
                   style={{ ...pillBtn(mode === t.m), display: 'inline-flex', alignItems: 'center', gap: 6 }}>

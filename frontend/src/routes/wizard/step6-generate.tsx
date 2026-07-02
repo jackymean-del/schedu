@@ -503,7 +503,7 @@ export function Step6Generate() {
     { icon:"🏫", label:"Classes",  value: sections.length },
     { icon:"👩‍🏫", label:"Teachers", value: store.staff.length },
     { icon:"📖", label:"Subjects",  value: subjects.length },
-    { icon:"🚪", label:"Rooms",     value: facilities.length || sections.length },
+    { icon:"🚪", label:"Venues",    value: facilities.length || sections.length },
     { icon:"📅", label:"Days/week", value: config.workDays?.length ?? 5 },
     { icon:"⏰", label:"Periods/day",value: config.periodsPerDay ?? 8 },
   ]

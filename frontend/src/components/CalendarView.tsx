@@ -383,7 +383,7 @@ function DetailPanel({d,tf,onClose,onEdit}:{
           ["📅","Day",DAY_FULL[dayKey]??dayKey,""],
           block.sectionName?["🏫","Class",block.sectionName,""]:[],
           block.teacher?["👤","Teacher",block.teacher,block.isSub?"Substitution":block.isClassTeacher?"Class Teacher":""]:[],
-          block.room?["🚪","Room",block.room,""]:[],
+          block.room?["🚪","Venue",block.room,""]:[],
         ].filter(r=>r.length===4).map(([icon,lbl,val,sub],i)=>(
           <div key={i} style={{ display:"flex", gap:10, marginBottom:11, alignItems:"flex-start" }}>
             <span style={{ fontSize:14, width:20, flexShrink:0, lineHeight:1.4 }}>{icon as string}</span>
@@ -1175,7 +1175,7 @@ export function CalendarView({
     }
     if (viewMode==="room") {
       const vr = selectedEntity!=="ALL" ? allRooms.filter(r=>r===selectedEntity) : allRooms
-      return vr.map(r=>({ id:r, label:r, group:"Room" }))
+      return vr.map(r=>({ id:r, label:r, group:"Venue" }))
     }
     // subject — show subjects as rows
     if (viewMode==="subject") {
@@ -1604,7 +1604,7 @@ export function CalendarView({
                 width:ENTITY_W, minWidth:ENTITY_W, background:"#F8FAFC",
                 border:"1px solid #CBD5E1", fontSize:12, fontWeight:800, color:"#334155",
                 boxShadow:"3px 0 6px -2px rgba(15,23,42,0.10)",
-              }}>{viewMode === "class" ? "Class" : viewMode === "teacher" ? "Teacher" : viewMode === "room" ? "Room" : "Subject"}</th>
+              }}>{viewMode === "class" ? "Class" : viewMode === "teacher" ? "Teacher" : viewMode === "room" ? "Venue" : "Subject"}</th>
               {days.map((day, di) => (
                 <th key={day} colSpan={cols.length} style={{
                   position:"sticky" as const, top:0, zIndex:20,

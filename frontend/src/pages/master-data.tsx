@@ -107,7 +107,7 @@ export function MasterDataPage() {
     { key: 'classes',   label: 'Classes',   icon: <GraduationCap size={14} />, count: sections.length },
     { key: 'subjects',  label: 'Subjects',  icon: <BookOpen      size={14} />, count: subjects.length },
     { key: 'teachers',  label: 'Teachers',  icon: <Users         size={14} />, count: staff.length },
-    { key: 'rooms',     label: 'Rooms',     icon: <Building2     size={14} />, count: rooms.length },
+    { key: 'rooms',     label: 'Venues',    icon: <Building2     size={14} />, count: rooms.length },
     { key: 'strengths', label: 'Strengths', icon: <Grid3x3       size={14} />, count: sectionStrengths?.length ?? 0 },
   ]
 
@@ -205,11 +205,11 @@ export function MasterDataPage() {
           ]} />
         )}
         {tab === 'rooms' && (
-          <StepGuide title="Rooms" tips={[
-            'Lab rooms (Computer Lab, Science Lab, etc.) are auto-matched to lab subjects by the AI.',
-            'Capacity helps the AI avoid over-assigning a room beyond what it can seat.',
-            'Use the Scope button to restrict a room to certain days or periods (e.g., shared hall).',
-            'You don\'t need a room per section — one room can be shared across multiple classes.',
+          <StepGuide title="Venues" tips={[
+            'Any teaching place — classroom, lab, hall, playground or sports ground. Lab-type venues are auto-matched to lab subjects by the AI.',
+            'Capacity helps the AI avoid over-assigning a venue beyond what it can hold.',
+            'Use the Scope button to restrict a venue to certain days or periods (e.g., a shared hall or ground).',
+            'You don\'t need a venue per section — one venue can be shared across multiple classes.',
           ]} />
         )}
         {tab === 'strengths' && (

@@ -44,7 +44,7 @@ const TAB_META: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'classes',  label: 'Classes',  icon: <GraduationCap size={14} /> },
   { key: 'subjects', label: 'Subjects', icon: <BookOpen size={14} /> },
   { key: 'teachers', label: 'Faculty', icon: <Users size={14} /> },
-  { key: 'rooms',    label: 'Rooms',    icon: <Building2 size={14} /> },
+  { key: 'rooms',    label: 'Venues',   icon: <Building2 size={14} /> },
 ]
 
 const GRADE_GROUP: Record<string, string> = {
@@ -1068,7 +1068,7 @@ export function StepResourcesV2() {
           const idx  = TABS.indexOf(activeTab)
           const prev = idx > 0 ? TABS[idx - 1] : null
           const next = idx < TABS.length - 1 ? TABS[idx + 1] : null
-          const TAB_LABELS: Record<TabKey,string> = { classes:'Classes', subjects:'Subjects', teachers:'Faculty', rooms:'Rooms' }
+          const TAB_LABELS: Record<TabKey,string> = { classes:'Classes', subjects:'Subjects', teachers:'Faculty', rooms:'Venues' }
           return (
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',

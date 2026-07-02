@@ -3523,7 +3523,7 @@ export function TimetablePage() {
   const VIEW_TABS: { key: ViewMode; label: string }[] = [
     { key:"class",   label: org.sectionLabel || "Section" },
     { key:"teacher", label: org.staffLabel   || "Faculty"  },
-    { key:"room",    label: "Room"  },
+    { key:"room",    label: "Venue"  },
     { key:"subject", label: "Subject" },
   ]
 
@@ -3687,8 +3687,8 @@ export function TimetablePage() {
                   ["Class-wise (Classes in Tabs)",     ()=>exportXLSX("class-class")],
                   ["Teacher-wise (Days in Tabs)",      ()=>exportXLSX("teacher-day")],
                   ["Teacher-wise (Teachers in Tabs)", ()=>exportXLSX("teacher-teacher")],
-                  ["Room-wise (Days in Tabs)",         ()=>exportXLSX("room-day")],
-                  ["Room-wise (Rooms in Tabs)",        ()=>exportXLSX("room-room")],
+                  ["Venue-wise (Days in Tabs)",        ()=>exportXLSX("room-day")],
+                  ["Venue-wise (Venues in Tabs)",      ()=>exportXLSX("room-room")],
                 ].map(([label, fn]) => (
                   <button key={label as string}
                     onClick={() => { (fn as ()=>void)(); setShowExportMenu(false) }}
@@ -3705,7 +3705,7 @@ export function TimetablePage() {
                 {[
                   ["Class-wise Schedule",   ()=>triggerPrint("class","individual")],
                   ["Teacher-wise Schedule", ()=>triggerPrint("teacher","individual")],
-                  ["Room-wise Schedule",    ()=>triggerPrint("room","individual")],
+                  ["Venue-wise Schedule",   ()=>triggerPrint("room","individual")],
                 ].map(([label, fn]) => (
                   <button key={label as string}
                     onClick={() => { (fn as ()=>void)(); setShowExportMenu(false) }}
@@ -3888,7 +3888,7 @@ export function TimetablePage() {
           }}>
             <span style={TBGROUP}>Show</span>
             {TBtn(showTeacher, () => setShowTeacher(!showTeacher), "Faculty", "👤")}
-            {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Room",    "🚪")}
+            {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Venue",   "🚪")}
             {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
             {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
             <div style={{ flex:1 }} />
@@ -3918,7 +3918,7 @@ export function TimetablePage() {
             <div style={{ width:1, height:18, background:"#CBD5E1" }} />
             <span style={TBGROUP}>Show</span>
             {TBtn(showTeacher, () => setShowTeacher(!showTeacher), "Faculty", "👤")}
-            {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Room",    "🚪")}
+            {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Venue",   "🚪")}
             {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
             {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
             <div style={{ width:1, height:18, background:"#CBD5E1" }} />

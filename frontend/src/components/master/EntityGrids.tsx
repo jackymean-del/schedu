@@ -386,8 +386,8 @@ export function RoomsGrid({
   ]
   return (
     <DataGrid<RoomRow>
-      title="Rooms"
-      description="Classrooms, labs, halls. Scope a room to time-window its availability."
+      title="Venues"
+      description="Any teaching place — classrooms, labs, halls, playgrounds, grounds. Scope a venue to time-window its availability."
       icon={<Building2 size={16} />}
       columns={columns}
       rows={rooms}

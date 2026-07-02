@@ -55,15 +55,15 @@ export function DashboardPulse(p: Props) {
     if (hasCover && hasRoom) {
       return {
         head: `${p.uncovered + p.roomClashes} issues need attention`,
-        sub: `${p.uncovered} period${s(p.uncovered)} to cover · ${p.roomClashes} room clash${s(p.roomClashes)}.`,
+        sub: `${p.uncovered} period${s(p.uncovered)} to cover · ${p.roomClashes} venue clash${s(p.roomClashes)}.`,
       }
     }
     if (hasCover) {
       return { head: `${p.uncovered} period${s(p.uncovered)} need cover`, sub: `${p.onLeave} teacher${s(p.onLeave)} out today — arrange a substitute.` }
     }
     return {
-      head: `${p.roomClashes} room clash${s(p.roomClashes)} today`,
-      sub: p.roomClashText ?? 'Two classes are booked into the same room — reassign one.',
+      head: `${p.roomClashes} venue clash${s(p.roomClashes)} today`,
+      sub: p.roomClashText ?? 'Two classes are booked into the same venue — reassign one.',
     }
   }
 
@@ -72,7 +72,7 @@ export function DashboardPulse(p: Props) {
     rest:      { head: 'No classes today', sub: 'Enjoy the day off.' },
     attention: attentionCopy(),
     covered:   { head: 'All absences covered', sub: `${p.onLeave} out today · ${p.covered} substitution${s(p.covered)} arranged.` },
-    clear:     { head: 'Everything’s running smoothly', sub: `${p.periodsToday} period${s(p.periodsToday)} today · fully staffed.` },
+    clear:     { head: 'Everything’s running smoothly', sub: `${p.periodsToday} period${s(p.periodsToday)} today · staff and venues all set.` },
   }
   const copy = copyMap[state]
 
@@ -84,7 +84,7 @@ export function DashboardPulse(p: Props) {
     state === 'setup'     ? { kind: 'button' as const, label: 'New schedule', icon: <Plus size={16} strokeWidth={2.6} /> }
     : state === 'attention' ? (hasCover
         ? { kind: 'link' as const, href: '/calendar', label: 'Arrange cover', icon: <ArrowRight size={16} /> }
-        : { kind: 'link' as const, href: '/timetable', label: 'Fix rooms', icon: <ArrowRight size={16} /> })
+        : { kind: 'link' as const, href: '/timetable', label: 'Fix venues', icon: <ArrowRight size={16} /> })
     : state === 'rest'      ? null
     : { kind: 'link' as const, href: '/calendar', label: 'View day', icon: <ArrowRight size={16} /> }
 

@@ -40,7 +40,7 @@ const TERMINOLOGY: Record<OrgType, TerminologyMap> = {
     schedule: 'Schedule',
     classTeacher: 'Class Teacher',
     pool: 'Teacher Pool', pools: 'Teacher Pools',
-    room: 'Room', rooms: 'Rooms',
+    room: 'Venue', rooms: 'Venues',
     grade: 'Grade', section: 'Section',
   },
   college: {
