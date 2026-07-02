@@ -9,7 +9,10 @@
  * Deliberately not modelled on any other product: a live status orb + human
  * headline, low cognitive load, one primary action.
  */
+import { useState, useEffect } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { loadTerms, plural, type Terms } from '@/lib/terms'
 
 type PulseState = 'setup' | 'rest' | 'attention' | 'covered' | 'clear'
 
@@ -38,6 +41,15 @@ const TONE: Record<PulseState, { dot: string; glow: string; wash: string }> = {
 }
 
 export function DashboardPulse(p: Props) {
+  // Institution naming (admin-set in Settings) for the quiet-facts labels.
+  const uid = useAuthStore.getState().user?.id ?? ''
+  const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
+  useEffect(() => {
+    const h = () => setTerms(loadTerms(uid))
+    window.addEventListener('schedu-terms-changed', h)
+    return () => window.removeEventListener('schedu-terms-changed', h)
+  }, [uid])
+  const noun = (word: string, n: number) => (n === 1 ? word : plural(word)).toLowerCase()
   const s = (n: number) => (n === 1 ? '' : 's')
   const hasCover = p.uncovered > 0
   const hasRoom = p.roomClashes > 0
@@ -129,11 +141,11 @@ export function DashboardPulse(p: Props) {
         {/* Row 2 — quiet facts, deliberately understated */}
         {p.hasSchedule && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(19,17,30,0.06)' }}>
-            <Fact value={p.classes} label={`class${p.classes === 1 ? '' : 'es'}`} />
+            <Fact value={p.classes} label={noun(terms.class, p.classes)} />
             <Dotsep />
-            <Fact value={p.teachers} label={`teacher${s(p.teachers)}`} />
+            <Fact value={p.teachers} label={noun(terms.teacher, p.teachers)} />
             <Dotsep />
-            <Fact value={p.venues} label={`venue${s(p.venues)}`} />
+            <Fact value={p.venues} label={noun(terms.venue, p.venues)} />
             <Dotsep />
             {p.conflicts > 0 ? (
               <a href="/timetable" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: '#DC2626', textDecoration: 'none' }}>

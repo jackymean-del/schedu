@@ -11,7 +11,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
-import { loadActiveTimetableIntoStore, saveActiveTimetableSnapshot } from '@/lib/ttRegistry'
+import {
+  loadActiveTimetableIntoStore, saveActiveTimetableSnapshot,
+  listTimetables, getActiveTimetableId, switchActiveTimetable,
+} from '@/lib/ttRegistry'
 import { type CalLeave, LEAVE_KEY, loadLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
 import {
   type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
@@ -24,6 +27,11 @@ import {
   X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
 } from 'lucide-react'
 import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
+import { loadTerms, plural, type Terms } from '@/lib/terms'
+import {
+  loadAssignments, saveAssignments, assignmentAt, TASK_PRESETS,
+  type FreeAssignment, type AssignKind,
+} from '@/lib/freeAssignments'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -77,7 +85,28 @@ interface Block {
   startMin: number; endMin: number
   color: SubjectColor    // always derived from the subject
   sub?: string           // substitute teacher name when this period is covered
+  task?: boolean         // a free-slot assignment, not a timetable lesson
 }
+
+// Amber identity for task blocks — visually distinct from any subject colour.
+const TASK_COLOR: SubjectColor = { accent: '#B45309', bg: '#B453091A' }
+
+/** Overlap layout: assign each block a lane so simultaneous blocks (common in
+ *  the Subject lens, where many classes run the same subject at once) stack
+ *  vertically instead of painting over each other. Greedy interval colouring. */
+function assignLanes(blocks: Block[]): { placed: { b: Block; lane: number }[]; laneCount: number } {
+  const laneEnds: number[] = []
+  const placed = [...blocks]
+    .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin)
+    .map(b => {
+      let lane = laneEnds.findIndex(end => end <= b.startMin)
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(b.endMin) }
+      else laneEnds[lane] = b.endMin
+      return { b, lane }
+    })
+  return { placed, laneCount: Math.max(1, laneEnds.length) }
+}
+const LANE_H = 66   // per-lane height when a row has stacked lanes
 
 const EVENTS_KEY = 'schedu-cal-events'
 
@@ -121,6 +150,23 @@ export function CalendarPage() {
     try { localStorage.setItem(`${EVENTS_KEY}:${uid}`, JSON.stringify(next)) } catch { /* quota */ }
   }
   const [addOpen, setAddOpen] = useState(false)
+
+  // ── institution naming (admin-set in Settings; live-updates on save) ──
+  const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
+  useEffect(() => {
+    const h = () => setTerms(loadTerms(uid))
+    window.addEventListener('schedu-terms-changed', h)
+    return () => window.removeEventListener('schedu-terms-changed', h)
+  }, [uid])
+
+  // ── free-slot assignments (tasks for idle teachers / venues / classes) ──
+  const [assignments, setAssignments] = useState<FreeAssignment[]>(() => loadAssignments(uid))
+  const updateAssignments = (next: FreeAssignment[]) => { setAssignments(next); saveAssignments(uid, next) }
+  const [taskFor, setTaskFor] = useState<{ kind: AssignKind; entity: string; periodId: string; periodName: string } | null>(null)
+
+  // ── schedule switcher ──
+  const schedules = listTimetables()
+  const activeScheduleId = getActiveTimetableId()
 
   // ── store-derived schedule data ──
   const sections: any[] = store.sections ?? []
@@ -365,6 +411,16 @@ export function CalendarPage() {
         }
       }
     }
+    // Free-slot assignments for this entity today render as dashed TASK blocks.
+    if (mode !== 'subject') {
+      const kind: AssignKind = mode === 'class' ? 'class' : mode === 'teacher' ? 'teacher' : 'room'
+      for (const a of assignments) {
+        if (a.date !== isoDate || a.kind !== kind || a.entity !== entity) continue
+        const t = periodTimes[a.periodId]
+        if (!t) continue
+        out.push({ key: `task|${a.id}`, title: a.title, line2: a.note ?? '', room: '', startMin: t.startMin, endMin: t.endMin, color: TASK_COLOR, task: true })
+      }
+    }
     return out
     function mkBlock(key: string, periodId: string, title: string, chip: string | undefined, line2: string, room: string, subjectName: string, sub?: string): Block {
       const t = periodTimes[periodId] ?? { startMin: dayStart, endMin: dayStart + 45, type: 'teaching' }
@@ -406,7 +462,7 @@ export function CalendarPage() {
     return q ? list.filter(e => e.name.toLowerCase().includes(q)) : list
   }, [mode, sections, staff, rooms, subjects, classTT, dayKey, query])
 
-  const colLabel = mode === 'class' ? 'Class' : mode === 'teacher' ? 'Teacher' : mode === 'room' ? 'Venue' : 'Subject'
+  const colLabel = mode === 'class' ? terms.class : mode === 'teacher' ? terms.teacher : mode === 'room' ? terms.venue : terms.subject
 
   // Current-time cursor position (only when viewing today and within the span).
   const todayISO = toISODate(now)
@@ -458,6 +514,8 @@ export function CalendarPage() {
         .cal-primary { transition: filter .12s, transform .05s; }
         .cal-primary:active { transform: translateY(1px); }
         .cal-entity-row:hover { background: #FAF9FE; }
+        .cal-free-chip { transition: border-color .12s, color .12s, box-shadow .12s; }
+        .cal-free-chip:hover { border-color: #B45309 !important; color: #B45309 !important; box-shadow: 0 2px 8px rgba(180,83,9,0.12); }
       `}</style>
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '22px 26px 60px' }}>
@@ -501,7 +559,7 @@ export function CalendarPage() {
           gap: 14, flexWrap: 'wrap', marginBottom: 16,
           background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '12px 14px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <button onClick={() => shift(-1)} style={navBtn}><ChevronLeft size={18} /></button>
             <input
               type="date"
@@ -515,6 +573,26 @@ export function CalendarPage() {
             />
             <button onClick={() => shift(1)} style={navBtn}><ChevronRight size={18} /></button>
             <button onClick={() => setDate(new Date())} style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 12.5, fontWeight: 700 }}>Today</button>
+            {/* Schedule switcher — schools run several schedules (drafts, terms,
+                next year); switching here swaps the whole calendar in place. */}
+            {schedules.length > 1 && (
+              <select
+                value={activeScheduleId ?? ''}
+                onChange={e => {
+                  const ok = switchActiveTimetable(e.target.value)
+                  if (!ok) window.location.href = '/dashboard'   // no snapshot yet — pick up there
+                }}
+                title="Switch schedule"
+                style={{
+                  padding: '9px 10px', borderRadius: 10, border: '1px solid #E3DEF7',
+                  fontSize: 12.5, fontWeight: 700, color: '#7C6FE0', background: '#FAF9FF',
+                  fontFamily: 'inherit', cursor: 'pointer', maxWidth: 190,
+                }}>
+                {schedules.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}{s.status === 'active' ? '' : s.status === 'draft' ? ' (draft)' : ''}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -530,10 +608,10 @@ export function CalendarPage() {
             {/* Faculty / Classes / Subjects / Rooms */}
             <div style={pillGroup}>
               {([
-                { m: 'teacher' as Mode, label: 'Faculty',  icon: <Users size={14} /> },
-                { m: 'class'   as Mode, label: 'Classes',  icon: <GraduationCap size={14} /> },
-                { m: 'subject' as Mode, label: 'Subjects', icon: <BookOpen size={14} /> },
-                { m: 'room'    as Mode, label: 'Venues',   icon: <Building2 size={14} /> },
+                { m: 'teacher' as Mode, label: plural(terms.teacher), icon: <Users size={14} /> },
+                { m: 'class'   as Mode, label: plural(terms.class),   icon: <GraduationCap size={14} /> },
+                { m: 'subject' as Mode, label: plural(terms.subject), icon: <BookOpen size={14} /> },
+                { m: 'room'    as Mode, label: plural(terms.venue),   icon: <Building2 size={14} /> },
               ]).map(t => (
                 <button key={t.m} className="cal-tab" onClick={() => setMode(t.m)}
                   style={{ ...pillBtn(mode === t.m), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -584,6 +662,9 @@ export function CalendarPage() {
               dayStart={dayStart} dayEnd={dayEnd} periods={periods} periodTimes={periodTimes}
               classTT={classTT} dayKey={dayKey} mode={mode} colLabel={colLabel}
               entities={entityList} sections={sections} substitutions={substitutions} h24={h24}
+              isoDate={isoDate} assignments={assignments}
+              onAssignTask={(kind, entity, periodId, periodName) => setTaskFor({ kind, entity, periodId, periodName })}
+              onClearTask={id => updateAssignments(assignments.filter(a => a.id !== id))}
             />
           )
           : (
@@ -623,8 +704,13 @@ export function CalendarPage() {
                   )}
                   {entityList.map(ent => {
                     const blocks = blocksFor(ent.id)
+                    // Simultaneous blocks (Subject lens especially) stack into
+                    // lanes; the row grows so nothing overlaps or clips.
+                    const { placed, laneCount } = assignLanes(blocks)
+                    const rowH = laneCount === 1 ? ROW_H : laneCount * LANE_H + 12
+                    const lessons = blocks.filter(b => !b.task).length
                     return (
-                      <div key={ent.id} className="cal-entity-row" style={{ display: 'flex', borderBottom: '1px solid #F2F0FB', minHeight: ROW_H }}>
+                      <div key={ent.id} className="cal-entity-row" style={{ display: 'flex', borderBottom: '1px solid #F2F0FB', minHeight: rowH }}>
                         <div style={{ width: ENTITY_W, flexShrink: 0, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRight: '1px solid #F2F0FB' }}>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
@@ -633,7 +719,7 @@ export function CalendarPage() {
                                 <span style={{ fontSize: 9, fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>LEAVE</span>
                               )}
                             </div>
-                            <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 2 }}>{blocks.length} period{blocks.length !== 1 ? 's' : ''}</div>
+                            <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 2 }}>{lessons} {(lessons === 1 ? terms.period : plural(terms.period)).toLowerCase()}</div>
                           </div>
                           {mode === 'teacher' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
@@ -650,13 +736,15 @@ export function CalendarPage() {
                             <Caret size={15} color="#CFC9EC" />
                           )}
                         </div>
-                        <div style={{ position: 'relative', width: trackW, height: ROW_H }}>
+                        <div style={{ position: 'relative', width: trackW, height: rowH }}>
                           {/* hour gridlines */}
                           {ticks.map(t => (
                             <div key={t} style={{ position: 'absolute', left: (t - dayStart) * PX_PER_MIN, top: 0, height: '100%', borderLeft: '1px solid #F6F4FD' }} />
                           ))}
-                          {blocks.map(b => (
-                            <SessionCell key={b.key} b={b} dayStart={dayStart} h24={h24} />
+                          {placed.map(({ b, lane }) => (
+                            <SessionCell key={b.key} b={b} dayStart={dayStart} h24={h24}
+                              top={laneCount === 1 ? 6 : 6 + lane * LANE_H}
+                              height={laneCount === 1 ? ROW_H - 12 : LANE_H - 6} />
                           ))}
                           {showCursor && <div style={{ position: 'absolute', left: cursorLeft, top: 0, height: '100%', width: 1.5, background: '#EF4444', opacity: 0.55, zIndex: 2, pointerEvents: 'none' }} />}
                         </div>
@@ -714,6 +802,22 @@ export function CalendarPage() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+
+      {taskFor && (
+        <AssignTaskModal
+          target={taskFor}
+          date={isoDate}
+          terms={terms}
+          onClose={() => setTaskFor(null)}
+          onAssign={a => {
+            updateAssignments([
+              ...assignments.filter(x => !(x.date === a.date && x.periodId === a.periodId && x.kind === a.kind && x.entity === a.entity)),
+              a,
+            ])
+            setTaskFor(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -742,9 +846,16 @@ function LiveBoard(props: {
   classTT: Record<string, any>; dayKey: string; mode: Mode; colLabel: string
   entities: { id: string; name: string }[]; sections: any[]
   substitutions: Record<string, string>; h24: boolean
+  isoDate: string; assignments: FreeAssignment[]
+  onAssignTask: (kind: AssignKind, entity: string, periodId: string, periodName: string) => void
+  onClearTask: (id: string) => void
 }) {
   const { scrub, onScrub, onNow, following, nowMin, viewingToday, dayStart, dayEnd,
-    periods, periodTimes, classTT, dayKey, mode, colLabel, entities, sections, substitutions, h24 } = props
+    periods, periodTimes, classTT, dayKey, mode, colLabel, entities, sections, substitutions, h24,
+    isoDate, assignments, onAssignTask, onClearTask } = props
+
+  // Free resources can be given a task; lens → assignment kind (subjects can't).
+  const assignKind: AssignKind | null = mode === 'teacher' ? 'teacher' : mode === 'room' ? 'room' : mode === 'class' ? 'class' : null
 
   const effTeacher = (section: string, pid: string, cell: any) =>
     substitutions[`${section}|${dayKey}|${pid}`] || cell?.teacher || ''
@@ -787,6 +898,15 @@ function LiveBoard(props: {
       if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
       else idle.push(ent.name)
     }
+  }
+
+  // Split idle into "on assignment" (given a task for this slot) vs truly free.
+  const onTask: { entity: string; a: FreeAssignment }[] = []
+  const free: string[] = []
+  for (const name of idle) {
+    const a = assignKind && active ? assignmentAt(assignments, isoDate, active.id, assignKind, name) : undefined
+    if (a) onTask.push({ entity: name, a })
+    else free.push(name)
   }
 
   const idleLabel = mode === 'teacher' ? 'Free now' : mode === 'room' ? 'Empty now' : mode === 'subject' ? 'Not running' : 'No class'
@@ -854,12 +974,43 @@ function LiveBoard(props: {
                 </div>
               </div>
             )}
-            {idle.length > 0 && (
+            {onTask.length > 0 && (
+              <div style={{ marginBottom: free.length ? 18 : 0 }}>
+                <SectionLabel text={`On assignment · ${onTask.length}`} tone="#B45309" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
+                  {onTask.map(({ entity, a }) => (
+                    <div key={entity} style={{ background: '#FFFBF3', border: '1.5px dashed #E5C078', borderRadius: 13, padding: '12px 13px', display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#9A95BC', marginBottom: 2 }}>{entity}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: '#B45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📌 {a.title}</div>
+                        {a.note && <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.note}</div>}
+                      </div>
+                      <button onClick={() => onClearTask(a.id)} title="Remove assignment"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#C9A45C', display: 'inline-flex', flexShrink: 0 }}>
+                        <X size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {free.length > 0 && (
               <div>
-                <SectionLabel text={`${idleLabel} · ${idle.length}`} tone="#9A95BC" />
+                <SectionLabel text={`${idleLabel} · ${free.length}`} tone="#9A95BC" />
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {idle.map(name => (
-                    <span key={name} style={{ padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>{name}</span>
+                  {free.map(name => (
+                    assignKind && active ? (
+                      <button key={name}
+                        onClick={() => onAssignTask(assignKind, name, active.id, active.name ?? active.id)}
+                        title="Assign a task for this slot"
+                        className="cal-free-chip"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {name}
+                        <Plus size={12} style={{ color: '#B5B0CF' }} />
+                      </button>
+                    ) : (
+                      <span key={name} style={{ padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>{name}</span>
+                    )
                   ))}
                 </div>
               </div>
@@ -980,6 +1131,10 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
             </div>
           )
         })}
+        {/* hour gridlines */}
+        {hours.map(t => (
+          <div key={`hr-${t}`} style={{ position: 'absolute', left: `${pct(t)}%`, top: 0, bottom: 0, width: 1, background: 'rgba(19,17,30,0.14)', pointerEvents: 'none' }} />
+        ))}
         {/* now tick */}
         {nowMin !== null && nowMin >= dayStart && nowMin <= dayEnd && (
           <div style={{ position: 'absolute', left: `${pct(nowMin)}%`, top: 0, bottom: 0, width: 2, background: '#EF4444', opacity: 0.5, pointerEvents: 'none' }} />
@@ -1001,31 +1156,40 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
 // Calm lines, never more than three: primary (class or subject, wraps to
 // 2 lines), subject chip when the primary is a class, one meta line, time.
 // The subject NAME is always visible as text, so grayscale prints stay legible.
-function SessionCell({ b, dayStart, h24 }: { b: Block; dayStart: number; h24: boolean }) {
+// Compact lanes (stacked overlaps) drop the time line and tighten padding.
+function SessionCell({ b, dayStart, h24, top, height }: {
+  b: Block; dayStart: number; h24: boolean; top: number; height: number
+}) {
   const left = (b.startMin - dayStart) * PX_PER_MIN + CELL_GAP / 2
   const width = Math.max(76, (b.endMin - b.startMin) * PX_PER_MIN - CELL_GAP)
   const { accent, bg } = b.color
   const meta = [b.line2, b.room].filter(Boolean).join(' · ')
+  const compact = height < 84
   return (
     <div style={{
-      position: 'absolute', left, width, top: 6, height: ROW_H - 12,
-      background: bg, borderRadius: 12, borderLeft: `3px solid ${accent}`,
-      padding: '8px 11px', overflow: 'hidden', boxSizing: 'border-box',
-      display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3,
+      position: 'absolute', left, width, top, height,
+      background: bg, borderRadius: compact ? 9 : 12,
+      borderLeft: `3px solid ${accent}`,
+      border: b.task ? `1.5px dashed ${accent}` : undefined,
+      padding: compact ? '5px 9px' : '8px 11px', overflow: 'hidden', boxSizing: 'border-box',
+      display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: compact ? 1 : 3,
     }}>
       {b.sub && (
         <span style={{ position: 'absolute', top: 7, right: 8, fontSize: 8.5, fontWeight: 800, letterSpacing: '0.04em', color: '#fff', background: '#2563EB', padding: '1.5px 6px', borderRadius: 5 }}>SUB</span>
       )}
+      {b.task && (
+        <span style={{ position: 'absolute', top: 5, right: 7, fontSize: 8.5, fontWeight: 800, letterSpacing: '0.04em', color: '#fff', background: accent, padding: '1.5px 6px', borderRadius: 5 }}>TASK</span>
+      )}
       <div style={{
-        fontSize: 12.5, fontWeight: 800, color: b.chip ? '#25213B' : accent, lineHeight: 1.28,
-        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        overflow: 'hidden', paddingRight: b.sub ? 30 : 0,
+        fontSize: 12.5, fontWeight: 800, color: b.chip || b.task ? '#25213B' : accent, lineHeight: 1.28,
+        display: '-webkit-box', WebkitLineClamp: compact ? 1 : 2, WebkitBoxOrient: 'vertical',
+        overflow: 'hidden', paddingRight: b.sub || b.task ? 34 : 0,
       }}>{b.title}</div>
       {b.chip && (
         <span style={{ alignSelf: 'flex-start', maxWidth: '100%', fontSize: 10.5, fontWeight: 800, color: '#fff', background: accent, padding: '1.5px 8px', borderRadius: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>{b.chip}</span>
       )}
       {meta && <div style={{ fontSize: 11, fontWeight: 600, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
-      <div style={{ fontSize: 10, color: '#9A95BC' }}>{fmtClock(b.startMin, h24)} – {fmtClock(b.endMin, h24)}</div>
+      {!compact && <div style={{ fontSize: 10, color: '#9A95BC' }}>{fmtClock(b.startMin, h24)} – {fmtClock(b.endMin, h24)}</div>}
     </div>
   )
 }
@@ -1408,6 +1572,75 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
               })}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Assign-task modal ──────────────────────────────────────────
+// Give a free resource a job for this slot: quick presets per resource kind,
+// free-text title, optional note. Date + period are fixed by where you clicked.
+function AssignTaskModal({ target, date, terms, onClose, onAssign }: {
+  target: { kind: AssignKind; entity: string; periodId: string; periodName: string }
+  date: string; terms: Terms
+  onClose: () => void; onAssign: (a: FreeAssignment) => void
+}) {
+  const [title, setTitle] = useState('')
+  const [note, setNote] = useState('')
+  const presets = TASK_PRESETS[target.kind]
+  const kindLabel = target.kind === 'teacher' ? terms.teacher : target.kind === 'room' ? terms.venue : terms.class
+  const valid = title.trim().length > 0
+
+  const submit = () => {
+    if (!valid) return
+    onAssign({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date, periodId: target.periodId, kind: target.kind, entity: target.entity,
+      title: title.trim(), note: note.trim() || undefined,
+    })
+  }
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: 520, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+        <div style={{ background: 'linear-gradient(135deg,#D97706,#B45309)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ color: '#fff' }}>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>📌 Assign a task</div>
+            <div style={{ fontSize: 12.5, opacity: 0.92, marginTop: 2 }}>
+              {kindLabel}: <strong>{target.entity}</strong> · {target.periodName} · {date}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={16} /></button>
+        </div>
+
+        <div style={{ padding: 22 }}>
+          <Field label="What should this slot be used for?" required>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Exam invigilation" autoFocus style={inp}
+              onKeyDown={e => { if (e.key === 'Enter') submit() }} />
+          </Field>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: -6, marginBottom: 16 }}>
+            {presets.map(p => (
+              <button key={p} onClick={() => setTitle(p)}
+                style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  border: title === p ? '1.5px solid #B45309' : '1.5px solid #EFE4CF',
+                  background: title === p ? '#FFF7E8' : '#fff', color: '#92610E',
+                }}>{p}</button>
+            ))}
+          </div>
+          <Field label="Note (optional)">
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Any detail worth remembering…" style={inp} />
+          </Field>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA' }}>
+          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 13.5, fontWeight: 700, color: '#4B5275', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+          <button onClick={submit} disabled={!valid}
+            style={{ padding: '10px 24px', borderRadius: 10, border: 'none', fontSize: 13.5, fontWeight: 800, cursor: valid ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+              background: valid ? 'linear-gradient(135deg,#D97706,#B45309)' : '#E8DCC8', color: '#fff',
+              boxShadow: valid ? '0 6px 16px rgba(180,83,9,0.3)' : 'none' }}>Assign</button>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { meApi } from '@/api/client'
+import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKey } from '@/lib/terms'
 
 const KINDS = ['School', 'College', 'University', 'Coaching / Training Center', 'Company', 'Hospital', 'NGO', 'Government', 'Other']
 const ACCENT = '#7C6FE0'
@@ -53,6 +54,9 @@ export function SettingsPage() {
           </div>
         </Card>
 
+        {/* Institution naming */}
+        <NamingCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
+
         {/* Account */}
         <Card title="Account" subtitle="Your personal sign-in and profile.">
           <Row label="Name" value={user?.name ?? '—'} />
@@ -64,6 +68,72 @@ export function SettingsPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+// ── Institution naming ─────────────────────────────────────────
+// Every institution names things differently — Class vs Grade vs Batch,
+// Teacher vs Faculty vs Trainer. Pick a suggestion or type your own word;
+// labels update everywhere instantly, even on already-generated timetables
+// (they're display words only — the underlying data never changes).
+const TERM_ROWS: { key: TermKey; label: string; hint: string }[] = [
+  { key: 'class',   label: 'A group of learners',   hint: 'Class · Grade · Section · Batch · Cohort…' },
+  { key: 'teacher', label: 'A person who teaches',  hint: 'Teacher · Faculty · Instructor · Trainer…' },
+  { key: 'subject', label: 'A thing being taught',  hint: 'Subject · Course · Module · Paper…' },
+  { key: 'venue',   label: 'A place teaching happens', hint: 'Venue · Room · Hall · Lab · Studio…' },
+  { key: 'period',  label: 'A block of teaching time', hint: 'Period · Session · Lecture · Slot…' },
+]
+
+function NamingCard({ onSaved }: { onSaved: () => void }) {
+  const uid = useAuthStore.getState().user?.id ?? ''
+  const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
+  const [dirty, setDirty] = useState(false)
+
+  const update = (key: TermKey, value: string) => {
+    setTerms(t => ({ ...t, [key]: value }))
+    setDirty(true)
+  }
+  const save = () => {
+    const clean = { ...terms }
+    ;(Object.keys(clean) as TermKey[]).forEach(k => { clean[k] = clean[k].trim() || TERM_SUGGESTIONS[k][0] })
+    setTerms(clean)
+    saveTerms(uid, clean)
+    setDirty(false)
+    onSaved()
+  }
+
+  return (
+    <Card title="Institution naming" subtitle="Call things what your institution calls them — the words update across the whole app, even on generated timetables.">
+      {TERM_ROWS.map(row => (
+        <div key={row.key} style={{ display: 'grid', gridTemplateColumns: '1fr 180px 120px', gap: 12, alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>{row.label}</div>
+            <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>{row.hint}</div>
+          </div>
+          <div>
+            <input
+              value={terms[row.key]}
+              onChange={e => update(row.key, e.target.value)}
+              list={`terms-${row.key}`}
+              placeholder={TERM_SUGGESTIONS[row.key][0]}
+              style={inputStyle}
+            />
+            <datalist id={`terms-${row.key}`}>
+              {TERM_SUGGESTIONS[row.key].map(s => <option key={s} value={s} />)}
+            </datalist>
+          </div>
+          <div style={{ fontSize: 12, color: '#8B87AD' }}>
+            plural: <strong style={{ color: '#4B5275' }}>{plural(terms[row.key] || TERM_SUGGESTIONS[row.key][0])}</strong>
+          </div>
+        </div>
+      ))}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+        <button onClick={save} disabled={!dirty}
+          style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: dirty ? ACCENT : '#C9C3EC', color: '#fff', fontWeight: 700, fontSize: 13, cursor: dirty ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+          Save naming
+        </button>
+      </div>
+    </Card>
   )
 }
 

@@ -115,6 +115,46 @@ export function loadActiveTimetableIntoStore(): void {
   })
 }
 
+/** Schedules available to switch between: id + name + status, newest first,
+ *  read from the same list the dashboard maintains. */
+export function listTimetables(): { id: string; name: string; status?: string }[] {
+  try {
+    const raw = localStorage.getItem(ttListKey()) ?? localStorage.getItem(TTLIST_KEY)
+    const list: any[] = raw ? JSON.parse(raw) : []
+    return list.map(t => ({ id: t.id, name: t.name ?? 'Untitled', status: t.status }))
+  } catch { return [] }
+}
+
+/**
+ * Switch the active timetable in place (no reload): snapshot the outgoing
+ * schedule, point the active id at the new one, then force-load its snapshot
+ * into the store (reset first so nothing bleeds between schedules). Returns
+ * false when the target has no snapshot yet — the caller should send the user
+ * to the dashboard/wizard for that one instead.
+ */
+export function switchActiveTimetable(id: string): boolean {
+  const current = getActiveTimetableId()
+  if (current === id) return true
+  if (current) saveActiveTimetableSnapshot()
+  localStorage.setItem(ACTIVE_TT_KEY, id)
+
+  const uid = useAuthStore.getState().user?.id ?? ''
+  const keys = [`${TT_SNAPSHOT_PFX}${uid}:${id}`, `${TT_SNAPSHOT_PFX}:${id}`, `${TT_SNAPSHOT_PFX}${id}`]
+  let snap: Record<string, unknown> | null = null
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k)
+      if (raw) { snap = JSON.parse(raw); break }
+    } catch { /* ignore */ }
+  }
+  if (!snap) return false
+
+  const store = useTimetableStore.getState() as any
+  store.resetWizard?.()
+  useTimetableStore.setState(snap as any)
+  return true
+}
+
 /**
  * Persist the CURRENT store state as the active timetable's snapshot, scoped to
  * that timetable (and this user). Lets pages outside the dashboard — notably
