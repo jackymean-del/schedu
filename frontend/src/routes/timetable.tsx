@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
-import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore } from "@/lib/ttRegistry"
+import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { loadTerms, plural, type Terms } from "@/lib/terms"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
@@ -1328,7 +1328,21 @@ export function TimetablePage() {
 
   // ── Period Pool panel state ──────────────────────────────
   const [poolPanelOpen, setPoolPanelOpen] = useState(false)
-  const [poolDragItem, setPoolDragItem] = useState<{section:string; subject:string} | null>(null)
+  const [poolDragItem, setPoolDragItem] = useState<{section:string; subject:string; teacher?:string; adhocId?:string} | null>(null)
+
+  // ── Ad-hoc lessons: user-created sessions that live in the Pool until
+  //    placed. Persisted per schedule so they survive reloads; removed from
+  //    the tray the moment they land on the grid.
+  type AdhocLesson = { id: string; section: string; subject: string; teacher?: string }
+  const adhocKey = `schedu-adhoc-pool:${getActiveTimetableId() ?? 'none'}`
+  const [adhocPool, setAdhocPool] = useState<AdhocLesson[]>(() => {
+    try { return JSON.parse(localStorage.getItem(adhocKey) || '[]') } catch { return [] }
+  })
+  const updateAdhocPool = (next: AdhocLesson[]) => {
+    setAdhocPool(next)
+    try { localStorage.setItem(adhocKey, JSON.stringify(next)) } catch { /* quota */ }
+  }
+  const [newLessonOpen, setNewLessonOpen] = useState(false)
   const [poolSuggestSubject, setPoolSuggestSubject] = useState("")
 
   // ── Substitution panel state ─────────────────────────────
@@ -1900,8 +1914,9 @@ export function TimetablePage() {
         setPoolDragItem(null)
         return
       }
-      // In teacher view forcedTeacher is the viewed teacher; otherwise pick best available
-      const teacher = forcedTeacher || pickBestTeacher(section, poolDragItem.subject, day, periodId)
+      // Ad-hoc lessons carry their own teacher; else teacher view forces the
+      // viewed teacher; else pick the best available.
+      const teacher = poolDragItem.teacher || forcedTeacher || pickBestTeacher(section, poolDragItem.subject, day, periodId)
       // Reject if the chosen teacher is already teaching another section at this slot
       const teacherConflict = !!teacher && sections.some(s =>
         s.name !== section && classTT[s.name]?.[day]?.[periodId]?.teacher === teacher
@@ -1917,6 +1932,8 @@ export function TimetablePage() {
       newTT[section][day] = { ...(newTT[section][day] ?? {}) }
       newTT[section][day][periodId] = { subject: poolDragItem.subject, teacher: teacher || "", room }
       commitTT(newTT)
+      // A placed ad-hoc lesson leaves the tray for good.
+      if (poolDragItem.adhocId) updateAdhocPool(adhocPool.filter(a => a.id !== poolDragItem.adhocId))
       setPoolDragItem(null)
       return
     }
@@ -3295,22 +3312,111 @@ export function TimetablePage() {
   // RENDER: Period Pool right-sidebar panel
   // ═══════════════════════════════════════════════════════════
   const renderPoolPanel = () => (
-    <div style={{ width:268, background:"#fff", borderLeft:"1px solid #E8E4FF", display:"flex", flexDirection:"column" as const, flexShrink:0, overflow:"hidden" }}>
+    <div
+      // The tray is also a drop target: dragging a placed lesson here clears
+      // its cell — the lesson "returns to the pool" (deficits recompute
+      // automatically, so it reappears as an unscheduled chip).
+      onDragOver={e => { if (dragItem) { e.preventDefault(); e.dataTransfer.dropEffect = "move" } }}
+      onDrop={e => {
+        e.preventDefault()
+        if (!dragItem) return
+        const { section, day, periodId } = dragItem
+        setDragItem(null)
+        const cell = classTT[section]?.[day]?.[periodId]
+        if (!cell?.subject) return
+        const newTT = { ...classTT }
+        newTT[section] = { ...newTT[section] }
+        newTT[section][day] = { ...newTT[section][day] }
+        newTT[section][day][periodId] = { subject: "", teacher: "", room: "", subjectId: "", teacherId: "", roomId: "" }
+        commitTT(newTT)
+      }}
+      style={{
+        width:268, background:"#fff",
+        borderLeft: dragItem ? "2px dashed #7C6FE0" : "1px solid #E8E4FF",
+        display:"flex", flexDirection:"column" as const, flexShrink:0, overflow:"hidden",
+        boxShadow: dragItem ? "inset 0 0 0 2px rgba(124,111,224,0.18)" : undefined,
+      }}>
       {/* Header */}
       <div style={{ padding:"12px 16px", background:"#EDE9FF", borderBottom:"1px solid #D8D2FF", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
         <div>
-          <div style={{ fontSize:13, fontWeight:700, color:"#4338ca" }}>📦 Period Pool</div>
+          <div style={{ fontSize:13, fontWeight:700, color:"#4338ca" }}>📦 Lesson Pool</div>
           <div style={{ fontSize:10, color:"#6D64C0", marginTop:1 }}>
-            {poolTotalDeficit > 0 ? `${poolTotalDeficit} unscheduled period${poolTotalDeficit!==1?"s":""}` : "All periods scheduled ✅"}
+            {poolTotalDeficit + adhocPool.length > 0 ? `${poolTotalDeficit + adhocPool.length} waiting to be placed` : "Everything placed ✅"}
           </div>
         </div>
-        <button onClick={() => setPoolPanelOpen(false)} style={{ border:"none", background:"none", fontSize:16, cursor:"pointer", color:"#6D64C0", lineHeight:1 }}>✕</button>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <button onClick={() => setNewLessonOpen(o => !o)}
+            title="Create a lesson — it lands here until you drag it onto the grid"
+            style={{ padding:"4px 10px", borderRadius:6, border:"none", background: newLessonOpen ? "#4338ca" : "#7C6FE0", color:"#fff", fontSize:10.5, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
+            + Lesson
+          </button>
+          <button onClick={() => setPoolPanelOpen(false)} style={{ border:"none", background:"none", fontSize:16, cursor:"pointer", color:"#6D64C0", lineHeight:1 }}>✕</button>
+        </div>
       </div>
 
       {/* Hint */}
       <div style={{ padding:"7px 12px 7px", background:"#F5F2FF", borderBottom:"1px solid #E8E4FF", fontSize:10, color:"#7C6FE0", lineHeight:1.4 }}>
-        Drag onto any cell to assign or replace. Changes reflect across all views.
+        {dragItem ? "Drop here to unschedule — it returns to the pool." : "Drag a chip onto a cell to place it, or drag a placed lesson here to unschedule."}
       </div>
+
+      {/* New-lesson mini form */}
+      {newLessonOpen && (() => {
+        const secName = (document.getElementById('adhoc-sec') as HTMLSelectElement | null)?.value
+        void secName
+        return (
+          <div style={{ padding:"10px 12px", background:"#FBFAFF", borderBottom:"1px solid #E8E4FF", display:"flex", flexDirection:"column" as const, gap:6 }}>
+            <select id="adhoc-sec" defaultValue={selectedEntity !== 'ALL' && viewMode === 'class' ? selectedEntity : sections[0]?.name}
+              style={{ padding:"5px 8px", border:"1px solid #D8D2FF", borderRadius:6, fontSize:11, background:"#fff", outline:"none" }}>
+              {sections.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+            <select id="adhoc-sub" defaultValue={subjects[0]?.name}
+              style={{ padding:"5px 8px", border:"1px solid #D8D2FF", borderRadius:6, fontSize:11, background:"#fff", outline:"none" }}>
+              {subjects.map((s: any) => <option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+            <select id="adhoc-tch" defaultValue=""
+              style={{ padding:"5px 8px", border:"1px solid #D8D2FF", borderRadius:6, fontSize:11, background:"#fff", outline:"none" }}>
+              <option value="">Auto-pick {terms.teacher.toLowerCase()}</option>
+              {staff.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+            <button
+              onClick={() => {
+                const sec = (document.getElementById('adhoc-sec') as HTMLSelectElement).value
+                const sub = (document.getElementById('adhoc-sub') as HTMLSelectElement).value
+                const tch = (document.getElementById('adhoc-tch') as HTMLSelectElement).value
+                if (!sec || !sub) return
+                updateAdhocPool([...adhocPool, { id: Date.now().toString(36), section: sec, subject: sub, teacher: tch || undefined }])
+                setNewLessonOpen(false)
+              }}
+              style={{ padding:"6px 0", borderRadius:6, border:"none", background:"#7C6FE0", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
+              Add to pool
+            </button>
+          </div>
+        )
+      })()}
+
+      {/* Ad-hoc lessons — user-created, waiting for a slot */}
+      {adhocPool.length > 0 && (
+        <div style={{ borderBottom:"1px solid #E8E4FF" }}>
+          <div style={{ padding:"5px 14px", background:"#FFF9EE", fontSize:10, fontWeight:800, color:"#B45309", letterSpacing:"0.04em" }}>CUSTOM LESSONS</div>
+          <div style={{ padding:"8px 10px 10px", display:"flex", flexWrap:"wrap" as const, gap:5 }}>
+            {adhocPool.map(a => (
+              <div key={a.id}
+                draggable
+                onDragStart={e => {
+                  setPoolDragItem({ section: a.section, subject: a.subject, teacher: a.teacher, adhocId: a.id })
+                  e.dataTransfer.effectAllowed = "copy"
+                }}
+                onDragEnd={() => setPoolDragItem(null)}
+                title={`Drag onto a ${a.section} cell${a.teacher ? ` · ${a.teacher}` : ''}`}
+                style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"4px 9px", borderRadius:7, background:"#FFFBF3", border:"1.5px dashed #E5C078", fontSize:10.5, fontWeight:700, color:"#92610E", cursor:"grab" }}>
+                {a.section} · {a.subject}{a.teacher ? ` · ${a.teacher.split(' ')[0]}` : ''}
+                <button onClick={() => updateAdhocPool(adhocPool.filter(x => x.id !== a.id))}
+                  style={{ border:"none", background:"none", cursor:"pointer", color:"#C9A45C", padding:0, fontSize:11, lineHeight:1 }}>✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Filters ── */}
       {(() => {
@@ -3630,14 +3736,14 @@ export function TimetablePage() {
                   background: mainMode==="traditional" ? "#1e293b" : "#fff",
                   color:      mainMode==="traditional" ? "#fff"    : "#64748b",
                   opacity:    isViewPending && mainMode!=="traditional" ? 0.6 : 1 }}>
-                ⊞ Traditional
+                ⊞ Grid
               </button>
               <button onClick={() => startViewTransition(() => setMainMode("calendar"))}
                 style={{ padding:"5px 12px", border:"none", cursor:"pointer", fontSize:11, fontWeight:500,
                   background: mainMode==="calendar" ? "#1e293b" : "#fff",
                   color:      mainMode==="calendar" ? "#fff"    : "#64748b",
                   opacity:    isViewPending && mainMode!=="calendar" ? 0.6 : 1 }}>
-                📅 Calendar
+                📅 Timeline
               </button>
             </div>
           </div>
@@ -3898,6 +4004,16 @@ export function TimetablePage() {
             {TBtn(showRoom,    () => setShowRoom(!showRoom),       terms.venue,   "🚪")}
             {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
             {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
+            <div style={{ width:1, height:18, background:"#CBD5E1" }} />
+            <span style={TBGROUP}>Tools</span>
+            <button onClick={() => setSubPanelOpen(o => !o)}
+              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${subPanelOpen?"#f59e0b":"#E5EBF5"}`, background:subPanelOpen?"#fff7ed":"#fff", color:"#92400e", fontSize:11, fontWeight:500, cursor:"pointer" }}>
+              🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
+            </button>
+            <button onClick={() => setPoolPanelOpen(o => !o)}
+              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#7C6FE0":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
+              📦 Pool{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
+            </button>
             <div style={{ flex:1 }} />
             <button onClick={() => conflicts.length && setConflictWarning(formatConflicts(conflicts))}
               title={conflicts.length ? "View conflict details" : "No scheduling conflicts"}
@@ -3936,7 +4052,7 @@ export function TimetablePage() {
             </button>
             <button onClick={() => setPoolPanelOpen(o => !o)}
               style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#7C6FE0":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
-              📦 Pool{poolTotalDeficit > 0 ? ` (${poolTotalDeficit})` : ""}
+              📦 Pool{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
             </button>
             <div style={{ flex:1 }} />
             <button onClick={() => conflicts.length && setConflictWarning(formatConflicts(conflicts))}
@@ -3955,7 +4071,8 @@ export function TimetablePage() {
           <StepGuide title="Schedule View" tips={[
             'Switch between Section, Faculty, Room and Subject tabs to see the schedule from each perspective.',
             'Toggle Faculty and Room labels on/off using the Show buttons in the toolbar.',
-            'In Traditional mode, click any cell to edit or swap that period.',
+            'In Grid mode, click any cell to edit it, drag between cells to swap, or drag a lesson to the Pool to unschedule it.',
+            'The Pool holds every unplaced lesson — create one with + Lesson, then drag it onto a free cell.',
             'Use the Short toggle for compact abbreviations — useful when printing.',
             'Click Publish to lock the schedule and make it visible on the Calendar page.',
           ]} />
