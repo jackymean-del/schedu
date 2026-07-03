@@ -23,6 +23,7 @@ import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
 import { DashboardPulse } from '@/components/DashboardPulse'
 import { loadLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary } from '@/lib/scheduleToday'
+import { loadActiveBundles, computeMultiToday } from '@/lib/activeSchedules'
 import {
   Home, CalendarDays, Calendar, BarChart2,
   Users, Database, Settings,
@@ -1389,11 +1390,21 @@ export function DashboardPage() {
   // "Today" stats — actionable, day-specific numbers (what's running, who's
   // out, what still needs a sub) instead of static institution-wide counts
   // that just repeat what the schedules list below already shows.
-  const todaySummary = hasTimetables ? computeTodaySummary({
-    periods: store.periods ?? [], sections, classTT: store.classTT ?? {}, config: store.config ?? {},
-    substitutions: store.substitutions ?? {}, leaves: loadLeaves(user?.id ?? ''),
-    conflicts, date: new Date(),
-  }) : null
+  //
+  // MULTI-ACTIVE: when several schedules are active at once (e.g. I–V and
+  // VI–X), aggregate across ALL of them — sums/unions per schedule plus
+  // cross-schedule venue clashes on the wall-clock axis. Snapshots are fresh
+  // here because the mount effect saves the open schedule's snapshot first.
+  const activeBundles = hasTimetables ? loadActiveBundles(user?.id ?? '') : []
+  const multiActive = activeBundles.length > 1
+  const todaySummary = !hasTimetables ? null
+    : multiActive
+    ? computeMultiToday(activeBundles, loadLeaves(user?.id ?? ''), conflicts, new Date())
+    : computeTodaySummary({
+        periods: store.periods ?? [], sections, classTT: store.classTT ?? {}, config: store.config ?? {},
+        substitutions: store.substitutions ?? {}, leaves: loadLeaves(user?.id ?? ''),
+        conflicts, date: new Date(),
+      })
   const onLeaveCount   = todaySummary?.teachersOnLeave.length ?? 0
   const uncoveredCount = todaySummary?.uncoveredSlots.length ?? 0
   const roomClashes    = todaySummary?.roomClashes ?? []
@@ -1427,7 +1438,7 @@ export function DashboardPage() {
   // Distinct venues in play: defined venues unioned with any referenced in the
   // schedule, so the count is truthful even when venues were assigned inline
   // rather than added to the venue list.
-  const venueCount = (() => {
+  const singleVenueCount = (() => {
     const names = new Set<string>()
     for (const r of (store.rooms ?? [])) {
       const n = r.actualName || r.generatedName || r.name
@@ -1442,6 +1453,12 @@ export function DashboardPage() {
     }
     return names.size
   })()
+
+  // Union counts across every active schedule when several run at once.
+  const multi = multiActive ? (todaySummary as import('@/lib/activeSchedules').MultiToday) : null
+  const classCount2   = multi ? multi.classes  : sections.length
+  const teacherCount2 = multi ? multi.teachers : staff.length
+  const venueCount    = multi ? multi.venues   : singleVenueCount
 
   const SW = sidebarOpen ? W_EXPANDED : W_COLLAPSED
   const initials = (user.name ?? 'U')
@@ -1520,8 +1537,8 @@ export function DashboardPage() {
             roomClashes={roomClashes.length}
             roomClashText={roomClashText}
             conflicts={conflicts}
-            classes={sections.length}
-            teachers={staff.length}
+            classes={classCount2}
+            teachers={teacherCount2}
             venues={venueCount}
             liveNow={liveNow}
             onNewSchedule={() => setShowCreate(true)}
@@ -1742,7 +1759,7 @@ export function DashboardPage() {
               (Traditional/Calendar toggle, print, share, substitution, etc.)
               lives at /timetable, one click away, rather than being duplicated
               here. Renders only when an active schedule with data exists. */}
-          <DashboardTodayPanel />
+          <DashboardTodayPanel summaryOverride={multiActive ? todaySummary : undefined} />
 
           {/* Quick actions */}
           <div>

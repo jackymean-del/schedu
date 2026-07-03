@@ -19,7 +19,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { loadLeaves } from '@/lib/leaveUtils'
-import { computeTodaySummary, type AffectedSlot } from '@/lib/scheduleToday'
+import { computeTodaySummary, type AffectedSlot, type TodaySummary } from '@/lib/scheduleToday'
 import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight, DoorOpen } from 'lucide-react'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -32,7 +32,7 @@ function fmtClock(min: number, h24: boolean): string {
   return `${h12}:${String(m).padStart(2, '0')} ${ap}`
 }
 
-export function DashboardTodayPanel() {
+export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: TodaySummary | null }) {
   const store = useTimetableStore() as any
   const uid = useAuthStore.getState().user?.id ?? ''
 
@@ -46,7 +46,9 @@ export function DashboardTodayPanel() {
   const today = new Date()
   const leaves = loadLeaves(uid)
   const h24 = (store.config?.timeFormat ?? '12h') === '24h'
-  const summary = computeTodaySummary({
+  // When several schedules are active, the dashboard hands us the merged
+  // summary so this panel and the Pulse always agree.
+  const summary = summaryOverride ?? computeTodaySummary({
     periods: store.periods ?? [], sections, classTT, config: store.config ?? {},
     substitutions: store.substitutions ?? {}, leaves,
     conflicts: (store.conflicts ?? []).length, date: today,
