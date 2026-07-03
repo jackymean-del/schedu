@@ -1402,6 +1402,28 @@ export function DashboardPage() {
     ? `${roomClashes[0].sections.join(' & ')} share ${roomClashes[0].room} at ${fmt12(roomClashes[0].startMin)}.`
     : undefined
 
+  // "Right now" bridge to the Calendar's Live view: which period is in
+  // progress at this minute and how many classes are in session — the
+  // dashboard stays a triage surface, Live stays the moment lens.
+  const liveNow = (() => {
+    if (!hasTimetables || !todaySummary?.isWorkDay) return undefined
+    const periods: any[] = store.periods ?? []
+    const [sh = 9, sm = 0] = (store.config?.startTime ?? '09:00').split(':').map(Number)
+    let mins = sh * 60 + sm
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
+    for (const p of periods) {
+      const end = mins + (p.duration ?? 45)
+      if (nowMin >= mins && nowMin < end) {
+        if (p.type === 'break') return `${p.name ?? 'Break'} in progress`
+        const dk = todaySummary.dayKey
+        const inSession = sections.filter((s: any) => store.classTT?.[s.name]?.[dk]?.[p.id]?.subject).length
+        return `${p.name ?? 'Period'} · ${inSession} in session`
+      }
+      mins = end
+    }
+    return undefined
+  })()
+
   // Distinct venues in play: defined venues unioned with any referenced in the
   // schedule, so the count is truthful even when venues were assigned inline
   // rather than added to the venue list.
@@ -1501,6 +1523,7 @@ export function DashboardPage() {
             classes={sections.length}
             teachers={staff.length}
             venues={venueCount}
+            liveNow={liveNow}
             onNewSchedule={() => setShowCreate(true)}
           />
 

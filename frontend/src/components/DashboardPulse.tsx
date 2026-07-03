@@ -29,6 +29,7 @@ interface Props {
   classes: number
   teachers: number
   venues: number
+  liveNow?: string        // "Period 3 · 18 in session" — deep-links to Live
   onNewSchedule: () => void
 }
 
@@ -153,6 +154,16 @@ export function DashboardPulse(p: Props) {
               </a>
             ) : (
               <span style={{ fontSize: 12.5, color: '#9CA3AF', fontWeight: 600 }}>No conflicts</span>
+            )}
+            {p.liveNow && (
+              <>
+                <div style={{ flex: 1 }} />
+                <a href="/calendar" title="Open the Live view"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#16A34A', textDecoration: 'none' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: 4, background: '#16A34A' }} />
+                  {p.liveNow} <ArrowRight size={12} />
+                </a>
+              </>
             )}
           </div>
         )}

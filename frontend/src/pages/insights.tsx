@@ -10,14 +10,15 @@ import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { loadLeaves } from '@/lib/leaveUtils'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint } from '@/lib/reportsData'
+import { loadAssignments } from '@/lib/freeAssignments'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
 import {
   BarChart3, Users, CalendarDays, XCircle, TrendingUp, PieChart, LayoutGrid,
-  UserMinus, CheckCircle2,
+  UserMinus, CheckCircle2, ClipboardList,
 } from 'lucide-react'
 
-type Tab = 'summary' | 'faculty' | 'class' | 'trends' | 'leaveTypes' | 'cancelled'
+type Tab = 'summary' | 'faculty' | 'class' | 'trends' | 'leaveTypes' | 'cancelled' | 'duties'
 const RANGES: { key: string; label: string }[] = [
   { key: 'today', label: 'Today' }, { key: 'week', label: 'This Week' },
   { key: 'month', label: 'This Month' }, { key: 'lastMonth', label: 'Last Month' },
@@ -43,7 +44,20 @@ export function InsightsPage() {
     periods: store.periods ?? [], sections, config: store.config ?? {}, range: rangeFor(rangeKey),
   }), [uid, store.classTT, store.substitutions, store.periods, sections, store.config, rangeKey])
 
+  // Extra duties (free-slot task assignments) in the selected range — same
+  // date-scoped records the Calendar writes, so the audit trail is automatic.
+  const duties = useMemo(() => {
+    const range = rangeFor(rangeKey)
+    const periodName = (pid: string) => (store.periods ?? []).find((p: any) => p.id === pid)?.name ?? pid
+    return loadAssignments(uid)
+      .filter(a => a.date >= range.start && a.date <= range.end)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map(a => ({ ...a, periodName: periodName(a.periodId) }))
+  }, [uid, rangeKey, store.periods])
+
   const buildSheets = (): ExportSheet[] => [
+    { name: 'Extra Duties', rows: [['Date','Period','Resource Type','Assigned To','Task','Note'],
+      ...duties.map(d => [d.date, d.periodName, d.kind, d.entity, d.title, d.note ?? ''])] },
     { name: 'Cancelled Lessons', rows: [['Date','Day','Period','Time','Subject','Faculty','Class','Reason'],
       ...reports.cancelled.map(e => [e.date, e.day, e.periodName, fmtClock(e.startMin), e.subject, e.faculty, e.section, e.reason ?? ''])] },
     { name: 'Faculty Summary', rows: [['Faculty','Leave Days','Periods Missed','Covered','As Substitute'],
@@ -60,6 +74,7 @@ export function InsightsPage() {
     { key: 'trends', label: 'Trends', icon: <TrendingUp size={14} /> },
     { key: 'leaveTypes', label: 'Leave Types', icon: <PieChart size={14} /> },
     { key: 'cancelled', label: 'Cancelled Lessons', icon: <XCircle size={14} /> },
+    { key: 'duties', label: 'Extra Duties', icon: <ClipboardList size={14} /> },
   ]
 
   const coverageRate = reports.totals.substitutes + reports.totals.cancelled > 0
@@ -108,7 +123,14 @@ export function InsightsPage() {
               ))}
             </div>
 
-            {reports.events.length === 0 && tab !== 'trends' ? (
+            {tab === 'duties' ? (
+              <Card>
+                {duties.length === 0 ? <NoActivity msg="No extra duties in this range — assign tasks to free resources from the Calendar’s Live view." /> : (
+                  <Table head={['Date', 'Period', 'Type', 'Assigned To', 'Task', 'Note']}
+                    rows={duties.map(d => [fmtDate(d.date), d.periodName, d.kind === 'room' ? 'Venue' : d.kind === 'class' ? 'Class' : 'Teacher', d.entity, d.title, d.note ?? ''])} />
+                )}
+              </Card>
+            ) : reports.events.length === 0 && tab !== 'trends' ? (
               <Card><NoActivity /></Card>
             ) : tab === 'summary' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

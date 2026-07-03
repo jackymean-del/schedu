@@ -56,7 +56,7 @@ const EVENT_TYPES = [
 // name should never need truncation, just a two-line wrap at worst.
 const ENTITY_W   = 196   // left entity column width (px)
 const PX_PER_MIN = 3.05  // horizontal scale
-const ROW_H      = 108   // entity row height
+const ROW_H      = 122   // entity row height — fits title + teacher + venue + time lines
 const RULER_H    = 54    // time-ruler header height
 const CELL_GAP   = 9
 
@@ -803,21 +803,32 @@ export function CalendarPage() {
         />
       )}
 
-      {taskFor && (
-        <AssignTaskModal
-          target={taskFor}
-          date={isoDate}
-          terms={terms}
-          onClose={() => setTaskFor(null)}
-          onAssign={a => {
-            updateAssignments([
-              ...assignments.filter(x => !(x.date === a.date && x.periodId === a.periodId && x.kind === a.kind && x.entity === a.entity)),
-              a,
-            ])
-            setTaskFor(null)
-          }}
-        />
-      )}
+      {taskFor && (() => {
+        // Work history for this resource — powers the fairness note and the
+        // "recent extra work" list inside the dialog.
+        const history = assignments
+          .filter(a => a.kind === taskFor.kind && a.entity === taskFor.entity && a.date <= isoDate)
+          .sort((a, b) => b.date.localeCompare(a.date))
+        const weekAgo = (() => { const d = new Date(date); d.setDate(d.getDate() - 6); return toISODate(d) })()
+        const weekCount = history.filter(a => a.date >= weekAgo && a.date <= isoDate).length
+        return (
+          <AssignTaskModal
+            target={taskFor}
+            date={isoDate}
+            terms={terms}
+            history={history.slice(0, 5)}
+            weekCount={weekCount}
+            onClose={() => setTaskFor(null)}
+            onAssign={a => {
+              updateAssignments([
+                ...assignments.filter(x => !(x.date === a.date && x.periodId === a.periodId && x.kind === a.kind && x.entity === a.entity)),
+                a,
+              ])
+              setTaskFor(null)
+            }}
+          />
+        )
+      })()}
     </div>
   )
 }
@@ -909,6 +920,38 @@ function LiveBoard(props: {
     else free.push(name)
   }
 
+  // Fair-pick ordering: today's total load (lessons + extra duties) per free
+  // resource, lightest first by default so the fairest choice is always the
+  // first chip — with a toggle to flip the order.
+  const [freeSort, setFreeSort] = useState<'light' | 'heavy'>('light')
+  const loadOf = (name: string): number => {
+    let n = 0
+    if (mode === 'teacher') {
+      for (const s of sections) {
+        const sd = classTT[s.name]?.[dayKey] ?? {}
+        for (const pid of Object.keys(sd)) {
+          const c = sd[pid]
+          if (c?.subject && (substitutions[`${s.name}|${dayKey}|${pid}`] || c.teacher) === name) n++
+        }
+      }
+    } else if (mode === 'room') {
+      for (const s of sections) {
+        const sd = classTT[s.name]?.[dayKey] ?? {}
+        for (const pid of Object.keys(sd)) {
+          const c = sd[pid]
+          if (c?.subject && (c.room ?? '') === name) n++
+        }
+      }
+    } else if (mode === 'class') {
+      n = Object.values(classTT[name]?.[dayKey] ?? {}).filter((c: any) => c?.subject).length
+    }
+    if (assignKind) n += assignments.filter(a => a.date === isoDate && a.kind === assignKind && a.entity === name).length
+    return n
+  }
+  const freeSorted = free
+    .map(name => ({ name, load: loadOf(name) }))
+    .sort((a, b) => (freeSort === 'light' ? a.load - b.load : b.load - a.load) || a.name.localeCompare(b.name))
+
   const idleLabel = mode === 'teacher' ? 'Free now' : mode === 'room' ? 'Empty now' : mode === 'subject' ? 'Not running' : 'No class'
 
   // Timeline segments: per period, the share of classes actually in session.
@@ -996,16 +1039,26 @@ function LiveBoard(props: {
             )}
             {free.length > 0 && (
               <div>
-                <SectionLabel text={`${idleLabel} · ${free.length}`} tone="#9A95BC" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <SectionLabel text={`${idleLabel} · ${free.length}`} tone="#9A95BC" />
+                  {assignKind && free.length > 1 && (
+                    <button onClick={() => setFreeSort(s => s === 'light' ? 'heavy' : 'light')}
+                      title="Flip workload order"
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#7C6FE0', fontFamily: 'inherit', padding: '2px 4px', marginBottom: 10 }}>
+                      {freeSort === 'light' ? '↑ Lightest load first' : '↓ Heaviest load first'}
+                    </button>
+                  )}
+                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {free.map(name => (
+                  {freeSorted.map(({ name, load }) => (
                     assignKind && active ? (
                       <button key={name}
                         onClick={() => onAssignTask(assignKind, name, active.id, active.name ?? active.id)}
-                        title="Assign a task for this slot"
+                        title={`${load} on the plate today — assign a task for this slot`}
                         className="cal-free-chip"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
                         {name}
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: load <= 2 ? '#16A34A' : load <= 4 ? '#B45309' : '#DC2626', background: '#F6F4FD', padding: '1px 6px', borderRadius: 6 }}>{load} today</span>
                         <Plus size={12} style={{ color: '#B5B0CF' }} />
                       </button>
                     ) : (
@@ -1163,8 +1216,8 @@ function SessionCell({ b, dayStart, h24, top, height }: {
   const left = (b.startMin - dayStart) * PX_PER_MIN + CELL_GAP / 2
   const width = Math.max(76, (b.endMin - b.startMin) * PX_PER_MIN - CELL_GAP)
   const { accent, bg } = b.color
-  const meta = [b.line2, b.room].filter(Boolean).join(' · ')
   const compact = height < 84
+  const metaLine: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
   return (
     <div style={{
       position: 'absolute', left, width, top, height,
@@ -1172,7 +1225,7 @@ function SessionCell({ b, dayStart, h24, top, height }: {
       borderLeft: `3px solid ${accent}`,
       border: b.task ? `1.5px dashed ${accent}` : undefined,
       padding: compact ? '5px 9px' : '8px 11px', overflow: 'hidden', boxSizing: 'border-box',
-      display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: compact ? 1 : 3,
+      display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: compact ? 1 : 2,
     }}>
       {b.sub && (
         <span style={{ position: 'absolute', top: 7, right: 8, fontSize: 8.5, fontWeight: 800, letterSpacing: '0.04em', color: '#fff', background: '#2563EB', padding: '1.5px 6px', borderRadius: 5 }}>SUB</span>
@@ -1188,8 +1241,16 @@ function SessionCell({ b, dayStart, h24, top, height }: {
       {b.chip && (
         <span style={{ alignSelf: 'flex-start', maxWidth: '100%', fontSize: 10.5, fontWeight: 800, color: '#fff', background: accent, padding: '1.5px 8px', borderRadius: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>{b.chip}</span>
       )}
-      {meta && <div style={{ fontSize: 11, fontWeight: 600, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
-      {!compact && <div style={{ fontSize: 10, color: '#9A95BC' }}>{fmtClock(b.startMin, h24)} – {fmtClock(b.endMin, h24)}</div>}
+      {/* Who / where / when — one calm line each, nothing hidden behind “…”. */}
+      {compact ? (
+        <>{(b.line2 || b.room) && <div style={metaLine}>{[b.line2, b.room].filter(Boolean).join(' · ')}</div>}</>
+      ) : (
+        <>
+          {b.line2 && <div style={metaLine}>{b.line2}</div>}
+          {b.room && <div style={{ ...metaLine, color: '#6B6890' }}>{b.room}</div>}
+          <div style={{ fontSize: 10, color: '#9A95BC' }}>{fmtClock(b.startMin, h24)} – {fmtClock(b.endMin, h24)}</div>
+        </>
+      )}
     </div>
   )
 }
@@ -1581,9 +1642,10 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
 // ── Assign-task modal ──────────────────────────────────────────
 // Give a free resource a job for this slot: quick presets per resource kind,
 // free-text title, optional note. Date + period are fixed by where you clicked.
-function AssignTaskModal({ target, date, terms, onClose, onAssign }: {
+function AssignTaskModal({ target, date, terms, history, weekCount, onClose, onAssign }: {
   target: { kind: AssignKind; entity: string; periodId: string; periodName: string }
   date: string; terms: Terms
+  history: FreeAssignment[]; weekCount: number
   onClose: () => void; onAssign: (a: FreeAssignment) => void
 }) {
   const [title, setTitle] = useState('')
@@ -1591,6 +1653,21 @@ function AssignTaskModal({ target, date, terms, onClose, onAssign }: {
   const presets = TASK_PRESETS[target.kind]
   const kindLabel = target.kind === 'teacher' ? terms.teacher : target.kind === 'room' ? terms.venue : terms.class
   const valid = title.trim().length > 0
+
+  // A human note, not a metric dump: is this a fair ask right now?
+  const name = target.entity
+  const advisory =
+    target.kind === 'teacher'
+      ? weekCount === 0 ? { text: `This would be ${name}’s first extra duty this week — a fair pick. 👍`, tone: '#16A34A' }
+      : weekCount <= 2 ? { text: `${name} has taken ${weekCount} extra dut${weekCount === 1 ? 'y' : 'ies'} this week — still a reasonable ask.`, tone: '#B45309' }
+      : { text: `Heads up — ${name} already has ${weekCount} extra duties this week. Someone lighter might be fairer.`, tone: '#DC2626' }
+    : target.kind === 'room'
+      ? weekCount === 0 ? { text: `${name} hasn’t been booked for anything extra this week.`, tone: '#16A34A' }
+      : { text: `${name} has ${weekCount} extra booking${weekCount === 1 ? '' : 's'} this week.`, tone: '#B45309' }
+      : weekCount === 0 ? { text: `No extra activities for ${name} this week yet.`, tone: '#16A34A' }
+      : { text: `${name} has had ${weekCount} extra activit${weekCount === 1 ? 'y' : 'ies'} this week — keep the balance in mind.`, tone: '#B45309' }
+
+  const fmtHist = (iso: string) => { const d = new Date(iso + 'T00:00:00'); return `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` }
 
   const submit = () => {
     if (!valid) return
@@ -1616,6 +1693,12 @@ function AssignTaskModal({ target, date, terms, onClose, onAssign }: {
         </div>
 
         <div style={{ padding: 22 }}>
+          {/* Fairness note — schedU talking like a colleague, not a dashboard */}
+          <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: `${advisory.tone}10`, border: `1px solid ${advisory.tone}33`, borderRadius: 10, padding: '10px 13px', marginBottom: 16 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: advisory.tone, marginTop: 5, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#3F3A55', lineHeight: 1.45 }}>{advisory.text}</span>
+          </div>
+
           <Field label="What should this slot be used for?" required>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Exam invigilation" autoFocus style={inp}
               onKeyDown={e => { if (e.key === 'Enter') submit() }} />
@@ -1633,6 +1716,22 @@ function AssignTaskModal({ target, date, terms, onClose, onAssign }: {
           <Field label="Note (optional)">
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Any detail worth remembering…" style={inp} />
           </Field>
+
+          {/* Recent extra work — so the decision is informed, right here */}
+          {history.length > 0 && (
+            <div style={{ marginTop: 2 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9A95BC', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Recent extra work</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {history.map(h => (
+                  <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5 }}>
+                    <span style={{ width: 62, flexShrink: 0, fontWeight: 700, color: '#9A95BC' }}>{fmtHist(h.date)}</span>
+                    <span style={{ fontWeight: 700, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title}</span>
+                    {h.note && <span style={{ color: '#B5B0CF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>— {h.note}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA' }}>
