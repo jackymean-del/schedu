@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore } from "@/lib/ttRegistry"
+import { loadTerms, plural, type Terms } from "@/lib/terms"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
@@ -1215,6 +1216,15 @@ export function TimetablePage() {
   // dashboard "View" button or a page refresh) so the grid is never empty.
   // No-op when the store already has data.
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
+
+  // Institution naming (admin-set in Settings) — live-updates on save.
+  const termsUid = useAuthStore.getState().user?.id ?? ''
+  const [terms, setTerms] = useState<Terms>(() => loadTerms(termsUid))
+  useEffect(() => {
+    const h = () => setTerms(loadTerms(termsUid))
+    window.addEventListener('schedu-terms-changed', h)
+    return () => window.removeEventListener('schedu-terms-changed', h)
+  }, [termsUid])
 
   // ── Block-wise (per-shift) view ────────────────────────────
   // When the timetable was generated block-wise, config.blockMeta holds each block's
@@ -3520,11 +3530,12 @@ export function TimetablePage() {
     }).join("\n") + (cs.length > 12 ? `\n…and ${cs.length - 12} more` : "")
 
   const entities = getEntityList()
+  // Perspective tabs use the institution's own naming (Settings → naming).
   const VIEW_TABS: { key: ViewMode; label: string }[] = [
-    { key:"class",   label: org.sectionLabel || "Section" },
-    { key:"teacher", label: org.staffLabel   || "Faculty"  },
-    { key:"room",    label: "Venue"  },
-    { key:"subject", label: "Subject" },
+    { key:"class",   label: terms.class },
+    { key:"teacher", label: terms.teacher },
+    { key:"room",    label: terms.venue },
+    { key:"subject", label: terms.subject },
   ]
 
   const absentHighlightProp = subPanelOpen && subAbsentTeacher
@@ -3543,13 +3554,9 @@ export function TimetablePage() {
           display:"flex", alignItems:"stretch", height:50, flexShrink:0,
           padding:"0 12px", gap:0,
         }}>
-          {/* ── Left: back + name ── */}
+          {/* ── Left: schedule identity (navigation lives in the app shell) ── */}
           <div style={{ display:"flex", alignItems:"center", gap:8, paddingRight:12, borderRight:"1px solid #E5EBF5", flexShrink:0 }}>
-            <button onClick={() => window.location.href="/wizard"}
-              style={{ width:28, height:28, border:"1px solid #E5EBF5", borderRadius:6, background:"#fff", cursor:"pointer", fontSize:14, color:"#64748b", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              ←
-            </button>
-            <div style={{ maxWidth:180 }}>
+            <div style={{ maxWidth:200 }}>
               <div style={{ fontSize:13, fontWeight:700, color:"#1e293b", overflow:"hidden", textOverflow:"ellipsis" as const, whiteSpace:"nowrap" as const }}>
                 {config.timetableName || "Timetable"}
               </div>
@@ -3602,7 +3609,7 @@ export function TimetablePage() {
               }}>
               {entities.map(e => (
                 <option key={e} value={e}>
-                  {e === "ALL" ? `All ${VIEW_TABS.find(v=>v.key===viewMode)?.label ?? ""}s` : e}
+                  {e === "ALL" ? `All ${plural(VIEW_TABS.find(v=>v.key===viewMode)?.label ?? "")}` : e}
                 </option>
               ))}
             </select>
@@ -3887,8 +3894,8 @@ export function TimetablePage() {
             padding:"6px 14px", display:"flex", alignItems:"center", gap:6, flexShrink:0, flexWrap:"wrap" as const,
           }}>
             <span style={TBGROUP}>Show</span>
-            {TBtn(showTeacher, () => setShowTeacher(!showTeacher), "Faculty", "👤")}
-            {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Venue",   "🚪")}
+            {TBtn(showTeacher, () => setShowTeacher(!showTeacher), terms.teacher, "👤")}
+            {TBtn(showRoom,    () => setShowRoom(!showRoom),       terms.venue,   "🚪")}
             {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
             {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
             <div style={{ flex:1 }} />
@@ -3917,8 +3924,8 @@ export function TimetablePage() {
             </div>
             <div style={{ width:1, height:18, background:"#CBD5E1" }} />
             <span style={TBGROUP}>Show</span>
-            {TBtn(showTeacher, () => setShowTeacher(!showTeacher), "Faculty", "👤")}
-            {TBtn(showRoom,    () => setShowRoom(!showRoom),       "Venue",   "🚪")}
+            {TBtn(showTeacher, () => setShowTeacher(!showTeacher), terms.teacher, "👤")}
+            {TBtn(showRoom,    () => setShowRoom(!showRoom),       terms.venue,   "🚪")}
             {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
             {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
             <div style={{ width:1, height:18, background:"#CBD5E1" }} />
