@@ -1041,12 +1041,24 @@ function LiveBoard(props: {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                   <SectionLabel text={`${idleLabel} · ${free.length}`} tone="#9A95BC" />
+                  {/* Segmented sort — you click the order you want and the
+                      selected option stays highlighted, so there's no
+                      "does the label mean current state or the action?" doubt. */}
                   {assignKind && free.length > 1 && (
-                    <button onClick={() => setFreeSort(s => s === 'light' ? 'heavy' : 'light')}
-                      title="Flip workload order"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#7C6FE0', fontFamily: 'inherit', padding: '2px 4px', marginBottom: 10 }}>
-                      {freeSort === 'light' ? '↑ Lightest load first' : '↓ Heaviest load first'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 2, padding: 2, background: '#F1EEFB', borderRadius: 8, marginBottom: 10 }}>
+                      {([['light', 'Lightest first'], ['heavy', 'Heaviest first']] as const).map(([key, label]) => (
+                        <button key={key} onClick={() => setFreeSort(key)}
+                          style={{
+                            padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                            fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+                            background: freeSort === key ? '#fff' : 'transparent',
+                            color: freeSort === key ? '#7C6FE0' : '#8B87AD',
+                            boxShadow: freeSort === key ? '0 1px 4px rgba(124,111,224,0.18)' : 'none',
+                          }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
