@@ -1287,6 +1287,8 @@ export function TimetablePage() {
   }
   const [viewMode, setViewMode] = useState<ViewMode>("class")
   const [transposed, setTransposed] = useState(false)
+  // Timeline-only third layout (a month planner has no Grid equivalent).
+  const [calMonthly, setCalMonthly] = useState(false)
   const [selectedEntity, setSelectedEntity] = useState<string>("ALL")
   const [uncoveredOpen, setUncoveredOpen] = useState(false)
   // startTransition: marks view/mode switches as non-urgent so the browser
@@ -3153,6 +3155,8 @@ export function TimetablePage() {
 
     return (
       <CalendarView
+        layout={calMonthly ? "month" : transposed ? "matrix" : "timeline"}
+        hideLayoutTabs
         classTT={classTT}
         teacherTT={teacherTT}
         periods={periods}
@@ -3339,9 +3343,9 @@ export function TimetablePage() {
       {/* Header */}
       <div style={{ padding:"12px 16px", background:"#EDE9FF", borderBottom:"1px solid #D8D2FF", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
         <div>
-          <div style={{ fontSize:13, fontWeight:700, color:"#4338ca" }}>📦 Lesson Pool</div>
+          <div style={{ fontSize:13, fontWeight:700, color:"#4338ca" }}>🪑 The Bench</div>
           <div style={{ fontSize:10, color:"#6D64C0", marginTop:1 }}>
-            {poolTotalDeficit + adhocPool.length > 0 ? `${poolTotalDeficit + adhocPool.length} waiting to be placed` : "Everything placed ✅"}
+            {poolTotalDeficit + adhocPool.length > 0 ? `${poolTotalDeficit + adhocPool.length} lesson${poolTotalDeficit + adhocPool.length !== 1 ? "s" : ""} waiting to go on` : "Everyone's on the field ✅"}
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -3356,7 +3360,7 @@ export function TimetablePage() {
 
       {/* Hint */}
       <div style={{ padding:"7px 12px 7px", background:"#F5F2FF", borderBottom:"1px solid #E8E4FF", fontSize:10, color:"#7C6FE0", lineHeight:1.4 }}>
-        {dragItem ? "Drop here to unschedule — it returns to the pool." : "Drag a chip onto a cell to place it, or drag a placed lesson here to unschedule."}
+        {dragItem ? "Drop here to bench it — the lesson comes off the grid." : "Drag a lesson onto a cell to send it on, or drag a placed lesson here to bench it."}
       </div>
 
       {/* New-lesson mini form */}
@@ -3388,7 +3392,7 @@ export function TimetablePage() {
                 setNewLessonOpen(false)
               }}
               style={{ padding:"6px 0", borderRadius:6, border:"none", background:"#7C6FE0", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
-              Add to pool
+              Add to bench
             </button>
           </div>
         )
@@ -3993,86 +3997,73 @@ export function TimetablePage() {
           </div>
         </div>
 
-        {/* ══ Secondary toolbar (Calendar mode) ═════════════════════ */}
-        {mainMode === "calendar" && (
-          <div style={{
-            background:"#F8FAFC", borderBottom:"1px solid #E5EBF5",
-            padding:"6px 14px", display:"flex", alignItems:"center", gap:6, flexShrink:0, flexWrap:"wrap" as const,
-          }}>
-            <span style={TBGROUP}>Show</span>
-            {TBtn(showTeacher, () => setShowTeacher(!showTeacher), terms.teacher, "👤")}
-            {TBtn(showRoom,    () => setShowRoom(!showRoom),       terms.venue,   "🚪")}
-            {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
-            {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
-            <div style={{ width:1, height:18, background:"#CBD5E1" }} />
-            <span style={TBGROUP}>Tools</span>
-            <button onClick={() => setSubPanelOpen(o => !o)}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${subPanelOpen?"#f59e0b":"#E5EBF5"}`, background:subPanelOpen?"#fff7ed":"#fff", color:"#92400e", fontSize:11, fontWeight:500, cursor:"pointer" }}>
-              🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
-            </button>
-            <button onClick={() => setPoolPanelOpen(o => !o)}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#7C6FE0":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
-              📦 Pool{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
-            </button>
-            <div style={{ flex:1 }} />
-            <button onClick={() => conflicts.length && setConflictWarning(formatConflicts(conflicts))}
-              title={conflicts.length ? "View conflict details" : "No scheduling conflicts"}
-              style={{ padding:"3px 10px", borderRadius:16, fontSize:10.5, fontWeight:600, cursor:conflicts.length?"pointer":"default",
-              background:conflicts.length===0?"#f0fdf4":"#fff7ed",
-              color:conflicts.length===0?"#166534":"#c2410c",
-              border:`1px solid ${conflicts.length===0?"#86EFAC":"#fed7aa"}` }}>
-              {conflicts.length===0 ? "✓ No conflicts" : `⚠ ${conflicts.length} conflict${conflicts.length>1?"s":""}`}
-            </button>
+        {/* ══ Unified toolbar — identical in Grid AND Timeline ══════════
+            One control surface for both modes: the same View pills (Normal /
+            Transposed, plus Month in Timeline), the same Show toggles, the
+            same Tools. No option exists in one mode but not the other. */}
+        <div style={{
+          background:"#F8FAFC", borderBottom:"1px solid #E5EBF5",
+          padding:"6px 14px", display:"flex", alignItems:"center", gap:6, flexShrink:0, flexWrap:"wrap" as const,
+        }}>
+          <span style={TBGROUP}>View</span>
+          <div style={{ display:"flex", gap:2, padding:2, background:"#F1EEFB", borderRadius:8 }}>
+            {([
+              ["normal", "☰ Normal"],
+              ["transposed", "⊞ Transposed"],
+              ...(mainMode === "calendar" ? [["month", "📆 Month"]] as const : []),
+            ] as [string, string][]).map(([key, label]) => {
+              const active = key === "month" ? calMonthly : key === "transposed" ? (transposed && !calMonthly) : (!transposed && !calMonthly)
+              return (
+                <button key={key}
+                  onClick={() => startViewTransition(() => {
+                    if (key === "month") { setCalMonthly(true) }
+                    else { setCalMonthly(false); setTransposed(key === "transposed") }
+                  })}
+                  style={{ padding:"4px 11px", borderRadius:6, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit",
+                    background: active ? "#fff" : "transparent",
+                    color: active ? "#7C6FE0" : "#7E7AA0",
+                    boxShadow: active ? "0 1px 4px rgba(124,111,224,0.18)" : "none" }}>
+                  {label}
+                </button>
+              )
+            })}
           </div>
-        )}
-
-        {/* ══ Secondary toolbar (Traditional mode only) ════════════════ */}
-        {mainMode === "traditional" && (
-          <div style={{
-            background:"#F8FAFC", borderBottom:"1px solid #E5EBF5",
-            padding:"6px 14px", display:"flex", alignItems:"center", gap:6, flexShrink:0, flexWrap:"wrap" as const,
-          }}>
-            {/* Normal / Transposed */}
-            <span style={TBGROUP}>View</span>
-            <div style={{ display:"flex", border:"1px solid #E5EBF5", borderRadius:6, overflow:"hidden" }}>
-              <button onClick={() => startViewTransition(() => setTransposed(false))} style={{ padding:"4px 11px", border:"none", background:!transposed?"#374151":"#fff", color:!transposed?"#fff":"#64748b", fontSize:11, fontWeight:500, cursor:"pointer" }}>☰ Normal</button>
-              <button onClick={() => startViewTransition(() => setTransposed(true))}  style={{ padding:"4px 11px", border:"none", background:transposed?"#374151":"#fff",  color:transposed?"#fff":"#64748b",  fontSize:11, fontWeight:500, cursor:"pointer" }}>⊞ Transposed</button>
-            </div>
-            <div style={{ width:1, height:18, background:"#CBD5E1" }} />
-            <span style={TBGROUP}>Show</span>
-            {TBtn(showTeacher, () => setShowTeacher(!showTeacher), terms.teacher, "👤")}
-            {TBtn(showRoom,    () => setShowRoom(!showRoom),       terms.venue,   "🚪")}
-            {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
-            {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
-            <div style={{ width:1, height:18, background:"#CBD5E1" }} />
-            <span style={TBGROUP}>Tools</span>
-            <button onClick={() => setSubPanelOpen(o => !o)}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${subPanelOpen?"#f59e0b":"#E5EBF5"}`, background:subPanelOpen?"#fff7ed":"#fff", color:"#92400e", fontSize:11, fontWeight:500, cursor:"pointer" }}>
-              🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
-            </button>
-            <button onClick={() => setPoolPanelOpen(o => !o)}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#7C6FE0":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
-              📦 Pool{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
-            </button>
-            <div style={{ flex:1 }} />
-            <button onClick={() => conflicts.length && setConflictWarning(formatConflicts(conflicts))}
-              title={conflicts.length ? "View conflict details" : "No scheduling conflicts"}
-              style={{ padding:"3px 10px", borderRadius:16, fontSize:10.5, fontWeight:600, cursor:conflicts.length?"pointer":"default",
-              background:conflicts.length===0?"#f0fdf4":"#fff7ed",
-              color:conflicts.length===0?"#166534":"#c2410c",
-              border:`1px solid ${conflicts.length===0?"#86EFAC":"#fed7aa"}` }}>
-              {conflicts.length===0 ? "✓ No conflicts" : `⚠ ${conflicts.length} conflict${conflicts.length>1?"s":""}`}
-            </button>
-          </div>
-        )}
+          <div style={{ width:1, height:18, background:"#CBD5E1" }} />
+          <span style={TBGROUP}>Show</span>
+          {TBtn(showTeacher, () => setShowTeacher(!showTeacher), terms.teacher, "👤")}
+          {TBtn(showRoom,    () => setShowRoom(!showRoom),       terms.venue,   "🚪")}
+          {TBtn(showTime,    () => setShowTime(!showTime),       "Time",    "⏱")}
+          {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
+          <div style={{ width:1, height:18, background:"#CBD5E1" }} />
+          <span style={TBGROUP}>Tools</span>
+          <button onClick={() => setSubPanelOpen(o => !o)}
+            style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${subPanelOpen?"#f59e0b":"#E5EBF5"}`, background:subPanelOpen?"#fff7ed":"#fff", color:"#92400e", fontSize:11, fontWeight:500, cursor:"pointer" }}>
+            🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
+          </button>
+          <button onClick={() => setPoolPanelOpen(o => !o)}
+            title="The Bench — every unplaced lesson waits here"
+            style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#7C6FE0":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
+            🪑 Bench{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
+          </button>
+          <div style={{ flex:1 }} />
+          <button onClick={() => conflicts.length && setConflictWarning(formatConflicts(conflicts))}
+            title={conflicts.length ? "View conflict details" : "No scheduling conflicts"}
+            style={{ padding:"3px 10px", borderRadius:16, fontSize:10.5, fontWeight:600, cursor:conflicts.length?"pointer":"default",
+            background:conflicts.length===0?"#f0fdf4":"#fff7ed",
+            color:conflicts.length===0?"#166534":"#c2410c",
+            border:`1px solid ${conflicts.length===0?"#86EFAC":"#fed7aa"}` }}>
+            {conflicts.length===0 ? "✓ No conflicts" : `⚠ ${conflicts.length} conflict${conflicts.length>1?"s":""}`}
+          </button>
+        </div>
 
         {/* ══ Inline guide ═════════════════════════════════════════════ */}
         <div style={{ padding:"0 16px", flexShrink:0 }}>
           <StepGuide title="Schedule View" tips={[
             'Switch between Section, Faculty, Room and Subject tabs to see the schedule from each perspective.',
             'Toggle Faculty and Room labels on/off using the Show buttons in the toolbar.',
-            'In Grid mode, click any cell to edit it, drag between cells to swap, or drag a lesson to the Pool to unschedule it.',
-            'The Pool holds every unplaced lesson — create one with + Lesson, then drag it onto a free cell.',
+            'Click any cell to edit it, drag between cells to swap, or drag a lesson onto the Bench to take it off the grid.',
+            'The Bench holds every unplaced lesson — create one with + Lesson, then drag it onto a free cell to send it on.',
+            'The View pills (Normal / Transposed) work the same in Grid and Timeline; Timeline adds a Month planner.',
             'Use the Short toggle for compact abbreviations — useful when printing.',
             'Click Publish to lock the schedule and make it visible on the Calendar page.',
           ]} />

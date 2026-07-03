@@ -74,6 +74,11 @@ export interface CalendarViewProps {
     id:string; name:string; type:string
     classes:string[]; afterPeriod:number; duration:number
   }>
+  /** Controlled layout mode — lets the parent's own view pills drive
+   *  matrix/timeline/month instead of the internal tabs. */
+  layout?: CalMode
+  /** Hide the internal ⊟/📅/📆 layout tabs when the parent renders its own. */
+  hideLayoutTabs?: boolean
 }
 
 // ─────────────────────────────────────────────
@@ -768,11 +773,14 @@ export function CalendarView({
   staff, sections, subjects, substitutions, viewMode, selectedEntity,
   showTeacher, showRoom, showTime=false, shortNames=false, editMode=false,
   onCellClick, onCellEdit, onCellDelete, onCellSwap, absentHighlights, classwiseBreaks,
-  rooms, sectionStrengths,
+  rooms, sectionStrengths, layout, hideLayoutTabs,
 }: CalendarViewProps) {
 
   // ── State ────────────────────────────────────────────────────────────
   const [calMode,    setCalMode]    = useState<CalMode>("matrix")
+  // Controlled layout: the parent (Schedule view) can drive matrix/timeline/
+  // month so its own Normal/Transposed/Month pills work in Timeline mode too.
+  useEffect(() => { if (layout) setCalMode(layout) }, [layout])
   const [zoom,       setZoom]       = useState<ZoomLevel>("60min")
   const [showBreaks, setShowBreaks] = useState(true)   // toggle: show/hide Assembly + breaks
   const [density,    setDensity]    = useState<"comfortable" | "compact">("comfortable")  // matrix row density
@@ -2070,18 +2078,20 @@ export function CalendarView({
         borderBottom:"1px solid #E5EBF5", flexShrink:0, background:"#F8FAFC",
         flexWrap:"wrap" as const,
       }}>
-        {/* Mode tabs */}
-        <div style={{ display:"flex", border:"1px solid #E5EBF5", borderRadius:6, overflow:"hidden" }}>
-          {([["matrix","⊟ Matrix"],["timeline","📅 Weekly"],["month","📆 Monthly"]] as [CalMode,string][]).map(([m,lbl])=>(
-            <button key={m} onClick={()=>setCalMode(m)}
-              style={{
-                padding:"4px 11px", border:"none",
-                background:calMode===m?"#7C6FE0":"#fff",
-                color:calMode===m?"#fff":"#64748b",
-                fontSize:10.5, fontWeight:calMode===m?700:400, cursor:"pointer",
-              }}>{lbl}</button>
-          ))}
-        </div>
+        {/* Mode tabs — hidden when the parent renders its own layout pills */}
+        {!hideLayoutTabs && (
+          <div style={{ display:"flex", border:"1px solid #E5EBF5", borderRadius:6, overflow:"hidden" }}>
+            {([["matrix","⊟ Matrix"],["timeline","📅 Weekly"],["month","📆 Monthly"]] as [CalMode,string][]).map(([m,lbl])=>(
+              <button key={m} onClick={()=>setCalMode(m)}
+                style={{
+                  padding:"4px 11px", border:"none",
+                  background:calMode===m?"#7C6FE0":"#fff",
+                  color:calMode===m?"#fff":"#64748b",
+                  fontSize:10.5, fontWeight:calMode===m?700:400, cursor:"pointer",
+                }}>{lbl}</button>
+            ))}
+          </div>
+        )}
 
         {/* Month nav */}
         {calMode==="timeline"&&(
