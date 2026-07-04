@@ -566,7 +566,11 @@ export function CalendarPage() {
 
   // Live view: the moment being inspected. null follows the clock (clamped to
   // the school day); dragging the timeline pins it to a specific minute.
-  const clampDay = (m: number) => Math.max(dayStart, Math.min(dayEnd, m))
+  // Live scrubber spans the open schedule's day, or the union of all bells when
+  // several schedules are live.
+  const liveStart = multiActive ? gridStart : dayStart
+  const liveEnd = multiActive ? gridEnd : dayEnd
+  const clampDay = (m: number) => Math.max(liveStart, Math.min(liveEnd, m))
   const activeScrub = scrub ?? clampDay(nowMin)
 
   const dayEvents = events
@@ -749,7 +753,7 @@ export function CalendarPage() {
             <span style={{ fontWeight: 800 }}>🔀 {activeCount} schedules active</span>
             <span style={{ color: '#3B6FD4' }}>
               {view === 'live'
-                ? '· Live shows the open schedule — switch above to view another'
+                ? '· Live follows the wall clock across every active schedule and their bells'
                 : `· ${view === 'month' ? 'Month' : 'Day'} shows the combined view across all of them`}
             </span>
           </div>
@@ -760,17 +764,19 @@ export function CalendarPage() {
           ? <MonthGrid date={date} setDate={setDate} events={events} onAdd={() => setAddOpen(true)} statsByDay={statsByDay} />
           : !hasTimetable
           ? <EmptyState />
-          : (view === 'live' ? !isWorkDay : !gridWorkDay)
+          : (view === 'live' ? (multiActive ? !gridWorkDay : !isWorkDay) : !gridWorkDay)
           ? <RestDay day={DOW_FULL[date.getDay()]} />
           : view === 'live'
           ? (
             <LiveBoard
               scrub={activeScrub} onScrub={setScrub} onNow={() => setScrub(null)}
               following={scrub === null} nowMin={nowMin} viewingToday={viewingToday}
-              dayStart={dayStart} dayEnd={dayEnd} periods={periods} periodTimes={periodTimes}
+              dayStart={multiActive ? gridStart : dayStart} dayEnd={multiActive ? gridEnd : dayEnd}
+              periods={periods} periodTimes={periodTimes}
               classTT={classTT} dayKey={dayKey} mode={mode} colLabel={colLabel}
-              entities={entityList} sections={sections} substitutions={substitutions} h24={h24}
+              entities={multiActive ? gridEntities : entityList} sections={sections} substitutions={substitutions} h24={h24}
               isoDate={isoDate} assignments={assignments}
+              multiActive={multiActive} cells={gridData.cells}
               onAssignTask={(kind, entity, periodId, periodName) => setTaskFor({ kind, entity, periodId, periodName })}
               onClearTask={id => updateAssignments(assignments.filter(a => a.id !== id))}
             />
@@ -966,64 +972,114 @@ function LiveBoard(props: {
   entities: { id: string; name: string }[]; sections: any[]
   substitutions: Record<string, string>; h24: boolean
   isoDate: string; assignments: FreeAssignment[]
+  multiActive: boolean; cells: any[]
   onAssignTask: (kind: AssignKind, entity: string, periodId: string, periodName: string) => void
   onClearTask: (id: string) => void
 }) {
   const { scrub, onScrub, onNow, following, nowMin, viewingToday, dayStart, dayEnd,
     periods, periodTimes, classTT, dayKey, mode, colLabel, entities, sections, substitutions, h24,
-    isoDate, assignments, onAssignTask, onClearTask } = props
+    isoDate, assignments, multiActive, cells, onAssignTask, onClearTask } = props
 
   // Free resources can be given a task; lens → assignment kind (subjects can't).
   const assignKind: AssignKind | null = mode === 'teacher' ? 'teacher' : mode === 'room' ? 'room' : mode === 'class' ? 'class' : null
 
   const effTeacher = (section: string, pid: string, cell: any) =>
     substitutions[`${section}|${dayKey}|${pid}`] || cell?.teacher || ''
+  const effTeacherCell = (c: any) => c.sub || c.teacher || ''
 
-  // The period slot containing the scrubbed minute.
-  const active = periods.find(p => {
-    const t = periodTimes[p.id]; return t && scrub >= t.startMin && scrub < t.endMin
-  })
-  const at = active ? periodTimes[active.id] : null
-  const isBreak = active?.type === 'break'
-
-  // Compute each entity's activity at this moment. Faculty/Venue lenses lead
-  // with the CLASS (the "who/where am I with?" answer); subject rides as a chip.
+  // With several schedules live, "the active period" dissolves — each bell runs
+  // its own periods, so at a given wall-clock minute one group can be mid-lesson
+  // while another is on break. We drive the whole board off the flat cross-
+  // schedule cell list (each cell already carries its own wall-clock interval)
+  // rather than a single periods array. Single-active keeps the period path.
+  let active: { id: string; name?: string; type: string } | null = null
+  let at: { startMin: number; endMin: number } | null = null
+  let isBreak = false
   const busy: LiveActivity[] = []
   const idle: string[] = []
-  if (active && !isBreak) {
-    for (const ent of entities) {
-      let a: { title: string; chip?: string; sub: string; seed: string } | null = null
-      if (mode === 'class') {
-        const c = classTT[ent.id]?.[dayKey]?.[active.id]
-        if (c?.subject) a = { title: c.subject, sub: [effTeacher(ent.id, active.id, c), c.room].filter(Boolean).join(' · '), seed: c.subject }
-      } else if (mode === 'teacher') {
-        for (const s of sections) {
-          const c = classTT[s.name]?.[dayKey]?.[active.id]
-          if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: s.name, chip: c.subject, sub: c.room ?? '', seed: c.subject }; break }
+
+  if (multiActive) {
+    const running = cells.filter((c: any) => scrub >= c.startMin && scrub < c.endMin)
+    const beforeAfter = scrub < dayStart || scrub >= dayEnd
+    if (running.length) {
+      // Next transition across any live group = when this "moment" ends.
+      at = { startMin: scrub, endMin: Math.min(...running.map((c: any) => c.endMin)) }
+      active = { id: 'live', name: 'In session', type: 'class' }
+    } else if (!beforeAfter) {
+      active = { id: 'gap', name: 'Between periods', type: 'break' }; isBreak = true
+    }
+    if (running.length) {
+      for (const ent of entities) {
+        let a: { title: string; chip?: string; sub: string; seed: string } | null = null
+        let cell: any = null
+        if (mode === 'class') {
+          cell = running.find((c: any) => c.section === ent.id)
+          if (cell) a = { title: cell.subject, sub: [effTeacherCell(cell), cell.room].filter(Boolean).join(' · '), seed: cell.subject }
+        } else if (mode === 'teacher') {
+          cell = running.find((c: any) => effTeacherCell(c) === ent.id)
+          if (cell) a = { title: cell.section, chip: cell.subject, sub: cell.room ?? '', seed: cell.subject }
+        } else if (mode === 'room') {
+          cell = running.find((c: any) => c.room === ent.id)
+          if (cell) a = { title: cell.section, chip: cell.subject, sub: effTeacherCell(cell), seed: cell.subject }
+        } else {
+          const classes = running.filter((c: any) => c.subject === ent.id).map((c: any) => c.section)
+          if (classes.length) { cell = running.find((c: any) => c.subject === ent.id); a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name } }
         }
-      } else if (mode === 'room') {
-        for (const s of sections) {
-          const c = classTT[s.name]?.[dayKey]?.[active.id]
-          if (c?.subject && (c.room ?? '') === ent.id) { a = { title: s.name, chip: c.subject, sub: effTeacher(s.name, active.id, c), seed: c.subject }; break }
-        }
-      } else {
-        const classes: string[] = []
-        for (const s of sections) {
-          const c = classTT[s.name]?.[dayKey]?.[active.id]
-          if (c?.subject === ent.id) classes.push(s.name)
-        }
-        if (classes.length) a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name }
+        if (a && cell) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - cell.startMin, total: cell.endMin - cell.startMin })
+        else idle.push(ent.name)
       }
-      if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
-      else idle.push(ent.name)
+    }
+  } else {
+    // The period slot containing the scrubbed minute.
+    active = periods.find(p => {
+      const t = periodTimes[p.id]; return t && scrub >= t.startMin && scrub < t.endMin
+    }) ?? null
+    at = active ? periodTimes[active.id] : null
+    isBreak = active?.type === 'break'
+
+    // Compute each entity's activity at this moment. Faculty/Venue lenses lead
+    // with the CLASS (the "who/where am I with?" answer); subject rides as a chip.
+    if (active && !isBreak) {
+      for (const ent of entities) {
+        let a: { title: string; chip?: string; sub: string; seed: string } | null = null
+        if (mode === 'class') {
+          const c = classTT[ent.id]?.[dayKey]?.[active.id]
+          if (c?.subject) a = { title: c.subject, sub: [effTeacher(ent.id, active.id, c), c.room].filter(Boolean).join(' · '), seed: c.subject }
+        } else if (mode === 'teacher') {
+          for (const s of sections) {
+            const c = classTT[s.name]?.[dayKey]?.[active.id]
+            if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: s.name, chip: c.subject, sub: c.room ?? '', seed: c.subject }; break }
+          }
+        } else if (mode === 'room') {
+          for (const s of sections) {
+            const c = classTT[s.name]?.[dayKey]?.[active.id]
+            if (c?.subject && (c.room ?? '') === ent.id) { a = { title: s.name, chip: c.subject, sub: effTeacher(s.name, active.id, c), seed: c.subject }; break }
+          }
+        } else {
+          const classes: string[] = []
+          for (const s of sections) {
+            const c = classTT[s.name]?.[dayKey]?.[active.id]
+            if (c?.subject === ent.id) classes.push(s.name)
+          }
+          if (classes.length) a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name }
+        }
+        if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
+        else idle.push(ent.name)
+      }
     }
   }
+
+  // Free-slot task assignment keys to a single period, which has no meaning when
+  // schedules overlap on different bells — so in multi-active Live the free list
+  // is read-only (fairness sort still works). Schedule-tagged tasks are a later
+  // slice. Single-active keeps full assignment.
+  const canAssign = !!assignKind && !multiActive
 
   // Split idle into "on assignment" (given a task for this slot) vs truly free.
   const onTask: { entity: string; a: FreeAssignment }[] = []
   const free: string[] = []
   for (const name of idle) {
-    const a = assignKind && active ? assignmentAt(assignments, isoDate, active.id, assignKind, name) : undefined
+    const a = canAssign && active ? assignmentAt(assignments, isoDate, active.id, assignKind!, name) : undefined
     if (a) onTask.push({ entity: name, a })
     else free.push(name)
   }
@@ -1033,6 +1089,14 @@ function LiveBoard(props: {
   // first chip — with a toggle to flip the order.
   const [freeSort, setFreeSort] = useState<'light' | 'heavy'>('light')
   const loadOf = (name: string): number => {
+    // Multi-active load spans every schedule the resource appears in (the cell
+    // list is already the union across all active schedules for the day).
+    if (multiActive) {
+      if (mode === 'teacher') return cells.filter((c: any) => effTeacherCell(c) === name).length
+      if (mode === 'room') return cells.filter((c: any) => c.room === name).length
+      if (mode === 'class') return cells.filter((c: any) => c.section === name).length
+      return 0
+    }
     let n = 0
     if (mode === 'teacher') {
       for (const s of sections) {
@@ -1062,19 +1126,34 @@ function LiveBoard(props: {
 
   const idleLabel = mode === 'teacher' ? 'Free now' : mode === 'room' ? 'Empty now' : mode === 'subject' ? 'Not running' : 'No class'
 
-  // Timeline segments: per period, the share of classes actually in session.
-  // A break period is all-amber; a teaching period where only some classes
-  // have a lesson renders as a violet/amber horizontal split.
-  const segments: ScrubSegment[] = periods.map((p: any) => {
-    const t = periodTimes[p.id] ?? { startMin: dayStart, endMin: dayStart, type: p.type }
-    const isBrk = p.type === 'break'
-    let teachFrac = 0
-    if (!isBrk && sections.length) {
-      const teaching = sections.filter((s: any) => classTT[s.name]?.[dayKey]?.[p.id]?.subject).length
-      teachFrac = teaching / sections.length
-    }
-    return { id: p.id, name: p.name, startMin: t.startMin, endMin: t.endMin, isBreak: isBrk, teachFrac }
-  })
+  // Timeline segments: the share of sessions actually running over time. Single-
+  // active reads its periods; multi-active splits the day at every schedule's
+  // period boundary so overlapping bells still read as one honest density strip.
+  const segments: ScrubSegment[] = multiActive
+    ? (() => {
+        const bounds = new Set<number>([dayStart, dayEnd])
+        cells.forEach((c: any) => { bounds.add(c.startMin); bounds.add(c.endMin) })
+        const pts = [...bounds].filter(m => m >= dayStart && m <= dayEnd).sort((a, b) => a - b)
+        const denom = new Set(cells.map((c: any) => `${c.sid}|${c.section}`)).size || 1
+        const segs: ScrubSegment[] = []
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i], b = pts[i + 1], mid = (a + b) / 2
+          const running = cells.filter((c: any) => mid >= c.startMin && mid < c.endMin)
+          const distinct = new Set(running.map((c: any) => `${c.sid}|${c.section}`)).size
+          segs.push({ id: `m${a}`, name: '', startMin: a, endMin: b, isBreak: distinct === 0, teachFrac: distinct / denom })
+        }
+        return segs
+      })()
+    : periods.map((p: any) => {
+        const t = periodTimes[p.id] ?? { startMin: dayStart, endMin: dayStart, type: p.type }
+        const isBrk = p.type === 'break'
+        let teachFrac = 0
+        if (!isBrk && sections.length) {
+          const teaching = sections.filter((s: any) => classTT[s.name]?.[dayKey]?.[p.id]?.subject).length
+          teachFrac = teaching / sections.length
+        }
+        return { id: p.id, name: p.name, startMin: t.startMin, endMin: t.endMin, isBreak: isBrk, teachFrac }
+      })
 
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
@@ -1171,7 +1250,7 @@ function LiveBoard(props: {
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {freeSorted.map(({ name, load }) => (
-                    assignKind && active ? (
+                    canAssign && active ? (
                       <button key={name}
                         onClick={() => onAssignTask(assignKind, name, active.id, active.name ?? active.id)}
                         title={`${load} on the plate today — assign a task for this slot`}
