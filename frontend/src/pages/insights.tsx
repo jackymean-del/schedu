@@ -9,8 +9,9 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { loadLeaves } from '@/lib/leaveUtils'
-import { computeReports, rangeFor, type ReportsData, type TrendPoint } from '@/lib/reportsData'
+import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
 import { loadAssignments } from '@/lib/freeAssignments'
+import { loadActiveBundles } from '@/lib/activeSchedules'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
 import {
@@ -37,23 +38,32 @@ export function InsightsPage() {
   const [rangeKey, setRangeKey] = useState('month')
 
   const sections = store.sections ?? []
-  const hasData = sections.length > 0 && Object.keys(store.classTT ?? {}).length > 0
+
+  // Analytics span every ACTIVE schedule (multi-active); a single active
+  // reduces to one source built from the store — same numbers as before.
+  const bundles = useMemo(() => loadActiveBundles(uid), [uid])
+  const multiActive = bundles.length > 1
+  const sources: ReportSource[] = multiActive
+    ? bundles.map(b => ({ sections: b.sections, periods: b.periods, classTT: b.classTT, substitutions: b.substitutions, config: b.config }))
+    : [{ sections, periods: store.periods ?? [], classTT: store.classTT ?? {}, substitutions: store.substitutions ?? {}, config: store.config ?? {} }]
+  const hasData = sources.some(s => s.sections.length > 0 && Object.keys(s.classTT).length > 0)
 
   const reports: ReportsData = useMemo(() => computeReports({
-    leaves: loadLeaves(uid), classTT: store.classTT ?? {}, substitutions: store.substitutions ?? {},
-    periods: store.periods ?? [], sections, config: store.config ?? {}, range: rangeFor(rangeKey),
-  }), [uid, store.classTT, store.substitutions, store.periods, sections, store.config, rangeKey])
+    leaves: loadLeaves(uid), sources, range: rangeFor(rangeKey),
+  }), [uid, sources, rangeKey])
 
   // Extra duties (free-slot task assignments) in the selected range — same
   // date-scoped records the Calendar writes, so the audit trail is automatic.
+  // periodName resolves across every active schedule's period grid.
   const duties = useMemo(() => {
     const range = rangeFor(rangeKey)
-    const periodName = (pid: string) => (store.periods ?? []).find((p: any) => p.id === pid)?.name ?? pid
+    const allPeriods = sources.flatMap(s => s.periods)
+    const periodName = (pid: string) => allPeriods.find((p: any) => p.id === pid)?.name ?? pid
     return loadAssignments(uid)
       .filter(a => a.date >= range.start && a.date <= range.end)
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(a => ({ ...a, periodName: periodName(a.periodId) }))
-  }, [uid, rangeKey, store.periods])
+  }, [uid, rangeKey, sources])
 
   const buildSheets = (): ExportSheet[] => [
     { name: 'Extra Duties', rows: [['Date','Period','Resource Type','Assigned To','Task','Note'],
@@ -82,7 +92,7 @@ export function InsightsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
-      <PageHeader icon="📊" title="Reports & Analytics" description="Leave, substitution and cancelled-lesson insight across your schedule."
+      <PageHeader icon="📊" title="Reports & Analytics" description={multiActive ? `Combined insight across all ${bundles.length} active schedules.` : "Leave, substitution and cancelled-lesson insight across your schedule."}
         actions={hasData ? <ExportControls filename="schedu-reports.xlsx" sheets={buildSheets} title="Reports" /> : undefined} />
 
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '22px 26px 60px' }}>

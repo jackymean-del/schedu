@@ -66,30 +66,47 @@ export function rangeFor(preset: string, today = new Date()): DateRange {
   }
 }
 
+/** One schedule's data — Reports expands leaves against every source, so
+ *  multiple active schedules aggregate while leaves are counted once. */
+export interface ReportSource {
+  sections: any[]; periods: any[]; classTT: Record<string, any>
+  substitutions: Record<string, string>; config: any
+}
+
 export function computeReports(params: {
   leaves: CalLeave[]
-  classTT: Record<string, any>
-  substitutions: Record<string, string>
-  periods: any[]
-  sections: any[]
-  config: any
   range: DateRange
+  /** Preferred: aggregate across all active schedules. */
+  sources?: ReportSource[]
+  /** Legacy single-schedule shape (kept for existing callers). */
+  classTT?: Record<string, any>
+  substitutions?: Record<string, string>
+  periods?: any[]
+  sections?: any[]
+  config?: any
 }): ReportsData {
-  const { leaves, classTT, substitutions, periods, sections, config, range } = params
+  const { leaves, range } = params
+  const sources: ReportSource[] = params.sources ?? [{
+    sections: params.sections ?? [], periods: params.periods ?? [],
+    classTT: params.classTT ?? {}, substitutions: params.substitutions ?? {},
+    config: params.config ?? {},
+  }]
 
-  // Period → wall-clock minutes for display.
-  const [sh = 9, sm = 0] = (config?.startTime ?? '09:00').split(':').map(Number)
-  const periodTimes: Record<string, { startMin: number; endMin: number; name: string }> = {}
-  let mins = sh * 60 + sm
-  for (const p of periods) {
-    periodTimes[p.id] = { startMin: mins, endMin: mins + (p.duration ?? 45), name: p.name ?? p.id }
-    mins += p.duration ?? 45
-  }
+  // Per-source period → wall-clock minutes (each schedule has its own bell).
+  const srcTimes = sources.map(src => {
+    const [sh = 9, sm = 0] = (src.config?.startTime ?? '09:00').split(':').map(Number)
+    const map: Record<string, { startMin: number; endMin: number; name: string }> = {}
+    let mins = sh * 60 + sm
+    for (const p of src.periods) {
+      map[p.id] = { startMin: mins, endMin: mins + (p.duration ?? 45), name: p.name ?? p.id }
+      mins += p.duration ?? 45
+    }
+    return map
+  })
 
   const dates = eachDate(range)
-  const inRange = (iso: string) => iso >= range.start && iso <= range.end
 
-  // Leave records touching the range (for totals / types / days).
+  // Leave records touching the range — counted ONCE (schedule-independent).
   const rangedLeaves = leaves.filter(l => dates.some(d => leaveCoversDate(l, d)))
   const leaveTypeMap = new Map<string, number>()
   const facultyOnLeave = new Set<string>()
@@ -101,27 +118,31 @@ export function computeReports(params: {
     leaveDays += l.duration === 'half' ? days * 0.5 : days
   }
 
-  // Expand every leave into the periods it affects, per date.
+  // Expand every leave into the periods it affects, per date, ACROSS all
+  // sources — a leave hits whichever schedule the teacher actually teaches in.
   const events: AffectedEvent[] = []
   for (const l of rangedLeaves) {
     for (const date of dates) {
       if (!leaveCoversDate(l, date)) continue
       const dayKey = DAY_KEY[new Date(date + 'T00:00:00').getDay()]
-      for (const s of sections) {
-        const sd = classTT[s.name]?.[dayKey] ?? {}
-        for (const p of periods) {
-          const c = sd[p.id]
-          if (!c?.subject || c.teacher !== l.teacher) continue
-          const sub = substitutions[`${s.name}|${dayKey}|${p.id}`]
-          const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0, name: p.id }
-          events.push({
-            date, day: dayKey, periodId: p.id, periodName: t.name,
-            startMin: t.startMin, endMin: t.endMin,
-            subject: c.subject, section: s.name, faculty: l.teacher,
-            substitute: sub || undefined, reason: sub ? undefined : (l.reason || 'no subs available'),
-          })
+      sources.forEach((src, si) => {
+        const times = srcTimes[si]
+        for (const s of src.sections) {
+          const sd = src.classTT[s.name]?.[dayKey] ?? {}
+          for (const p of src.periods) {
+            const c = sd[p.id]
+            if (!c?.subject || c.teacher !== l.teacher) continue
+            const sub = src.substitutions[`${s.name}|${dayKey}|${p.id}`]
+            const t = times[p.id] ?? { startMin: 0, endMin: 0, name: p.id }
+            events.push({
+              date, day: dayKey, periodId: p.id, periodName: t.name,
+              startMin: t.startMin, endMin: t.endMin,
+              subject: c.subject, section: s.name, faculty: l.teacher,
+              substitute: sub || undefined, reason: sub ? undefined : (l.reason || 'no subs available'),
+            })
+          }
         }
-      }
+      })
     }
   }
   const covered = events.filter(e => e.substitute)
