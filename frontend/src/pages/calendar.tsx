@@ -33,6 +33,7 @@ import {
   type FreeAssignment, type AssignKind,
 } from '@/lib/freeAssignments'
 import { loadActiveBundles, patchBundleSubstitutions, type ScheduleBundle } from '@/lib/activeSchedules'
+import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -185,18 +186,14 @@ export function CalendarPage() {
     ? config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
   const isWorkDay = workDays.includes(dayKey)
 
-  // Period → wall-clock minutes (cumulative from config.startTime).
+  // Period → wall-clock minutes. Ground truth is config.bellSchedules (assembly,
+  // lunch and dispersal included) so the calendar clock matches the timetable
+  // views; falls back to a cumulative sum for schedules without bell rows.
   const periodTimes = useMemo(() => {
     const map: Record<string, { startMin: number; endMin: number; type: string }> = {}
-    const [sh = 9, sm = 0] = (config.startTime ?? '09:00').split(':').map(Number)
-    let mins = sh * 60 + sm
-    for (const p of periods) {
-      const dur = p.duration ?? 45
-      map[p.id] = { startMin: mins, endMin: mins + dur, type: p.type }
-      mins += dur
-    }
+    schedulePeriodTimes(config, periods, sections).forEach((t, pid) => { map[pid] = t })
     return map
-  }, [periods, config.startTime])
+  }, [periods, sections, config])
 
   const dayStart = periods.length ? periodTimes[periods[0].id]?.startMin ?? 540 : 540
   const dayEnd   = periods.length ? periodTimes[periods[periods.length-1].id]?.endMin ?? 900 : 900
@@ -262,13 +259,14 @@ export function CalendarPage() {
     for (const b of sources) {
       const wd: string[] = b.config?.workDays?.length ? b.config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
       wd.forEach(d => workUnion.add(d))
-      const [sh = 9, sm = 0] = (b.config?.startTime ?? '09:00').split(':').map(Number)
-      let mins = sh * 60 + sm
-      for (const p of b.periods) {
-        const t = { startMin: mins, endMin: mins + (p.duration ?? 45) }
-        timeById[p.id] = t; lo = Math.min(lo, t.startMin); hi = Math.max(hi, t.endMin)
-        mins = t.endMin
-        for (const s of b.sections) {
+      // Each section resolves to its own bell (early dispersal / class-wise
+      // breaks give different groups different clocks), so times are per section.
+      for (const s of b.sections) {
+        const times = sectionPeriodTimes(s.name, b.config, b.periods)
+        for (const p of b.periods) {
+          const t = times.get(p.id)
+          if (!t) continue
+          timeById[p.id] = t; lo = Math.min(lo, t.startMin); hi = Math.max(hi, t.endMin)
           const c = b.classTT[s.name]?.[dayKey]?.[p.id]
           if (!c?.subject) continue
           const sub = b.substitutions[`${s.name}|${dayKey}|${p.id}`]
@@ -351,10 +349,8 @@ export function CalendarPage() {
   // the open schedule may be teaching in another at the same clock time (their
   // bells differ), which would be a real double-booking.
   const bundleWallTimes = (b: ScheduleBundle) => {
-    const [sh = 9, sm = 0] = (b.config?.startTime ?? '09:00').split(':').map(Number)
-    let mins = sh * 60 + sm
     const m: Record<string, { s: number; e: number }> = {}
-    for (const p of b.periods) { m[p.id] = { s: mins, e: mins + (p.duration ?? 45) }; mins = m[p.id].e }
+    schedulePeriodTimes(b.config, b.periods, b.sections).forEach((t, pid) => { m[pid] = { s: t.startMin, e: t.endMin } })
     return m
   }
   // Is `name` already teaching (or subbing) at this wall-clock interval in any
