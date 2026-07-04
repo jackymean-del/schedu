@@ -13,6 +13,8 @@ interface SeoProps {
   description: string
   path: string // route path, e.g. '/features'
   noindex?: boolean
+  /** One or more schema.org objects, rendered as <script type="application/ld+json"> tags. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[]
 }
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
@@ -36,7 +38,7 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute('href', href)
 }
 
-export function Seo({ title, description, path, noindex = false }: SeoProps) {
+export function Seo({ title, description, path, noindex = false, jsonLd }: SeoProps) {
   useEffect(() => {
     const url = `${SITE_URL}${path}`
     const fullTitle = title.includes('schedU') ? title : `${title} · schedU`
@@ -59,7 +61,19 @@ export function Seo({ title, description, path, noindex = false }: SeoProps) {
     upsertMeta('name', 'twitter:title', fullTitle)
     upsertMeta('name', 'twitter:description', description)
     upsertMeta('name', 'twitter:image', OG_IMAGE)
-  }, [title, description, path, noindex])
+
+    // Structured data — one <script> per schema object, removed on unmount/change
+    // so navigating between pages doesn't accumulate stale JSON-LD.
+    const schemas = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
+    const scripts = schemas.map(schema => {
+      const el = document.createElement('script')
+      el.type = 'application/ld+json'
+      el.textContent = JSON.stringify(schema)
+      document.head.appendChild(el)
+      return el
+    })
+    return () => { scripts.forEach(el => el.remove()) }
+  }, [title, description, path, noindex, jsonLd])
 
   return null
 }

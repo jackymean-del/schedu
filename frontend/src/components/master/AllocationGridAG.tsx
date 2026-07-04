@@ -34,8 +34,6 @@ import {
   type CellValueChangedEvent,
   type ProcessDataFromClipboardParams,
 } from 'ag-grid-community'
-import { AllEnterpriseModule } from 'ag-grid-enterprise'
-
 import { useTimetableStore } from '@/store/timetableStore'
 import { buildPeriodSequence } from '@/lib/aiEngine'
 import type { Subject, Section, Period } from '@/types'
@@ -46,7 +44,7 @@ import {
 } from '@/lib/capacityEngine'
 import { Search, ChevronDown, Minus, Plus, Check } from 'lucide-react'
 
-ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
+ModuleRegistry.registerModules([AllCommunityModule])
 
 // ─────────────────────────────────────────────────────────────────
 // Helpers
@@ -1412,7 +1410,13 @@ export function AllocationGridAG({
         <div style={{ flex: 1 }} />
         <ExportDropdown
           onCsv={() => gridRef.current?.api?.exportDataAsCsv()}
-          onExcel={() => (gridRef.current?.api as any)?.exportDataAsExcel?.()}
+          onExcel={async () => {
+            const csv = gridRef.current?.api?.getDataAsCsv()
+            if (!csv) return
+            const XLSX = await import('xlsx')
+            const wb = XLSX.read(csv, { type: 'string' })
+            XLSX.writeFile(wb, 'period-allocation.xlsx')
+          }}
         />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <Search size={10} style={{ position: 'absolute', left: 7, color: '#C0BDDA', pointerEvents: 'none' }} />

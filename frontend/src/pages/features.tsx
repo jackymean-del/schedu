@@ -4,6 +4,7 @@
 import { MarketingChrome } from '@/components/marketing/MarketingChrome'
 import { Seo } from '@/components/marketing/Seo'
 import { appStartHref } from '@/lib/nav'
+import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 
 const FEATURES = [
   {
@@ -48,6 +49,7 @@ export function FeaturesPage() {
         title="Features"
         description="Explore every schedU feature — AI auto-scheduling, real-time conflict detection, elective OR/AND groups, multi-stream support, room planning, and PDF/Excel export."
         path="/features"
+        jsonLd={ORGANIZATION_SCHEMA}
       />
       {/* Hero */}
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-14 pt-[72px] text-center">
@@ -68,7 +70,7 @@ export function FeaturesPage() {
           {FEATURES.map(f => (
             <div key={f.title} className={`rounded-[14px] border border-[#E8E4FF] bg-[#FAFAFE] px-6 py-7 ${cardHover}`}>
               <div className="mb-3.5 text-[30px] leading-none">{f.icon}</div>
-              <h3 className="mb-2 text-base font-bold text-[#13111E]">{f.title}</h3>
+              <h2 className="mb-2 text-base font-bold text-[#13111E]">{f.title}</h2>
               <p className="text-[13.5px] leading-[1.7] text-[#4B5275]">{f.desc}</p>
             </div>
           ))}

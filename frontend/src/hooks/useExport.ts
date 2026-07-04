@@ -1,8 +1,6 @@
 import { useTimetableStore } from "@/store/timetableStore"
 import { ORG_CONFIGS } from "@/lib/orgData"
 
-declare const XLSX: any
-
 // ─── Excel format types ────────────────────────────────────────────────
 export type ExcelFormat =
   | "class-day"       // Class-wise, each tab = one day
@@ -15,12 +13,9 @@ export type ExcelFormat =
 export function useExport() {
   const { config, sections, staff, periods, classTT, teacherTT } = useTimetableStore()
 
-  const exportXLSX = (format: ExcelFormat = "class-class") => {
+  const exportXLSX = async (format: ExcelFormat = "class-class") => {
     if (!sections.length) return
-    if (typeof XLSX === "undefined") {
-      alert("Excel export library not loaded. Please refresh the page.")
-      return
-    }
+    const XLSX = await import("xlsx")
 
     const wb   = XLSX.utils.book_new()
     const days = config.workDays

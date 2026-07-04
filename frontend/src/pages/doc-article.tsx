@@ -6,6 +6,7 @@ import { MarketingChrome } from '@/components/marketing/MarketingChrome'
 import { Seo } from '@/components/marketing/Seo'
 import { appStartHref } from '@/lib/nav'
 import { DOC_ARTICLES, getDoc, type DocBlock } from '@/content/docs'
+import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 
 function Block({ block }: { block: DocBlock }) {
   if ('p' in block) return <p className="mt-4 text-[15px] leading-[1.8] text-[#4B5275]">{block.p}</p>
@@ -60,7 +61,7 @@ export function DocArticlePage() {
 
   return (
     <MarketingChrome>
-      <Seo title={`${doc.title} · Docs`} description={doc.description} path={`/docs/${doc.slug}`} />
+      <Seo title={`${doc.title} · Docs`} description={doc.description} path={`/docs/${doc.slug}`} jsonLd={ORGANIZATION_SCHEMA} />
       <div className="mx-auto grid w-full max-w-[1000px] grid-cols-1 gap-10 px-6 py-12 md:grid-cols-[220px_1fr]">
 
         {/* Sidebar */}

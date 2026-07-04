@@ -4,6 +4,7 @@
 import { MarketingChrome } from '@/components/marketing/MarketingChrome'
 import { Seo } from '@/components/marketing/Seo'
 import { DOC_ARTICLES } from '@/content/docs'
+import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 
 const STEPS = [
   { n: 1, title: 'Enter the basics', desc: 'Name your institution, pick a board (or define your own), and add class ranges, teachers, and rooms.' },
@@ -22,6 +23,7 @@ export function DocsPage() {
         title="Documentation"
         description="Learn how schedU works — from your first conflict-free timetable to advanced electives, room planning, and exports. Guides for schools, colleges, and universities."
         path="/docs"
+        jsonLd={ORGANIZATION_SCHEMA}
       />
       {/* Hero */}
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-12 pt-[72px] text-center">
@@ -37,7 +39,7 @@ export function DocsPage() {
 
       {/* Quick start steps */}
       <section className="flex flex-col items-center bg-white px-6 py-14">
-        <p className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Quick start</p>
+        <h2 className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Quick start</h2>
         <div className="grid w-full max-w-[920px] grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
           {STEPS.map(s => (
             <div key={s.n} className={`rounded-xl border border-[#E8E4FF] bg-white px-5 py-[22px] ${cardHover}`}>
@@ -53,7 +55,7 @@ export function DocsPage() {
 
       {/* Topics */}
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#F8F7FF] px-6 pb-[72px] pt-14">
-        <p className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Browse by topic</p>
+        <h2 className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Browse by topic</h2>
         <div className="grid w-full max-w-[920px] grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-[18px]">
           {DOC_ARTICLES.map(d => (
             <a key={d.slug} href={`/docs/${d.slug}`} className="no-underline">

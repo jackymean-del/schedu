@@ -5,6 +5,7 @@
 import { MarketingChrome } from '@/components/marketing/MarketingChrome'
 import { Seo } from '@/components/marketing/Seo'
 import { appStartHref } from '@/lib/nav'
+import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 
 const BOARDS = [
   'IB (MYP / DP)', 'Cambridge IGCSE', 'Common Core', 'GCSE / A-Level',
@@ -74,6 +75,24 @@ const TESTIMONIALS = [
 const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
+// Mirrors the prices actually shown in the Pricing section below — schema.org
+// Offer requires a numeric price, so 'Free'/'$29'/'$99' map to 0/29/99 USD.
+const SOFTWARE_APPLICATION_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'schedU',
+  applicationCategory: 'EducationalApplication',
+  operatingSystem: 'Web',
+  url: 'https://schedu.bhusku.com',
+  description: 'AI-generated, conflict-free timetables for schools, colleges, and universities — any board, any curriculum.',
+  offers: TIERS.map(t => ({
+    '@type': 'Offer',
+    name: t.name,
+    price: t.price === 'Free' ? '0' : t.price.replace('$', ''),
+    priceCurrency: 'USD',
+  })),
+}
+
 export function HomePage() {
   return (
     <MarketingChrome>
@@ -81,6 +100,7 @@ export function HomePage() {
         title="schedU — AI Timetable Scheduling for Any Institution"
         description="schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere."
         path="/"
+        jsonLd={[ORGANIZATION_SCHEMA, SOFTWARE_APPLICATION_SCHEMA]}
       />
       {/* Hero */}
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-[60px] pt-[72px] text-center">
@@ -152,7 +172,7 @@ export function HomePage() {
           {FEATURES.map(f => (
             <div key={f.title} className={`rounded-xl border border-[#E8E4FF] bg-[#FAFAFE] px-[22px] py-[26px] ${cardHover}`}>
               <div className="mb-3.5 text-[30px] leading-none">{f.icon}</div>
-              <h3 className="mb-2 text-[15px] font-bold text-[#13111E]">{f.title}</h3>
+              <h2 className="mb-2 text-[15px] font-bold text-[#13111E]">{f.title}</h2>
               <p className="text-[13px] leading-[1.7] text-[#4B5275]">{f.desc}</p>
             </div>
           ))}
@@ -191,14 +211,14 @@ export function HomePage() {
 
       {/* How it works */}
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#F8F7FF] px-6 py-16">
-        <p className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">How it works</p>
+        <h2 className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">How it works</h2>
         <div className="grid w-full max-w-[900px] grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-4">
           {STEPS.map(s => (
             <div key={s.n} className={`rounded-xl border border-[#E8E4FF] bg-white px-5 py-[22px] ${cardHover}`}>
               <div className="mb-3.5 inline-flex items-center justify-center rounded-full bg-[#EDE9FF] px-2.5 py-[3px] text-[10px] font-extrabold tracking-[0.04em] text-[#7C6FE0]">
                 Step {s.n}
               </div>
-              <h4 className="mb-[7px] text-sm font-bold text-[#13111E]">{s.title}</h4>
+              <h3 className="mb-[7px] text-sm font-bold text-[#13111E]">{s.title}</h3>
               <p className="text-[12.5px] leading-[1.65] text-[#4B5275]">{s.desc}</p>
             </div>
           ))}

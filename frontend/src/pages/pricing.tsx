@@ -4,6 +4,7 @@
 import { MarketingChrome } from '@/components/marketing/MarketingChrome'
 import { Seo } from '@/components/marketing/Seo'
 import { appStartHref } from '@/lib/nav'
+import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 
 const TIERS = [
   {
@@ -43,6 +44,7 @@ export function PricingPage() {
         title="Pricing"
         description="Simple, transparent pricing for schedU. Start free, then scale to unlimited classes, multi-stream electives, and multi-campus management. Starter / Pro / Enterprise."
         path="/pricing"
+        jsonLd={ORGANIZATION_SCHEMA}
       />
       {/* Hero */}
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-12 pt-[72px] text-center">
@@ -73,7 +75,7 @@ export function PricingPage() {
                   Most popular
                 </span>
               )}
-              <h3 className="text-base font-bold text-[#13111E]">{t.name}</h3>
+              <h2 className="text-base font-bold text-[#13111E]">{t.name}</h2>
               <div className="mb-1.5 mt-3.5 flex items-baseline gap-1">
                 <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">{t.price}</span>
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}

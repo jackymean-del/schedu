@@ -1,12 +1,10 @@
 /**
- * Reusable export helpers — Excel (SheetJS, loaded globally via index.html) and
+ * Reusable export helpers — Excel (SheetJS, lazily loaded on demand) and
  * shared print branding (institution info + schedU mark). The actual Print/PDF
  * preview lives in components/PrintDoc.tsx (the standardized PrintPreview).
  */
 import { useAuthStore } from '@/store/authStore'
 import { useTimetableStore } from '@/store/timetableStore'
-
-declare const XLSX: any
 
 export interface ExportSheet {
   name: string
@@ -15,11 +13,8 @@ export interface ExportSheet {
 }
 
 /** Download one or more sheets as a single .xlsx workbook. */
-export function exportSheetsToXLSX(filename: string, sheets: ExportSheet[]): void {
-  if (typeof XLSX === 'undefined') {
-    alert('Excel export library is still loading — please try again in a moment.')
-    return
-  }
+export async function exportSheetsToXLSX(filename: string, sheets: ExportSheet[]): Promise<void> {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
   for (const s of sheets) {
     const ws = XLSX.utils.aoa_to_sheet(s.rows.length ? s.rows : [['(no data)']])
