@@ -312,19 +312,53 @@ export function CalendarPage() {
   }
 
   // Teaching load for a teacher on a given day (regular vs. covering as sub).
+  // A teacher's true load counts EVERY active schedule they appear in, so
+  // fairness (and the caps below) reflect their whole day, not one schedule.
   const loadOn = (teacher: string, day: string) => {
     let reg = 0, sub = 0
-    for (const s of sections) {
-      const sd = classTT[s.name]?.[day] ?? {}
-      for (const p of periods) {
-        const c = sd[p.id]
-        if (!c?.subject) continue
-        const covered = substitutions[`${s.name}|${day}|${p.id}`]
-        if (covered) { if (covered === teacher) sub++ }
-        else if (c.teacher === teacher) reg++
+    for (const b of sources) {
+      for (const s of b.sections) {
+        const sd = b.classTT[s.name]?.[day] ?? {}
+        for (const p of b.periods) {
+          const c = sd[p.id]
+          if (!c?.subject) continue
+          const covered = b.substitutions[`${s.name}|${day}|${p.id}`]
+          if (covered) { if (covered === teacher) sub++ }
+          else if (c.teacher === teacher) reg++
+        }
       }
     }
     return { reg, sub }
+  }
+
+  // Wall-clock busy check ACROSS other active schedules — a candidate free in
+  // the open schedule may be teaching in another at the same clock time (their
+  // bells differ), which would be a real double-booking.
+  const bundleWallTimes = (b: ScheduleBundle) => {
+    const [sh = 9, sm = 0] = (b.config?.startTime ?? '09:00').split(':').map(Number)
+    let mins = sh * 60 + sm
+    const m: Record<string, { s: number; e: number }> = {}
+    for (const p of b.periods) { m[p.id] = { s: mins, e: mins + (p.duration ?? 45) }; mins = m[p.id].e }
+    return m
+  }
+  const busyElsewhere = (name: string, startMin: number, endMin: number): boolean => {
+    if (!multiActive) return false
+    for (const b of sources) {
+      if (b.id === (activeScheduleId ?? 'open')) continue   // open schedule handled by `busy`
+      const times = bundleWallTimes(b)
+      for (const s of b.sections) {
+        const sd = b.classTT[s.name]?.[dayKey] ?? {}
+        for (const pid of Object.keys(sd)) {
+          const c = sd[pid]
+          if (!c?.subject) continue
+          const eff = b.substitutions[`${s.name}|${dayKey}|${pid}`] || c.teacher
+          if (eff !== name) continue
+          const t = times[pid]
+          if (t && t.s < endMin && startMin < t.e) return true
+        }
+      }
+    }
+    return false
   }
 
   // Does `name` teach `section` (any subject) / `subject` (any section) anywhere
@@ -356,9 +390,12 @@ export function CalendarPage() {
       const [, d, pid] = k.split('|'); if (d === dayKey && pid === periodId) busy.add(v)
     })
     const pIdx = classPeriods.findIndex((p: any) => p.id === periodId)
+    // Wall-clock interval of the slot being covered (open schedule's bell).
+    const wt = periodTimes[periodId]
 
     return staff
       .filter((st: any) => st.name !== absent && !busy.has(st.name))
+      .filter((st: any) => !wt || !busyElsewhere(st.name, wt.startMin, wt.endMin))
       .filter((st: any) => {
         const ov = overrideFor(substitutionSettings, st.id)
         if (!ov.canSub) return false
