@@ -32,6 +32,7 @@ import {
   loadAssignments, saveAssignments, assignmentAt, TASK_PRESETS,
   type FreeAssignment, type AssignKind,
 } from '@/lib/freeAssignments'
+import { loadActiveBundles, type ScheduleBundle } from '@/lib/activeSchedules'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -214,6 +215,67 @@ export function CalendarPage() {
   const substitutions: Record<string, string> = store.substitutions ?? {}
   const subAt = (section: string, periodId: string) => substitutions[`${section}|${dayKey}|${periodId}`]
 
+  // ── Multi-active aggregation for the Day grid & Month ──────────────
+  // When several schedules are active, the grid shows their UNION. Each
+  // schedule keeps its own bell, so cells resolve to wall-clock minutes per
+  // their own grid and merge on the time axis. The OPEN schedule always uses
+  // the live store (unsaved edits included); other actives read their snapshot.
+  // Live/scrubber stay on the open schedule (a later slice), with a banner.
+  // Source of truth for "how many schedules are active" is the bundles we can
+  // actually load (robust across mock/Clerk key namespacing), not the switcher
+  // list. Re-reads when the open schedule changes.
+  const rawBundles = useMemo(() => loadActiveBundles(uid), [uid, activeScheduleId])
+  const activeCount = rawBundles.length
+  const multiActive = activeCount > 1
+  const sources = useMemo<ScheduleBundle[]>(() => {
+    const open: ScheduleBundle = {
+      id: activeScheduleId ?? 'open', name: config.timetableName ?? 'Schedule',
+      sections, staff, rooms, subjects, periods, config, classTT, substitutions,
+    }
+    if (!multiActive) return [open]
+    // The open schedule uses the live store; other actives use their snapshot.
+    return rawBundles.map(b => b.id === activeScheduleId ? open : b)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multiActive, rawBundles, activeScheduleId, sections, staff, rooms, subjects, periods, classTT, substitutions, config.startTime])
+
+  // Flat list of every scheduled cell for the selected weekday, across sources,
+  // each carrying its own wall-clock start/end and any substitution.
+  interface DayCell { sid: string; sname: string; section: string; periodId: string; subject: string; teacher: string; room: string; startMin: number; endMin: number; sub?: string }
+  const gridData = useMemo(() => {
+    const cells: DayCell[] = []
+    const timeById: Record<string, { startMin: number; endMin: number }> = {}
+    let lo = Infinity, hi = -Infinity
+    const workUnion = new Set<string>()
+    for (const b of sources) {
+      const wd: string[] = b.config?.workDays?.length ? b.config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
+      wd.forEach(d => workUnion.add(d))
+      const [sh = 9, sm = 0] = (b.config?.startTime ?? '09:00').split(':').map(Number)
+      let mins = sh * 60 + sm
+      for (const p of b.periods) {
+        const t = { startMin: mins, endMin: mins + (p.duration ?? 45) }
+        timeById[p.id] = t; lo = Math.min(lo, t.startMin); hi = Math.max(hi, t.endMin)
+        mins = t.endMin
+        for (const s of b.sections) {
+          const c = b.classTT[s.name]?.[dayKey]?.[p.id]
+          if (!c?.subject) continue
+          const sub = b.substitutions[`${s.name}|${dayKey}|${p.id}`]
+          cells.push({ sid: b.id, sname: b.name, section: s.name, periodId: p.id, subject: c.subject, teacher: c.teacher ?? '', room: (c.room ?? '').trim(), startMin: t.startMin, endMin: t.endMin, sub: sub || undefined })
+        }
+      }
+    }
+    if (!isFinite(lo)) { lo = 540; hi = 900 }
+    return { cells, timeById, gridStart: lo, gridEnd: hi, isWorkDay: workUnion.has(dayKey) }
+  }, [sources, dayKey])
+
+  const gridStart = gridData.gridStart
+  const gridEnd   = gridData.gridEnd
+  const gridSpan  = Math.max(60, gridEnd - gridStart)
+  const gridTrackW = gridSpan * PX_PER_MIN
+  const gridTicks = useMemo(() => {
+    const out: number[] = []; for (let t = Math.ceil(gridStart / 60) * 60; t <= gridEnd; t += 60) out.push(t); return out
+  }, [gridStart, gridEnd])
+  const gridWorkDay = gridData.isWorkDay
+
   // ── Leave & substitution ──
   const [leaves, setLeaves] = useState<CalLeave[]>(() => loadLeaves(uid))
   const saveLeaves = (next: CalLeave[]) => {
@@ -365,50 +427,23 @@ export function CalendarPage() {
 
   const blocksFor = (entity: string): Block[] => {
     const out: Block[] = []
-    if (mode === 'class') {
-      // Class lens: the subject IS the primary line (coloured).
-      const sd = classTT[entity]?.[dayKey] ?? {}
-      for (const p of periods) {
-        const c = sd[p.id]
-        if (!c?.subject) continue
-        const s = subAt(entity, p.id)
-        out.push(mkBlock(p.id, p.id, c.subject, undefined, s || c.teacher || '', c.room ?? '', c.subject, s))
-      }
-    } else if (mode === 'teacher') {
-      // Faculty lens: the CLASS is primary (a teacher asks "who am I with?"),
-      // subject demoted to a coloured chip.
-      for (const s of sections) {
-        const sd = classTT[s.name]?.[dayKey] ?? {}
-        for (const p of periods) {
-          const c = sd[p.id]
-          if (!c?.subject) continue
-          const sub = subAt(s.name, p.id)
-          const effective = sub || c.teacher
-          if (effective === entity) out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, c.subject, '', c.room ?? '', c.subject, sub && sub === entity ? sub : undefined))
-        }
-      }
-    } else if (mode === 'room') {
-      // Venue lens: the CLASS occupying it is primary, subject as chip.
-      for (const s of sections) {
-        const sd = classTT[s.name]?.[dayKey] ?? {}
-        for (const p of periods) {
-          const c = sd[p.id]
-          if (!c?.subject || (c.room ?? '') !== entity) continue
-          const sub = subAt(s.name, p.id)
-          out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, c.subject, sub || c.teacher || '', '', c.subject, sub))
-        }
-      }
-    } else {
-      // Subject lens: rows are subjects, so the class is primary; colour
-      // stays the row-subject's colour for a consistent band per row.
-      for (const s of sections) {
-        const sd = classTT[s.name]?.[dayKey] ?? {}
-        for (const p of periods) {
-          const c = sd[p.id]
-          if (!c?.subject || c.subject !== entity) continue
-          const sub = subAt(s.name, p.id)
-          out.push(mkBlock(`${s.name}|${p.id}`, p.id, s.name, undefined, sub || c.teacher || '', c.room ?? '', entity, sub))
-        }
+    // Filter the union cell list by the active lens. Each cell already carries
+    // its own wall-clock time (resolved per its schedule's bell).
+    for (const c of gridData.cells) {
+      const key = `${c.sid}|${c.section}|${c.periodId}`
+      if (mode === 'class') {
+        if (c.section !== entity) continue
+        out.push(mk(key, c, c.subject, undefined, c.sub || c.teacher || '', c.room, c.subject, c.sub))
+      } else if (mode === 'teacher') {
+        const effective = c.sub || c.teacher
+        if (effective !== entity) continue
+        out.push(mk(key, c, c.section, c.subject, '', c.room, c.subject, c.sub && c.sub === entity ? c.sub : undefined))
+      } else if (mode === 'room') {
+        if (c.room !== entity) continue
+        out.push(mk(key, c, c.section, c.subject, c.sub || c.teacher || '', '', c.subject, c.sub))
+      } else {
+        if (c.subject !== entity) continue
+        out.push(mk(key, c, c.section, undefined, c.sub || c.teacher || '', c.room, entity, c.sub))
       }
     }
     // Free-slot assignments for this entity today render as dashed TASK blocks.
@@ -416,15 +451,14 @@ export function CalendarPage() {
       const kind: AssignKind = mode === 'class' ? 'class' : mode === 'teacher' ? 'teacher' : 'room'
       for (const a of assignments) {
         if (a.date !== isoDate || a.kind !== kind || a.entity !== entity) continue
-        const t = periodTimes[a.periodId]
+        const t = gridData.timeById[a.periodId]
         if (!t) continue
         out.push({ key: `task|${a.id}`, title: a.title, line2: a.note ?? '', room: '', startMin: t.startMin, endMin: t.endMin, color: TASK_COLOR, task: true })
       }
     }
     return out
-    function mkBlock(key: string, periodId: string, title: string, chip: string | undefined, line2: string, room: string, subjectName: string, sub?: string): Block {
-      const t = periodTimes[periodId] ?? { startMin: dayStart, endMin: dayStart + 45, type: 'teaching' }
-      return { key, title, chip, line2, room, startMin: t.startMin, endMin: t.endMin, color: subjectColor(subjectName), sub: sub || undefined }
+    function mk(key: string, c: DayCell, title: string, chip: string | undefined, line2: string, room: string, subjectName: string, sub?: string): Block {
+      return { key, title, chip, line2, room, startMin: c.startMin, endMin: c.endMin, color: subjectColor(subjectName), sub: sub || undefined }
     }
   }
 
@@ -462,6 +496,25 @@ export function CalendarPage() {
     return q ? list.filter(e => e.name.toLowerCase().includes(q)) : list
   }, [mode, sections, staff, rooms, subjects, classTT, dayKey, query])
 
+  // Day-grid entity rows — the UNION across active schedules (single-active
+  // reduces to the same set as entityList). Live keeps entityList (open only).
+  const gridEntities = useMemo(() => {
+    if (!multiActive) return entityList
+    const names = new Set<string>()
+    if (mode === 'class')        sources.forEach(b => b.sections.forEach((s: any) => names.add(s.name)))
+    else if (mode === 'teacher') sources.forEach(b => b.staff.forEach((s: any) => names.add(s.name)))
+    else if (mode === 'room') {
+      sources.forEach(b => b.rooms.forEach((r: any) => { const n = r.actualName || r.generatedName || r.name; if (n) names.add(n) }))
+      gridData.cells.forEach(c => { if (c.room) names.add(c.room) })
+    } else {
+      sources.forEach(b => b.subjects.forEach((s: any) => { if (s.name) names.add(s.name) }))
+      gridData.cells.forEach(c => names.add(c.subject))
+    }
+    const q = query.trim().toLowerCase()
+    const list = Array.from(names).sort().map(n => ({ id: n, name: n }))
+    return q ? list.filter(e => e.name.toLowerCase().includes(q)) : list
+  }, [multiActive, mode, sources, gridData, entityList, query])
+
   const colLabel = mode === 'class' ? terms.class : mode === 'teacher' ? terms.teacher : mode === 'room' ? terms.venue : terms.subject
 
   // Current-time cursor position (only when viewing today and within the span).
@@ -470,6 +523,9 @@ export function CalendarPage() {
   const nowMin = now.getHours() * 60 + now.getMinutes()
   const showCursor = view === 'day' && viewingToday && nowMin >= dayStart && nowMin <= dayEnd
   const cursorLeft = (nowMin - dayStart) * PX_PER_MIN
+  // Day-grid cursor is relative to the grid's own (possibly wider) span.
+  const gridShowCursor = view === 'day' && viewingToday && nowMin >= gridStart && nowMin <= gridEnd
+  const gridCursorLeft = (nowMin - gridStart) * PX_PER_MIN
 
   // Live view: the moment being inspected. null follows the clock (clamped to
   // the school day); dragging the timeline pins it to a specific minute.
@@ -485,23 +541,26 @@ export function CalendarPage() {
   const statsByDay = useMemo(() => {
     const out: Record<string, { sessions: number; classes: number; teachers: number; venues: number; subjects: number }> = {}
     for (const dk of DAY_KEY) {
-      if (!workDays.includes(dk)) continue
-      let sessions = 0
+      let sessions = 0, anyWork = false
       const cls = new Set<string>(), tch = new Set<string>(), ven = new Set<string>(), sub = new Set<string>()
-      for (const s of sections) {
-        const sd = classTT[s.name]?.[dk] ?? {}
-        for (const c of Object.values(sd) as any[]) {
-          if (!c?.subject) continue
-          sessions++
-          cls.add(s.name); sub.add(c.subject)
-          if (c.teacher) tch.add(c.teacher)
-          if (c.room) ven.add(c.room)
+      for (const b of sources) {
+        const wd: string[] = b.config?.workDays?.length ? b.config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
+        if (!wd.includes(dk)) continue
+        anyWork = true
+        for (const s of b.sections) {
+          const sd = b.classTT[s.name]?.[dk] ?? {}
+          for (const c of Object.values(sd) as any[]) {
+            if (!c?.subject) continue
+            sessions++; cls.add(s.name); sub.add(c.subject)
+            if (c.teacher) tch.add(c.teacher)
+            if (c.room) ven.add(c.room)
+          }
         }
       }
-      out[dk] = { sessions, classes: cls.size, teachers: tch.size, venues: ven.size, subjects: sub.size }
+      if (anyWork) out[dk] = { sessions, classes: cls.size, teachers: tch.size, venues: ven.size, subjects: sub.size }
     }
     return out
-  }, [sections, classTT, workDays])
+  }, [sources])
 
   const shift = (d: number) => setDate(prev => { const n = new Date(prev); n.setDate(n.getDate() + d); return n })
 
@@ -647,12 +706,24 @@ export function CalendarPage() {
           </div>
         )}
 
+        {/* Multi-active banner — the grid unions every active schedule. */}
+        {multiActive && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12, padding: '8px 12px', borderRadius: 10, background: '#EEF4FF', border: '1px solid #C7D7FF', fontSize: 12.5, color: '#1E40AF' }}>
+            <span style={{ fontWeight: 800 }}>🔀 {activeCount} schedules active</span>
+            <span style={{ color: '#3B6FD4' }}>
+              {view === 'live'
+                ? '· Live shows the open schedule — switch above to view another'
+                : `· ${view === 'month' ? 'Month' : 'Day'} shows the combined view across all of them`}
+            </span>
+          </div>
+        )}
+
         {/* ── Main ───────────────────────────────────────────── */}
         {view === 'month'
           ? <MonthGrid date={date} setDate={setDate} events={events} onAdd={() => setAddOpen(true)} statsByDay={statsByDay} />
           : !hasTimetable
           ? <EmptyState />
-          : !isWorkDay
+          : (view === 'live' ? !isWorkDay : !gridWorkDay)
           ? <RestDay day={DOW_FULL[date.getDay()]} />
           : view === 'live'
           ? (
@@ -670,7 +741,7 @@ export function CalendarPage() {
           : (
             <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
               <div className="cal-scroll" style={{ overflowX: 'auto' }}>
-                <div style={{ minWidth: ENTITY_W + trackW }}>
+                <div style={{ minWidth: ENTITY_W + gridTrackW }}>
                   {/* Ruler */}
                   <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 3, background: 'linear-gradient(#FBFAFF,#F4F2FE)', borderBottom: '1px solid #ECE9FB' }}>
                     <div style={{
@@ -687,22 +758,22 @@ export function CalendarPage() {
                         />
                       </div>
                     </div>
-                    <div style={{ position: 'relative', width: trackW, height: RULER_H }}>
-                      {ticks.map(t => (
-                        <div key={t} style={{ position: 'absolute', left: (t - dayStart) * PX_PER_MIN, top: 0, height: '100%', borderLeft: '1px solid #ECE9FB', paddingLeft: 8, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ position: 'relative', width: gridTrackW, height: RULER_H }}>
+                      {gridTicks.map(t => (
+                        <div key={t} style={{ position: 'absolute', left: (t - gridStart) * PX_PER_MIN, top: 0, height: '100%', borderLeft: '1px solid #ECE9FB', paddingLeft: 8, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#4B5275' }}>{fmtClock(t, h24).split(' ')[0]}</span>
                           {!h24 && <span style={{ fontSize: 9.5, fontWeight: 700, color: '#A9A4C8' }}>{fmtClock(t, h24).split(' ')[1]}</span>}
                         </div>
                       ))}
-                      {showCursor && <CursorHead left={cursorLeft} label={fmtClock(nowMin, h24)} />}
+                      {gridShowCursor && <CursorHead left={gridCursorLeft} label={fmtClock(nowMin, h24)} />}
                     </div>
                   </div>
 
                   {/* Rows */}
-                  {entityList.length === 0 && (
+                  {gridEntities.length === 0 && (
                     <div style={{ padding: '40px', textAlign: 'center', color: '#8B87AD', fontSize: 13 }}>No {colLabel.toLowerCase()} matches “{query}”.</div>
                   )}
-                  {entityList.map(ent => {
+                  {gridEntities.map(ent => {
                     const blocks = blocksFor(ent.id)
                     // Simultaneous blocks (Subject lens especially) stack into
                     // lanes; the row grows so nothing overlaps or clips.
@@ -736,17 +807,17 @@ export function CalendarPage() {
                             <Caret size={15} color="#CFC9EC" />
                           )}
                         </div>
-                        <div style={{ position: 'relative', width: trackW, height: rowH }}>
+                        <div style={{ position: 'relative', width: gridTrackW, height: rowH }}>
                           {/* hour gridlines */}
-                          {ticks.map(t => (
-                            <div key={t} style={{ position: 'absolute', left: (t - dayStart) * PX_PER_MIN, top: 0, height: '100%', borderLeft: '1px solid #F6F4FD' }} />
+                          {gridTicks.map(t => (
+                            <div key={t} style={{ position: 'absolute', left: (t - gridStart) * PX_PER_MIN, top: 0, height: '100%', borderLeft: '1px solid #F6F4FD' }} />
                           ))}
                           {placed.map(({ b, lane }) => (
-                            <SessionCell key={b.key} b={b} dayStart={dayStart} h24={h24}
+                            <SessionCell key={b.key} b={b} dayStart={gridStart} h24={h24}
                               top={laneCount === 1 ? 6 : 6 + lane * LANE_H}
                               height={laneCount === 1 ? ROW_H - 12 : LANE_H - 6} />
                           ))}
-                          {showCursor && <div style={{ position: 'absolute', left: cursorLeft, top: 0, height: '100%', width: 1.5, background: '#EF4444', opacity: 0.55, zIndex: 2, pointerEvents: 'none' }} />}
+                          {gridShowCursor && <div style={{ position: 'absolute', left: gridCursorLeft, top: 0, height: '100%', width: 1.5, background: '#EF4444', opacity: 0.55, zIndex: 2, pointerEvents: 'none' }} />}
                         </div>
                       </div>
                     )
