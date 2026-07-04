@@ -22,6 +22,26 @@ export interface ScheduleBundle {
 const TTLIST_KEY = 'schedu-tt-list'
 const SNAP_PFX = 'schedu-tt-snap-'
 
+/** The snapshot key an id currently lives under (namespaced preferred, else a
+ *  legacy variant that already exists). Falls back to the namespaced key. */
+export function snapKeyFor(uid: string, id: string): string {
+  for (const k of [`${SNAP_PFX}${uid}:${id}`, `${SNAP_PFX}:${id}`, `${SNAP_PFX}${id}`]) {
+    if (localStorage.getItem(k) != null) return k
+  }
+  return `${SNAP_PFX}${uid}:${id}`
+}
+
+/** Write one schedule's substitution map straight into its snapshot. Used to
+ *  route a substitution to the schedule that OWNS the lesson when it isn't the
+ *  open one (the open schedule persists through its store instead). */
+export function patchBundleSubstitutions(uid: string, id: string, next: Record<string, string>): void {
+  const key = snapKeyFor(uid, id)
+  let snap: Record<string, any> = {}
+  try { const raw = localStorage.getItem(key); if (raw) snap = JSON.parse(raw) } catch { /* ignore */ }
+  snap.substitutions = next
+  try { localStorage.setItem(key, JSON.stringify(snap)) } catch { /* quota */ }
+}
+
 /** Load a bundle for every schedule marked active in the tt-list. */
 export function loadActiveBundles(uid: string): ScheduleBundle[] {
   let list: any[] = []

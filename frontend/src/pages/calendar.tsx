@@ -32,7 +32,7 @@ import {
   loadAssignments, saveAssignments, assignmentAt, TASK_PRESETS,
   type FreeAssignment, type AssignKind,
 } from '@/lib/freeAssignments'
-import { loadActiveBundles, type ScheduleBundle } from '@/lib/activeSchedules'
+import { loadActiveBundles, patchBundleSubstitutions, type ScheduleBundle } from '@/lib/activeSchedules'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -213,7 +213,6 @@ export function CalendarPage() {
 
   // ── rows for the active perspective ──
   const substitutions: Record<string, string> = store.substitutions ?? {}
-  const subAt = (section: string, periodId: string) => substitutions[`${section}|${dayKey}|${periodId}`]
 
   // ── Multi-active aggregation for the Day grid & Month ──────────────
   // When several schedules are active, the grid shows their UNION. Each
@@ -224,9 +223,13 @@ export function CalendarPage() {
   // Source of truth for "how many schedules are active" is the bundles we can
   // actually load (robust across mock/Clerk key namespacing), not the switcher
   // list. Re-reads when the open schedule changes.
-  const rawBundles = useMemo(() => loadActiveBundles(uid), [uid, activeScheduleId])
+  // Bumped after we write a substitution into another schedule's snapshot, so
+  // the aggregated bundles (and every derived view) re-read that fresh map.
+  const [subNonce, setSubNonce] = useState(0)
+  const rawBundles = useMemo(() => loadActiveBundles(uid), [uid, activeScheduleId, subNonce])
   const activeCount = rawBundles.length
   const multiActive = activeCount > 1
+  const openId = activeScheduleId ?? 'open'
   const sources = useMemo<ScheduleBundle[]>(() => {
     const open: ScheduleBundle = {
       id: activeScheduleId ?? 'open', name: config.timetableName ?? 'Schedule',
@@ -237,6 +240,16 @@ export function CalendarPage() {
     return rawBundles.map(b => b.id === activeScheduleId ? open : b)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [multiActive, rawBundles, activeScheduleId, sections, staff, rooms, subjects, periods, classTT, substitutions, config.startTime])
+
+  const bundleById = (sid: string): ScheduleBundle => sources.find(b => b.id === sid) ?? sources[0]
+  // Substitute pool spans every active schedule's staff (deduped by name) — a
+  // free teacher in any active timetable can cover, subject to their caps.
+  const staffPool = useMemo(() => {
+    if (!multiActive) return staff
+    const seen = new Set<string>(); const out: any[] = []
+    for (const b of sources) for (const st of b.staff) if (!seen.has(st.name)) { seen.add(st.name); out.push(st) }
+    return out
+  }, [multiActive, sources, staff])
 
   // Flat list of every scheduled cell for the selected weekday, across sources,
   // each carrying its own wall-clock start/end and any substitution.
@@ -294,17 +307,20 @@ export function CalendarPage() {
   const isoDate = toISODate(date)
   const onLeave = (teacher: string) => isOnLeaveOn(leaves, teacher, isoDate)
 
-  const classPeriods = periods.filter((p: any) => p.type !== 'break')
-
-  // Periods the given teacher covers on the selected day (their cells to cover).
+  // Periods the given teacher covers on the selected day — across EVERY active
+  // schedule, each slot tagged with the schedule (sid) that owns it so cover is
+  // written back to the right timetable. Single-active spans only the open one.
   const slotsOf = (teacher: string) => {
-    const slots: { section: string; periodId: string; periodName: string; subject: string; startMin: number }[] = []
-    for (const s of sections) {
-      const sd = classTT[s.name]?.[dayKey] ?? {}
-      for (const p of periods) {
-        const c = sd[p.id]
-        if (c?.subject && c.teacher === teacher) {
-          slots.push({ section: s.name, periodId: p.id, periodName: p.name ?? p.id, subject: c.subject, startMin: periodTimes[p.id]?.startMin ?? 0 })
+    const slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[] = []
+    for (const b of sources) {
+      const times = bundleWallTimes(b)
+      for (const s of b.sections) {
+        const sd = b.classTT[s.name]?.[dayKey] ?? {}
+        for (const p of b.periods) {
+          const c = sd[p.id]
+          if (c?.subject && c.teacher === teacher) {
+            slots.push({ sid: b.id, sname: b.name, section: s.name, periodId: p.id, periodName: p.name ?? p.id, subject: c.subject, startMin: times[p.id]?.s ?? 0 })
+          }
         }
       }
     }
@@ -341,10 +357,13 @@ export function CalendarPage() {
     for (const p of b.periods) { m[p.id] = { s: mins, e: mins + (p.duration ?? 45) }; mins = m[p.id].e }
     return m
   }
-  const busyElsewhere = (name: string, startMin: number, endMin: number): boolean => {
+  // Is `name` already teaching (or subbing) at this wall-clock interval in any
+  // active schedule OTHER than `exceptId` (the schedule owning the slot being
+  // covered)? Single-active has no other schedules, so always false.
+  const busyIn = (name: string, startMin: number, endMin: number, exceptId: string): boolean => {
     if (!multiActive) return false
     for (const b of sources) {
-      if (b.id === (activeScheduleId ?? 'open')) continue   // open schedule handled by `busy`
+      if (b.id === exceptId) continue
       const times = bundleWallTimes(b)
       for (const s of b.sections) {
         const sd = b.classTT[s.name]?.[dayKey] ?? {}
@@ -361,41 +380,44 @@ export function CalendarPage() {
     return false
   }
 
-  // Does `name` teach `section` (any subject) / `subject` (any section) anywhere
-  // in the WEEK's schedule — the ground truth for familiarity, not just today.
-  const teachesSectionInWeek = (name: string, section: string): boolean =>
-    workDays.some(d => Object.values(classTT[section]?.[d] ?? {}).some((c: any) => c?.teacher === name))
-  const teachesSubjectInWeek = (name: string, subject: string): boolean =>
-    sections.some((s: any) => workDays.some(d =>
-      Object.values(classTT[s.name]?.[d] ?? {}).some((c: any) => c?.subject === subject && c?.teacher === name)))
-  const teachesExactInWeek = (name: string, section: string, subject: string): boolean =>
-    workDays.some(d => Object.values(classTT[section]?.[d] ?? {}).some((c: any) => c?.subject === subject && c?.teacher === name))
-
-  const matchTier = (name: string, section: string, subject: string): MatchTier => {
-    if (teachesExactInWeek(name, section, subject)) return 'exact'
-    if (teachesSectionInWeek(name, section)) return 'class'
-    if (teachesSubjectInWeek(name, subject)) return 'subject'
+  // Familiarity from the WEEK's schedule, evaluated against the bundle that owns
+  // the lesson (so covering a Class VI–X lesson scores on that timetable, not
+  // the open one). Week days come from that bundle's own config.
+  const bundleWorkDays = (b: ScheduleBundle): string[] =>
+    b.config?.workDays?.length ? b.config.workDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+  const matchTierIn = (b: ScheduleBundle, name: string, section: string, subject: string): MatchTier => {
+    const wd = bundleWorkDays(b)
+    const inSection = (pred: (c: any) => boolean) =>
+      wd.some(d => Object.values(b.classTT[section]?.[d] ?? {}).some(pred))
+    if (inSection((c: any) => c?.subject === subject && c?.teacher === name)) return 'exact'
+    if (inSection((c: any) => c?.teacher === name)) return 'class'
+    if (b.sections.some((s: any) => wd.some(d =>
+      Object.values(b.classTT[s.name]?.[d] ?? {}).some((c: any) => c?.subject === subject && c?.teacher === name)))) return 'subject'
     return 'none'
   }
 
   // Ranked substitute candidates for one slot: eligible (can-sub, under daily/
   // weekly sub caps and daily period cap), scored by the configured priorities.
-  const candidatesFor = (section: string, periodId: string, subject: string, absent: string): SubCandidate[] => {
+  const candidatesFor = (sid: string, section: string, periodId: string, subject: string, absent: string): SubCandidate[] => {
+    const tb = bundleById(sid)
+    const tbClassPeriods = tb.periods.filter((p: any) => p.type !== 'break')
+    // Who is already occupied in THIS slot within the owning schedule.
     const busy = new Set<string>()
-    for (const s of sections) {
-      const c = classTT[s.name]?.[dayKey]?.[periodId]
+    for (const s of tb.sections) {
+      const c = tb.classTT[s.name]?.[dayKey]?.[periodId]
       if (c?.teacher && c.teacher !== absent) busy.add(c.teacher)
     }
-    Object.entries(substitutions).forEach(([k, v]) => {
+    Object.entries(tb.substitutions).forEach(([k, v]) => {
       const [, d, pid] = k.split('|'); if (d === dayKey && pid === periodId) busy.add(v)
     })
-    const pIdx = classPeriods.findIndex((p: any) => p.id === periodId)
-    // Wall-clock interval of the slot being covered (open schedule's bell).
-    const wt = periodTimes[periodId]
+    const pIdx = tbClassPeriods.findIndex((p: any) => p.id === periodId)
+    // Wall-clock interval of the slot being covered (owning schedule's bell).
+    const wt = bundleWallTimes(tb)[periodId]
 
-    return staff
+    return staffPool
       .filter((st: any) => st.name !== absent && !busy.has(st.name))
-      .filter((st: any) => !wt || !busyElsewhere(st.name, wt.startMin, wt.endMin))
+      // Not teaching in any OTHER active schedule at this wall-clock time.
+      .filter((st: any) => !wt || !busyIn(st.name, wt.s, wt.e, sid))
       .filter((st: any) => {
         const ov = overrideFor(substitutionSettings, st.id)
         if (!ov.canSub) return false
@@ -407,59 +429,63 @@ export function CalendarPage() {
         return true
       })
       .map((st: any): SubCandidate => {
-        const tier = matchTier(st.name, section, subject)
+        const tier = matchTierIn(tb, st.name, section, subject)
         const today = loadOn(st.name, dayKey)
         const weekLoad = workDays.reduce((a, d) => { const l = loadOn(st.name, d); return a + l.reg + l.sub }, 0)
         const weekSubs = workDays.reduce((a, d) => a + loadOn(st.name, d).sub, 0)
         // consecutive run this assignment would create (neighbours already taught)
         let streak = 1
-        for (let i = pIdx - 1; i >= 0; i--) { if (teachesAt(st.name, classPeriods[i]?.id)) streak++; else break }
-        for (let i = pIdx + 1; i < classPeriods.length; i++) { if (teachesAt(st.name, classPeriods[i]?.id)) streak++; else break }
+        for (let i = pIdx - 1; i >= 0; i--) { if (teachesAt(st.name, tbClassPeriods[i]?.id)) streak++; else break }
+        for (let i = pIdx + 1; i < tbClassPeriods.length; i++) { if (teachesAt(st.name, tbClassPeriods[i]?.id)) streak++; else break }
         const score = scoreCandidate(substitutionSettings.weights, {
           tier, todayLoad: today.reg + today.sub, weekLoad, todaySubs: today.sub, weekSubs,
         })
         return { name: st.name, staffId: st.id, tier, todayReg: today.reg, todaySub: today.sub, weekLoad, streak, score }
       })
       .sort((a, b) => substitutionSettings.defaults.autoSuggestionsEnabled ? b.score - a.score : a.name.localeCompare(b.name))
+    // Streak is measured within the owning schedule's own consecutive periods.
     function teachesAt(name: string, pid?: string): boolean {
       if (!pid) return false
-      return sections.some((s: any) => {
-        const c = classTT[s.name]?.[dayKey]?.[pid]
-        const cov = substitutions[`${s.name}|${dayKey}|${pid}`]
+      return tb.sections.some((s: any) => {
+        const c = tb.classTT[s.name]?.[dayKey]?.[pid]
+        const cov = tb.substitutions[`${s.name}|${dayKey}|${pid}`]
         return cov ? cov === name : c?.teacher === name
       })
     }
   }
 
-  const assignSub = (section: string, periodId: string, subName: string) => {
-    const next = { ...substitutions, [`${section}|${dayKey}|${periodId}`]: subName }
-    store.setSubstitutions(next)
-    saveActiveTimetableSnapshot()
+  // Persist a schedule's substitution map to wherever it lives: the open one
+  // through the store (+ snapshot), any other active schedule straight into its
+  // snapshot (then re-read so the aggregated views update).
+  const writeSubs = (sid: string, next: Record<string, string>) => {
+    if (sid === openId) { store.setSubstitutions(next); saveActiveTimetableSnapshot() }
+    else { patchBundleSubstitutions(uid, sid, next); setSubNonce(n => n + 1) }
   }
-  const clearSub = (section: string, periodId: string) => {
-    const next = { ...substitutions }; delete next[`${section}|${dayKey}|${periodId}`]
-    store.setSubstitutions(next)
-    saveActiveTimetableSnapshot()
+  const assignSub = (sid: string, section: string, periodId: string, subName: string) => {
+    writeSubs(sid, { ...bundleById(sid).substitutions, [`${section}|${dayKey}|${periodId}`]: subName })
+  }
+  const clearSub = (sid: string, section: string, periodId: string) => {
+    const next = { ...bundleById(sid).substitutions }; delete next[`${section}|${dayKey}|${periodId}`]
+    writeSubs(sid, next)
   }
   // Auto-assign the best candidate to every uncovered slot of the absent
   // teacher — only among faculty flagged Auto (not Manual) in Faculty Settings.
+  // Slots can span several schedules, so writes are batched per owning schedule.
   const autoAssign = (teacher: string) => {
-    const next = { ...substitutions }
-    const usedThisPeriod: Record<string, Set<string>> = {}
+    const bySid: Record<string, Record<string, string>> = {}
+    const usedAtClock: Record<string, Set<string>> = {}   // startMin → names taken, blocks overlap double-book
     for (const slot of slotsOf(teacher)) {
+      const map = (bySid[slot.sid] ??= { ...bundleById(slot.sid).substitutions })
       const key = `${slot.section}|${dayKey}|${slot.periodId}`
-      if (next[key]) continue
-      const cands = candidatesFor(slot.section, slot.periodId, slot.subject, teacher)
+      if (map[key]) continue
+      const clock = String(slot.startMin)
+      const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
         .filter(c => overrideFor(substitutionSettings, c.staffId).autoAssign)
-        .filter(c => !usedThisPeriod[slot.periodId]?.has(c.name))
+        .filter(c => !usedAtClock[clock]?.has(c.name))
       const best = cands[0]
-      if (best) {
-        next[key] = best.name
-        ;(usedThisPeriod[slot.periodId] ??= new Set()).add(best.name)
-      }
+      if (best) { map[key] = best.name; (usedAtClock[clock] ??= new Set()).add(best.name) }
     }
-    store.setSubstitutions(next)
-    saveActiveTimetableSnapshot()
+    for (const [sid, map] of Object.entries(bySid)) writeSubs(sid, map)
   }
 
   const blocksFor = (entity: string): Block[] => {
@@ -898,7 +924,8 @@ export function CalendarPage() {
           teacher={subFor}
           dayLabel={DOW_FULL[date.getDay()]}
           slots={slotsOf(subFor)}
-          subAt={(section, periodId) => substitutions[`${section}|${dayKey}|${periodId}`]}
+          multiActive={multiActive}
+          subAt={(sid, section, periodId) => bundleById(sid).substitutions[`${section}|${dayKey}|${periodId}`]}
           candidatesFor={candidatesFor}
           onAssign={assignSub}
           onClear={clearSub}
@@ -1719,20 +1746,21 @@ const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: str
 }
 
 // ── Substitute panel ───────────────────────────────────────────
-function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
+function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
   teacher: string; dayLabel: string
-  slots: { section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
-  subAt: (section: string, periodId: string) => string | undefined
-  candidatesFor: (section: string, periodId: string, subject: string, absent: string) => SubCandidate[]
-  onAssign: (section: string, periodId: string, name: string) => void
-  onClear: (section: string, periodId: string) => void
+  slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
+  multiActive: boolean
+  subAt: (sid: string, section: string, periodId: string) => string | undefined
+  candidatesFor: (sid: string, section: string, periodId: string, subject: string, absent: string) => SubCandidate[]
+  onAssign: (sid: string, section: string, periodId: string, name: string) => void
+  onClear: (sid: string, section: string, periodId: string) => void
   onAutoAssign: () => void
   onClose: () => void
   settings: SubstitutionSettings
 }) {
   const showRanking = settings.defaults.autoSuggestionsEnabled
   const maxShow = settings.defaults.maxSuggestionsToShow ?? Infinity
-  const covered = slots.filter(s => subAt(s.section, s.periodId)).length
+  const covered = slots.filter(s => subAt(s.sid, s.section, s.periodId)).length
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
@@ -1769,19 +1797,22 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {slots.map(slot => {
-                const current = subAt(slot.section, slot.periodId)
-                const cands = candidatesFor(slot.section, slot.periodId, slot.subject, teacher)
+                const current = subAt(slot.sid, slot.section, slot.periodId)
+                const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
                 return (
-                  <div key={`${slot.section}|${slot.periodId}`} style={{ display: 'flex', gap: 14, background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16 }}>
+                  <div key={`${slot.sid}|${slot.section}|${slot.periodId}`} style={{ display: 'flex', gap: 14, background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16 }}>
                     {/* slot info */}
                     <div style={{ width: 168, flexShrink: 0, borderRight: '1px solid #F2F0FB', paddingRight: 14 }}>
                       <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E' }}>{slot.periodName}</div>
+                      {multiActive && (
+                        <div style={{ marginTop: 6, display: 'inline-block', fontSize: 10.5, fontWeight: 800, color: '#5D4FCF', background: '#EEF0FF', padding: '2px 7px', borderRadius: 6, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔀 {slot.sname}</div>
+                      )}
                       <div style={{ fontSize: 12, color: '#8B87AD', marginTop: 6 }}>📘 {slot.subject}</div>
                       <div style={{ fontSize: 12, color: '#8B87AD', marginTop: 4 }}>🏫 {slot.section}</div>
                       {current && (
                         <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 7, background: '#E8F0FF', color: '#2563EB', fontSize: 11.5, fontWeight: 700 }}>
                           <Check size={12} /> {current}
-                          <button onClick={() => onClear(slot.section, slot.periodId)} title="Clear" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#2563EB', display: 'inline-flex' }}><X size={12} /></button>
+                          <button onClick={() => onClear(slot.sid, slot.section, slot.periodId)} title="Clear" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#2563EB', display: 'inline-flex' }}><X size={12} /></button>
                         </div>
                       )}
                     </div>
@@ -1799,7 +1830,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, subAt, candidatesFor, onAss
                             const active = current === c.name
                             const badge = showRanking && c.tier !== 'none' ? TIER_BADGE[c.tier] : null
                             return (
-                              <button key={c.name} onClick={() => onAssign(slot.section, slot.periodId, c.name)}
+                              <button key={c.name} onClick={() => onAssign(slot.sid, slot.section, slot.periodId, c.name)}
                                 style={{ width: 178, flexShrink: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
                                   border: active ? '1.5px solid #2563EB' : '1.5px solid #ECE9FB', background: active ? '#F5F9FF' : '#fff',
                                   borderRadius: 12, padding: 12 }}>
