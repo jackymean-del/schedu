@@ -788,12 +788,13 @@ export function CalendarPage() {
               <button
                 onClick={() => setViewIds(null)}
                 style={{
-                  padding: '7px 14px', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  fontSize: 12.5, fontWeight: 800,
+                  padding: '7px 14px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 12.5, fontWeight: 700,
                   background: viewIds === null ? '#1E40AF' : 'transparent',
-                  color: viewIds === null ? '#fff' : '#3B6FD4',
+                  color: viewIds === null ? '#fff' : '#9CA8C9',
+                  border: viewIds === null ? '1.5px solid #1E40AF' : '1.5px solid transparent',
                 }}>
-                🔀 All ({activeCount})
+                {viewIds === null ? '✓ ' : ''}🔀 All ({activeCount})
               </button>
               {sources.map(b => {
                 const selected = viewIds === null || viewIds.includes(b.id)
@@ -805,13 +806,14 @@ export function CalendarPage() {
                       return next.length === 0 || next.length === sources.length ? null : next
                     })}
                     style={{
-                      padding: '7px 14px', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      padding: '7px 14px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit',
                       fontSize: 12.5, fontWeight: 700,
                       background: selected ? '#fff' : 'transparent',
-                      color: selected ? '#1E40AF' : '#7C87B8',
+                      color: selected ? '#1E40AF' : '#9CA8C9',
+                      border: selected ? '1.5px solid #1E40AF' : '1.5px solid transparent',
                       boxShadow: selected ? '0 1px 3px rgba(30,64,175,0.18)' : 'none',
                     }}>
-                    {b.name}
+                    {selected ? '✓ ' : ''}{b.name}
                   </button>
                 )
               })}
