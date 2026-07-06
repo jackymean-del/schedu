@@ -1073,6 +1073,7 @@ interface LiveActivity {
   sub: string
   color: SubjectColor
   elapsed: number; total: number
+  sid: string; sname: string   // owning schedule — groups "In session" by timetable
 }
 
 function LiveBoard(props: {
@@ -1137,7 +1138,7 @@ function LiveBoard(props: {
           const classes = running.filter((c: any) => c.subject === ent.id).map((c: any) => c.section)
           if (classes.length) { cell = running.find((c: any) => c.subject === ent.id); a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name } }
         }
-        if (a && cell) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - cell.startMin, total: cell.endMin - cell.startMin })
+        if (a && cell) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - cell.startMin, total: cell.endMin - cell.startMin, sid: cell.sid, sname: cell.sname })
         else idle.push(ent.name)
       }
     }
@@ -1175,11 +1176,35 @@ function LiveBoard(props: {
           }
           if (classes.length) a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name }
         }
-        if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin })
+        if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin, sid: openId, sname: '' })
         else idle.push(ent.name)
       }
     }
   }
+
+  // "Free Now" eligibility is deliberately stricter than the In-session display
+  // above: an idle-in-the-VISIBLE-schedules entity must ALSO be genuinely free
+  // in every OTHER active schedule (visible or not) before it's offered as
+  // assignable — a resource busy in a hidden schedule should never be handed a
+  // task right now. This is the one place multi-active Live still looks past
+  // the picker's selection; everything else (In-session grouping, the Day/
+  // Month grid) reflects the selection exactly.
+  const busyElsewhere = useMemo(() => {
+    if (!multiActive || idle.length === 0) return new Set<string>()
+    const fullCells = buildGridData(sources, dayKey).cells
+    const fullRunning = fullCells.filter((c: any) => scrub >= c.startMin && scrub < c.endMin)
+    const names = new Set<string>()
+    for (const name of idle) {
+      const hit =
+        mode === 'class'   ? fullRunning.some((c: any) => c.section === name) :
+        mode === 'teacher' ? fullRunning.some((c: any) => effTeacherCell(c) === name) :
+        mode === 'room'    ? fullRunning.some((c: any) => c.room === name) :
+        fullRunning.some((c: any) => c.subject === name)
+      if (hit) names.add(name)
+    }
+    return names
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multiActive, idle.join('|'), sources, dayKey, scrub, mode])
 
   // The (schedule, period) that "this slot" means for a given idle entity right
   // now. Single-active: the one concrete period at the scrub instant, owned by
@@ -1214,10 +1239,13 @@ function LiveBoard(props: {
   }
 
   // Split idle into "on assignment" (given a task for this slot) vs truly free.
+  // Anyone busyElsewhere (occupied in another active schedule right now) is
+  // skipped entirely — not free, not offered a task, genuinely unavailable.
   const onTask: { entity: string; a: FreeAssignment }[] = []
   const free: string[] = []
   const anchors: Record<string, { sid: string; sname: string; periodId: string; periodName: string } | null> = {}
   for (const name of idle) {
+    if (busyElsewhere.has(name)) continue
     const anchor = assignKind ? anchorFor(name) : null
     anchors[name] = anchor
     const a = anchor ? assignmentAt(assignments, isoDate, anchor.periodId, assignKind!, name, anchor.sid) : undefined
@@ -1266,6 +1294,16 @@ function LiveBoard(props: {
     .sort((a, b) => (freeSort === 'light' ? a.load - b.load : b.load - a.load) || a.name.localeCompare(b.name))
 
   const idleLabel = mode === 'teacher' ? 'Free now' : mode === 'room' ? 'Empty now' : mode === 'subject' ? 'Not running' : 'No class'
+
+  // When 2+ schedules are currently visible, "In session" splits into one
+  // section per schedule (rather than one merged, undifferentiated list) so
+  // it's clear which timetable each busy resource belongs to. Order follows
+  // `sources`, restricted to the schedules actually present in `cells` (i.e.
+  // the ones the picker currently shows).
+  const visibleSchedules = multiActive
+    ? sources.filter(b => cells.some((c: any) => c.sid === b.id))
+    : []
+  const segmentBySchedule = visibleSchedules.length > 1
 
   // Timeline segments: the share of sessions actually running over time. Single-
   // active reads its periods; multi-active splits the day at every schedule's
@@ -1338,11 +1376,28 @@ function LiveBoard(props: {
         ) : (
           <>
             {busy.length > 0 && (
-              <div style={{ marginBottom: idle.length ? 18 : 0 }}>
-                <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
-                  {busy.map(b => <LiveCard key={b.id} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
-                </div>
+              <div style={{ marginBottom: (onTask.length + free.length) ? 18 : 0 }}>
+                {segmentBySchedule ? (
+                  visibleSchedules.map(sch => {
+                    const group = busy.filter(b => b.sid === sch.id)
+                    if (!group.length) return null
+                    return (
+                      <div key={sch.id} style={{ marginBottom: 14 }}>
+                        <SectionLabel text={`In session — ${sch.name} · ${group.length}`} tone="#16A34A" />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
+                          {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <>
+                    <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
+                      {busy.map(b => <LiveCard key={b.id} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                    </div>
+                  </>
+                )}
               </div>
             )}
             {onTask.length > 0 && (
