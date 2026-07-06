@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { loadLeaves } from '@/lib/leaveUtils'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
-import { loadAssignments } from '@/lib/freeAssignments'
+import { loadAssignments, type FreeAssignment } from '@/lib/freeAssignments'
 import { loadActiveBundles } from '@/lib/activeSchedules'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
@@ -54,16 +54,22 @@ export function InsightsPage() {
 
   // Extra duties (free-slot task assignments) in the selected range — same
   // date-scoped records the Calendar writes, so the audit trail is automatic.
-  // periodName resolves across every active schedule's period grid.
+  // periodName resolves against the OWNING schedule's periods (a.sid) — a
+  // flat cross-schedule search would be ambiguous when two schedules reuse the
+  // same period id at a different time. Legacy untagged records (pre-dating
+  // schedule tagging) fall back to the flat search.
   const duties = useMemo(() => {
     const range = rangeFor(rangeKey)
     const allPeriods = sources.flatMap(s => s.periods)
-    const periodName = (pid: string) => allPeriods.find((p: any) => p.id === pid)?.name ?? pid
+    const periodName = (a: FreeAssignment) => {
+      const ownPeriods = a.sid ? bundles.find(b => b.id === a.sid)?.periods : undefined
+      return (ownPeriods ?? allPeriods).find((p: any) => p.id === a.periodId)?.name ?? a.periodId
+    }
     return loadAssignments(uid)
       .filter(a => a.date >= range.start && a.date <= range.end)
       .sort((a, b) => b.date.localeCompare(a.date))
-      .map(a => ({ ...a, periodName: periodName(a.periodId) }))
-  }, [uid, rangeKey, sources])
+      .map(a => ({ ...a, periodName: periodName(a) }))
+  }, [uid, rangeKey, sources, bundles])
 
   const buildSheets = (): ExportSheet[] => [
     { name: 'Extra Duties', rows: [['Date','Period','Resource Type','Assigned To','Task','Note'],

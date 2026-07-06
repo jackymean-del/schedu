@@ -164,7 +164,7 @@ export function CalendarPage() {
   // ── free-slot assignments (tasks for idle teachers / venues / classes) ──
   const [assignments, setAssignments] = useState<FreeAssignment[]>(() => loadAssignments(uid))
   const updateAssignments = (next: FreeAssignment[]) => { setAssignments(next); saveAssignments(uid, next) }
-  const [taskFor, setTaskFor] = useState<{ kind: AssignKind; entity: string; periodId: string; periodName: string } | null>(null)
+  const [taskFor, setTaskFor] = useState<{ sid: string; sname: string; kind: AssignKind; entity: string; periodId: string; periodName: string } | null>(null)
 
   // ── schedule switcher ──
   const schedules = listTimetables()
@@ -506,13 +506,16 @@ export function CalendarPage() {
       }
     }
     // Free-slot assignments for this entity today render as dashed TASK blocks.
+    // Resolve each task's time against ITS OWN schedule's bell (a.sid) — the
+    // flat gridData.timeById can collide when two schedules share a periodId.
+    // Legacy untagged records (a.sid undefined) fall back to the open schedule.
     if (mode !== 'subject') {
       const kind: AssignKind = mode === 'class' ? 'class' : mode === 'teacher' ? 'teacher' : 'room'
       for (const a of assignments) {
         if (a.date !== isoDate || a.kind !== kind || a.entity !== entity) continue
-        const t = gridData.timeById[a.periodId]
+        const t = bundleWallTimes(bundleById(a.sid ?? openId))[a.periodId]
         if (!t) continue
-        out.push({ key: `task|${a.id}`, title: a.title, line2: a.note ?? '', room: '', startMin: t.startMin, endMin: t.endMin, color: TASK_COLOR, task: true })
+        out.push({ key: `task|${a.id}`, title: a.title, line2: a.note ?? '', room: '', startMin: t.s, endMin: t.e, color: TASK_COLOR, task: true })
       }
     }
     return out
@@ -798,8 +801,8 @@ export function CalendarPage() {
               classTT={classTT} dayKey={dayKey} mode={mode} colLabel={colLabel}
               entities={multiActive ? gridEntities : entityList} sections={sections} substitutions={substitutions} h24={h24}
               isoDate={isoDate} assignments={assignments}
-              multiActive={multiActive} cells={gridData.cells}
-              onAssignTask={(kind, entity, periodId, periodName) => setTaskFor({ kind, entity, periodId, periodName })}
+              multiActive={multiActive} cells={gridData.cells} sources={sources} openId={openId}
+              onAssignTask={(kind, entity, sid, periodId, periodName, sname) => setTaskFor({ kind, entity, sid, sname, periodId, periodName })}
               onClearTask={id => updateAssignments(assignments.filter(a => a.id !== id))}
             />
           )
@@ -955,10 +958,12 @@ export function CalendarPage() {
             terms={terms}
             history={history.slice(0, 5)}
             weekCount={weekCount}
+            multiActive={multiActive}
             onClose={() => setTaskFor(null)}
             onAssign={a => {
               updateAssignments([
-                ...assignments.filter(x => !(x.date === a.date && x.periodId === a.periodId && x.kind === a.kind && x.entity === a.entity)),
+                ...assignments.filter(x => !(x.date === a.date && x.periodId === a.periodId && x.kind === a.kind && x.entity === a.entity
+                  && (x.sid === undefined || x.sid === a.sid))),
                 a,
               ])
               setTaskFor(null)
@@ -995,13 +1000,13 @@ function LiveBoard(props: {
   entities: { id: string; name: string }[]; sections: any[]
   substitutions: Record<string, string>; h24: boolean
   isoDate: string; assignments: FreeAssignment[]
-  multiActive: boolean; cells: any[]
-  onAssignTask: (kind: AssignKind, entity: string, periodId: string, periodName: string) => void
+  multiActive: boolean; cells: any[]; sources: ScheduleBundle[]; openId: string
+  onAssignTask: (kind: AssignKind, entity: string, sid: string, periodId: string, periodName: string, sname: string) => void
   onClearTask: (id: string) => void
 }) {
   const { scrub, onScrub, onNow, following, nowMin, viewingToday, dayStart, dayEnd,
     periods, periodTimes, classTT, dayKey, mode, colLabel, entities, sections, substitutions, h24,
-    isoDate, assignments, multiActive, cells, onAssignTask, onClearTask } = props
+    isoDate, assignments, multiActive, cells, sources, openId, onAssignTask, onClearTask } = props
 
   // Free resources can be given a task; lens → assignment kind (subjects can't).
   const assignKind: AssignKind | null = mode === 'teacher' ? 'teacher' : mode === 'room' ? 'room' : mode === 'class' ? 'class' : null
@@ -1092,17 +1097,46 @@ function LiveBoard(props: {
     }
   }
 
-  // Free-slot task assignment keys to a single period, which has no meaning when
-  // schedules overlap on different bells — so in multi-active Live the free list
-  // is read-only (fairness sort still works). Schedule-tagged tasks are a later
-  // slice. Single-active keeps full assignment.
-  const canAssign = !!assignKind && !multiActive
+  // The (schedule, period) that "this slot" means for a given idle entity right
+  // now. Single-active: the one concrete period at the scrub instant, owned by
+  // the open schedule. Multi-active: a synthetic 'live'/'gap' id stands in for
+  // "the moment" overall, which isn't a real period on any one bell — so for
+  // each entity we find a schedule it actually belongs to (preferring the open
+  // one) whose OWN bell has a teaching period covering the scrub instant, and
+  // anchor the task to that. A room with no matching schedule (or a moment
+  // between periods everywhere) has no anchor and can't be assigned right now.
+  const anchorFor = (name: string): { sid: string; sname: string; periodId: string; periodName: string } | null => {
+    if (!multiActive) {
+      if (!active || isBreak) return null
+      const open = sources.find(b => b.id === openId)
+      return { sid: openId, sname: open?.name ?? 'Schedule', periodId: active.id, periodName: active.name ?? active.id }
+    }
+    const ordered = [...sources].sort((a, b) => (a.id === openId ? -1 : b.id === openId ? 1 : 0))
+    for (const b of ordered) {
+      const isMember =
+        assignKind === 'teacher' ? b.staff.some((s: any) => s.name === name) :
+        assignKind === 'class'   ? b.sections.some((s: any) => s.name === name) :
+        true // rooms are shared physical resources — any active schedule's bell is eligible
+      if (!isMember) continue
+      const times = schedulePeriodTimes(b.config, b.periods, b.sections)
+      for (const [pid, t] of times) {
+        if (t.type !== 'class') continue
+        if (scrub >= t.startMin && scrub < t.endMin) {
+          return { sid: b.id, sname: b.name, periodId: pid, periodName: b.periods.find((p: any) => p.id === pid)?.name ?? pid }
+        }
+      }
+    }
+    return null
+  }
 
   // Split idle into "on assignment" (given a task for this slot) vs truly free.
   const onTask: { entity: string; a: FreeAssignment }[] = []
   const free: string[] = []
+  const anchors: Record<string, { sid: string; sname: string; periodId: string; periodName: string } | null> = {}
   for (const name of idle) {
-    const a = canAssign && active ? assignmentAt(assignments, isoDate, active.id, assignKind!, name) : undefined
+    const anchor = assignKind ? anchorFor(name) : null
+    anchors[name] = anchor
+    const a = anchor ? assignmentAt(assignments, isoDate, anchor.periodId, assignKind!, name, anchor.sid) : undefined
     if (a) onTask.push({ entity: name, a })
     else free.push(name)
   }
@@ -1272,11 +1306,14 @@ function LiveBoard(props: {
                   )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {freeSorted.map(({ name, load }) => (
-                    canAssign && active ? (
+                  {freeSorted.map(({ name, load }) => {
+                    const anchor = anchors[name]
+                    return anchor ? (
                       <button key={name}
-                        onClick={() => onAssignTask(assignKind, name, active.id, active.name ?? active.id)}
-                        title={`${load} on the plate today — assign a task for this slot`}
+                        onClick={() => onAssignTask(assignKind!, name, anchor.sid, anchor.periodId, anchor.periodName, anchor.sname)}
+                        title={multiActive
+                          ? `${load} on the plate today — assign a task for this slot (${anchor.sname})`
+                          : `${load} on the plate today — assign a task for this slot`}
                         className="cal-free-chip"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
                         {name}
@@ -1286,7 +1323,7 @@ function LiveBoard(props: {
                     ) : (
                       <span key={name} style={{ padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>{name}</span>
                     )
-                  ))}
+                  })}
                 </div>
               </div>
             )}
@@ -1868,10 +1905,10 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
 // ── Assign-task modal ──────────────────────────────────────────
 // Give a free resource a job for this slot: quick presets per resource kind,
 // free-text title, optional note. Date + period are fixed by where you clicked.
-function AssignTaskModal({ target, date, terms, history, weekCount, onClose, onAssign }: {
-  target: { kind: AssignKind; entity: string; periodId: string; periodName: string }
+function AssignTaskModal({ target, date, terms, history, weekCount, multiActive, onClose, onAssign }: {
+  target: { sid: string; sname: string; kind: AssignKind; entity: string; periodId: string; periodName: string }
   date: string; terms: Terms
-  history: FreeAssignment[]; weekCount: number
+  history: FreeAssignment[]; weekCount: number; multiActive: boolean
   onClose: () => void; onAssign: (a: FreeAssignment) => void
 }) {
   const [title, setTitle] = useState('')
@@ -1899,7 +1936,7 @@ function AssignTaskModal({ target, date, terms, history, weekCount, onClose, onA
     if (!valid) return
     onAssign({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date, periodId: target.periodId, kind: target.kind, entity: target.entity,
+      date, periodId: target.periodId, sid: target.sid, kind: target.kind, entity: target.entity,
       title: title.trim(), note: note.trim() || undefined,
     })
   }
@@ -1913,6 +1950,7 @@ function AssignTaskModal({ target, date, terms, history, weekCount, onClose, onA
             <div style={{ fontSize: 17, fontWeight: 800 }}>📌 Assign a task</div>
             <div style={{ fontSize: 12.5, opacity: 0.92, marginTop: 2 }}>
               {kindLabel}: <strong>{target.entity}</strong> · {target.periodName} · {date}
+              {multiActive && <> · 🔀 {target.sname}</>}
             </div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={16} /></button>
