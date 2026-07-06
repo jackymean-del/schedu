@@ -1290,7 +1290,15 @@ export function DashboardPage() {
     const next = ttList.filter(t => t.id !== id)
     setTTList(next)
     saveTTList(next)
-    if (getActiveTTId() === id) setActiveTTId(null)
+    if (getActiveTTId() === id) {
+      setActiveTTId(null)
+      // Clear the live store too — leaving its sections/classTT behind (even
+      // with no active pointer) makes the "adopt orphaned wizard work" check
+      // on the next dashboard load (see the SERVER_BACKED useEffect above)
+      // mistake this deleted schedule's leftover in-memory content for real
+      // unsaved work and resurrect it as a brand-new phantom schedule.
+      useTimetableStore.getState().resetAll()
+    }
     setConfirmDelete(null)
     if (SERVER_BACKED) {
       ttRepo.deleteTimetable(id).catch(() => { /* best-effort; row may reappear on next load */ })
