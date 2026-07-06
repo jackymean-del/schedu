@@ -3557,10 +3557,10 @@ export function StepBell() {
         .gap-btn:hover { background:rgba(0,0,0,0.03) !important; }
       `}</style>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: setupChoice === 'choose' ? '1fr' : '1fr 320px', gap: 20, alignItems: 'start' }}>
 
         {/* ══════════ LEFT ══════════ */}
-        <div>
+        <div style={setupChoice === 'choose' ? { maxWidth: 560, margin: '40px auto 0' } : undefined}>
 
           {/* ─── QUICK START ─── */}
           {setupChoice === 'choose' ? (
@@ -3631,6 +3631,12 @@ export function StepBell() {
               <button onClick={() => setSetupChoice('choose')} style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Change</button>
             </div>
           )}
+
+          {/* Everything below is deferred until the user has actually picked a setup
+              path — showing the full manual editor + rhythm/shift cards up front (even
+              before "Build it for me" / "I'll configure manually" is chosen) was the
+              main source of the step's high cognitive load. */}
+          {setupChoice !== 'choose' && <>
 
           {/* ─── SCHEDULE MODE ─── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
@@ -4871,9 +4877,19 @@ export function StepBell() {
                           </div>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={() => {
+                                // Position-based lookup: the picker's options are built purely
+                                // from maxPeriods (Period 1..N by position), but a prior staggered/
+                                // partial break can split a period into duplicate- or oddly-named
+                                // rows. Matching by name/id can then miss entirely (afterIndex -1),
+                                // silently no-op'ing the button. Counting teaching rows by position
+                                // always resolves to a real row, so "Add break" never does nothing.
+                                const teachingIdxs = displayRows.reduce<number[]>((acc, r, i) => {
+                                  if (r.type === 'teaching') acc.push(i)
+                                  return acc
+                                }, [])
                                 const afterIndex = newBreakPos === 0
                                   ? displayRows.findIndex(r => r.type === 'assembly')
-                                  : displayRows.findIndex(r => r.id === `p${newBreakPos}` || r.name === `Period ${newBreakPos}`)
+                                  : teachingIdxs[newBreakPos - 1] ?? teachingIdxs[teachingIdxs.length - 1] ?? displayRows.length - 1
                                 if (afterIndex >= 0) insertBreak(afterIndex, 'Break', newBreakDur)
                                 setAddingBreak(false)
                               }}
@@ -5796,6 +5812,7 @@ export function StepBell() {
               </div>
             </div>
           </div>
+          </>}
         </div>
 
         {/* ══════════ RIGHT (sticky) ══════════ */}
@@ -5804,8 +5821,10 @@ export function StepBell() {
           past the bottom. 52px top-bar + 38px sub-bar + 86px step-bar + 20px
           page padding-top + 16px top offset = ~212px removed from 100vh.
           overflowY: auto lets the panel scroll independently of the left side.
+          Hidden until setupChoice is picked — nothing to preview before then,
+          and showing it early was part of the step's initial cognitive overload.
         */}
-        <div style={{
+        {setupChoice !== 'choose' && <div style={{
           position: 'sticky', top: 16,
           maxHeight: 'calc(100vh - 212px)',
           overflowY: 'auto',
@@ -5876,7 +5895,7 @@ export function StepBell() {
               </div>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ── Confirmation dialog ── */}
