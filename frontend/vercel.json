@@ -3,6 +3,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    { "source": "/", "destination": "https://schedu.bhusku.com/", "permanent": true },
+    { "source": "/features", "destination": "https://schedu.bhusku.com/features", "permanent": true },
+    { "source": "/pricing", "destination": "https://schedu.bhusku.com/pricing", "permanent": true },
+    { "source": "/docs/:path*", "destination": "https://schedu.bhusku.com/docs/:path*", "permanent": true },
+    { "source": "/contact", "destination": "https://schedu.bhusku.com/contact", "permanent": true }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

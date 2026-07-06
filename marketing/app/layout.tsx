@@ -1,0 +1,53 @@
+import type { Metadata } from "next";
+import { Plus_Jakarta_Sans, DM_Mono } from "next/font/google";
+import "./globals.css";
+import { ORGANIZATION_SCHEMA, SITE_URL } from "@/lib/structuredData";
+
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "schedU — AI Timetable Scheduling for Any Institution",
+    template: "%s · schedU",
+  },
+  description:
+    "schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere.",
+  openGraph: {
+    type: "website",
+    siteName: "schedU",
+    images: [`${SITE_URL}/logo.svg`],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [`${SITE_URL}/logo.svg`],
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className={`${jakarta.variable} ${dmMono.variable}`}>
+      <body className="min-h-full">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_SCHEMA) }}
+        />
+        {children}
+      </body>
+    </html>
+  );
+}

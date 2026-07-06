@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* Ported from frontend/src/index.css — marketing-relevant rules only. The
+   original file also carries the product app's reset/print/DataGrid/wizard
+   styles, which have no matching elements on this site and are left out.
+   `transition-all`/`transition-colors` are pinned to the SAME subset of
+   properties the product app uses (bg/border/color/opacity, no transform or
+   box-shadow) so card-hover behavior matches exactly, not Tailwind's default
+   "transition everything". */
+
+body {
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.font-mono { font-family: var(--font-dm-mono), 'Courier New', monospace !important; }
+h1, h2, h3 { letter-spacing: -0.015em; }
+
+/* Landing-hero entrance + float animations. */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* Universal interactive element feedback — filter composites the whole
+   element, so it works even with inline background styles. */
+button, [role="button"] {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button:not(:disabled):hover,
+[role="button"]:not([aria-disabled]):hover { filter: brightness(0.91); }
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled]):active { filter: brightness(0.78); transform: scale(0.985); }
+button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
+
+/* One focus ring, one selection tint, one scrollbar. */
+:focus-visible {
+  outline: 2px solid rgba(124, 111, 224, 0.65) !important;
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+::selection { background: #EDE9FF; color: #2A2363; }
+* { scrollbar-width: thin; scrollbar-color: #C9C3EE transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #D6D1F2; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: #B7AEE9; border: 2px solid transparent; background-clip: content-box; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.transition-all    { transition: background-color 0.08s ease, border-color 0.08s ease, opacity 0.08s ease !important; }
+.transition-colors { transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease !important; }
