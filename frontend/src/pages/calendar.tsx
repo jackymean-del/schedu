@@ -1380,24 +1380,32 @@ function LiveBoard(props: {
                 {segmentBySchedule ? (
                   <>
                     <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 20 }}>
-                      {visibleSchedules.map(sch => {
-                        const group = busy.filter(b => b.sid === sch.id)
-                        if (!group.length) return null
-                        const cols = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(group.length))))
-                        const colWidth = cols * 190 + (cols - 1) * 10
-                        return (
-                          <div key={sch.id} style={{ width: colWidth, paddingLeft: 14, borderLeft: '1px solid #F2F0FB' }}>
-                            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#4B5275', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                              {sch.name} <span style={{ color: '#9A95BC', fontWeight: 700 }}>· {group.length}</span>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10 }}>
-                              {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                    {(() => {
+                      const withCards = visibleSchedules.filter(sch => busy.some(b => b.sid === sch.id))
+                      return (
+                        // Fixed N-track grid — one column per selected timetable, always
+                        // side by side. A schedule with many entries just grows its own
+                        // column taller (and wraps 2-3 cards per row inside it); it never
+                        // pushes another schedule's column onto a new line the way a
+                        // flex-wrap layout could when combined natural widths overflow.
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${withCards.length}, 1fr)`, alignItems: 'start', gap: 0 }}>
+                          {withCards.map((sch, i) => {
+                            const group = busy.filter(b => b.sid === sch.id)
+                            const isLast = i === withCards.length - 1
+                            return (
+                              <div key={sch.id} style={{ padding: '0 14px', borderRight: isLast ? 'none' : '1px solid #F2F0FB' }}>
+                                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#4B5275', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  {sch.name} <span style={{ color: '#9A95BC', fontWeight: 700 }}>· {group.length}</span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+                                  {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
                   </>
                 ) : (
                   <>
