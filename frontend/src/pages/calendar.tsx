@@ -24,6 +24,7 @@ import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
   X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
+  AlertTriangle,
 } from 'lucide-react'
 import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
 import { loadTerms, plural, type Terms } from '@/lib/terms'
@@ -326,6 +327,49 @@ export function CalendarPage() {
   const hasTimetable = multiActive
     ? visibleSources.some(b => b.sections.length > 0 && Object.keys(b.classTT).length > 0)
     : sections.length > 0 && Object.keys(classTT).length > 0
+
+  // Cross-schedule teacher clash: the same staff NAME is scheduled to teach in
+  // two different active schedules at overlapping wall-clock times on the
+  // selected day. The app's multi-active model treats teacher identity as a
+  // name string (deliberately — so one real teacher working across schedules
+  // is recognized as busy in one when checked from another). That means two
+  // DIFFERENT people who happen to share an auto-generated/placeholder name
+  // (e.g. two independently-wizard-generated "Mathematics Teacher 4"s) look
+  // identical to the app — one of them silently disappears behind the other
+  // in Teachers-mode Live view instead of surfacing as a problem. Flag it
+  // instead. Deliberately scans ALL active schedules (not just the picker's
+  // visible subset) since this is a data problem the school needs to see
+  // regardless of what's currently toggled on.
+  const teacherClashes = useMemo(() => {
+    if (!multiActive) return [] as { teacher: string; a: DayCell; b: DayCell }[]
+    const full = buildGridData(sources, dayKey).cells
+    const byTeacher = new Map<string, DayCell[]>()
+    for (const c of full) {
+      if (!c.teacher) continue
+      if (!byTeacher.has(c.teacher)) byTeacher.set(c.teacher, [])
+      byTeacher.get(c.teacher)!.push(c)
+    }
+    const out: { teacher: string; a: DayCell; b: DayCell }[] = []
+    for (const [teacher, cells] of byTeacher) {
+      const bySchedule = new Map<string, DayCell[]>()
+      for (const c of cells) {
+        if (!bySchedule.has(c.sid)) bySchedule.set(c.sid, [])
+        bySchedule.get(c.sid)!.push(c)
+      }
+      if (bySchedule.size < 2) continue
+      const scheduleIds = [...bySchedule.keys()]
+      for (let i = 0; i < scheduleIds.length; i++) {
+        for (let j = i + 1; j < scheduleIds.length; j++) {
+          for (const a of bySchedule.get(scheduleIds[i])!) {
+            for (const b of bySchedule.get(scheduleIds[j])!) {
+              if (a.startMin < b.endMin && b.startMin < a.endMin) out.push({ teacher, a, b })
+            }
+          }
+        }
+      }
+    }
+    return out
+  }, [multiActive, sources, dayKey])
 
   const gridStart = gridData.gridStart
   const gridEnd   = gridData.gridEnd
@@ -814,6 +858,31 @@ export function CalendarPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Cross-schedule teacher clash banner — see teacherClashes above for why
+            this can happen even without any OR/AND group configured. */}
+        {teacherClashes.length > 0 && (
+          <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 800, color: '#B91C1C', marginBottom: 6 }}>
+              <AlertTriangle size={14} /> {teacherClashes.length} teacher name{teacherClashes.length > 1 ? 's are' : ' is'} double-booked across schedules
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {teacherClashes.map((cl, i) => {
+                const schA = bundleById(cl.a.sid), schB = bundleById(cl.b.sid)
+                return (
+                  <div key={i} style={{ fontSize: 12, color: '#7F1D1D', lineHeight: 1.5 }}>
+                    <strong>{cl.teacher}</strong> is scheduled in both{' '}
+                    <strong>{schA.name}</strong> ({cl.a.section} · {cl.a.subject}, {fmtClock(cl.a.startMin, h24)}–{fmtClock(cl.a.endMin, h24)}) and{' '}
+                    <strong>{schB.name}</strong> ({cl.b.section} · {cl.b.subject}, {fmtClock(cl.b.startMin, h24)}–{fmtClock(cl.b.endMin, h24)}) at the same time.
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: '#9F1239', marginTop: 6 }}>
+              If these are actually two different people, give them distinct names — the app treats matching names as the same teacher across schedules.
+            </div>
           </div>
         )}
 
