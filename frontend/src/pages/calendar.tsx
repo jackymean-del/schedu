@@ -1378,18 +1378,26 @@ function LiveBoard(props: {
             {busy.length > 0 && (
               <div style={{ marginBottom: (onTask.length + free.length) ? 18 : 0 }}>
                 {segmentBySchedule ? (
-                  visibleSchedules.map(sch => {
-                    const group = busy.filter(b => b.sid === sch.id)
-                    if (!group.length) return null
-                    return (
-                      <div key={sch.id} style={{ marginBottom: 14 }}>
-                        <SectionLabel text={`In session — ${sch.name} · ${group.length}`} tone="#16A34A" />
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
-                          {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
-                        </div>
-                      </div>
-                    )
-                  })
+                  <>
+                    <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visibleSchedules.filter(sch => busy.some(b => b.sid === sch.id)).length}, minmax(220px, 1fr))`, gap: 0 }}>
+                      {visibleSchedules.map((sch, i) => {
+                        const group = busy.filter(b => b.sid === sch.id)
+                        if (!group.length) return null
+                        const isLast = i === visibleSchedules.length - 1 || visibleSchedules.slice(i + 1).every(s => !busy.some(b => b.sid === s.id))
+                        return (
+                          <div key={sch.id} style={{ padding: '0 14px', borderRight: isLast ? 'none' : '1px solid #F2F0FB' }}>
+                            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#4B5275', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {sch.name} <span style={{ color: '#9A95BC', fontWeight: 700 }}>· {group.length}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
                 ) : (
                   <>
                     <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
