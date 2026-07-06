@@ -1192,22 +1192,34 @@ export function DashboardPage() {
       window.location.href = '/wizard'
       return
     }
+    // Resolve the incoming timetable's state FIRST — only commit the active-id
+    // switch once we know what to load. Flipping the pointer before an async
+    // restore resolves (as this used to) leaves `schedu-active-tt` pointing at
+    // a timetable whose data was never actually loaded into the store — the
+    // store still holds the OUTGOING timetable's sections/classTT, so any
+    // later save silently overwrites the incoming timetable's real snapshot
+    // with the outgoing one's data. That's how one timetable can end up an
+    // exact copy of a completely different one.
+    let snap: Record<string, unknown> | null = null
+    if (SERVER_BACKED) {
+      try { snap = (await ttRepo.fetchTimetableSnapshot(t.id)) ?? null } catch { /* fall through to local cache */ }
+    }
+    if (!snap) {
+      try {
+        const raw = localStorage.getItem(snapKey(t.id))
+        if (raw) snap = JSON.parse(raw)
+      } catch { /* ignore */ }
+    }
+
     // Save outgoing timetable's full state
     if (currentId) saveTTSnapshot(currentId)
-
     setActiveTTId(t.id)
-    // Restore incoming timetable's saved state. Prefer the server snapshot
-    // (authoritative, follows the user across devices); fall back to the local
-    // cache, then to a fresh start keyed off the list metadata.
-    let restored = false
-    if (SERVER_BACKED) {
-      try {
-        const snap = await ttRepo.fetchTimetableSnapshot(t.id)
-        if (snap) { applySnapshot(snap); restored = true }
-      } catch { /* fall through to local cache */ }
-    }
-    if (!restored) restored = restoreTTSnapshot(t.id)
-    if (!restored) {
+    if (snap) {
+      applySnapshot(snap)
+    } else {
+      // No saved state anywhere for this timetable yet — start fresh rather
+      // than leaving the outgoing timetable's data in the store.
+      useTimetableStore.getState().resetWizard()
       useTimetableStore.getState().setConfig({ timetableName: t.name } as any)
       useTimetableStore.getState().setStep(Math.max(1, t.wizardStep))
     }
@@ -1220,16 +1232,22 @@ export function DashboardPage() {
   const handleViewTimetable = async (t: TTEntry) => {
     const currentId = getActiveTTId()
     if (currentId !== t.id) {
+      // Same ordering fix as handleContinue — resolve state before committing
+      // the active-id switch.
+      let snap: Record<string, unknown> | null = null
+      if (SERVER_BACKED) {
+        try { snap = (await ttRepo.fetchTimetableSnapshot(t.id)) ?? null } catch { /* fall through to local cache */ }
+      }
+      if (!snap) {
+        try {
+          const raw = localStorage.getItem(snapKey(t.id))
+          if (raw) snap = JSON.parse(raw)
+        } catch { /* ignore */ }
+      }
       if (currentId) saveTTSnapshot(currentId)
       setActiveTTId(t.id)
-      let restored = false
-      if (SERVER_BACKED) {
-        try {
-          const snap = await ttRepo.fetchTimetableSnapshot(t.id)
-          if (snap) { applySnapshot(snap); restored = true }
-        } catch { /* fall through to local cache */ }
-      }
-      if (!restored) restoreTTSnapshot(t.id)
+      if (snap) applySnapshot(snap)
+      else useTimetableStore.getState().resetWizard()
     }
     window.location.href = '/timetable'
   }

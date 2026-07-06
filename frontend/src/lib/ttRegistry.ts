@@ -127,16 +127,23 @@ export function listTimetables(): { id: string; name: string; status?: string }[
 
 /**
  * Switch the active timetable in place (no reload): snapshot the outgoing
- * schedule, point the active id at the new one, then force-load its snapshot
- * into the store (reset first so nothing bleeds between schedules). Returns
- * false when the target has no snapshot yet — the caller should send the user
- * to the dashboard/wizard for that one instead.
+ * schedule, force-load the target's snapshot into the store (reset first so
+ * nothing bleeds between schedules), THEN point the active id at the new one.
+ * Returns false when the target has no snapshot yet — the caller should send
+ * the user to the dashboard/wizard for that one instead.
+ *
+ * CRITICAL ordering: the active-id pointer must only move once the target's
+ * snapshot has actually been loaded. Flipping it first (as this used to) and
+ * bailing out on a missing snapshot leaves `schedu-active-tt` pointing at a
+ * schedule whose data was never loaded into the store — the store still holds
+ * the OUTGOING schedule's data, so any later save (anything that persists via
+ * saveActiveTimetableSnapshot) silently overwrites the new schedule's snapshot
+ * with the old schedule's data. This is how a schedule's own data can end up
+ * looking like an exact copy of a different, unrelated schedule.
  */
 export function switchActiveTimetable(id: string): boolean {
   const current = getActiveTimetableId()
   if (current === id) return true
-  if (current) saveActiveTimetableSnapshot()
-  localStorage.setItem(ACTIVE_TT_KEY, id)
 
   const uid = useAuthStore.getState().user?.id ?? ''
   const keys = [`${TT_SNAPSHOT_PFX}${uid}:${id}`, `${TT_SNAPSHOT_PFX}:${id}`, `${TT_SNAPSHOT_PFX}${id}`]
@@ -149,6 +156,8 @@ export function switchActiveTimetable(id: string): boolean {
   }
   if (!snap) return false
 
+  if (current) saveActiveTimetableSnapshot()
+  localStorage.setItem(ACTIVE_TT_KEY, id)
   const store = useTimetableStore.getState() as any
   store.resetWizard?.()
   useTimetableStore.setState(snap as any)
