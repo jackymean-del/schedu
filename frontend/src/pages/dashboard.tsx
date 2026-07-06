@@ -1322,7 +1322,7 @@ export function DashboardPage() {
     saveTTList(next)
   }
 
-  const handleSaveEdit = (updated: TTEntry) => {
+  const handleSaveEdit = async (updated: TTEntry) => {
     const next = ttList.map(t => t.id === updated.id ? updated : t)
     setTTList(next)
     saveTTList(next)
@@ -1334,9 +1334,16 @@ export function DashboardPage() {
     const tr = updated.approxRooms
     const tc = updated.approxClasses
 
-    /** Trim an array: if cur.length > target → slice; if < → reset to [] */
+    /** Trim an array: if cur.length > target → slice; if < → reset to []
+     *  (so the wizard's auto-generate step can fill in a fresh count); if
+     *  EQUAL, leave it alone. The equal case matters more than it looks —
+     *  the modal pre-fills the CURRENT counts, so submitting the form
+     *  without changing any number (the common case) must be a no-op, not
+     *  silently wipe every resource array to empty. */
     const trimArr = (cur: any[], target: number | undefined) =>
-      target == null ? cur : cur.length > target ? cur.slice(0, target) : []
+      target == null || cur.length === target ? cur
+      : cur.length > target ? cur.slice(0, target)
+      : []
 
     // ── 1. Patch the persisted snapshot for this timetable directly in
     //       localStorage. This handles BOTH the active-timetable case (where
@@ -1359,7 +1366,11 @@ export function DashboardPage() {
       if (Array.isArray(snap.rooms))    snap.rooms    = trimArr(snap.rooms,    tr)
       if (Array.isArray(snap.sections)) snap.sections = trimArr(snap.sections, tc)
       localStorage.setItem(key, JSON.stringify(snap))
-      if (SERVER_BACKED) ttRepo.saveTimetableSnapshot(updated.id, snap).catch(() => { /* best-effort */ })
+      // Awaited (not fire-and-forget): handleContinue below re-fetches this
+      // same timetable's snapshot from the server, preferring it over the
+      // local cache. If that fetch raced ahead of this save, it could load
+      // back the STALE server copy we just corrected — undoing this fix.
+      if (SERVER_BACKED) await ttRepo.saveTimetableSnapshot(updated.id, snap).catch(() => { /* best-effort */ })
     } catch { /* ignore storage errors */ }
 
     // ── 2. If this timetable is the live active one, also patch the Zustand
@@ -1384,7 +1395,7 @@ export function DashboardPage() {
       s.setSections?.(trimArr(curSections, tc))
     }
     // Navigate into the wizard for this timetable
-    handleContinue(updated)
+    await handleContinue(updated)
   }
 
   // Wait for auth to resolve before deciding — otherwise a fresh load (or the
