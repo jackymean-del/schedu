@@ -87,10 +87,15 @@ interface Block {
   color: SubjectColor    // always derived from the subject
   sub?: string           // substitute teacher name when this period is covered
   task?: boolean         // a free-slot assignment, not a timetable lesson
+  brk?: boolean          // a break/assembly/dispersal slot, not a lesson
 }
 
 // Amber identity for task blocks — visually distinct from any subject colour.
 const TASK_COLOR: SubjectColor = { accent: '#B45309', bg: '#B453091A' }
+// Softer amber for break/assembly/dispersal blocks — same family as TASK_COLOR
+// (and Live's BREAK_BAND) but a paler fill so it doesn't compete with a real
+// substitution/task block if they ever land in the same row.
+const BREAK_COLOR: SubjectColor = { accent: '#C2760B', bg: '#FBEBD2' }
 
 /** Overlap layout: assign each block a lane so simultaneous blocks (common in
  *  the Subject lens, where many classes run the same subject at once) stack
@@ -151,7 +156,21 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
     }
   }
   if (!isFinite(lo)) { lo = 540; hi = 900 }
-  return { cells, timeById, gridStart: lo, gridEnd: hi, isWorkDay: workUnion.has(dayKey) }
+  // One representative break/assembly/dispersal schedule per bundle (not per
+  // section — staggered per-class break times are a Live/class-view nuance;
+  // here we just need "is this schedule on a break right now" for the grid).
+  const breaksByBundle: Record<string, { periodId: string; name: string; startMin: number; endMin: number }[]> = {}
+  for (const b of srcs) {
+    const times = schedulePeriodTimes(b.config, b.periods, b.sections)
+    const list: { periodId: string; name: string; startMin: number; endMin: number }[] = []
+    for (const p of b.periods) {
+      const t = times.get(p.id)
+      if (!t || t.type === 'class') continue
+      list.push({ periodId: p.id, name: p.name ?? p.id, startMin: t.startMin, endMin: t.endMin })
+    }
+    breaksByBundle[b.id] = list
+  }
+  return { cells, timeById, gridStart: lo, gridEnd: hi, isWorkDay: workUnion.has(dayKey), breaksByBundle }
 }
 
 export function CalendarPage() {
@@ -542,6 +561,21 @@ export function CalendarPage() {
         out.push({ key: `task|${a.id}`, title: a.title, line2: a.note ?? '', room: '', startMin: t.s, endMin: t.e, color: TASK_COLOR, task: true })
       }
     }
+    // Break/assembly/dispersal blocks — one per schedule this entity actually
+    // belongs to, using that schedule's own (representative) bell. Only for
+    // class/teacher: room/subject aren't tied to one schedule's break clock.
+    if (mode === 'class' || mode === 'teacher') {
+      const memberSids = new Set(
+        visibleSources
+          .filter(b => mode === 'class' ? b.sections.some((s: any) => s.name === entity) : b.staff.some((s: any) => s.name === entity))
+          .map(b => b.id)
+      )
+      for (const sid of memberSids) {
+        for (const brk of gridData.breaksByBundle[sid] ?? []) {
+          out.push({ key: `brk|${sid}|${brk.periodId}`, title: brk.name, line2: '', room: '', startMin: brk.startMin, endMin: brk.endMin, color: BREAK_COLOR, brk: true })
+        }
+      }
+    }
     return out
     function mk(key: string, c: DayCell, title: string, chip: string | undefined, line2: string, room: string, subjectName: string, sub?: string): Block {
       return { key, title, chip, line2, room, startMin: c.startMin, endMin: c.endMin, color: subjectColor(subjectName), sub: sub || undefined }
@@ -850,14 +884,17 @@ export function CalendarPage() {
           )
           : (
             <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
-              <div className="cal-scroll" style={{ overflowX: 'auto' }}>
+              <div className="cal-scroll" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '70vh' }}>
                 <div style={{ minWidth: ENTITY_W + gridTrackW }}>
-                  {/* Ruler */}
+                  {/* Ruler — sticky to the top of the scroll pane; its entity-
+                      label cell is ALSO sticky to the left, so the top-left
+                      corner stays pinned through scrolling in either direction. */}
                   <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 3, background: 'linear-gradient(#FBFAFF,#F4F2FE)', borderBottom: '1px solid #ECE9FB' }}>
                     <div style={{
                       width: ENTITY_W, flexShrink: 0, height: RULER_H,
                       display: 'flex', flexDirection: 'column', justifyContent: 'center',
                       padding: '0 14px', borderRight: '1px solid #ECE9FB',
+                      position: 'sticky', left: 0, zIndex: 1, background: 'linear-gradient(#FBFAFF,#F4F2FE)',
                     }}>
                       <div style={{ fontSize: 12.5, fontWeight: 800, color: '#13111E' }}>{colLabel}</div>
                       <div style={{ position: 'relative', marginTop: 3 }}>
@@ -892,7 +929,7 @@ export function CalendarPage() {
                     const lessons = blocks.filter(b => !b.task).length
                     return (
                       <div key={ent.id} className="cal-entity-row" style={{ display: 'flex', borderBottom: '1px solid #F2F0FB', minHeight: rowH }}>
-                        <div style={{ width: ENTITY_W, flexShrink: 0, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRight: '1px solid #F2F0FB' }}>
+                        <div style={{ width: ENTITY_W, flexShrink: 0, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRight: '1px solid #F2F0FB', position: 'sticky', left: 0, zIndex: 1, background: '#fff' }}>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                               <span style={{ fontSize: 13.5, fontWeight: 700, color: onLeave(ent.id) && mode === 'teacher' ? '#DC2626' : '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ent.name}</span>
@@ -1515,7 +1552,10 @@ function SessionCell({ b, dayStart, h24, top, height }: {
   b: Block; dayStart: number; h24: boolean; top: number; height: number
 }) {
   const left = (b.startMin - dayStart) * PX_PER_MIN + CELL_GAP / 2
-  const width = Math.max(76, (b.endMin - b.startMin) * PX_PER_MIN - CELL_GAP)
+  // Break/assembly slots are often short (10-20 min) — the 76px legibility
+  // floor for lesson cells would visually bleed into the next (non-overlapping
+  // in time) block, so breaks get a much smaller floor.
+  const width = Math.max(b.brk ? 28 : 76, (b.endMin - b.startMin) * PX_PER_MIN - CELL_GAP)
   const { accent, bg } = b.color
   const compact = height < 84
   const metaLine: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
@@ -1535,7 +1575,7 @@ function SessionCell({ b, dayStart, h24, top, height }: {
         <span style={{ position: 'absolute', top: 5, right: 7, fontSize: 8.5, fontWeight: 800, letterSpacing: '0.04em', color: '#fff', background: accent, padding: '1.5px 6px', borderRadius: 5 }}>TASK</span>
       )}
       <div style={{
-        fontSize: 12.5, fontWeight: 800, color: b.chip || b.task ? '#25213B' : accent, lineHeight: 1.28,
+        fontSize: 12.5, fontWeight: 800, color: b.chip || b.task || b.brk ? '#25213B' : accent, lineHeight: 1.28,
         display: '-webkit-box', WebkitLineClamp: compact ? 1 : 2, WebkitBoxOrient: 'vertical',
         overflow: 'hidden', paddingRight: b.sub || b.task ? 34 : 0,
       }}>{b.title}</div>
