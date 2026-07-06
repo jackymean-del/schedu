@@ -128,9 +128,11 @@ function toISODate(d: Date): string {
 
 // Flat list of every scheduled cell for one weekday across a set of schedule
 // bundles, each carrying its own wall-clock start/end and any substitution.
-// Built once for the VISIBLE (view-scoped) bundles to drive the Day/Month
-// grid, and once for the FULL active set (unaffected by view scoping) so
-// busy/free detection never treats a hidden-but-active clash as "free".
+// Called with the VISIBLE (view-scoped) bundles — the Day/Month grid and
+// Live's busy/free detection both reflect only what the multi-active picker
+// currently shows (see viewIds above). Cross-schedule clash prevention for
+// actual scheduling actions (substitution candidacy, task anchoring) is a
+// separate path that always consults every active schedule via `sources`.
 interface DayCell { sid: string; sname: string; section: string; periodId: string; subject: string; teacher: string; room: string; startMin: number; endMin: number; sub?: string }
 function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
   const cells: DayCell[] = []
@@ -298,9 +300,16 @@ export function CalendarPage() {
 
   // Which active schedules the Day/Month grid and Live rows currently show —
   // "All" (null) by default, or a chosen subset via the card picker below.
-  // Cross-schedule clash checks (busy detection, substitution availability,
-  // task anchoring) always use the FULL `sources`/allCellsData regardless of
-  // this filter, so hiding a schedule from view never hides its real clashes.
+  // This is a genuine FOCUS filter: in-session/free-now on Live, and the
+  // Day/Month grid, all reflect ONLY the selected schedule(s)' own teaching —
+  // a teacher who's a member of the visible schedule but currently mid-lesson
+  // in a HIDDEN schedule shows as free here, not busy (confirmed desired
+  // behavior — the hidden schedule's activity is simply out of view, the same
+  // way it would be if that teacher didn't teach there at all). Substitution
+  // candidacy (busyIn/candidatesFor) and task anchoring (anchorFor) are a
+  // SEPARATE, unaffected code path that always checks every active schedule
+  // directly via `sources` — actual double-booking prevention when arranging
+  // cover or assigning a task doesn't depend on what this filter shows.
   const [viewIds, setViewIds] = useState<string[] | null>(null)
   const visibleSources = useMemo(() => {
     if (!multiActive || viewIds === null) return sources
@@ -309,9 +318,6 @@ export function CalendarPage() {
   }, [multiActive, sources, viewIds])
 
   const gridData = useMemo(() => buildGridData(visibleSources, dayKey), [visibleSources, dayKey])
-  // Full cross-schedule cells, independent of the view filter — LiveBoard uses
-  // this for busy/free so an entity hidden-but-clashing never reads as free.
-  const allCellsData = useMemo(() => buildGridData(sources, dayKey), [sources, dayKey])
 
   // A schedule exists to show when ANY schedule currently in view has actually
   // been generated — not just the single open one, so switching "All" on with
@@ -617,9 +623,8 @@ export function CalendarPage() {
   }, [mode, sections, staff, rooms, subjects, classTT, dayKey, query])
 
   // Day-grid entity rows — the UNION across VISIBLE (view-scoped) schedules
-  // (single-active reduces to the same set as entityList). Live keeps its own
-  // gridEntities-derived rows too, but busy/free detection still checks the
-  // full cross-schedule cell list (allCellsData), never just what's shown.
+  // (single-active reduces to the same set as entityList). Live's rows and its
+  // busy/free detection both use this same visible scope (see viewIds above).
   const gridEntities = useMemo(() => {
     if (!multiActive) return entityList
     const names = new Set<string>()
@@ -877,7 +882,7 @@ export function CalendarPage() {
               classTT={classTT} dayKey={dayKey} mode={mode} colLabel={colLabel}
               entities={multiActive ? gridEntities : entityList} sections={sections} substitutions={substitutions} h24={h24}
               isoDate={isoDate} assignments={assignments}
-              multiActive={multiActive} cells={allCellsData.cells} sources={sources} openId={openId}
+              multiActive={multiActive} cells={gridData.cells} sources={sources} openId={openId}
               onAssignTask={(kind, entity, sid, periodId, periodName, sname) => setTaskFor({ kind, entity, sid, sname, periodId, periodName })}
               onClearTask={id => updateAssignments(assignments.filter(a => a.id !== id))}
             />
