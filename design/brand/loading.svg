@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="64" height="64">
+  <!-- schedU loading animation — the mark IS the loader.
+       The right stem becomes a live fader: faint full-height track, solid fill
+       riding under the gold knob, knob sliding as if the Tuner Console is
+       adjusting itself. SMIL = zero JS; usable as <img src>.
+       Reduced-motion rule: swap for u-mark.svg (static), never an empty box. -->
+
+  <!-- static: left stem + bottom curve -->
+  <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30"
+        fill="none" stroke="#13111E" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- faint full-height track (the fader rail) -->
+  <line x1="36" y1="9" x2="36" y2="30" stroke="#EDE9FF" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- solid fill from knob down to the curve -->
+  <line x1="36" y1="22" x2="36" y2="30" stroke="#13111E" stroke-width="8" stroke-linecap="round">
+    <animate attributeName="y1" values="22;11;26;22" keyTimes="0;0.38;0.72;1"
+             calcMode="spline" keySplines="0.45 0 0.25 1;0.45 0 0.25 1;0.45 0 0.25 1"
+             dur="1.8s" repeatCount="indefinite"/>
+  </line>
+
+  <!-- gold knob riding the rail -->
+  <circle cx="36" cy="22" r="4.5" fill="#D4920E">
+    <animate attributeName="cy" values="22;11;26;22" keyTimes="0;0.38;0.72;1"
+             calcMode="spline" keySplines="0.45 0 0.25 1;0.45 0 0.25 1;0.45 0 0.25 1"
+             dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+</svg>

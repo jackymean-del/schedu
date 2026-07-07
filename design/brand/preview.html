@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>schedU brand system — preview</title>
+<link rel="icon" href="favicon-32.svg"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --su-ink:#13111E; --su-brand:#7C6FE0; --su-knob:#D4920E;
+    --su-paper:#FAF9F5; --su-mist:#EDE9FF;
+  }
+  body { margin:0; background:var(--su-paper); font-family:'Plus Jakarta Sans',sans-serif; color:var(--su-ink); padding:48px 56px 96px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:#8B87AD; font-size:13px; margin:0 0 40px; }
+  h2 { font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:#8B87AD; margin:44px 0 14px; border-bottom:1px solid var(--su-mist); padding-bottom:8px; }
+  .row { display:flex; gap:20px; flex-wrap:wrap; align-items:stretch; }
+  .cell { background:#fff; border:1px solid #E8E4FF; border-radius:14px; padding:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-width:130px; }
+  .cell.dark { background:var(--su-ink); border-color:var(--su-ink); }
+  .cell .lbl { font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#8B87AD; }
+  .cell.dark .lbl { color:#3B3660; }
+
+  /* ── CSS loading animation (mark-native fader loader) ──
+     Knob: transform translateY (rest cy=22 → peak 11 → dip 26).
+     Fill: stroke-dashoffset draw on a bottom-anchored path (pathLength 21).
+     Both properties are universally CSS-animatable on SVG. */
+  @keyframes su-knob { 0%{transform:translateY(0)} 38%{transform:translateY(-11px)} 72%{transform:translateY(4px)} 100%{transform:translateY(0)} }
+  @keyframes su-fill { 0%{stroke-dashoffset:13} 38%{stroke-dashoffset:2} 72%{stroke-dashoffset:17} 100%{stroke-dashoffset:13} }
+  .su-loader .knob { animation: su-knob 1.8s cubic-bezier(.45,0,.25,1) infinite; }
+  .su-loader .fill { stroke-dasharray:21; stroke-dashoffset:13; animation: su-fill 1.8s cubic-bezier(.45,0,.25,1) infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .su-loader .knob, .su-loader .fill { animation:none; }
+  }
+
+  .swatches { display:flex; gap:14px; flex-wrap:wrap; }
+  .sw { width:150px; border-radius:12px; overflow:hidden; border:1px solid #E8E4FF; background:#fff; }
+  .sw .chip { height:72px; }
+  .sw .m { padding:10px 12px; font-size:11px; }
+  .sw .m b { display:block; font-size:12px; }
+  .sw .m code { font-family:'DM Mono',monospace; color:#8B87AD; font-size:11px; }
+  .og-wrap { max-width:600px; border-radius:12px; overflow:hidden; border:1px solid #E8E4FF; }
+  .og-wrap img, .og-wrap object { display:block; width:100%; }
+  .note { font-size:12px; color:#4A4580; max-width:640px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<h1>schedU brand system — preview</h1>
+<p class="sub">"Fader U" · ink-first triad · every variant at real usage size. Tokens &amp; rationale in README.md.</p>
+
+<h2>The mark</h2>
+<div class="row">
+  <div class="cell"><img src="u-mark.svg" width="96" height="96" alt=""><span class="lbl">Master · ink</span></div>
+  <div class="cell dark"><img src="u-mark-reversed.svg" width="96" height="96" alt=""><span class="lbl">Reversed</span></div>
+  <div class="cell"><img src="u-mark-tile.svg" width="96" height="96" alt=""><span class="lbl">App tile</span></div>
+  <div class="cell"><span style="color:var(--su-brand)"><svg viewBox="0 0 52 52" width="96" height="96"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><circle cx="36" cy="12.5" r="4.5" fill="currentColor"/></svg></span><span class="lbl">Mono (currentColor)</span></div>
+  <div class="cell" style="background:#fff"><img src="u-mark-print.svg" width="96" height="96" alt="" style="filter:grayscale(1)"><span class="lbl">Print 1-color</span></div>
+</div>
+
+<h2>Favicon test — the tiebreaker (true size)</h2>
+<div class="row">
+  <div class="cell"><img src="favicon-16.svg" width="16" height="16" alt=""><span class="lbl">16 × 16</span></div>
+  <div class="cell"><img src="favicon-32.svg" width="32" height="32" alt=""><span class="lbl">32 × 32</span></div>
+  <div class="cell dark"><svg viewBox="0 0 52 52" width="16" height="16"><path d="M 16 9 L 16 29 A 10 10 0 0 0 36 29 L 36 24" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/><circle cx="36" cy="12" r="6" fill="#D4920E"/></svg><span class="lbl">16 dark</span></div>
+  <div class="cell"><img src="app-icon.svg" width="72" height="72" alt=""><span class="lbl">App icon 512→72</span></div>
+</div>
+<p class="note">Optical variants, not scaled masters: 16px uses stroke 10 / knob r6 / widened gap; 32px uses stroke 9 / knob r5. Also set as this page's favicon — check the browser tab.</p>
+
+<h2>Wordmark</h2>
+<div class="row">
+  <div class="cell" style="padding:28px 36px"><img src="wordmark.svg" height="52" alt="schedU"><span class="lbl">Lockup</span></div>
+  <div class="cell dark" style="padding:28px 36px"><img src="wordmark-reversed.svg" height="52" alt="schedU"><span class="lbl">Reversed</span></div>
+</div>
+<p class="note">Lowercase "sched" mirrors the lowercase "bhusku" parent wordmark; the U is always the mark, never a typed glyph. Convert text to outlines before shipping static assets.</p>
+
+<h2>Loading animation — the mark is the loader</h2>
+<div class="row">
+  <div class="cell"><img src="loading.svg" width="72" height="72" alt="loading"><span class="lbl">SMIL (zero-JS, works as &lt;img&gt;)</span></div>
+  <div class="cell">
+    <svg class="su-loader" viewBox="0 0 52 52" width="72" height="72">
+      <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30" fill="none" stroke="var(--su-ink)" stroke-width="8" stroke-linecap="round"/>
+      <line x1="36" y1="9" x2="36" y2="30" stroke="var(--su-mist)" stroke-width="8" stroke-linecap="round"/>
+      <path class="fill" d="M 36 30 L 36 9" pathLength="21" fill="none" stroke="var(--su-ink)" stroke-width="8" stroke-linecap="round"/>
+      <circle class="knob" cx="36" cy="22" r="4.5" fill="var(--su-knob)"/>
+    </svg>
+    <span class="lbl">CSS keyframes (in-app)</span>
+  </div>
+  <div class="cell dark">
+    <svg class="su-loader" viewBox="0 0 52 52" width="72" height="72">
+      <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+      <line x1="36" y1="9" x2="36" y2="30" stroke="#2A2642" stroke-width="8" stroke-linecap="round"/>
+      <path class="fill" d="M 36 30 L 36 9" pathLength="21" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+      <circle class="knob" cx="36" cy="22" r="4.5" fill="var(--su-knob)"/>
+    </svg>
+    <span class="lbl">Reversed</span>
+  </div>
+</div>
+<p class="note">The gold knob rides the right stem like a Tuner Console fader — same motion vocabulary as the hero animation (Task 2). <code>prefers-reduced-motion</code> freezes it to the static mark; never an empty box.</p>
+
+<h2>Palette — ink-first triad</h2>
+<div class="swatches">
+  <div class="sw"><div class="chip" style="background:#13111E"></div><div class="m"><b>Ink</b><code>#13111E</code> · mark default, print, text</div></div>
+  <div class="sw"><div class="chip" style="background:#7C6FE0"></div><div class="m"><b>Lavender</b><code>#7C6FE0</code> · interactive only, never page fills</div></div>
+  <div class="sw"><div class="chip" style="background:#D4920E"></div><div class="m"><b>Mahua Gold</b><code>#D4920E</code> · the knob, rationed</div></div>
+  <div class="sw"><div class="chip" style="background:#FAF9F5; border-bottom:1px solid #E8E4FF"></div><div class="m"><b>Paper</b><code>#FAF9F5</code> · documents</div></div>
+  <div class="sw"><div class="chip" style="background:#EDE9FF"></div><div class="m"><b>Mist</b><code>#EDE9FF</code> · tints, chips</div></div>
+</div>
+
+<h2>Open Graph template (1200 × 630)</h2>
+<div class="og-wrap"><img src="og-template.svg" alt="OG template"></div>
+
+<h2>Family check</h2>
+<div class="row">
+  <div class="cell dark" style="flex-direction:row; gap:24px; padding:28px 36px;">
+    <svg viewBox="0 0 52 52" width="56" height="56"><rect x="12" y="9" width="8" height="33" rx="4" fill="#fff"/><path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="39" cy="10" r="4.5" fill="#D4920E"/></svg>
+    <svg viewBox="0 0 52 52" width="56" height="56"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/></svg>
+    <span class="lbl" style="max-width:220px; text-transform:none; letter-spacing:0; font-size:12px; line-height:1.55;">bhusk<b style="color:#fff">u</b> → sched<b style="color:#fff">U</b>: same stroke, same caps, same gold dot. One family.</span>
+  </div>
+</div>
+
+</body>
+</html>

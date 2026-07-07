@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>schedU — U-mark explorations</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#FAF9F5; font-family:'Plus Jakarta Sans',sans-serif; color:#13111E; padding:48px; }
+  h1 { font-size:22px; margin:0 0 6px; } .sub { color:#8B87AD; font-size:13px; margin:0 0 36px; }
+  .row { display:flex; gap:24px; flex-wrap:wrap; }
+  .card { background:#fff; border:1px solid #E8E4FF; border-radius:16px; padding:28px; width:300px; }
+  .card h2 { font-size:14px; margin:0 0 2px; } .card .tag { font-size:11px; color:#8B87AD; margin:0 0 18px; }
+  .stage { display:flex; align-items:center; justify-content:center; height:150px; background:#FAF9F5; border-radius:12px; margin-bottom:14px; }
+  .sizes { display:flex; align-items:flex-end; gap:14px; }
+  .verdict { font-size:12px; line-height:1.55; color:#4A4580; }
+  .verdict b { color:#13111E; }
+  .rec { outline:2.5px solid #D4920E; outline-offset:3px; }
+  .pill { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.08em; background:#D4920E; color:#fff; border-radius:20px; padding:2px 10px; margin-left:6px; vertical-align:2px; }
+</style>
+</head>
+<body>
+<h1>schedU U-mark — three directions</h1>
+<p class="sub">Family constants inherited from the bhusku <code>b</code>: 8-unit monoline · round caps · gold dot #D4920E · 52-grid. Bottom row of each card = the 16px favicon test at true size.</p>
+
+<div class="row">
+
+  <!-- 1. Console U -->
+  <div class="card">
+    <h2>1 · Console U</h2>
+    <p class="tag">Tuner sliders inside the bowl</p>
+    <div class="stage">
+      <svg viewBox="0 0 52 52" width="96" height="96">
+        <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 9"
+              fill="none" stroke="#13111E" stroke-width="7" stroke-linecap="round"/>
+        <line x1="21.5" y1="18" x2="30.5" y2="18" stroke="#B8B4D4" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="24" cy="18" r="2.6" fill="#D4920E"/>
+        <line x1="21.5" y1="26" x2="30.5" y2="26" stroke="#B8B4D4" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="29" cy="26" r="2.6" fill="#D4920E"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <svg viewBox="0 0 52 52" width="32" height="32"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 9" fill="none" stroke="#13111E" stroke-width="7" stroke-linecap="round"/><line x1="21.5" y1="18" x2="30.5" y2="18" stroke="#B8B4D4" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="18" r="2.6" fill="#D4920E"/><line x1="21.5" y1="26" x2="30.5" y2="26" stroke="#B8B4D4" stroke-width="3" stroke-linecap="round"/><circle cx="29" cy="26" r="2.6" fill="#D4920E"/></svg>
+      <svg viewBox="0 0 52 52" width="16" height="16"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 9" fill="none" stroke="#13111E" stroke-width="7" stroke-linecap="round"/><line x1="21.5" y1="18" x2="30.5" y2="18" stroke="#B8B4D4" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="18" r="2.6" fill="#D4920E"/><line x1="21.5" y1="26" x2="30.5" y2="26" stroke="#B8B4D4" stroke-width="3" stroke-linecap="round"/><circle cx="29" cy="26" r="2.6" fill="#D4920E"/></svg>
+    </div>
+    <p class="verdict"><b>Fails the favicon test.</b> The interior faders are ~1px of smear at 16px; the mark reads as a blurry badge, not a letter. Excellent at 48px+, but the tiebreaker size kills it as the primary.</p>
+  </div>
+
+  <!-- 2. Monoline hand U -->
+  <div class="card">
+    <h2>2 · Monoline U</h2>
+    <p class="tag">bhusku bowl-stroke quality, symmetric</p>
+    <div class="stage">
+      <svg viewBox="0 0 52 52" width="96" height="96">
+        <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 9"
+              fill="none" stroke="#13111E" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="42" cy="10" r="4.5" fill="#D4920E"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <svg viewBox="0 0 52 52" width="32" height="32"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 9" fill="none" stroke="#13111E" stroke-width="8" stroke-linecap="round"/><circle cx="42" cy="10" r="4.5" fill="#D4920E"/></svg>
+      <svg viewBox="0 0 52 52" width="16" height="16"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 9" fill="none" stroke="#13111E" stroke-width="8" stroke-linecap="round"/><circle cx="42" cy="10" r="4.5" fill="#D4920E"/></svg>
+    </div>
+    <p class="verdict"><b>Safe but mute.</b> A perfect sibling to the <code>b</code> and it holds at 16px — but it says nothing about scheduling. A letter, not a mark. Kept as the conservative fallback.</p>
+  </div>
+
+  <!-- 3. Fader U (recommended) -->
+  <div class="card rec">
+    <h2>3 · Fader U <span class="pill">RECOMMENDED</span></h2>
+    <p class="tag">Asymmetric stem = the tuner, no interior detail</p>
+    <div class="stage">
+      <svg viewBox="0 0 52 52" width="96" height="96">
+        <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22"
+              fill="none" stroke="#13111E" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <svg viewBox="0 0 52 52" width="32" height="32"><path d="M 16 9 L 16 29.5 A 10 10 0 0 0 36 29.5 L 36 23" fill="none" stroke="#13111E" stroke-width="9" stroke-linecap="round"/><circle cx="36" cy="12.5" r="5" fill="#D4920E"/></svg>
+      <svg viewBox="0 0 52 52" width="16" height="16"><path d="M 16 9 L 16 29 A 10 10 0 0 0 36 29 L 36 24" fill="none" stroke="#13111E" stroke-width="10" stroke-linecap="round"/><circle cx="36" cy="12" r="6" fill="#D4920E"/></svg>
+    </div>
+    <p class="verdict"><b>The asymmetry <i>is</i> the tuner reference.</b> Right stem = a fader track, gold dot = the knob mid-adjustment. Two strokes and a dot: nothing to smear at 16px, and the dot sits in the same quadrant as bhusku's — unmistakably one family.</p>
+  </div>
+
+</div>
+
+<!-- family check -->
+<div style="margin-top:40px; background:#13111E; border-radius:16px; padding:28px; display:flex; align-items:center; gap:28px; max-width:560px;">
+  <svg viewBox="0 0 52 52" width="64" height="64">
+    <rect x="12" y="9" width="8" height="33" rx="4" fill="#fff"/>
+    <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+  </svg>
+  <svg viewBox="0 0 52 52" width="64" height="64">
+    <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+  </svg>
+  <div style="color:#8B87AD; font-size:12px; line-height:1.6;">Family check: bhusk<b style="color:#fff">u</b> · sched<b style="color:#fff">U</b> — same stroke, same caps, same gold dot at matching optical height.</div>
+</div>
+
+</body>
+</html>

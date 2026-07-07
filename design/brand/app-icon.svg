@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- App icon (PWA / mobile): 512 rounded-square, radius 27% (138),
+       lavender tile, white U, gold knob. Mark occupies the safe zone
+       (centered, ~66% of tile) so OS masks (squircle/circle) never clip it. -->
+  <rect width="512" height="512" rx="138" fill="#7C6FE0"/>
+  <g transform="translate(86 86) scale(6.54)">
+    <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22"
+          fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+  </g>
+</svg>
