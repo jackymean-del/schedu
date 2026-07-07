@@ -617,6 +617,7 @@ export function StepResourcesV2() {
         subjectMappings: r.subjectMappings ?? [],
         notes:           r.notes ?? '',
         scope:           r.scope,
+        directoryId:     r.directoryId,
       }))
     }
     return []
@@ -629,7 +630,7 @@ export function StepResourcesV2() {
       roomType: r.type,   // store as Title Case — no kebab conversion
       capacity: r.capacity, building: r.building, floor: r.floor,
       subjectMappings: r.subjectMappings,
-      notes: r.notes, scope: r.scope,
+      notes: r.notes, scope: r.scope, directoryId: r.directoryId,
     })))
   }
 
@@ -639,7 +640,7 @@ export function StepResourcesV2() {
       roomType: r.type,   // store as Title Case — no kebab conversion
       capacity: r.capacity, building: r.building, floor: r.floor,
       subjectMappings: r.subjectMappings,
-      notes: r.notes, scope: r.scope,
+      notes: r.notes, scope: r.scope, directoryId: r.directoryId,
     })))
   }, [rooms]) // eslint-disable-line react-hooks/exhaustive-deps
 

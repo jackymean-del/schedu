@@ -69,6 +69,7 @@ export function MasterDataPage() {
         building: r.building ?? 'Main Block',
         floor: r.floor ?? 'Ground',
         scope: r.scope,
+        directoryId: r.directoryId,
       }))
     }
     return (sections ?? []).map((s: any, i: number) => ({
@@ -82,7 +83,7 @@ export function MasterDataPage() {
       setStoredRooms(rooms.map(r => ({
         id: r.id, generatedName: r.name, actualName: r.name,
         roomType: (r.type.toLowerCase().replace(/ /g, '-') as any) || 'classroom',
-        capacity: r.capacity, scope: r.scope,
+        capacity: r.capacity, scope: r.scope, directoryId: r.directoryId,
       })))
     }
   }, [rooms])

@@ -151,9 +151,11 @@ function BlockNameInput({ initial, onCommit }: { initial: string; onCommit: (v: 
 }
 
 // ─── Add row ──────────────────────────────────────────────────────────────────
-// Consults the shared cross-schedule venue directory (store/directoryStore.ts)
-// so "same venue name" is a deliberate choice rather than an accident — see
-// TeachersPanel.tsx's AddRow for the identical rationale on the staff side.
+// Consults the shared cross-schedule venue directory (store/directoryStore.ts):
+// typing a name that exactly matches an existing entry auto-fills its
+// type/capacity and links via directoryId — no extra click — instead of
+// silently creating a second, disconnected record. See TeachersPanel.tsx's
+// AddRow for the identical rationale on the staff side.
 function AddRow({ onAdd, defaultBlock, blocks }: {
   onAdd: (r: RoomExt) => void
   defaultBlock: string
@@ -171,31 +173,21 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
 
   const directoryVenues = useDirectoryStore(s => s.venues)
   const trimmed = name.trim()
-  const collision = trimmed
+  const match = trimmed
     ? directoryVenues.find(v => v.name.toLowerCase() === trimmed.toLowerCase())
     : undefined
 
   function resetForm() { setName(''); setType('Classroom'); setCap(40); setBlock(defaultBlock); setActive(false) }
 
-  function addRecord(directoryId: string, base?: Partial<RoomExt>) {
-    onAdd({
-      id: makeId(), name: trimmed, type, capacity: cap,
-      building: block.trim() || DEFAULT_BLOCK, floor: '', subjectMappings: [], notes: '',
-      ...base, directoryId,
-    })
-    resetForm()
-  }
-
   function commit() {
     if (!trimmed) { setActive(false); return }
-    if (collision) return // resolve the conflict below first — see useExisting()
-    const entry = useDirectoryStore.getState().addVenue({ name: trimmed, roomType: type, capacity: cap })
-    addRecord(entry.id)
-  }
-
-  function useExisting() {
-    if (!collision) return
-    addRecord(collision.id, { type: collision.roomType || type, capacity: collision.capacity ?? cap })
+    const entry = match ?? useDirectoryStore.getState().addVenue({ name: trimmed, roomType: type, capacity: cap })
+    onAdd({
+      id: makeId(), name: trimmed, type: entry.roomType || type, capacity: entry.capacity ?? cap,
+      building: block.trim() || DEFAULT_BLOCK, floor: '', subjectMappings: [], notes: '',
+      directoryId: entry.id,
+    })
+    resetForm()
   }
 
   if (!active) return (
@@ -214,8 +206,8 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
       <tr style={{ background: '#FAFAFE' }}>
         <td style={{ ...TD, verticalAlign: 'top' }}>
           <input ref={ref} value={name} onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !collision) commit(); if (e.key === 'Escape') setActive(false) }}
-            placeholder="Room name" style={{ ...inp, width: '100%', borderColor: collision ? '#F59E0B' : undefined }}
+            onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
+            placeholder="Room name" style={{ ...inp, width: '100%', borderColor: match ? '#16A34A' : undefined }}
           />
         </td>
         <td style={TD}>
@@ -233,24 +225,16 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
           <datalist id={listId}>{blocks.map(b => <option key={b} value={b} />)}</datalist>
         </td>
         <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-          <button onClick={commit} disabled={!!collision}
-            title={collision ? 'Resolve the name conflict before adding' : undefined}
-            style={{ background: collision ? '#E5E7EB' : P, color: collision ? '#9CA3AF' : '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: collision ? 'not-allowed' : 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
+          <button onClick={commit}
+            style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
           <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
         </td>
       </tr>
-      {collision && (
+      {match && (
         <tr>
           <td colSpan={6} style={{ padding: '0 12px 8px' }}>
-            <div style={{ padding: '7px 9px', borderRadius: 6, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 11, color: '#92400E', lineHeight: 1.5 }}>
-              <strong>{collision.name}</strong> already exists in your venue directory.
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
-                <button onClick={useExisting}
-                  style={{ background: '#D97706', color: '#fff', border: 'none', borderRadius: 5, padding: '3px 9px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ✓ Use this venue
-                </button>
-                <span style={{ color: '#B45309' }}>Different room? Make the name distinguishable (e.g. "Lab 2 – Block B") to add it separately.</span>
-              </div>
+            <div style={{ padding: '6px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', fontSize: 11, color: '#166534', lineHeight: 1.5 }}>
+              ✓ Matches <strong>{match.name}</strong> in your venue directory — will auto-link ({match.roomType || 'Classroom'}, cap. {match.capacity ?? 40}). Different room? Add a distinguishing detail (e.g. "Lab 2 – Block B") to keep it separate.
             </div>
           </td>
         </tr>
