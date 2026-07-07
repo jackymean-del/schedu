@@ -30,6 +30,7 @@ import {
 import type { ChipOption } from './shared'
 import { calcTeacherSlots, slotLoadLevel, seedStandardStaff } from './aiEngine'
 import { normalizeBoardType, type CurriculumBoard } from './curriculum'
+import { useDirectoryStore } from '@/store/directoryStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SubjectMapping { subject: string; classes: string[] }
@@ -370,16 +371,50 @@ function ShortNameCell({ value, onSave }: { value?: string; onSave: (v: string) 
 }
 
 // ─── Add teacher row ──────────────────────────────────────────────────────────
+// Consults the shared cross-schedule staff directory (store/directoryStore.ts)
+// so "same name" becomes a deliberate choice: typing a name that already
+// exists there offers "use this teacher" (links via directoryId, reused
+// across schedules) instead of silently creating a second, disconnected
+// record that later looks like a double-booking or a merged-away duplicate.
 function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
   const [active, setActive] = useState(false)
   const [name, setName] = useState('')
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => { if (active) ref.current?.focus() }, [active])
-  function commit() {
-    if (!name.trim()) { setActive(false); return }
-    onAdd({ id: makeId(), name: name.trim(), shortName: '', role: 'Teacher', subjects: [], classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30 } as unknown as StaffExt)
+
+  const directoryStaff = useDirectoryStore(s => s.staff)
+  const trimmed = name.trim()
+  const collision = trimmed
+    ? directoryStaff.find(s => s.name.toLowerCase() === trimmed.toLowerCase())
+    : undefined
+
+  function addRecord(directoryId: string, base?: Partial<StaffExt>) {
+    onAdd({
+      id: makeId(), name: trimmed, shortName: '', role: 'Teacher',
+      subjects: [], classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30,
+      ...base, directoryId,
+    } as unknown as StaffExt)
     setName(''); setActive(false)
   }
+
+  function commit() {
+    if (!trimmed) { setActive(false); return }
+    if (collision) return // resolve the conflict below first — see useExisting()
+    const entry = useDirectoryStore.getState().addStaff({ name: trimmed })
+    addRecord(entry.id)
+  }
+
+  function useExisting() {
+    if (!collision) return
+    addRecord(collision.id, {
+      shortName: collision.shortName ?? '',
+      role: collision.role ?? 'Teacher',
+      subjects: collision.subjects ?? [],
+      maxPeriodsPerWeek: collision.maxPeriodsPerWeek ?? 30,
+      gender: collision.gender,
+    } as Partial<StaffExt>)
+  }
+
   if (!active) return (
     <tr>
       <td colSpan={5} style={{ ...TD, padding: '9px 12px' }}>
@@ -392,15 +427,29 @@ function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
   )
   return (
     <tr style={{ background: '#FAFAFE' }}>
-      <td colSpan={3} style={TD}>
+      <td colSpan={3} style={{ ...TD, verticalAlign: 'top' }}>
         <input ref={ref} value={name} onChange={e => setName(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
+          onKeyDown={e => { if (e.key === 'Enter' && !collision) commit(); if (e.key === 'Escape') setActive(false) }}
           placeholder="Educator full name"
-          style={{ ...fld, width: '100%', fontSize: 12.5, boxSizing: 'border-box' as const }}
+          style={{ ...fld, width: '100%', fontSize: 12.5, boxSizing: 'border-box' as const, borderColor: collision ? '#F59E0B' : undefined }}
         />
+        {collision && (
+          <div style={{ marginTop: 6, padding: '7px 9px', borderRadius: 6, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 11, color: '#92400E', lineHeight: 1.5 }}>
+            <strong>{collision.name}</strong> already exists in your staff directory.
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+              <button onClick={useExisting}
+                style={{ background: '#D97706', color: '#fff', border: 'none', borderRadius: 5, padding: '3px 9px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                ✓ Use this teacher
+              </button>
+              <span style={{ color: '#B45309' }}>Different person? Make the name distinguishable (e.g. add a last initial) to add them separately.</span>
+            </div>
+          </div>
+        )}
       </td>
-      <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap' }}>
-        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
+      <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+        <button onClick={commit} disabled={!!collision}
+          title={collision ? 'Resolve the name conflict before adding' : undefined}
+          style={{ background: collision ? '#E5E7EB' : P, color: collision ? '#9CA3AF' : '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: collision ? 'not-allowed' : 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
         <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
       </td>
     </tr>

@@ -34,6 +34,7 @@ import {
 } from '@/lib/freeAssignments'
 import { loadActiveBundles, patchBundleSubstitutions, type ScheduleBundle } from '@/lib/activeSchedules'
 import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
+import { bootstrapDirectoryFromSchedules } from '@/lib/directoryBootstrap'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -181,6 +182,10 @@ export function CalendarPage() {
   const uid = useAuthStore.getState().user?.id ?? ''
 
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
+  // One-time seed of the shared staff/venue directory from whatever active
+  // schedules already exist, so wizard entry has something to match against
+  // from day one (see lib/directoryBootstrap.ts).
+  useEffect(() => { if (uid) bootstrapDirectoryFromSchedules(uid) }, [uid])
 
   // ── selection state ──
   const [date, setDate] = useState(() => new Date())

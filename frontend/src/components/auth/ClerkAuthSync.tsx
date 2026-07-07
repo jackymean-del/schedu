@@ -11,6 +11,7 @@ import { useUser, useAuth, useClerk } from '@clerk/clerk-react'
 import { useAuthStore, setClerkSignOut, setClerkOpenProfile, type AuthUser } from '@/store/authStore'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useTimetableStore } from '@/store/timetableStore'
+import { useDirectoryStore } from '@/store/directoryStore'
 import { setTokenGetter, meApi } from '@/api/client'
 
 export function ClerkAuthSync() {
@@ -60,6 +61,7 @@ export function ClerkAuthSync() {
     if (useOrgProfile.getState().ownerId !== appUser.id) {
       useTimetableStore.getState().resetAll()
       useOrgProfile.getState().resetForOwner(appUser.id)
+      useDirectoryStore.getState().resetForOwner(appUser.id)
     }
 
     void getToken().then((t) => {

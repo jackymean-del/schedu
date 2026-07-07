@@ -187,6 +187,9 @@ export interface RoomRow {
   building: string
   floor: string
   scope?: ScopeMatrix
+  /** Links this schedule's row to a shared cross-schedule roster entry
+   *  (store/directoryStore.ts). Optional — old records simply lack it. */
+  directoryId?: string
 }
 
 export function makeId() {

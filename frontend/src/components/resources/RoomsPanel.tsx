@@ -19,6 +19,7 @@ import {
 } from './shared'
 import type { ChipOption } from './shared'
 import { seedStandardRooms } from './aiEngine'
+import { useDirectoryStore } from '@/store/directoryStore'
 
 export type RoomExt = RoomRow & {
   subjectMappings?: string[]
@@ -150,6 +151,9 @@ function BlockNameInput({ initial, onCommit }: { initial: string; onCommit: (v: 
 }
 
 // ─── Add row ──────────────────────────────────────────────────────────────────
+// Consults the shared cross-schedule venue directory (store/directoryStore.ts)
+// so "same venue name" is a deliberate choice rather than an accident — see
+// TeachersPanel.tsx's AddRow for the identical rationale on the staff side.
 function AddRow({ onAdd, defaultBlock, blocks }: {
   onAdd: (r: RoomExt) => void
   defaultBlock: string
@@ -165,10 +169,33 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
   useEffect(() => { if (active) ref.current?.focus() }, [active])
   useEffect(() => { setBlock(defaultBlock) }, [defaultBlock])
 
+  const directoryVenues = useDirectoryStore(s => s.venues)
+  const trimmed = name.trim()
+  const collision = trimmed
+    ? directoryVenues.find(v => v.name.toLowerCase() === trimmed.toLowerCase())
+    : undefined
+
+  function resetForm() { setName(''); setType('Classroom'); setCap(40); setBlock(defaultBlock); setActive(false) }
+
+  function addRecord(directoryId: string, base?: Partial<RoomExt>) {
+    onAdd({
+      id: makeId(), name: trimmed, type, capacity: cap,
+      building: block.trim() || DEFAULT_BLOCK, floor: '', subjectMappings: [], notes: '',
+      ...base, directoryId,
+    })
+    resetForm()
+  }
+
   function commit() {
-    if (!name.trim()) { setActive(false); return }
-    onAdd({ id: makeId(), name: name.trim(), type, capacity: cap, building: block.trim() || DEFAULT_BLOCK, floor: '', subjectMappings: [], notes: '' })
-    setName(''); setType('Classroom'); setCap(40); setBlock(defaultBlock); setActive(false)
+    if (!trimmed) { setActive(false); return }
+    if (collision) return // resolve the conflict below first — see useExisting()
+    const entry = useDirectoryStore.getState().addVenue({ name: trimmed, roomType: type, capacity: cap })
+    addRecord(entry.id)
+  }
+
+  function useExisting() {
+    if (!collision) return
+    addRecord(collision.id, { type: collision.roomType || type, capacity: collision.capacity ?? cap })
   }
 
   if (!active) return (
@@ -183,32 +210,52 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
   )
 
   return (
-    <tr style={{ background: '#FAFAFE' }}>
-      <td style={TD}>
-        <input ref={ref} value={name} onChange={e => setName(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
-          placeholder="Room name" style={{ ...inp, width: '100%' }}
-        />
-      </td>
-      <td style={TD}>
-        <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, width: '100%' }}>
-          {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-      </td>
-      <td style={TD}>
-        <input type="number" value={cap} onChange={e => setCap(+e.target.value)} min={1} max={999}
-          style={{ ...inp, width: '100%', textAlign: 'center' }} />
-      </td>
-      <td style={TD}>
-        <input value={block} onChange={e => setBlock(e.target.value)} list={listId}
-          placeholder="Block / Building" style={{ ...inp, width: '100%' }} />
-        <datalist id={listId}>{blocks.map(b => <option key={b} value={b} />)}</datalist>
-      </td>
-      <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap' }}>
-        <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
-        <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
-      </td>
-    </tr>
+    <>
+      <tr style={{ background: '#FAFAFE' }}>
+        <td style={{ ...TD, verticalAlign: 'top' }}>
+          <input ref={ref} value={name} onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !collision) commit(); if (e.key === 'Escape') setActive(false) }}
+            placeholder="Room name" style={{ ...inp, width: '100%', borderColor: collision ? '#F59E0B' : undefined }}
+          />
+        </td>
+        <td style={TD}>
+          <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, width: '100%' }}>
+            {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </td>
+        <td style={TD}>
+          <input type="number" value={cap} onChange={e => setCap(+e.target.value)} min={1} max={999}
+            style={{ ...inp, width: '100%', textAlign: 'center' }} />
+        </td>
+        <td style={TD}>
+          <input value={block} onChange={e => setBlock(e.target.value)} list={listId}
+            placeholder="Block / Building" style={{ ...inp, width: '100%' }} />
+          <datalist id={listId}>{blocks.map(b => <option key={b} value={b} />)}</datalist>
+        </td>
+        <td colSpan={2} style={{ ...TD, whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+          <button onClick={commit} disabled={!!collision}
+            title={collision ? 'Resolve the name conflict before adding' : undefined}
+            style={{ background: collision ? '#E5E7EB' : P, color: collision ? '#9CA3AF' : '#fff', border: 'none', borderRadius: 5, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: collision ? 'not-allowed' : 'pointer', marginRight: 6, fontFamily: 'inherit' }}>✓ Add</button>
+          <button onClick={() => setActive(false)} style={{ background: '#F0F0F0', color: '#888', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✗</button>
+        </td>
+      </tr>
+      {collision && (
+        <tr>
+          <td colSpan={6} style={{ padding: '0 12px 8px' }}>
+            <div style={{ padding: '7px 9px', borderRadius: 6, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 11, color: '#92400E', lineHeight: 1.5 }}>
+              <strong>{collision.name}</strong> already exists in your venue directory.
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                <button onClick={useExisting}
+                  style={{ background: '#D97706', color: '#fff', border: 'none', borderRadius: 5, padding: '3px 9px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ✓ Use this venue
+                </button>
+                <span style={{ color: '#B45309' }}>Different room? Make the name distinguishable (e.g. "Lab 2 – Block B") to add it separately.</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 

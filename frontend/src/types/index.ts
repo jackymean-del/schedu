@@ -1152,6 +1152,9 @@ export const StaffSchema = z.object({
   maxPeriodsPerWeek: z.number().int().positive(),
   gender: z.enum(['male', 'female', 'other']).optional(),
   scope: ScopeMatrixSchema.optional(),   // schedU Scope System
+  /** Links this schedule's row to a shared cross-schedule roster entry
+   *  (store/directoryStore.ts). Optional — old records simply lack it. */
+  directoryId: z.string().optional(),
 })
 export type Staff = z.infer<typeof StaffSchema>
 
@@ -1181,6 +1184,9 @@ export interface Room {
   shiftId?: string
   /** schedU Scope System — when set, room can only be used where allowed */
   scope?: ScopeMatrix
+  /** Links this schedule's row to a shared cross-schedule roster entry
+   *  (store/directoryStore.ts). Optional — old records simply lack it. */
+  directoryId?: string
 }
 
 /** @deprecated Use Teacher instead. */
