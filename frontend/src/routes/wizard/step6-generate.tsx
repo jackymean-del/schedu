@@ -6,7 +6,9 @@ import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from "@/
 import { parseAllocation } from "@/lib/allocationSyntax"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import { getCountry } from "@/lib/orgData"
-import type { OptionalBlock, OptionalOption, Period } from "@/types"
+import type { OptionalBlock, OptionalOption, Period, ClassTimetable } from "@/types"
+import { GraduationCap, Users, BookOpen, Building2, CalendarDays, Clock } from "lucide-react"
+import { P, P_D, P_L, P_B } from "@/components/resources/shared"
 
 // ── DLG → OptionalBlock bridge ─────────────────────────────────────────────
 //
@@ -314,6 +316,31 @@ const STEPS = [
   { pct: 98, label: "Building class and teacher views…" },
 ]
 
+// The solve completes synchronously before this progress ceremony even
+// starts (see startGenerate below) — so instead of a fabricated animation
+// with no relation to the user's actual data, we flatten the just-computed
+// classTT into real "class → subject · teacher" lines and reveal a few per
+// tick alongside the ring. Same cadence, but genuinely shows the schedule
+// being assembled instead of a generic spinner.
+function flattenAssignments(classTT: ClassTimetable): string[] {
+  const lines: string[] = []
+  for (const [section, days] of Object.entries(classTT ?? {})) {
+    for (const slots of Object.values(days ?? {})) {
+      for (const cell of Object.values(slots ?? {})) {
+        const c = cell as any
+        if (!c?.subject) continue
+        lines.push(`${section} → ${c.subject}${c.teacher ? ` · ${c.teacher}` : ''}`)
+      }
+    }
+  }
+  // Shuffle so the feed doesn't just march through one section at a time.
+  for (let i = lines.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[lines[i], lines[j]] = [lines[j], lines[i]]
+  }
+  return lines
+}
+
 // Default academic year boundaries
 function defaultStartDate(): string {
   const now = new Date()
@@ -485,6 +512,9 @@ export function Step6Generate() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // Whether to show the "already generated" banner (user came back after closing)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
+  // Real assignments from the just-computed schedule, revealed a few at a
+  // time while the progress ring animates — see flattenAssignments above.
+  const [liveFeed, setLiveFeed] = useState<string[]>([])
 
   // Detect existing timetable in the store (persisted across sessions)
   const hasExistingTT = Object.keys(store.classTT ?? {}).length > 0
@@ -500,12 +530,12 @@ export function Step6Generate() {
 
   // ── Stats for the info cards ──────────────────────────────────
   const stats = [
-    { icon:"🏫", label:"Classes",  value: sections.length },
-    { icon:"👩‍🏫", label:"Teachers", value: store.staff.length },
-    { icon:"📖", label:"Subjects",  value: subjects.length },
-    { icon:"🚪", label:"Venues",    value: facilities.length || sections.length },
-    { icon:"📅", label:"Days/week", value: config.workDays?.length ?? 5 },
-    { icon:"⏰", label:"Periods/day",value: config.periodsPerDay ?? 8 },
+    { icon: GraduationCap, label:"Classes",  value: sections.length },
+    { icon: Users,         label:"Teachers", value: store.staff.length },
+    { icon: BookOpen,      label:"Subjects",  value: subjects.length },
+    { icon: Building2,     label:"Venues",    value: facilities.length || sections.length },
+    { icon: CalendarDays,  label:"Days/week", value: config.workDays?.length ?? 5 },
+    { icon: Clock,         label:"Periods/day",value: config.periodsPerDay ?? 8 },
   ]
 
   // ── Pre-flight summary — what WILL be generated, judged before clicking ──
@@ -590,6 +620,7 @@ export function Step6Generate() {
     const jobId    = crypto.randomUUID()
     const startedAt = Date.now()
     setJob({ id: jobId, status: "running", progress: 3, currentStep: "Starting…", startedAt })
+    setLiveFeed([])
 
     let output: ReturnType<typeof solveTimetable>
     let solveMs: number
@@ -808,7 +839,10 @@ export function Step6Generate() {
       return
     }
 
-    // ── Animate progress through STEPS at 110ms each ──
+    // ── Animate progress through STEPS at 110ms each, revealing real
+    //    assignments from the just-computed schedule alongside it ──
+    const assignments = flattenAssignments(output.classTT)
+    const perTick = Math.max(1, Math.ceil(assignments.length / STEPS.length))
     let step = 0
     pollRef.current = setInterval(() => {
       if (step >= STEPS.length) {
@@ -825,6 +859,10 @@ export function Step6Generate() {
       }
       const idx = step
       setJob(j => j ? { ...j, progress: STEPS[idx].pct, currentStep: STEPS[idx].label } : j)
+      if (assignments.length) {
+        const slice = assignments.slice(idx * perTick, idx * perTick + perTick)
+        if (slice.length) setLiveFeed(prev => [...slice.reverse(), ...prev].slice(0, 4))
+      }
       step++
     }, 110)
   }
@@ -836,8 +874,8 @@ export function Step6Generate() {
   const dashOffset = circ * (1 - progress / 100)
 
   const ringColor =
-    job?.status === "completed" ? "#7C6FE0" :
-    job?.status === "failed"    ? "#dc2626" : "#7C6FE0"
+    job?.status === "completed" ? P :
+    job?.status === "failed"    ? "#dc2626" : P
 
   const elapsed = job?.startedAt ? ((Date.now() - job.startedAt) / 1000).toFixed(1) : "0.0"
 
@@ -859,11 +897,8 @@ export function Step6Generate() {
            job.status === "completed" ? `${T.schedule} is ready! 🎉` :
            "Something went wrong"}
         </h2>
-        {job && (
-          <p style={{ fontSize:12, color:"#8B87AD", margin:0, fontFamily:"monospace" }}>
-            Job {job.id.slice(0,8)}
-            {job.status === "running" && ` · ${elapsed}s`}
-          </p>
+        {job?.status === "running" && (
+          <p style={{ fontSize:12, color:"#8B87AD", margin:0, fontFamily:"'DM Mono',monospace" }}>{elapsed}s</p>
         )}
       </div>
 
@@ -886,7 +921,7 @@ export function Step6Generate() {
               <defs>
                 <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#818cf8" stopOpacity="0"/>
-                  <stop offset="100%" stopColor="#7C6FE0"/>
+                  <stop offset="100%" stopColor={P}/>
                 </linearGradient>
               </defs>
             </svg>
@@ -924,90 +959,105 @@ export function Step6Generate() {
       {/* ── Current step label ── */}
       {job && (
         <div key={job.currentStep}
-          style={{ animation:"fade-up 0.3s ease", fontSize:14, color: job.status==="failed"?"#dc2626": job.status==="completed"?"#7C6FE0":"#4B5275", fontWeight:500, maxWidth:420, lineHeight:1.5 }}>
+          style={{ animation:"fade-up 0.3s ease", fontSize:14, color: job.status==="failed"?"#dc2626": job.status==="completed"?P:"#4B5275", fontWeight:500, maxWidth:420, lineHeight:1.5 }}>
           {job.status === "running" && (
-            <span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:"#7C6FE0", marginRight:8, animation:"pulse-dot 1s ease-in-out infinite", verticalAlign:"middle" }}/>
+            <span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:P, marginRight:8, animation:"pulse-dot 1s ease-in-out infinite", verticalAlign:"middle" }}/>
           )}
           {job.currentStep}
         </div>
       )}
 
-      {/* ── Stats cards ── */}
-      <div style={{ display:"flex", gap:10, flexWrap:"wrap" as const, justifyContent:"center", maxWidth:520, animation:"fade-up 0.4s ease 0.2s both" }}>
-        {stats.map((s, i) => (
-          <div key={s.label} style={{
-            display:"flex", flexDirection:"column" as const, alignItems:"center", gap:3,
-            padding:"12px 16px", borderRadius:12,
-            background: job?.status==="completed" ? "#f0fdf4" : "#F8F7FF",
-            border: `1.5px solid ${job?.status==="completed" ? "#D8D2FF" : "#E8E4FF"}`,
-            minWidth:72,
-            transition:"all 0.3s ease",
-            animationDelay: `${0.3 + i * 0.05}s`,
-          }}>
-            <span style={{ fontSize:20 }}>{s.icon}</span>
-            <span style={{ fontSize:22, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"#13111E", lineHeight:1 }}>{s.value}</span>
-            <span style={{ fontSize:10, color:"#8B87AD", fontWeight:600, textTransform:"uppercase" as const, letterSpacing:"0.05em" }}>{s.label}</span>
-          </div>
-        ))}
-      </div>
+      {/* ── Live feed — real assignments from the just-built schedule,
+           revealed a few at a time in step with the progress ring. Not
+           fabricated: these are literally output.classTT entries. ── */}
+      {job?.status === "running" && liveFeed.length > 0 && (
+        <div style={{ width:"100%", maxWidth:420, display:"flex", flexDirection:"column" as const, gap:6 }}>
+          {liveFeed.map((line, i) => (
+            <div key={line + i} style={{
+              animation:"fade-up 0.25s ease", fontSize:12.5, color:"#4B5275",
+              background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:9,
+              padding:"7px 12px", textAlign:"left" as const,
+              opacity: 1 - i * 0.22,
+            }}>
+              <span style={{ color:"#22C55E", fontWeight:700, marginRight:6 }}>✓</span>{line}
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* ── Pre-flight summary — judge the outcome BEFORE generating ── */}
-      {!job && preflight && (
-        <div style={{ width:"100%", maxWidth:520, background:"#fff", borderRadius:14, border:"1.5px solid #E8E4FF", padding:"16px 20px", animation:"fade-up 0.4s ease 0.22s both", textAlign:"left" as const }}>
-          <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase" as const, color:"#8B7FE8", marginBottom:10 }}>
-            Pre-flight summary
+      {/* ── Briefing card — stats + pre-flight judgment, merged into one
+           panel, shown only before generating (irrelevant once it's
+           actually running or done) ── */}
+      {!job && (
+        <div style={{ width:"100%", maxWidth:520, background:"#fff", borderRadius:14, border:`1.5px solid ${P_B}`, padding:"18px 20px", animation:"fade-up 0.4s ease 0.2s both", textAlign:"left" as const }}>
+          {/* Stat row */}
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" as const, justifyContent:"space-between", marginBottom: preflight ? 16 : 0 }}>
+            {stats.map(s => {
+              const Icon = s.icon
+              return (
+                <div key={s.label} style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:4, flex:"1 1 72px", minWidth:64 }}>
+                  <Icon size={17} color={P} />
+                  <span style={{ fontSize:20, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"#13111E", lineHeight:1 }}>{s.value}</span>
+                  <span style={{ fontSize:9.5, color:"#8B87AD", fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.05em" }}>{s.label}</span>
+                </div>
+              )
+            })}
           </div>
 
-          {/* Day shapes — one line per distinct (periods/day, end time) */}
-          <div style={{ display:"flex", flexDirection:"column" as const, gap:5, marginBottom:10 }}>
-            {preflight.shapes.map(s => (
-              <div key={`${s.label}-${s.end}`} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275" }}>
-                <span style={{ fontSize:13 }}>🕐</span>
-                <span style={{ fontWeight:700, color:"#13111E" }}>{s.label}</span>
-                <span style={{ color:"#9B96BD" }}>·</span>
-                <span>{s.count} period{s.count !== 1 ? "s" : ""}/day</span>
-                <span style={{ color:"#9B96BD" }}>·</span>
-                <span>ends <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
+          {preflight && (
+            <div style={{ borderTop: `1px solid ${P_L}`, paddingTop:14 }}>
+              {/* Day shapes — one line per distinct (periods/day, end time) */}
+              <div style={{ display:"flex", flexDirection:"column" as const, gap:5, marginBottom:10 }}>
+                {preflight.shapes.map(s => (
+                  <div key={`${s.label}-${s.end}`} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275" }}>
+                    <Clock size={13} color="#9B96BD" />
+                    <span style={{ fontWeight:700, color:"#13111E" }}>{s.label}</span>
+                    <span style={{ color:"#9B96BD" }}>·</span>
+                    <span>{s.count} period{s.count !== 1 ? "s" : ""}/day</span>
+                    <span style={{ color:"#9B96BD" }}>·</span>
+                    <span>ends <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* Workload line */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275", marginBottom:10, flexWrap:"wrap" as const }}>
-            <span style={{ fontSize:13 }}>📚</span>
-            <span><strong style={{ fontFamily:"'DM Mono',monospace" }}>{preflight.totalWeekly}</strong> lessons/week</span>
-            {preflight.doubleSubjects > 0 && (
-              <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.doubleSubjects} double-period subject{preflight.doubleSubjects !== 1 ? "s" : ""}</span></>
-            )}
-            {preflight.parallelGroups > 0 && (
-              <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.parallelGroups} parallel group{preflight.parallelGroups !== 1 ? "s" : ""}</span></>
-            )}
-            {preflight.dayOffRules > 0 && (
-              <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.dayOffRules} day-off rule{preflight.dayOffRules !== 1 ? "s" : ""}</span></>
-            )}
-          </div>
+              {/* Workload line */}
+              <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275", marginBottom:10, flexWrap:"wrap" as const }}>
+                <BookOpen size={13} color="#9B96BD" />
+                <span><strong style={{ fontFamily:"'DM Mono',monospace" }}>{preflight.totalWeekly}</strong> lessons/week</span>
+                {preflight.doubleSubjects > 0 && (
+                  <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.doubleSubjects} double-period subject{preflight.doubleSubjects !== 1 ? "s" : ""}</span></>
+                )}
+                {preflight.parallelGroups > 0 && (
+                  <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.parallelGroups} parallel group{preflight.parallelGroups !== 1 ? "s" : ""}</span></>
+                )}
+                {preflight.dayOffRules > 0 && (
+                  <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.dayOffRules} day-off rule{preflight.dayOffRules !== 1 ? "s" : ""}</span></>
+                )}
+              </div>
 
-          {/* Checks */}
-          {preflight.overCap.length > 0 ? (
-            <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:8, padding:"7px 11px" }}>
-              <span>⚠</span>
-              <span>
-                <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
-                ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
-                extra lessons will be dropped. Trim in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
-              </span>
-            </div>
-          ) : preflight.unallocated.length > 0 ? (
-            <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:"1px solid #E8E4FF", borderRadius:8, padding:"7px 11px" }}>
-              <span>ℹ</span>
-              <span>
-                {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
-                ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) — they'll come out empty.
-              </span>
-            </div>
-          ) : (
-            <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11.5, color:"#15803D" }}>
-              <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
+              {/* Checks */}
+              {preflight.overCap.length > 0 ? (
+                <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:8, padding:"7px 11px" }}>
+                  <span>⚠</span>
+                  <span>
+                    <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
+                    ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
+                    extra lessons will be dropped. Trim in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
+                  </span>
+                </div>
+              ) : preflight.unallocated.length > 0 ? (
+                <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:8, padding:"7px 11px" }}>
+                  <span>ℹ</span>
+                  <span>
+                    {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
+                    ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) — they'll come out empty.
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11.5, color:"#15803D" }}>
+                  <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1027,7 +1077,7 @@ export function Step6Generate() {
           <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" as const }}>
             <button
               onClick={() => window.location.href='/timetable'}
-              style={{ padding:"11px 28px", borderRadius:10, border:"none", background:"#7C6FE0", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 16px rgba(124,111,224,0.3)" }}>
+              style={{ padding:"11px 28px", borderRadius:10, border:"none", background:P, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 16px rgba(124,111,224,0.3)" }}>
               View {T.schedule} →
             </button>
             <button
@@ -1114,7 +1164,7 @@ export function Step6Generate() {
         {!job && (!hasExistingTT || showRegenConfirm) && (
           <>
             <button onClick={startGenerate}
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"13px 36px", borderRadius:10, border:"none", background:"#7C6FE0", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(79,70,229,0.35)" }}>
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"13px 36px", borderRadius:10, border:"none", background:P, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(79,70,229,0.35)" }}>
               {showRegenConfirm ? "↺ Regenerate" : `✨ Generate ${T.schedule}`}
             </button>
             {showRegenConfirm
@@ -1133,7 +1183,7 @@ export function Step6Generate() {
         {job?.status === "completed" && (
           <>
             <button onClick={() => window.location.href='/timetable'}
-              style={{ padding:"13px 32px", borderRadius:10, border:"none", background:"#7C6FE0", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(124,111,224,0.3)" }}>
+              style={{ padding:"13px 32px", borderRadius:10, border:"none", background:P, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(124,111,224,0.3)" }}>
               View {T.schedule} (Draft) →
             </button>
             <button onClick={() => { setJob(null); setShowRegenConfirm(false) }}
