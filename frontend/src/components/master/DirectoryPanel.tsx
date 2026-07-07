@@ -4,7 +4,7 @@
  * into every active schedule's own local roster via lib/directoryManagement.ts
  * so the directory never silently drifts from what schedules actually show.
  */
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Users, Building2, Merge, Trash2 } from 'lucide-react'
 import { useDirectoryStore, type DirectoryStaff, type DirectoryVenue } from '@/store/directoryStore'
 import { renameLinkedEntries, mergeLinkedEntries, usageOf, type DirectoryKind } from '@/lib/directoryManagement'
@@ -21,7 +21,11 @@ function EntryRow<T extends { id: string; name: string }>({
   onRemove: () => void
 }) {
   const [mergePick, setMergePick] = useState('')
-  const usage = useMemo(() => usageOf(entry.id, kind), [entry.id, kind])
+  // Not memoized: a rename/merge writes cross-schedule data straight into
+  // localStorage (lib/directoryManagement.ts), which doesn't change `entry.id`
+  // or `kind` — memoizing on those alone left this stale after a merge even
+  // though the underlying schedules were correctly updated.
+  const usage = usageOf(entry.id, kind)
   const mergeable = others.filter(o => o.id !== entry.id)
 
   return (
