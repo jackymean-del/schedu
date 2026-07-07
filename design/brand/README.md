@@ -5,12 +5,19 @@
 > to see every variant, the loading animation, and the 16px favicon test
 > at real size).
 
+> **DECISION (approved): the old bhusku `b` dot icon is RETIRED.** The
+> Fader U deliberately reads as both **U** and **b** — one mark now
+> carries the whole family. The `b` survives only as provenance (§1
+> documents the constants inherited from it); it must not appear in any
+> new surface. See §7 for the migration note.
+
 ---
 
 ## 1. Where this comes from — the bhusku family DNA
 
-The parent mark already exists in code (`frontend/src/components/branding/Logos.tsx`,
-`BhuskuLogo`). Reverse-engineering it gives us hard family constants, not vibes:
+The parent mark existed in code (`frontend/src/components/branding/Logos.tsx`,
+`BhuskuLogo` — now retired, unused by any live surface). Reverse-engineering
+it gave us hard family constants, not vibes:
 
 | Trait | bhusku `b` value | Family rule |
 |---|---|---|
@@ -197,9 +204,11 @@ absolute floor 16px. Wordmark lockup minimum 96px wide.
 practically, ¼ of the mark's height. Nothing enters this zone, including
 the bhusku footer mark when they appear together.
 
-**Co-branding rule:** when `b` and `U` marks appear together (footer,
-about page), same tile size, same baseline, gold dots at matching optical
-height — the dots are what tie the family; never recolor them.
+**Co-branding rule:** the `b` mark is retired — the Fader U is the ONLY
+family icon, everywhere. Parent-brand attribution is **typographic only**:
+lowercase wordmark "bhusku" (Plus Jakarta Sans 800) with no icon, e.g. the
+footer line "by bhusku · Heavy on craft. Full of energy." The gold dot now
+lives exclusively in the U; never resurrect the `b`, never pair two icons.
 
 **Typography:** wordmark set in Plus Jakarta Sans 800, lowercase "sched",
 tracking −2%; the U is always the mark, never a typed glyph. (Kills the
@@ -208,4 +217,22 @@ current italic-serif U, which borrows nothing from the parent.)
 **Don'ts:** no gradients on the mark · no recoloring the knob · no
 outlining the tile · no interior detail added back "because it looks empty
 at 200px" (it's supposed to breathe) · never typeset "SchedU"/"Schedu" in
-running copy — product name is **schedU**.
+running copy — product name is **schedU** · **never use the retired `b`
+dot icon** — the U is the family mark.
+
+---
+
+## 7. Migration note (for the next implementation session)
+
+The retired `b` mark exists only in
+`frontend/src/components/branding/Logos.tsx` (`BhuskuLogo`, and inside
+`BhuskuFooter`). **Neither is imported by any live page** (verified by
+grep), so retirement costs nothing today. When Logos.tsx is next touched:
+
+1. Delete `BhuskuLogo`.
+2. Rework `BhuskuFooter` to typographic-only attribution ("bhusku"
+   wordmark, no icon) per the co-branding rule above.
+3. Replace `SchedULogo` (stacked time-bars) with the Fader U from
+   `u-mark-tile.svg` — same tile container convention it already uses.
+4. Point loading states at the mark-native loader (`loading.svg` /
+   the CSS-keyframe variant in `preview.html`).
