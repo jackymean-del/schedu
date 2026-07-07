@@ -13,7 +13,7 @@ import type { Subject, Section, Staff, ScopeMatrix } from '@/types'
 import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
 import { GraduationCap, BookOpen, Users, Building2, X } from 'lucide-react'
 import { useNamingMemory } from '@/hooks/useNamingMemory'
-import { useDirectoryStore, type DirectoryStaff, type DirectoryVenue } from '@/store/directoryStore'
+import { useDirectoryStore } from '@/store/directoryStore'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
 
@@ -325,29 +325,32 @@ export function SubjectsGrid({
   )
 }
 
-// ── Shared cross-schedule directory collision banner ────────────────────────
-// Master Data edits a single already-open schedule's own roster — no wizard
-// picker to hook a suggestion into — so collisions surface as a dismissible
-// banner instead: "link" merges this row into the existing directory entry,
-// dismissing just leaves the two as separate (distinct) people/venues.
-function DirectoryCollisionBanner({ name, onLink, onDismiss }: {
-  name: string; onLink: () => void; onDismiss: () => void
+// ── Shared cross-schedule directory auto-link confirmation ──────────────────
+// Master Data's DataGrid text cell only commits on blur/Enter/Tab (not per
+// keystroke, unlike a live-typing input) — see DataGrid.tsx's text editor —
+// so by the time a name commit reaches here it's final, and matches the
+// wizard's Add row: an exact match to the shared directory links immediately
+// (role/subjects or type/capacity filled in from the directory entry), no
+// separate click required. This banner is just a dismissible confirmation
+// with an escape hatch for the rare case the match was wrong.
+function DirectoryLinkedBanner({ name, onUnlink, onDismiss }: {
+  name: string; onUnlink: () => void; onDismiss: () => void
 }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
-      padding: '7px 10px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A',
-      fontSize: 11.5, color: '#92400E',
+      padding: '7px 10px', borderRadius: 8, background: '#F0FDF4', border: '1px solid #BBF7D0',
+      fontSize: 11.5, color: '#166534',
     }}>
       <span style={{ flex: 1 }}>
-        <strong>{name}</strong> matches an existing entry in your cross-schedule directory. Same person/venue as another schedule?
+        ✓ Linked <strong>{name}</strong> to your cross-schedule directory — details filled in from there.
       </span>
-      <button onClick={onLink}
-        style={{ background: '#D97706', color: '#fff', border: 'none', borderRadius: 5, padding: '3px 10px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-        ✓ Link them
+      <button onClick={onUnlink} title="Not the same person/venue — unlink this row"
+        style={{ background: 'none', border: '1.5px solid #86EFAC', color: '#166534', borderRadius: 5, padding: '3px 9px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+        Not the same? Unlink
       </button>
-      <button onClick={onDismiss} title="Keep as a separate, distinct entry"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B45309', padding: 2, display: 'inline-flex' }}>
+      <button onClick={onDismiss}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#166534', padding: 2, display: 'inline-flex' }}>
         <X size={13} />
       </button>
     </div>
@@ -356,13 +359,21 @@ function DirectoryCollisionBanner({ name, onLink, onDismiss }: {
 
 /** Debounced auto-registration into the shared directory: waits for edits to
  *  settle (so per-keystroke commits from DataGrid's live text cell don't spam
- *  the directory with partial names) before registering any row with a real
- *  name, no directoryId yet, and no unresolved collision banner showing. */
+ *  the directory with partial names) before registering a row with a real
+ *  name and no directoryId as a brand-new directory entry.
+ *
+ *  Deliberately only creates NEW entries — it never links a row to an
+ *  EXISTING match. That's the name column's own setValue's job (see
+ *  TeachersGrid/RoomsGrid), which runs at commit time. If this debounce also
+ *  linked existing matches, "Unlink" (DirectoryLinkedBanner) would be undone
+ *  within 900ms: the row's name is still an exact match right after
+ *  unlinking, so a find-or-create here would silently re-attach the same
+ *  directoryId the user just asked to remove. */
 function useDirectoryAutoRegister<T extends { id: string; name?: string; directoryId?: string }>(
   rows: T[],
   setRows: (r: T[]) => void,
-  collisionRowId: string | undefined,
   placeholderPattern: RegExp,
+  findByName: (name: string) => { id: string } | undefined,
   register: (name: string) => { id: string },
 ) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -372,7 +383,7 @@ function useDirectoryAutoRegister<T extends { id: string; name?: string; directo
       let changed = false
       const next = rows.map(r => {
         const name = (r.name ?? '').trim()
-        if (!name || r.directoryId || r.id === collisionRowId || placeholderPattern.test(name)) return r
+        if (!name || r.directoryId || placeholderPattern.test(name) || findByName(name)) return r
         changed = true
         return { ...r, directoryId: register(name).id }
       })
@@ -380,7 +391,7 @@ function useDirectoryAutoRegister<T extends { id: string; name?: string; directo
     }, 900)
     return () => clearTimeout(timer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, collisionRowId])
+  }, [rows])
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -397,32 +408,35 @@ export function TeachersGrid({
 }) {
   const sectionOptions = useMemo(() => ['', ...sections.map((s: any) => s.name)], [sections])
   const directoryStaff = useDirectoryStore(s => s.staff)
-  const [collision, setCollision] = useState<{ rowId: string; match: DirectoryStaff } | null>(null)
+  const [linked, setLinked] = useState<{ rowId: string; name: string } | null>(null)
 
-  useDirectoryAutoRegister(staff, setStaff, collision?.rowId, /^Teacher \d+$/,
+  useDirectoryAutoRegister(staff, setStaff, /^Teacher \d+$/,
+    (name) => useDirectoryStore.getState().findStaffByName(name),
     (name) => useDirectoryStore.getState().addStaff({ name }))
 
-  function linkToDirectory() {
-    if (!collision) return
-    const { rowId, match } = collision
-    setStaff(staff.map(s => s.id === rowId ? {
-      ...s,
-      directoryId: match.id,
-      shortName: s.shortName || match.shortName || '',
-      subjects: s.subjects?.length ? s.subjects : (match.subjects ?? []),
-      maxPeriodsPerWeek: s.maxPeriodsPerWeek ?? match.maxPeriodsPerWeek ?? 30,
-    } as Staff : s))
-    setCollision(null)
+  function unlink(rowId: string) {
+    setStaff(staff.map(s => s.id === rowId ? { ...s, directoryId: undefined } as Staff : s))
+    setLinked(null)
   }
 
   const columns: DataGridColumn<Staff>[] = [
     {
       key: 'name', label: 'Teacher', type: 'text', sticky: true, width: 180, placeholder: 'e.g. John Smith',
+      // Commits on blur/Enter/Tab (DataGrid's text cell), not per keystroke, so
+      // an exact match here is already a finished edit — auto-link immediately
+      // like the wizard's Add row, rather than requiring a separate click.
       setValue: (row, v) => {
         const trimmed = String(v).trim()
         const match = trimmed ? directoryStaff.find(s => s.name.toLowerCase() === trimmed.toLowerCase()) : undefined
-        if (match && (row as any).directoryId !== match.id) setCollision({ rowId: row.id, match })
-        else if (collision?.rowId === row.id) setCollision(null)
+        if (match && (row as any).directoryId !== match.id) {
+          setLinked({ rowId: row.id, name: match.name })
+          return {
+            ...row, name: v, directoryId: match.id,
+            shortName: (row as any).shortName || match.shortName || '',
+            subjects: (row as any).subjects?.length ? (row as any).subjects : (match.subjects ?? []),
+            maxPeriodsPerWeek: (row as any).maxPeriodsPerWeek ?? match.maxPeriodsPerWeek ?? 30,
+          } as any
+        }
         return { ...row, name: v } as any
       },
     },
@@ -435,11 +449,10 @@ export function TeachersGrid({
       setValue: (r, v) => ({ ...r, isClassTeacher: v ?? '' }),
     },
   ]
-  const collisionName = collision ? staff.find(s => s.id === collision.rowId)?.name ?? collision.match.name : ''
   return (
     <div>
-      {collision && (
-        <DirectoryCollisionBanner name={collisionName} onLink={linkToDirectory} onDismiss={() => setCollision(null)} />
+      {linked && (
+        <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
       <DataGrid<Staff>
         title="Teachers"
@@ -474,31 +487,33 @@ export function RoomsGrid({
   onBulkScope?: (rect?: DOMRect) => void
 }) {
   const directoryVenues = useDirectoryStore(s => s.venues)
-  const [collision, setCollision] = useState<{ rowId: string; match: DirectoryVenue } | null>(null)
+  const [linked, setLinked] = useState<{ rowId: string; name: string } | null>(null)
 
-  useDirectoryAutoRegister(rooms, setRooms, collision?.rowId, /^Room \d+$/,
+  useDirectoryAutoRegister(rooms, setRooms, /^Room \d+$/,
+    (name) => useDirectoryStore.getState().findVenueByName(name),
     (name) => useDirectoryStore.getState().addVenue({ name }))
 
-  function linkToDirectory() {
-    if (!collision) return
-    const { rowId, match } = collision
-    setRooms(rooms.map(r => r.id === rowId ? {
-      ...r,
-      directoryId: match.id,
-      type: r.type || match.roomType || 'Classroom',
-      capacity: r.capacity ?? match.capacity ?? 40,
-    } as RoomRow : r))
-    setCollision(null)
+  function unlink(rowId: string) {
+    setRooms(rooms.map(r => r.id === rowId ? { ...r, directoryId: undefined } as RoomRow : r))
+    setLinked(null)
   }
 
   const columns: DataGridColumn<RoomRow>[] = [
     {
       key: 'name', label: 'Room', type: 'text', sticky: true, width: 140, placeholder: 'e.g. Room 101',
+      // See TeachersGrid's name column for why auto-link-on-commit (no extra
+      // click) is the right match for this grid's commit-on-blur/Enter/Tab model.
       setValue: (row, v) => {
         const trimmed = String(v).trim()
         const match = trimmed ? directoryVenues.find(x => x.name.toLowerCase() === trimmed.toLowerCase()) : undefined
-        if (match && (row as any).directoryId !== match.id) setCollision({ rowId: row.id, match })
-        else if (collision?.rowId === row.id) setCollision(null)
+        if (match && (row as any).directoryId !== match.id) {
+          setLinked({ rowId: row.id, name: match.name })
+          return {
+            ...row, name: v, directoryId: match.id,
+            type: row.type || match.roomType || 'Classroom',
+            capacity: row.capacity ?? match.capacity ?? 40,
+          } as any
+        }
         return { ...row, name: v } as any
       },
     },
@@ -507,11 +522,10 @@ export function RoomsGrid({
     { key: 'building', label: 'Building', type: 'text',   width: 140, placeholder: 'e.g. Main Block' },
     { key: 'floor',    label: 'Floor',    type: 'text',   width: 100, placeholder: 'e.g. Ground' },
   ]
-  const collisionName = collision ? rooms.find(r => r.id === collision.rowId)?.name ?? collision.match.name : ''
   return (
     <div>
-      {collision && (
-        <DirectoryCollisionBanner name={collisionName} onLink={linkToDirectory} onDismiss={() => setCollision(null)} />
+      {linked && (
+        <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
       <DataGrid<RoomRow>
         title="Venues"
