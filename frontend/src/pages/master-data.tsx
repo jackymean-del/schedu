@@ -26,12 +26,14 @@ import {
   ClassesGrid, SubjectsGrid, TeachersGrid, RoomsGrid,
   type RoomRow, makeId, STREAMS,
 } from '@/components/master/EntityGrids'
+import { DirectoryPanel } from '@/components/master/DirectoryPanel'
+import { useDirectoryStore } from '@/store/directoryStore'
 import {
-  GraduationCap, BookOpen, Users, Building2, Grid3x3, Sparkles,
+  GraduationCap, BookOpen, Users, Building2, Grid3x3, Sparkles, BookMarked,
 } from 'lucide-react'
 import { StepGuide } from '@/components/StepGuide'
 
-type Tab = 'classes' | 'subjects' | 'teachers' | 'rooms' | 'strengths'
+type Tab = 'classes' | 'subjects' | 'teachers' | 'rooms' | 'strengths' | 'directory'
 
 function guessStream(secName: string): string {
   const u = secName.toUpperCase()
@@ -103,12 +105,16 @@ export function MasterDataPage() {
   // Auth gate
   if (!user) { window.location.href = '/login'; return null }
 
+  const directoryStaff = useDirectoryStore(s => s.staff)
+  const directoryVenues = useDirectoryStore(s => s.venues)
+
   const TABS: { key: Tab; label: string; icon: React.ReactNode; count: number }[] = [
     { key: 'classes',   label: 'Classes',   icon: <GraduationCap size={14} />, count: sections.length },
     { key: 'subjects',  label: 'Subjects',  icon: <BookOpen      size={14} />, count: subjects.length },
     { key: 'teachers',  label: 'Teachers',  icon: <Users         size={14} />, count: staff.length },
     { key: 'rooms',     label: 'Venues',    icon: <Building2     size={14} />, count: rooms.length },
     { key: 'strengths', label: 'Strengths', icon: <Grid3x3       size={14} />, count: sectionStrengths?.length ?? 0 },
+    { key: 'directory', label: 'Directory', icon: <BookMarked    size={14} />, count: directoryStaff.length + directoryVenues.length },
   ]
 
   // One Excel sheet per reference entity (built lazily on export).
@@ -220,6 +226,14 @@ export function MasterDataPage() {
             'The Total column is auto-summed but can be overridden if your section size differs.',
           ]} />
         )}
+        {tab === 'directory' && (
+          <StepGuide title="Directory" tips={[
+            'This is the shared roster every schedule checks when you add a teacher or venue by name.',
+            'Renaming an entry here renames it in every active schedule that uses it.',
+            '"Merge into…" is for two entries that turn out to be the same real person or room.',
+            'Removing an entry only removes it from this shared list — it does not delete rows already in a schedule.',
+          ]} />
+        )}
 
         {/* Tab content */}
         {tab === 'classes'   && <ClassesGrid  sections={sections}  setSections={setSections}  staff={staff} onScope={(s) => setScopeTarget({ kind: 'Section', entity: s })} onBulkScope={() => setScopeTarget({ kind: 'BulkSection', entity: { id: '__bulk__', name: 'All Classes' } })} />}
@@ -227,6 +241,7 @@ export function MasterDataPage() {
         {tab === 'teachers'  && <TeachersGrid staff={staff}        setStaff={setStaff}        sections={sections} onScope={(t) => setScopeTarget({ kind: 'Teacher', entity: t })} onBulkScope={() => setScopeTarget({ kind: 'BulkTeacher', entity: { id: '__bulk__', name: 'All Teachers' } })} />}
         {tab === 'rooms'     && <RoomsGrid    rooms={rooms}        setRooms={setRooms}                       onScope={(r) => setScopeTarget({ kind: 'Room', entity: r })} onBulkScope={() => setScopeTarget({ kind: 'BulkRoom', entity: { id: '__bulk__', name: 'All Rooms' } })} />}
         {tab === 'strengths' && <StrengthsGrid sections={sections} subjects={subjects} sectionStrengths={sectionStrengths ?? []} setSectionStrengths={setSectionStrengths} />}
+        {tab === 'directory' && <DirectoryPanel />}
 
       </div>
 

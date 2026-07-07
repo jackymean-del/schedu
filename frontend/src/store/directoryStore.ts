@@ -57,6 +57,10 @@ interface DirectoryState {
   addVenue: (v: Omit<DirectoryVenue, 'id'>) => DirectoryVenue
   findStaffByName: (name: string) => DirectoryStaff | undefined
   findVenueByName: (name: string) => DirectoryVenue | undefined
+  renameStaff: (id: string, name: string) => void
+  renameVenue: (id: string, name: string) => void
+  removeStaff: (id: string) => void
+  removeVenue: (id: string) => void
   resetForOwner: (ownerId: string) => void
   markBootstrapped: () => void
 }
@@ -85,6 +89,11 @@ export const useDirectoryStore = create<DirectoryState>()(
       },
       findStaffByName: (name) => get().staff.find(s => norm(s.name) === norm(name)),
       findVenueByName: (name) => get().venues.find(v => norm(v.name) === norm(name)),
+
+      renameStaff: (id, name) => set((st) => ({ staff: st.staff.map(s => s.id === id ? { ...s, name } : s) })),
+      renameVenue: (id, name) => set((st) => ({ venues: st.venues.map(v => v.id === id ? { ...v, name } : v) })),
+      removeStaff: (id) => set((st) => ({ staff: st.staff.filter(s => s.id !== id) })),
+      removeVenue: (id) => set((st) => ({ venues: st.venues.filter(v => v.id !== id) })),
 
       resetForOwner: (ownerId) => set({ ownerId, ...EMPTY }),
       markBootstrapped: () => set({ bootstrapped: true }),
