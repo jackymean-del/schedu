@@ -92,3 +92,33 @@ export const useDirectoryStore = create<DirectoryState>()(
     { name: 'schedu-staff-venue-directory' }
   )
 )
+
+/**
+ * Bulk paths (CSV import, "AI Generate All Resources", "Let me create
+ * smartly") can produce a dozen+ rows at once — a per-row link-or-rename
+ * dialog like the wizard's manual Add row would be unusable there. So bulk
+ * generation silently links each row to a matching directory entry (or
+ * registers it as new) with no prompt: the deterministic naming patterns
+ * these generators use ("Mathematics Teacher 1", "Room 101"...) are exactly
+ * as likely to coincidentally repeat across two schedules as they are to
+ * genuinely mean "the same auto-slot" — the cross-schedule teacher-clash
+ * banner (pages/calendar.tsx) remains the real safety net for a genuine
+ * double-booking regardless of whether two rows share a directoryId.
+ */
+export function linkOrRegisterStaff<T extends { name: string; directoryId?: string }>(rows: T[]): T[] {
+  const { findStaffByName, addStaff } = useDirectoryStore.getState()
+  return rows.map(r => {
+    if (r.directoryId || !r.name?.trim()) return r
+    const entry = findStaffByName(r.name) ?? addStaff({ name: r.name.trim() })
+    return { ...r, directoryId: entry.id }
+  })
+}
+
+export function linkOrRegisterVenues<T extends { name: string; directoryId?: string }>(rows: T[]): T[] {
+  const { findVenueByName, addVenue } = useDirectoryStore.getState()
+  return rows.map(r => {
+    if (r.directoryId || !r.name?.trim()) return r
+    const entry = findVenueByName(r.name) ?? addVenue({ name: r.name.trim() })
+    return { ...r, directoryId: entry.id }
+  })
+}

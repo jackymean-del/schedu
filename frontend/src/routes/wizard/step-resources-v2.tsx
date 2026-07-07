@@ -28,6 +28,7 @@ import { SubjectsPanel, generateShortName, inferCategory } from '@/components/re
 import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, subjectAppliesToSections, type CurriculumBoard } from '@/components/resources/curriculum'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
+import { linkOrRegisterStaff, linkOrRegisterVenues } from '@/store/directoryStore'
 import {
   Sparkles, Users, BookOpen, Building2, GraduationCap,
   ChevronLeft, ChevronRight, RefreshCw, CheckCircle2,
@@ -416,8 +417,8 @@ export function StepResourcesV2() {
     const result = runAIAssignment(subjects, sections, staff, rooms, board)
     setSections(result.sections)
     setSubjects(result.subjects)
-    setStaff(result.staff)
-    setRooms(result.rooms)
+    setStaff(linkOrRegisterStaff(result.staff))
+    setRooms(linkOrRegisterVenues(result.rooms))
     setStaffingGaps(result.staffingGaps)
     setAiStatus(`✓ ${board} curriculum assigned`)
     setAiLoading(false)
@@ -496,7 +497,7 @@ export function StepResourcesV2() {
     }
 
     const newCount = result.staff.length - (staff as any[]).length
-    setStaff(result.staff)
+    setStaff(linkOrRegisterStaff(result.staff))
     setStaffingGaps(result.staffingGaps)
     setAiStatus(
       newCount > 0
@@ -761,9 +762,9 @@ export function StepResourcesV2() {
     //       teachers have empty subject lists, so the solver can't match a
     //       teacher to a subject and leaves "no eligible teacher" gaps. ────────
     const assigned = runAIAssignment(newSubjects, sectionsWithRooms, newStaff, newRooms, board)
-    setStaff(assigned.staff)
+    setStaff(linkOrRegisterStaff(assigned.staff))
     setSubjects(assigned.subjects)
-    setRooms(assigned.rooms)
+    setRooms(linkOrRegisterVenues(assigned.rooms))
     setStaffingGaps(assigned.staffingGaps)
     setSections(assigned.sections.map((s: any) => {
       // Preserve the home room we just set (runAIAssignment doesn't change section.room)

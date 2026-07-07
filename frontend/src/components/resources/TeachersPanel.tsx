@@ -30,7 +30,7 @@ import {
 import type { ChipOption } from './shared'
 import { calcTeacherSlots, slotLoadLevel, seedStandardStaff } from './aiEngine'
 import { normalizeBoardType, type CurriculumBoard } from './curriculum'
-import { useDirectoryStore } from '@/store/directoryStore'
+import { useDirectoryStore, linkOrRegisterStaff } from '@/store/directoryStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SubjectMapping { subject: string; classes: string[] }
@@ -660,7 +660,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
     if (!subjects.length) return
     undoHistory.push(staff)
     const board = normalizeBoardType('CBSE') as CurriculumBoard
-    setStaff(seedStandardStaff(subjects, board) as unknown as Staff[])
+    setStaff(linkOrRegisterStaff(seedStandardStaff(subjects, board) as unknown as Staff[]))
   }
 
   const handlePanelKeyDown = useCallback((e: RKeyboardEvent<HTMLDivElement>) => {
@@ -678,7 +678,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
         subjects: [], classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30,
       } as unknown as Staff))
       .filter(t => (t as any).name)
-    if (newStaff.length) setStaff([...staff, ...newStaff])
+    if (newStaff.length) setStaff([...staff, ...linkOrRegisterStaff(newStaff)])
   }
 
   const [sortAZ, setSortAZ] = useState(false)

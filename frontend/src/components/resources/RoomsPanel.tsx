@@ -19,7 +19,7 @@ import {
 } from './shared'
 import type { ChipOption } from './shared'
 import { seedStandardRooms } from './aiEngine'
-import { useDirectoryStore } from '@/store/directoryStore'
+import { useDirectoryStore, linkOrRegisterVenues } from '@/store/directoryStore'
 
 export type RoomExt = RoomRow & {
   subjectMappings?: string[]
@@ -465,7 +465,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
   function handleSmartCreate() {
     if (!sections.length) return
     undoHistory.push(rooms)
-    const newRooms = seedStandardRooms(sections, subjects)
+    const newRooms = linkOrRegisterVenues(seedStandardRooms(sections, subjects))
     setRooms(newRooms)
     // Wire section.room — each section gets exactly ONE home classroom (1-to-1)
     setSections(sections.map(sec => {
@@ -492,7 +492,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         subjectMappings: [], notes: '',
       } as RoomExt))
       .filter(r => r.name)
-    if (newRooms.length) setRooms([...rooms, ...newRooms])
+    if (newRooms.length) setRooms([...rooms, ...linkOrRegisterVenues(newRooms)])
   }
 
   const [sortAZ, setSortAZ] = useState(false)
