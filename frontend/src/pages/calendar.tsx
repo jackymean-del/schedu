@@ -135,7 +135,7 @@ function toISODate(d: Date): string {
 // currently shows (see viewIds above). Cross-schedule clash prevention for
 // actual scheduling actions (substitution candidacy, task anchoring) is a
 // separate path that always consults every active schedule via `sources`.
-interface DayCell { sid: string; sname: string; section: string; periodId: string; subject: string; teacher: string; room: string; startMin: number; endMin: number; sub?: string }
+interface DayCell { sid: string; sname: string; section: string; periodId: string; subject: string; teacher: string; room: string; startMin: number; endMin: number; sub?: string; directoryId?: string }
 function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
   const cells: DayCell[] = []
   const timeById: Record<string, { startMin: number; endMin: number }> = {}
@@ -144,6 +144,11 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
   for (const b of srcs) {
     const wd: string[] = b.config?.workDays?.length ? b.config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
     wd.forEach(d => workUnion.add(d))
+    // Teacher name -> shared directory link (store/directoryStore.ts), if any —
+    // lets teacherClashes below tell "confirmed, same directoryId" apart from
+    // "same name only" instead of treating every name match identically.
+    const directoryIdByName = new Map<string, string>()
+    for (const st of b.staff ?? []) { if (st?.name && st.directoryId) directoryIdByName.set(st.name, st.directoryId) }
     // Each section resolves to its own bell (early dispersal / class-wise
     // breaks give different groups different clocks), so times are per section.
     for (const s of b.sections) {
@@ -155,7 +160,11 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
         const c = b.classTT[s.name]?.[dayKey]?.[p.id]
         if (!c?.subject) continue
         const sub = b.substitutions[`${s.name}|${dayKey}|${p.id}`]
-        cells.push({ sid: b.id, sname: b.name, section: s.name, periodId: p.id, subject: c.subject, teacher: c.teacher ?? '', room: (c.room ?? '').trim(), startMin: t.startMin, endMin: t.endMin, sub: sub || undefined })
+        cells.push({
+          sid: b.id, sname: b.name, section: s.name, periodId: p.id, subject: c.subject,
+          teacher: c.teacher ?? '', room: (c.room ?? '').trim(), startMin: t.startMin, endMin: t.endMin,
+          sub: sub || undefined, directoryId: c.teacher ? directoryIdByName.get(c.teacher) : undefined,
+        })
       }
     }
   }
@@ -345,8 +354,17 @@ export function CalendarPage() {
   // instead. Deliberately scans ALL active schedules (not just the picker's
   // visible subset) since this is a data problem the school needs to see
   // regardless of what's currently toggled on.
+  //
+  // Now that most staff carry a directoryId (store/directoryStore.ts), use it
+  // to grade confidence instead of treating every name match the same:
+  //   - same directoryId on both sides  → confirmed real double-booking.
+  //   - directoryId missing on one/both → same as before, name-only signal.
+  //   - directoryId present but DIFFERENT on both sides → the school already
+  //     told the app these are two distinct people (e.g. via the Directory
+  //     tab or a deliberate "keep separate" during Add) — don't re-alarm on
+  //     a coincidence that's already been resolved.
   const teacherClashes = useMemo(() => {
-    if (!multiActive) return [] as { teacher: string; a: DayCell; b: DayCell }[]
+    if (!multiActive) return [] as { teacher: string; a: DayCell; b: DayCell; confirmed: boolean }[]
     const full = buildGridData(sources, dayKey).cells
     const byTeacher = new Map<string, DayCell[]>()
     for (const c of full) {
@@ -354,7 +372,7 @@ export function CalendarPage() {
       if (!byTeacher.has(c.teacher)) byTeacher.set(c.teacher, [])
       byTeacher.get(c.teacher)!.push(c)
     }
-    const out: { teacher: string; a: DayCell; b: DayCell }[] = []
+    const out: { teacher: string; a: DayCell; b: DayCell; confirmed: boolean }[] = []
     for (const [teacher, cells] of byTeacher) {
       const bySchedule = new Map<string, DayCell[]>()
       for (const c of cells) {
@@ -367,7 +385,10 @@ export function CalendarPage() {
         for (let j = i + 1; j < scheduleIds.length; j++) {
           for (const a of bySchedule.get(scheduleIds[i])!) {
             for (const b of bySchedule.get(scheduleIds[j])!) {
-              if (a.startMin < b.endMin && b.startMin < a.endMin) out.push({ teacher, a, b })
+              if (!(a.startMin < b.endMin && b.startMin < a.endMin)) continue
+              const bothLinked = !!a.directoryId && !!b.directoryId
+              if (bothLinked && a.directoryId !== b.directoryId) continue // already known to be different people
+              out.push({ teacher, a, b, confirmed: bothLinked && a.directoryId === b.directoryId })
             }
           }
         }
@@ -867,29 +888,55 @@ export function CalendarPage() {
         )}
 
         {/* Cross-schedule teacher clash banner — see teacherClashes above for why
-            this can happen even without any OR/AND group configured. */}
-        {teacherClashes.length > 0 && (
-          <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 800, color: '#B91C1C', marginBottom: 6 }}>
-              <AlertTriangle size={14} /> {teacherClashes.length} teacher name{teacherClashes.length > 1 ? 's are' : ' is'} double-booked across schedules
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {teacherClashes.map((cl, i) => {
-                const schA = bundleById(cl.a.sid), schB = bundleById(cl.b.sid)
-                return (
-                  <div key={i} style={{ fontSize: 12, color: '#7F1D1D', lineHeight: 1.5 }}>
-                    <strong>{cl.teacher}</strong> is scheduled in both{' '}
-                    <strong>{schA.name}</strong> ({cl.a.section} · {cl.a.subject}, {fmtClock(cl.a.startMin, h24)}–{fmtClock(cl.a.endMin, h24)}) and{' '}
-                    <strong>{schB.name}</strong> ({cl.b.section} · {cl.b.subject}, {fmtClock(cl.b.startMin, h24)}–{fmtClock(cl.b.endMin, h24)}) at the same time.
+            this can happen even without any OR/AND group configured. Confirmed
+            (same directoryId on both sides) and unconfirmed (name-only match,
+            no directory link yet) render as separate groups so a school with a
+            real double-booking sees it clearly instead of buried among lower-
+            confidence coincidences. */}
+        {teacherClashes.length > 0 && (() => {
+          const confirmed = teacherClashes.filter(c => c.confirmed)
+          const unconfirmed = teacherClashes.filter(c => !c.confirmed)
+          const ClashLine = ({ cl }: { cl: typeof teacherClashes[number] }) => {
+            const schA = bundleById(cl.a.sid), schB = bundleById(cl.b.sid)
+            return (
+              <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+                <strong>{cl.teacher}</strong> is scheduled in both{' '}
+                <strong>{schA.name}</strong> ({cl.a.section} · {cl.a.subject}, {fmtClock(cl.a.startMin, h24)}–{fmtClock(cl.a.endMin, h24)}) and{' '}
+                <strong>{schB.name}</strong> ({cl.b.section} · {cl.b.subject}, {fmtClock(cl.b.startMin, h24)}–{fmtClock(cl.b.endMin, h24)}) at the same time.
+              </div>
+            )
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+              {confirmed.length > 0 && (
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', color: '#7F1D1D' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 800, color: '#B91C1C', marginBottom: 6 }}>
+                    <AlertTriangle size={14} /> {confirmed.length} confirmed double-booking{confirmed.length > 1 ? 's' : ''} across schedules
                   </div>
-                )
-              })}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {confirmed.map((cl, i) => <ClashLine key={i} cl={cl} />)}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9F1239', marginTop: 6 }}>
+                    Same directory entry in both schedules — this is the same real person, genuinely booked twice.
+                  </div>
+                </div>
+              )}
+              {unconfirmed.length > 0 && (
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#78350F' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 800, color: '#B45309', marginBottom: 6 }}>
+                    <AlertTriangle size={14} /> {unconfirmed.length} possible name clash{unconfirmed.length > 1 ? 'es' : ''} — not yet linked in your directory
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {unconfirmed.map((cl, i) => <ClashLine key={i} cl={cl} />)}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#92400E', marginTop: 6 }}>
+                    Same name in both schedules, but not confirmed as the same person yet. If it's one teacher, add/edit them once more so the name auto-links (Resources → Faculty); if they're different people, rename one to be distinguishable (e.g. add a last initial).
+                  </div>
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: 11, color: '#9F1239', marginTop: 6 }}>
-              If these are actually two different people, give them distinct names — the app treats matching names as the same teacher across schedules.
-            </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Multi-active picker — All + one card per active schedule. Toggling
             individual schedules scopes what the grid/Live board SHOW; cross-
