@@ -8,11 +8,12 @@
  * One source of truth. Identical UX everywhere.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Subject, Section, Staff, ScopeMatrix } from '@/types'
 import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
-import { GraduationCap, BookOpen, Users, Building2 } from 'lucide-react'
+import { GraduationCap, BookOpen, Users, Building2, X } from 'lucide-react'
 import { useNamingMemory } from '@/hooks/useNamingMemory'
+import { useDirectoryStore, type DirectoryStaff, type DirectoryVenue } from '@/store/directoryStore'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
 
@@ -324,6 +325,64 @@ export function SubjectsGrid({
   )
 }
 
+// ── Shared cross-schedule directory collision banner ────────────────────────
+// Master Data edits a single already-open schedule's own roster — no wizard
+// picker to hook a suggestion into — so collisions surface as a dismissible
+// banner instead: "link" merges this row into the existing directory entry,
+// dismissing just leaves the two as separate (distinct) people/venues.
+function DirectoryCollisionBanner({ name, onLink, onDismiss }: {
+  name: string; onLink: () => void; onDismiss: () => void
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+      padding: '7px 10px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A',
+      fontSize: 11.5, color: '#92400E',
+    }}>
+      <span style={{ flex: 1 }}>
+        <strong>{name}</strong> matches an existing entry in your cross-schedule directory. Same person/venue as another schedule?
+      </span>
+      <button onClick={onLink}
+        style={{ background: '#D97706', color: '#fff', border: 'none', borderRadius: 5, padding: '3px 10px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+        ✓ Link them
+      </button>
+      <button onClick={onDismiss} title="Keep as a separate, distinct entry"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B45309', padding: 2, display: 'inline-flex' }}>
+        <X size={13} />
+      </button>
+    </div>
+  )
+}
+
+/** Debounced auto-registration into the shared directory: waits for edits to
+ *  settle (so per-keystroke commits from DataGrid's live text cell don't spam
+ *  the directory with partial names) before registering any row with a real
+ *  name, no directoryId yet, and no unresolved collision banner showing. */
+function useDirectoryAutoRegister<T extends { id: string; name?: string; directoryId?: string }>(
+  rows: T[],
+  setRows: (r: T[]) => void,
+  collisionRowId: string | undefined,
+  placeholderPattern: RegExp,
+  register: (name: string) => { id: string },
+) {
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      let changed = false
+      const next = rows.map(r => {
+        const name = (r.name ?? '').trim()
+        if (!name || r.directoryId || r.id === collisionRowId || placeholderPattern.test(name)) return r
+        changed = true
+        return { ...r, directoryId: register(name).id }
+      })
+      if (changed) setRows(next)
+    }, 900)
+    return () => clearTimeout(timer.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, collisionRowId])
+}
+
 // ═════════════════════════════════════════════════════════════
 // TEACHERS GRID
 // ═════════════════════════════════════════════════════════════
@@ -337,8 +396,36 @@ export function TeachersGrid({
   onBulkScope?: (rect?: DOMRect) => void
 }) {
   const sectionOptions = useMemo(() => ['', ...sections.map((s: any) => s.name)], [sections])
+  const directoryStaff = useDirectoryStore(s => s.staff)
+  const [collision, setCollision] = useState<{ rowId: string; match: DirectoryStaff } | null>(null)
+
+  useDirectoryAutoRegister(staff, setStaff, collision?.rowId, /^Teacher \d+$/,
+    (name) => useDirectoryStore.getState().addStaff({ name }))
+
+  function linkToDirectory() {
+    if (!collision) return
+    const { rowId, match } = collision
+    setStaff(staff.map(s => s.id === rowId ? {
+      ...s,
+      directoryId: match.id,
+      shortName: s.shortName || match.shortName || '',
+      subjects: s.subjects?.length ? s.subjects : (match.subjects ?? []),
+      maxPeriodsPerWeek: s.maxPeriodsPerWeek ?? match.maxPeriodsPerWeek ?? 30,
+    } as Staff : s))
+    setCollision(null)
+  }
+
   const columns: DataGridColumn<Staff>[] = [
-    { key: 'name',   label: 'Teacher', type: 'text',   sticky: true, width: 180, placeholder: 'e.g. John Smith' },
+    {
+      key: 'name', label: 'Teacher', type: 'text', sticky: true, width: 180, placeholder: 'e.g. John Smith',
+      setValue: (row, v) => {
+        const trimmed = String(v).trim()
+        const match = trimmed ? directoryStaff.find(s => s.name.toLowerCase() === trimmed.toLowerCase()) : undefined
+        if (match && (row as any).directoryId !== match.id) setCollision({ rowId: row.id, match })
+        else if (collision?.rowId === row.id) setCollision(null)
+        return { ...row, name: v } as any
+      },
+    },
     { key: 'role',   label: 'Role',    type: 'select', options: ROLES,    width: 160, placeholder: 'Select role' },
     { key: 'gender', label: 'Gender',  type: 'select', options: GENDERS,  width: 110, placeholder: 'Male/Female/Other' },
     {
@@ -348,24 +435,30 @@ export function TeachersGrid({
       setValue: (r, v) => ({ ...r, isClassTeacher: v ?? '' }),
     },
   ]
+  const collisionName = collision ? staff.find(s => s.id === collision.rowId)?.name ?? collision.match.name : ''
   return (
-    <DataGrid<Staff>
-      title="Teachers"
-      description="Subjects = comma-separated list. Click Scope to set per-teacher availability."
-      icon={<Users size={16} />}
-      columns={columns}
-      rows={staff}
-      rowKey={(r) => r.id}
-      onChange={setStaff}
-      onScope={onScope}
-      onBulkScope={onBulkScope}
-      newRow={() => ({
-        id: makeId(), name: `Teacher ${staff.length + 1}`,
-        shortName: '', role: 'Teacher', subjects: [], classes: [],
-        isClassTeacher: '', maxPeriodsPerWeek: 30,
-      } as Staff)}
-      toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}
-    />
+    <div>
+      {collision && (
+        <DirectoryCollisionBanner name={collisionName} onLink={linkToDirectory} onDismiss={() => setCollision(null)} />
+      )}
+      <DataGrid<Staff>
+        title="Teachers"
+        description="Subjects = comma-separated list. Click Scope to set per-teacher availability."
+        icon={<Users size={16} />}
+        columns={columns}
+        rows={staff}
+        rowKey={(r) => r.id}
+        onChange={setStaff}
+        onScope={onScope}
+        onBulkScope={onBulkScope}
+        newRow={() => ({
+          id: makeId(), name: `Teacher ${staff.length + 1}`,
+          shortName: '', role: 'Teacher', subjects: [], classes: [],
+          isClassTeacher: '', maxPeriodsPerWeek: 30,
+        } as Staff)}
+        toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}
+      />
+    </div>
   )
 }
 
@@ -380,29 +473,62 @@ export function RoomsGrid({
   onScope: (r: RoomRow, rect?: DOMRect) => void
   onBulkScope?: (rect?: DOMRect) => void
 }) {
+  const directoryVenues = useDirectoryStore(s => s.venues)
+  const [collision, setCollision] = useState<{ rowId: string; match: DirectoryVenue } | null>(null)
+
+  useDirectoryAutoRegister(rooms, setRooms, collision?.rowId, /^Room \d+$/,
+    (name) => useDirectoryStore.getState().addVenue({ name }))
+
+  function linkToDirectory() {
+    if (!collision) return
+    const { rowId, match } = collision
+    setRooms(rooms.map(r => r.id === rowId ? {
+      ...r,
+      directoryId: match.id,
+      type: r.type || match.roomType || 'Classroom',
+      capacity: r.capacity ?? match.capacity ?? 40,
+    } as RoomRow : r))
+    setCollision(null)
+  }
+
   const columns: DataGridColumn<RoomRow>[] = [
-    { key: 'name',     label: 'Room',     type: 'text',   sticky: true, width: 140, placeholder: 'e.g. Room 101' },
+    {
+      key: 'name', label: 'Room', type: 'text', sticky: true, width: 140, placeholder: 'e.g. Room 101',
+      setValue: (row, v) => {
+        const trimmed = String(v).trim()
+        const match = trimmed ? directoryVenues.find(x => x.name.toLowerCase() === trimmed.toLowerCase()) : undefined
+        if (match && (row as any).directoryId !== match.id) setCollision({ rowId: row.id, match })
+        else if (collision?.rowId === row.id) setCollision(null)
+        return { ...row, name: v } as any
+      },
+    },
     { key: 'type',     label: 'Type',     type: 'select', options: ROOM_TYPES, width: 140 },
     { key: 'capacity', label: 'Capacity', type: 'number', width: 100, align: 'right', placeholder: '40' },
     { key: 'building', label: 'Building', type: 'text',   width: 140, placeholder: 'e.g. Main Block' },
     { key: 'floor',    label: 'Floor',    type: 'text',   width: 100, placeholder: 'e.g. Ground' },
   ]
+  const collisionName = collision ? rooms.find(r => r.id === collision.rowId)?.name ?? collision.match.name : ''
   return (
-    <DataGrid<RoomRow>
-      title="Venues"
-      description="Any teaching place — classrooms, labs, halls, playgrounds, grounds. Scope a venue to time-window its availability."
-      icon={<Building2 size={16} />}
-      columns={columns}
-      rows={rooms}
-      rowKey={(r) => r.id}
-      onChange={setRooms}
-      onScope={onScope}
-      onBulkScope={onBulkScope}
-      newRow={() => ({
-        id: makeId(), name: `Room ${100 + rooms.length + 1}`,
-        type: 'Classroom', capacity: 40, building: 'Main Block', floor: 'Ground',
-      })}
-      toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}
-    />
+    <div>
+      {collision && (
+        <DirectoryCollisionBanner name={collisionName} onLink={linkToDirectory} onDismiss={() => setCollision(null)} />
+      )}
+      <DataGrid<RoomRow>
+        title="Venues"
+        description="Any teaching place — classrooms, labs, halls, playgrounds, grounds. Scope a venue to time-window its availability."
+        icon={<Building2 size={16} />}
+        columns={columns}
+        rows={rooms}
+        rowKey={(r) => r.id}
+        onChange={setRooms}
+        onScope={onScope}
+        onBulkScope={onBulkScope}
+        newRow={() => ({
+          id: makeId(), name: `Room ${100 + rooms.length + 1}`,
+          type: 'Classroom', capacity: 40, building: 'Main Block', floor: 'Ground',
+        })}
+        toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}
+      />
+    </div>
   )
 }
