@@ -106,9 +106,8 @@ export function SharedTimetablePage() {
         <a href="/" className="flex items-center gap-2 no-underline">
           <span className="flex size-7 items-center justify-center rounded-[8px] bg-[#7C6FE0]">
             <svg width="15" height="15" viewBox="0 0 52 52" fill="none">
-              <rect x="12" y="9" width="8" height="33" rx="4" fill="white" />
-              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" />
-              <circle cx="39" cy="10" r="4.5" fill="#D4920E" />
+              <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" />
+              <circle cx="36" cy="12.5" r="4.5" fill="#D4920E" />
             </svg>
           </span>
           <span className="text-[15px] font-black tracking-[-0.3px]">

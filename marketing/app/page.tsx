@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
+import { HeroTuning } from '@/components/animations/HeroTuning'
+import { LivePulse } from '@/components/animations/LivePulse'
+import { MultiTimetable } from '@/components/animations/MultiTimetable'
 import { appHref } from '@/lib/appUrl'
 
 const BOARDS = [
@@ -27,17 +30,6 @@ const STEPS = [
   { n: 2, title: 'AI generates', desc: 'Allocations, groups, and constraints auto-built.' },
   { n: 3, title: 'Review & refine', desc: 'AI inlines like a spreadsheet. AI explains every choice.' },
   { n: 4, title: 'Publish & share', desc: 'Share a public or private link, or export to PDF and Excel.' },
-]
-
-const DEMO_CELLS = [
-  { label: 'Mathematics', value: '7', hi: false },
-  { label: 'Science', value: '5+1', hi: false },
-  { label: 'English', value: '6', hi: false },
-  { label: 'History', value: '4', hi: false },
-  { label: 'Geography', value: '3', hi: false },
-  { label: 'Languages', value: '3', hi: false },
-  { label: 'PE / Arts', value: '2', hi: false },
-  { label: 'Capacity', value: '34', hi: true },
 ]
 
 const TIERS = [
@@ -129,27 +121,9 @@ export default function HomePage() {
           </a>
         </div>
 
-        {/* Demo grid preview */}
-        <div className="mt-14 w-full max-w-[520px] animate-[floatCard_5s_ease-in-out_infinite] rounded-2xl border border-[#E8E4FF] bg-white p-5 shadow-[0_20px_60px_rgba(124,111,224,0.14)]">
-          <div className="mb-3.5 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#8B87AD]">Weekly period allocation</span>
-            <span className="rounded-full bg-[#EDE9FF] px-2.5 py-[3px] text-[10px] font-bold text-[#7C6FE0]">Class VI-A</span>
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {DEMO_CELLS.map(({ label, value, hi }) => (
-              <div
-                key={label}
-                className={`rounded-[9px] p-2.5 text-center ${hi ? 'border border-[#C4B5FD] bg-[#EDE9FF]' : 'border border-[#E8E4FF] bg-[#FAFAFE]'}`}
-              >
-                <div className={`mb-[5px] overflow-hidden text-ellipsis whitespace-nowrap text-[10.5px] font-semibold ${hi ? 'text-[#7C6FE0]' : 'text-[#8B87AD]'}`}>
-                  {label}
-                </div>
-                <div className={`font-mono text-xl font-extrabold leading-none ${hi ? 'text-[#7C6FE0]' : 'text-[#13111E]'}`}>
-                  {value}
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Hero animation — the Tuner Console resolving a schedule to 0 conflicts */}
+        <div className="mt-14 w-full max-w-[640px] rounded-2xl border border-[#E8E4FF] bg-white p-5 shadow-[0_20px_60px_rgba(124,111,224,0.14)]">
+          <HeroTuning />
         </div>
       </section>
 
@@ -194,6 +168,21 @@ export default function HomePage() {
           No built-in board restrictions. Enter your own period counts, subject names,
           and grading labels — schedU adapts to you.
         </p>
+      </section>
+
+      {/* Live board */}
+      <section className="flex flex-col items-center bg-white px-6 py-16 text-center">
+        <p className="mb-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Live board</p>
+        <h2 className="mb-4 max-w-[560px] text-[clamp(24px,4vw,34px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
+          See <span className="italic text-[#7C6FE0]">who's free right now.</span>
+        </h2>
+        <p className="mb-9 max-w-[520px] text-sm leading-[1.8] text-[#4B5275]">
+          A live wall-clock view of the school day — who's teaching, who just freed up,
+          and who can cover a gap instantly.
+        </p>
+        <div className="w-full max-w-[680px] rounded-2xl border border-[#E8E4FF] bg-[#FAFAFE] p-6 text-left">
+          <LivePulse />
+        </div>
       </section>
 
       {/* How it works */}
@@ -278,6 +267,17 @@ export default function HomePage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Multi-timetable scale */}
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16 text-center">
+        <p className="mb-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Built to scale</p>
+        <h2 className="mb-9 max-w-[520px] text-[clamp(22px,3.5vw,30px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
+          Run <span className="italic text-[#7C6FE0]">every grade's schedule</span> at once.
+        </h2>
+        <div className="w-full max-w-[500px] rounded-2xl border border-[#E8E4FF] bg-[#FAFAFE] p-6">
+          <MultiTimetable />
         </div>
       </section>
 

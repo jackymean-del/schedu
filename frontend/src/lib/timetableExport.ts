@@ -206,6 +206,13 @@ export function buildPrintHTML(options: ExportOptions): string {
 
     return `
       <div class="section-page">
+        <div class="letterhead">
+          <span class="letterhead-word">sched<span class="letterhead-u">U</span></span>
+          <svg width="16" height="16" viewBox="0 0 52 52" fill="none" style="margin-bottom:1px">
+            <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22.5" fill="none" stroke="#000000" stroke-width="9" stroke-linecap="round"/>
+            <circle cx="36" cy="12" r="5" fill="#000000"/>
+          </svg>
+        </div>
         <h2 class="section-title">${sec.name}</h2>
         <table class="timetable">
           <thead>
@@ -237,6 +244,22 @@ export function buildPrintHTML(options: ExportOptions): string {
       padding: 24px 28px;
     }
     .section-page:last-child { page-break-after: auto; }
+    .letterhead {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      margin-bottom: 8px;
+    }
+    .letterhead-word {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #000;
+    }
+    .letterhead-u {
+      font-family: Georgia, serif;
+      font-style: italic;
+    }
     .section-title {
       font-size: 16px;
       font-weight: 800;

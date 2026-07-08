@@ -86,7 +86,11 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
 
         {/* Logo + tagline */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <a href="/" style={{ textDecoration: 'none', display: 'inline-block', marginBottom: 6 }}>
+          <a href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'flex-end', gap: 6, marginBottom: 6 }}>
+            <svg width="18" height="18" viewBox="0 0 52 52" style={{ marginBottom: 1 }}>
+              <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#13111E" strokeWidth="8" strokeLinecap="round"/>
+              <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+            </svg>
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: '-0.4px', color: '#13111E' }}>
               sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans', Georgia, serif", fontStyle: 'italic' }}>U</span>
             </span>

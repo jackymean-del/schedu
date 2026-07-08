@@ -102,7 +102,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }}>
           {open && (
             <a href="/dashboard" style={{ textDecoration: 'none', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 26, height: 26, borderRadius: 7, background: '#7C6FE0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 }}>S</span>
+              <span style={{ width: 26, height: 26, borderRadius: 7, background: '#7C6FE0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="15" height="15" viewBox="0 0 52 52" fill="none">
+                  <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
+                  <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+                </svg>
+              </span>
               <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
                 sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
               </span>

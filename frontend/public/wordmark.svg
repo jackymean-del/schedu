@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236 64" width="236" height="64">
+  <!-- schedU wordmark: lowercase "sched" (Plus Jakarta Sans 800, matching the
+       lowercase "bhusku" parent wordmark) + the Fader-U mark AS the final letter.
+       The U is never a typed glyph. Text requires Plus Jakarta Sans loaded on
+       the page; convert to outlines before shipping static assets. -->
+  <text x="6" y="47" font-family="'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+        font-size="46" font-weight="800" letter-spacing="-1" fill="#13111E">sched</text>
+  <g transform="translate(124 -1.5) scale(1.1)">
+    <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22"
+          fill="none" stroke="#13111E" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+  </g>
+</svg>

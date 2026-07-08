@@ -122,7 +122,11 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
       {/* LEFT SIDEBAR */}
       <aside style={{ width: 260, flexShrink: 0, background: '#F5F4F0', display: 'flex', flexDirection: 'column', padding: '40px 28px' }}>
         <div style={{ marginBottom: 40 }}>
-          <a href="/" style={{ textDecoration: 'none' }}>
+          <a href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'flex-end', gap: 6 }}>
+            <svg width="18" height="18" viewBox="0 0 52 52" style={{ marginBottom: 1 }}>
+              <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#13111E" strokeWidth="8" strokeLinecap="round"/>
+              <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+            </svg>
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', color: '#13111E' }}>
               sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
             </span>

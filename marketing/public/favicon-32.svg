@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="32" height="32">
+  <!-- 32×32 optical variant — stroke 9, knob 5, slightly widened gap. -->
+  <path d="M 16 9 L 16 29.5 A 10 10 0 0 0 36 29.5 L 36 23"
+        fill="none" stroke="#13111E" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="36" cy="12.5" r="5" fill="#D4920E"/>
+</svg>

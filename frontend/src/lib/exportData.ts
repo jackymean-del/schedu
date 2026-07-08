@@ -23,8 +23,8 @@ export async function exportSheetsToXLSX(filename: string, sheets: ExportSheet[]
   XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`)
 }
 
-/** schedU mark (white "b" glyph + gold dot) for the print footer watermark. */
-export const SCHEDU_MARK = `<svg width="22" height="22" viewBox="0 0 52 52" fill="none"><rect x="12" y="9" width="8" height="33" rx="4" fill="white"/><path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="39" cy="10" r="4.5" fill="#D4920E"/></svg>`
+/** schedU Fader-U mark (white stroke + gold knob) for the print footer watermark. */
+export const SCHEDU_MARK = `<svg width="22" height="22" viewBox="0 0 52 52" fill="none"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/></svg>`
 
 /**
  * Institution branding for print/PDF headers, read from the stores

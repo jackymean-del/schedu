@@ -80,13 +80,12 @@ function WizardTopbar() {
       display: 'flex', alignItems: 'center', padding: '0 20px', gap: 14,
       flexShrink: 0, zIndex: 100,
     }}>
-      {/* Bhusku-b mark + SchedU wordmark */}
+      {/* schedU Fader-U mark + wordmark (typographic bhusku attribution) */}
       <a href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', flexShrink: 0 }}>
         <div style={{ width: 30, height: 30, borderRadius: 8, background: '#7C6FE0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="18" height="18" viewBox="0 0 52 52" fill="none">
-            <rect x="12" y="9" width="8" height="33" rx="4" fill="white"/>
-            <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
-            <circle cx="39" cy="10" r="4.5" fill="#D4920E"/>
+            <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
+            <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
           </svg>
         </div>
         <div>

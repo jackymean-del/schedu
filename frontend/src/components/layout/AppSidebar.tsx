@@ -136,14 +136,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         {!collapsed ? (
           <>
             <a href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-              {/* SchedU mark — stacked time blocks */}
+              {/* SchedU mark — the Fader U */}
               <div style={{ width: 32, height: 32, borderRadius: 8, background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
-                  <rect x="10" y="13" width="24" height="4.5" rx="2.25" fill="white"/>
-                  <rect x="10" y="21" width="32" height="4.5" rx="2.25" fill="white" opacity="0.82"/>
-                  <rect x="10" y="29" width="18" height="4.5" rx="2.25" fill="white" opacity="0.65"/>
-                  <rect x="10" y="37" width="26" height="4.5" rx="2.25" fill="white" opacity="0.5"/>
-                  <circle cx="42" cy="11" r="3.5" fill="#D4920E"/>
+                  <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
+                  <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
                 </svg>
               </div>
               <div>
@@ -170,11 +167,8 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           <a href="/dashboard" style={{ textDecoration: 'none' }} title="SchedU — Dashboard">
             <div style={{ width: 30, height: 30, borderRadius: 8, background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="19" height="19" viewBox="0 0 52 52" fill="none">
-                <rect x="10" y="13" width="24" height="4.5" rx="2.25" fill="white"/>
-                <rect x="10" y="21" width="32" height="4.5" rx="2.25" fill="white" opacity="0.82"/>
-                <rect x="10" y="29" width="18" height="4.5" rx="2.25" fill="white" opacity="0.65"/>
-                <rect x="10" y="37" width="26" height="4.5" rx="2.25" fill="white" opacity="0.5"/>
-                <circle cx="42" cy="11" r="3.5" fill="#D4920E"/>
+                <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
+                <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
               </svg>
             </div>
           </a>

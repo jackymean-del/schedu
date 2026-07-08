@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="52" height="52">
+  <!-- Print-safe 1-color variant.
+       - Pure #000 throughout (knob included): survives photocopy, fax, 1-color runs.
+       - Stroke thickened 8 → 9 and knob 4.5 → 5 so low-DPI laser output doesn't thin
+         the curve to breaking.
+       - When color print IS available, knob may print Mahua Gold:
+         CMYK 18/45/100/6 (≈ #D4920E). Never screen/halftone the stroke. -->
+  <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22.5"
+        fill="none" stroke="#000000" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="36" cy="12" r="5" fill="#000000"/>
+</svg>

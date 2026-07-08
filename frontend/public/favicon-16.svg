@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="16" height="16">
+  <!-- 16×16 OPTICAL variant — not a scaled master.
+       Stroke 8→10, knob 4.5→6, gap widened to 6 units so it survives ~2px rendering.
+       This is the tiebreaker size: two stems, one curve, one dot. Nothing else. -->
+  <path d="M 16 9 L 16 29 A 10 10 0 0 0 36 29 L 36 24"
+        fill="none" stroke="#13111E" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="36" cy="12" r="6" fill="#D4920E"/>
+</svg>

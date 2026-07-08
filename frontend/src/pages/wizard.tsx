@@ -170,8 +170,14 @@ export function WizardPage() {
         flexShrink: 0,
         gap: 10,
       }}>
-        <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
-          sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
+        <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 4 }}>
+          <svg width="10" height="10" viewBox="0 0 52 52" style={{ marginBottom: 1 }}>
+            <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#13111E" strokeWidth="8" strokeLinecap="round"/>
+            <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+          </svg>
+          <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
+            sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
+          </span>
         </span>
         <span style={{ color: '#D1D5DB' }}>|</span>
         <span style={{ fontSize: 13, color: '#6B7280' }}>{ttName}</span>

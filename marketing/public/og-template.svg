@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Open Graph / social-share template (1200×630).
+       Slots: TITLE (line 1–2) and TAGLINE are placeholders — replace per page.
+       Ink background, reversed wordmark top-left, oversized ghost mark right,
+       bhusku attribution bottom-left. No gradients. -->
+  <rect width="1200" height="630" fill="#13111E"/>
+
+  <!-- oversized ghost mark, right side, clipped by canvas -->
+  <g transform="translate(760 60) scale(11)" opacity="0.10">
+    <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22"
+          fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <!-- the ghost's knob stays FULL gold — the one point of color -->
+  <circle cx="1156" cy="197.5" r="49.5" fill="#D4920E"/>
+
+  <!-- wordmark lockup, top-left -->
+  <g transform="translate(64 56)">
+    <text x="0" y="34" font-family="'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+          font-size="34" font-weight="800" letter-spacing="-0.7" fill="#FFFFFF">sched</text>
+    <g transform="translate(86 -6) scale(0.82)">
+      <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22"
+            fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
+    </g>
+  </g>
+
+  <!-- TITLE slot (max 2 lines, 30 chars/line) -->
+  <text x="64" y="330" font-family="'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+        font-size="64" font-weight="800" letter-spacing="-1.5" fill="#FFFFFF">Timetables that tune</text>
+  <text x="64" y="404" font-family="'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+        font-size="64" font-weight="800" letter-spacing="-1.5" fill="#FFFFFF">themselves.</text>
+
+  <!-- TAGLINE slot -->
+  <text x="64" y="462" font-family="'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+        font-size="24" font-weight="500" fill="#8B87AD">Academic planning &amp; scheduling intelligence for schools.</text>
+
+  <!-- bhusku attribution -->
+  <text x="64" y="566" font-family="'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+        font-size="16" font-weight="700" letter-spacing="2.2" fill="#3B3660">BY BHUSKU · HEAVY ON CRAFT. FULL OF ENERGY.</text>
+</svg>

@@ -25,9 +25,8 @@ export function MarketingChrome({ children }: { children: ReactNode }) {
         <Link href="/" className="flex shrink-0 items-center gap-[9px] no-underline">
           <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[#7C6FE0]">
             <svg width="19" height="19" viewBox="0 0 52 52" fill="none">
-              <rect x="12" y="9" width="8" height="33" rx="4" fill="white" />
-              <path d="M 20 22 C 23 14 40 15 40 30 C 40 45 23 46 20 42" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" />
-              <circle cx="39" cy="10" r="4.5" fill="#D4920E" />
+              <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" />
+              <circle cx="36" cy="12.5" r="4.5" fill="#D4920E" />
             </svg>
           </div>
           <span className="text-[17px] font-black tracking-[-0.4px] text-[#13111E]">
