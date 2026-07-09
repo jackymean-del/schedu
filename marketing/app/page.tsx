@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
-import { HeroTuning } from '@/components/animations/HeroTuning'
-import { LivePulse } from '@/components/animations/LivePulse'
-import { MultiTimetable } from '@/components/animations/MultiTimetable'
+import { HeroMovie } from '@/components/animations/HeroMovie'
 import { appHref } from '@/lib/appUrl'
 
 const BOARDS = [
@@ -12,24 +10,20 @@ const BOARDS = [
   'Korean CSAT', 'Japanese Gakuryoku', '…and any custom curriculum',
 ]
 
-const FEATURES = [
-  { icon: '🧠', title: 'AI period allocation', desc: 'AI suggests balanced period distributions per class and board — no manual tables needed.' },
-  { icon: '👨‍🏫', title: 'Smart teacher allocation', desc: 'Workload-balanced, expertise-matched teacher assignments with vertical continuity rules.' },
-  { icon: '👥', title: 'OR slots & cross-class groups', desc: 'Flexible OR periods run one subject at a time; AND groups pool same-subject students across sections — built automatically.' },
-]
-
 const STATS = [
-  { value: '1,200+', label: 'Schools using schedU' },
+  { value: '1,200+', label: 'Institutions using schedU' },
   { value: '4.8 min', label: 'Avg. timetable generation time' },
   { value: '98%', label: 'Conflict-free first generation' },
   { value: '180+', label: 'Countries & territories' },
 ]
 
-const STEPS = [
-  { n: 1, title: 'Enter basics', desc: 'Name, board, class range, teachers, rooms.' },
-  { n: 2, title: 'AI generates', desc: 'Allocations, groups, and constraints auto-built.' },
-  { n: 3, title: 'Review & refine', desc: 'AI inlines like a spreadsheet. AI explains every choice.' },
-  { n: 4, title: 'Publish & share', desc: 'Share a public or private link, or export to PDF and Excel.' },
+const UNIQUE_FEATURES = [
+  { icon: '🔀', title: 'Cross-timetable clash detection', desc: 'The same teacher double-booked across two entirely separate timetables — caught instantly, not just within one schedule.' },
+  { icon: '🔗', title: 'Directory auto-link', desc: 'Type a teacher or room name that already exists elsewhere and schedU links it automatically — one record, reused everywhere.' },
+  { icon: '🍱', title: 'Per-grade staggered breaks', desc: 'Nursery breaks after P3, Class VI after P5, Class XI after P6 — every grade\'s break lands at its own real time, automatically.' },
+  { icon: '🔁', title: 'Transpose any view instantly', desc: 'Flip Class, Teacher, Room, or Subject views between periods-as-columns and days-as-columns with one click.' },
+  { icon: '🧩', title: 'True AND / OR combination engine', desc: 'AND runs subjects in genuine parallel across sections, streams, and blocks. OR competes for a single slot based on real period need — never a fake simultaneous split.' },
+  { icon: '📡', title: 'A live Pulse on every view', desc: 'Every schedule view — class, teacher, room, subject — carries the same live "now" indicator, not just one dashboard.' },
 ]
 
 const TIERS = [
@@ -63,13 +57,11 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'schedU — AI Timetable Scheduling for Any Institution',
+  title: 'schedU — The last schedule you\'ll ever fix by hand',
   description: 'schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere.',
   alternates: { canonical: '/' },
 }
 
-// Mirrors the prices actually shown in the Pricing section below — schema.org
-// Offer requires a numeric price, so 'Free'/'$29'/'$99' map to 0/29/99 USD.
 const SOFTWARE_APPLICATION_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -93,112 +85,86 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_APPLICATION_SCHEMA) }}
       />
-      {/* Hero */}
-      <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-[60px] pt-[72px] text-center">
-        <div className="mb-7 inline-flex animate-[fadeUp_0.55s_ease_both] items-center gap-[7px] rounded-full border border-[#86EFAC] bg-[#F0FDF4] px-4 py-[5px] text-xs font-semibold text-[#15803D]">
-          <span className="inline-block size-[7px] shrink-0 rounded-full bg-[#22C55E]" />
-          AI-native timetable engine
+
+      {/* Hero — the movie plays immediately, right after the nav, full width */}
+      <section className="bg-gradient-to-b from-[#F8F7FF] to-white px-[3vw] pb-12 pt-4">
+        <div className="mx-auto w-full max-w-[1400px]">
+          <HeroMovie />
         </div>
 
-        <h1 className="mb-[18px] max-w-[720px] animate-[fadeUp_0.55s_ease_both] text-[clamp(34px,6.5vw,56px)] font-normal leading-[1.1] tracking-[-1.5px] text-[#13111E] [animation-delay:0.08s]">
-          AI-generated timetables for{' '}
-          <span className="italic text-[#7C6FE0]">any institution.</span>
-        </h1>
-        <p className="mb-9 max-w-[560px] animate-[fadeUp_0.55s_ease_both] text-base leading-[1.8] text-[#4B5275] [animation-delay:0.16s]">
-          schedU auto-generates conflict-free timetables for schools, colleges, and universities —
-          any board, any curriculum, anywhere in the world.
-        </p>
-        <div className="flex animate-[fadeUp_0.55s_ease_both] flex-wrap items-center justify-center gap-3 [animation-delay:0.24s]">
-          <a href={appHref('/login')} className="no-underline">
-            <button className="rounded-[9px] bg-[#7C6FE0] px-[26px] py-[13px] text-sm font-bold text-white shadow-[0_4px_18px_rgba(124,111,224,0.38)]">
-              Start free — no credit card
-            </button>
-          </a>
-          <a href="#features" className="no-underline">
-            <button className="rounded-[9px] border border-[#E8E4FF] bg-white px-[26px] py-[13px] text-sm font-bold text-[#4B5275]">
-              See how it works
-            </button>
-          </a>
-        </div>
-
-        {/* Hero animation — the Tuner Console resolving a schedule to 0 conflicts */}
-        <div className="mt-14 w-full max-w-[640px] rounded-2xl border border-[#E8E4FF] bg-white p-5 shadow-[0_20px_60px_rgba(124,111,224,0.14)]">
-          <HeroTuning />
-        </div>
-      </section>
-
-      {/* 3 feature columns */}
-      <section id="features" className="flex flex-col items-center bg-white px-6 py-16">
-        <div className="grid w-full max-w-[920px] grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-5">
-          {FEATURES.map(f => (
-            <div key={f.title} className={`rounded-xl border border-[#E8E4FF] bg-[#FAFAFE] px-[22px] py-[26px] ${cardHover}`}>
-              <div className="mb-3.5 text-[30px] leading-none">{f.icon}</div>
-              <h2 className="mb-2 text-[15px] font-bold text-[#13111E]">{f.title}</h2>
-              <p className="text-[13px] leading-[1.7] text-[#4B5275]">{f.desc}</p>
-            </div>
-          ))}
+        <div className="mx-auto mt-9 max-w-[1000px] text-center">
+          <div className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[#E8C88A] bg-[#FDF6E7] px-4 py-[5px] text-xs font-semibold text-[#92702A]">
+            <span className="inline-block size-[7px] shrink-0 rounded-full bg-[#D4920E]" />
+            The only scheduler with a live Tuner Console
+          </div>
+          <h1 className="mb-[16px] text-[clamp(30px,5.5vw,50px)] font-normal leading-[1.12] tracking-[-1.4px] text-[#13111E]">
+            The last schedule you&rsquo;ll ever{' '}
+            <span className="italic text-[#7C6FE0]">fix by hand.</span>
+          </h1>
+          <p className="mx-auto mb-8 max-w-[620px] text-base leading-[1.75] text-[#4B5275]">
+            Tune it like sound, resolve it like a puzzle — across every building, room,
+            and combination your institution runs.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a href={appHref('/login')} className="no-underline">
+              <button className="rounded-[9px] bg-[#7C6FE0] px-[26px] py-[13px] text-sm font-bold text-white shadow-[0_4px_18px_rgba(124,111,224,0.38)]">
+                Start free — no credit card
+              </button>
+            </a>
+            <a href="#unique" className="no-underline">
+              <button className="rounded-[9px] border border-[#E8E4FF] bg-white px-[26px] py-[13px] text-sm font-bold text-[#4B5275]">
+                See how it works
+              </button>
+            </a>
+          </div>
         </div>
       </section>
 
       {/* Stats band */}
-      <section className="flex justify-center border-y border-[#F0EDFF] bg-[#F8F7FF] px-6 py-11">
+      <section className="flex justify-center border-y border-[#F0EDFF] bg-[#F8F7FF] px-6 py-10">
         <div className="grid w-full max-w-[860px] grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
           {STATS.map((s, i) => (
-            <div key={s.label} className={`px-3 py-4 text-center ${i < STATS.length - 1 ? 'border-r border-[#E8E4FF]' : ''}`}>
-              <div className="mb-[7px] text-[30px] font-normal leading-none text-[#13111E]">{s.value}</div>
+            <div key={s.label} className={`px-3 py-3 text-center ${i < STATS.length - 1 ? 'border-r border-[#E8E4FF]' : ''}`}>
+              <div className="mb-[7px] text-[28px] font-normal leading-none text-[#13111E]">{s.value}</div>
               <div className="text-xs leading-[1.5] text-[#8B87AD]">{s.label}</div>
             </div>
           ))}
         </div>
       </section>
 
+      {/* Unique features — dense grid, no empty space */}
+      <section id="unique" className="flex flex-col items-center bg-white px-6 py-16">
+        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Not used by anyone else</p>
+        <h2 className="mb-9 max-w-[560px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
+          Six things <span className="italic text-[#7C6FE0]">only schedU does.</span>
+        </h2>
+        <div className="grid w-full max-w-[1040px] grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+          {UNIQUE_FEATURES.map(f => (
+            <div key={f.title} className={`rounded-xl border border-[#E8E4FF] bg-[#FAFAFE] px-6 py-6 ${cardHover}`}>
+              <div className="mb-3 text-[26px] leading-none">{f.icon}</div>
+              <h3 className="mb-2 text-[14.5px] font-bold text-[#13111E]">{f.title}</h3>
+              <p className="text-[13px] leading-[1.65] text-[#4B5275]">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Global board support */}
-      <section className="flex flex-col items-center bg-white px-6 py-14 text-center">
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#FAFAFE] px-6 py-14 text-center">
         <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">
           Works with every curriculum worldwide
         </p>
         <div className="flex max-w-[820px] flex-wrap justify-center gap-2">
           {BOARDS.map(b => (
-            <span key={b} className="inline-block whitespace-nowrap rounded-full border border-[#E8E4FF] bg-[#FAFAFE] px-3 py-[5px] text-xs font-medium text-[#4B5275] transition-colors hover:border-[#C4B5FD] hover:bg-[#EDE9FF] hover:text-[#7C6FE0]">
+            <span key={b} className="inline-block whitespace-nowrap rounded-full border border-[#E8E4FF] bg-white px-3 py-[5px] text-xs font-medium text-[#4B5275] transition-colors hover:border-[#C4B5FD] hover:bg-[#EDE9FF] hover:text-[#7C6FE0]">
               {b}
             </span>
           ))}
         </div>
         <p className="mt-5 max-w-[480px] text-[13px] leading-[1.6] text-[#8B87AD]">
           No built-in board restrictions. Enter your own period counts, subject names,
-          and grading labels — schedU adapts to you.
+          and grading labels — schedU adapts to any institution.
         </p>
-      </section>
-
-      {/* Live board */}
-      <section className="flex flex-col items-center bg-white px-6 py-16 text-center">
-        <p className="mb-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Live board</p>
-        <h2 className="mb-4 max-w-[560px] text-[clamp(24px,4vw,34px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
-          See <span className="italic text-[#7C6FE0]">who's free right now.</span>
-        </h2>
-        <p className="mb-9 max-w-[520px] text-sm leading-[1.8] text-[#4B5275]">
-          A live wall-clock view of the school day — who's teaching, who just freed up,
-          and who can cover a gap instantly.
-        </p>
-        <div className="w-full max-w-[680px] rounded-2xl border border-[#E8E4FF] bg-[#FAFAFE] p-6 text-left">
-          <LivePulse />
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#F8F7FF] px-6 py-16">
-        <h2 className="mb-7 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">How it works</h2>
-        <div className="grid w-full max-w-[900px] grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-4">
-          {STEPS.map(s => (
-            <div key={s.n} className={`rounded-xl border border-[#E8E4FF] bg-white px-5 py-[22px] ${cardHover}`}>
-              <div className="mb-3.5 inline-flex items-center justify-center rounded-full bg-[#EDE9FF] px-2.5 py-[3px] text-[10px] font-extrabold tracking-[0.04em] text-[#7C6FE0]">
-                Step {s.n}
-              </div>
-              <h3 className="mb-[7px] text-sm font-bold text-[#13111E]">{s.title}</h3>
-              <p className="text-[12.5px] leading-[1.65] text-[#4B5275]">{s.desc}</p>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* Pricing */}
@@ -270,21 +236,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Multi-timetable scale */}
-      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16 text-center">
-        <p className="mb-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Built to scale</p>
-        <h2 className="mb-9 max-w-[520px] text-[clamp(22px,3.5vw,30px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
-          Run <span className="italic text-[#7C6FE0]">every grade's schedule</span> at once.
-        </h2>
-        <div className="w-full max-w-[500px] rounded-2xl border border-[#E8E4FF] bg-[#FAFAFE] p-6">
-          <MultiTimetable />
-        </div>
-      </section>
-
       {/* Bottom CTA */}
-      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-[72px] text-center">
-        <h2 className="mb-2.5 text-[32px] font-normal leading-[1.2] text-[#13111E]">Ready to build your timetable?</h2>
-        <p className="mb-8 max-w-[380px] text-[15px] leading-[1.6] text-[#8B87AD]">
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16 text-center">
+        <h2 className="mb-2.5 text-[30px] font-normal leading-[1.2] text-[#13111E]">Ready to build your timetable?</h2>
+        <p className="mb-7 max-w-[380px] text-[15px] leading-[1.6] text-[#8B87AD]">
           Start free. No setup. No training required.
         </p>
         <a href={appHref('/login')} className="no-underline">
