@@ -145,7 +145,7 @@ export function HeroMovie() {
           {scene.key === "combine" && <SceneCombine inView={inView} />}
           {scene.key === "calendar" && <SceneCalendarDay />}
           {(scene.key === "class" || scene.key === "teacher" || scene.key === "room" || scene.key === "subject") && (
-            <SceneGrid kind={scene.key} inView={inView} />
+            <SceneGrid kind={scene.key} />
           )}
           {scene.key === "assign" && <SceneTaskAssign />}
           {scene.key === "views" && <SceneViews />}
@@ -202,6 +202,15 @@ export function HeroMovie() {
         @keyframes hm-click-pulse { 0%{opacity:0; transform:scale(.3)} 25%{opacity:.9; transform:scale(1)} 100%{opacity:0; transform:scale(2.5)} }
         .hm-caret { display: inline-block; width: 2px; height: 0.9em; background: #D4920E; margin-left: 1px; vertical-align: -0.1em; animation: hm-caret-blink 0.9s steps(1) infinite; }
         @keyframes hm-caret-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+        /* Generic before/after text swap — shows the real OUTCOME of a
+           click (e.g. "Assign" -> "Assigned ✓") instead of cutting away
+           before the action resolves. Both states share a grid cell so
+           there's no layout jump when one fades and the other fades in. */
+        .hm-swap { display: inline-grid; }
+        .hm-swap > span { grid-area: 1 / 1; }
+        .hm-swap-b { opacity: 0; }
+        @keyframes hm-swap-out { to { opacity: 0; } }
+        @keyframes hm-swap-in { to { opacity: 1; } }
         .hm-vignette {
           position: absolute; inset: 0; pointer-events: none;
           background-image:
@@ -236,14 +245,14 @@ export function HeroMovie() {
 
         .hm-badges { position: absolute; left: 22px; bottom: 62px; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px; max-width: 60%; }
         .hm-badge {
-          font: 700 9px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.35);
-          background: rgba(255,255,255,0.05); border-radius: 999px; padding: 4px 9px;
+          font: 700 10px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.5);
+          background: rgba(255,255,255,0.07); border-radius: 999px; padding: 4px 9px;
           transition: color 0.4s, background 0.4s;
         }
         .hm-badge.is-lit { color: #13111E; background: #D4920E; }
 
         .hm-chrome { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 0 22px 18px; }
-        .hm-subtitle { font: 600 clamp(13px, 2vw, 15px)/1.4 'Plus Jakarta Sans', sans-serif; color: #fff; text-align: center; margin-bottom: 10px; animation: hm-sub-in 0.5s ease both; }
+        .hm-subtitle { font: 700 clamp(15px, 2.3vw, 19px)/1.4 'Plus Jakarta Sans', sans-serif; color: #fff; text-align: center; margin-bottom: 10px; animation: hm-sub-in 0.5s ease both; }
         @keyframes hm-sub-in { 0%{opacity:0; transform:translateY(6px)} 100%{opacity:1; transform:translateY(0)} }
         .hm-scrub { display: flex; gap: 4px; max-width: 520px; margin: 0 auto; }
         .hm-seg { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.16); overflow: hidden; }
@@ -252,7 +261,7 @@ export function HeroMovie() {
         .hm-seg-fill.is-playing { animation-name: hm-fill; animation-timing-function: linear; }
         @keyframes hm-fill { 0%{width:0%} 100%{width:100%} }
 
-        .hm-input-outer { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(18px,3vw,26px); width: 100%; max-width: 680px; }
+        .hm-input-outer { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(18px,3vw,26px); width: 100%; max-width: 780px; }
         .hm-input-field { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .hm-input-field-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
         .hm-input-field-box { display: inline-flex; align-items: center; min-width: 190px; background: rgba(255,255,255,0.07); border: 1.5px solid #7C6FE0; border-radius: 10px; padding: 10px 14px; font: 700 14px 'Plus Jakarta Sans', sans-serif; color: #fff; }
@@ -266,7 +275,7 @@ export function HeroMovie() {
         .hm-chip-label { font: 600 11px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.06em; }
         @keyframes hm-chip-in { 0%{opacity:0; transform: translateY(16px) scale(.9)} 100%{opacity:1; transform: translateY(0) scale(1)} }
 
-        .hm-combine-outer { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(14px,2.4vw,20px); width: 100%; max-width: 700px; }
+        .hm-combine-outer { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(14px,2.4vw,20px); width: 100%; max-width: 840px; }
         .hm-expr-bar { display: flex; align-items: center; gap: 8px; }
         .hm-expr-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
         .hm-expr-box { display: inline-flex; align-items: center; background: rgba(255,255,255,0.07); border: 1.5px solid #7C6FE0; border-radius: 999px; padding: 7px 14px; font: 700 11.5px 'DM Mono', monospace; color: #fff; }
@@ -274,78 +283,86 @@ export function HeroMovie() {
         @keyframes hm-expr-type { to { width: 34ch; } }
         @keyframes hm-cur-combine { 0%{left:2%; top:-38%; opacity:0;} 8%{opacity:1;} 20%{left:20%; top:-20%;} 40%,55%{left:20%; top:-20%;} 100%{left:10%; top:64%; opacity:1;} }
         .hm-lane-typed { animation-name: hm-lane-in; }
-        .hm-combine { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px,3vw,32px); width: 100%; max-width: 640px; }
+        .hm-combine { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px,3vw,32px); width: 100%; max-width: 760px; }
         .hm-combine-panel { display: flex; flex-direction: column; gap: 8px; }
-        .hm-combine-head { font: 500 10px 'DM Mono', monospace; color: #fff; background: rgba(255,255,255,0.1); border-radius: 999px; padding: 5px 10px; align-self: flex-start; }
-        .hm-lane { border-radius: 8px; padding: 7px 10px; opacity: 0; animation: hm-lane-in 0.5s cubic-bezier(.2,.9,.3,1.1) both; }
+        .hm-combine-head { font: 600 11px 'DM Mono', monospace; color: #fff; background: rgba(255,255,255,0.1); border-radius: 999px; padding: 5px 10px; align-self: flex-start; }
+        .hm-lane { border-radius: 8px; padding: 8px 12px; opacity: 0; animation: hm-lane-in 0.5s cubic-bezier(.2,.9,.3,1.1) both; }
         @keyframes hm-lane-in { 0%{opacity:0; transform:translateX(-6px)} 100%{opacity:1; transform:translateX(0)} }
-        .hm-lane-main { font-size: 10.5px; font-weight: 700; color: #13111E; }
-        .hm-lane-tag { display: inline-block; margin-top: 3px; font-size: 8px; font-weight: 700; text-transform: uppercase; color: #7C6FE0; background: rgba(124,111,224,0.18); border-radius: 4px; padding: 1px 5px; }
-        .hm-or-stage { position: relative; height: 78px; }
+        .hm-lane-main { font-size: 12px; font-weight: 700; color: #13111E; }
+        .hm-lane-tag { display: inline-block; margin-top: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; color: #7C6FE0; background: rgba(124,111,224,0.18); border-radius: 4px; padding: 1px 6px; }
+        .hm-or-stage { position: relative; height: 84px; }
         .hm-or-card { position: absolute; inset: 0; border-radius: 10px; border: 1.5px solid; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; animation-duration: 6s; animation-timing-function: cubic-bezier(.45,0,.25,1); animation-iteration-count: infinite; }
         .hm-or-card-0 { animation-name: hm-or-toggle-0; }
         .hm-or-card-1 { animation-name: hm-or-toggle-1; }
         @keyframes hm-or-toggle-0 { 0%,40%{opacity:1} 50%,92%{opacity:0} 100%{opacity:1} }
         @keyframes hm-or-toggle-1 { 0%,40%{opacity:0} 50%,92%{opacity:1} 100%{opacity:0} }
-        .hm-or-subject { font-size: 13px; font-weight: 800; color: #13111E; }
-        .hm-or-reason { font-size: 9.5px; color: #4B5275; margin-top: 3px; }
-        .hm-combine-note { font-size: 9.5px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+        .hm-or-subject { font-size: 14.5px; font-weight: 800; color: #13111E; }
+        .hm-or-reason { font-size: 11px; color: #4B5275; margin-top: 3px; }
+        .hm-combine-note { font-size: 11.5px; color: rgba(255,255,255,0.68); line-height: 1.45; font-weight: 500; }
 
-        .hm-card { background: #fff; border-radius: 16px; padding: clamp(14px,2.5vw,22px); box-shadow: 0 30px 80px rgba(124,111,224,0.35), 0 0 0 1px rgba(255,255,255,0.06); max-width: 620px; width: 100%; }
-        .hm-card-title { font: 800 13px 'Plus Jakarta Sans', sans-serif; color: #13111E; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-        .hm-card-live { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: #16A34A; display: inline-flex; align-items: center; gap: 4px; }
+        .hm-card { background: #fff; border-radius: 16px; padding: clamp(16px,2.6vw,26px); box-shadow: 0 30px 80px rgba(124,111,224,0.35), 0 0 0 1px rgba(255,255,255,0.06); max-width: 760px; width: 100%; }
+        .hm-card-title { font: 800 14.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .hm-card-live { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #16A34A; display: inline-flex; align-items: center; gap: 4px; }
         .hm-card-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #22C55E; animation: hm-pulse-dot 1.6s ease-in-out infinite; }
         .hm-grid-wrap { position: relative; }
-        .hm-grid { display: grid; gap: 3px; grid-template-columns: 44px repeat(4, 1fr); }
-        .hm-g-head { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #8B87AD; text-align: center; text-transform: uppercase; padding: 3px 0; }
-        .hm-g-row-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: #13111E; display: flex; align-items: center; padding-left: 3px; }
-        .hm-g-cell { border-radius: 6px; padding: 6px 7px; display: flex; flex-direction: column; justify-content: center; min-height: 44px; }
+        .hm-grid { display: grid; gap: 4px; grid-template-columns: 52px repeat(4, 1fr); }
+        .hm-g-head { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #6B7280; text-align: center; text-transform: uppercase; padding: 3px 0; }
+        .hm-g-row-label { font: 700 11.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; display: flex; align-items: center; padding-left: 3px; }
+        .hm-g-cell { border-radius: 7px; padding: 7px 9px; display: flex; flex-direction: column; justify-content: center; min-height: 54px; }
         .hm-g-cell.free { background: #FAFAFE; border: 1px dashed #E8E4FF; align-items: center; justify-content: center; }
-        .hm-g-title { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #13111E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .hm-g-meta { font: 500 7px 'Plus Jakarta Sans', sans-serif; color: #4B5275; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .hm-g-free-label { font-size: 7.5px; color: #B8B4D4; font-weight: 600; }
-        .hm-g-multi { font: 600 7.5px 'Plus Jakarta Sans', sans-serif; color: #4B5275; line-height: 1.3; }
-        /* The real Play-Head: full-height red line, red dot + live time badge above it */
-        .hm-playhead { position: absolute; top: 0; bottom: 0; pointer-events: none; }
-        .hm-playhead-line { position: absolute; top: 20px; bottom: 0; left: 50%; width: 2px; background: #EF4444; transform: translateX(-50%); }
+        .hm-g-title { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hm-g-meta { font: 500 8.5px 'Plus Jakarta Sans', sans-serif; color: #4B5275; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hm-g-free-label { font-size: 9px; color: #B8B4D4; font-weight: 600; }
+        .hm-g-multi { font: 600 9px 'Plus Jakarta Sans', sans-serif; color: #4B5275; line-height: 1.3; }
+        /* The real Play-Head: full-height red line, red dot + live time badge
+           above it, positioned by the ACTUAL current time — not a loop —
+           and eased with a slow linear transition so it visibly advances
+           second by second rather than jumping. */
+        .hm-playhead { position: absolute; top: 0; bottom: 0; pointer-events: none; transition: left 1s linear; }
+        .hm-playhead-line { position: absolute; top: 20px; bottom: 0; left: -1px; width: 2px; background: #EF4444; }
         .hm-playhead-badge {
-          position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+          position: absolute; top: -18px; left: 0; transform: translateX(-50%);
           display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
-          font: 800 9.5px 'Plus Jakarta Sans', sans-serif; color: #EF4444;
+          font: 800 10px 'Plus Jakarta Sans', sans-serif; color: #EF4444;
         }
         .hm-playhead-dot { width: 6px; height: 6px; border-radius: 50%; background: #EF4444; }
 
         .hm-views { display: flex; flex-direction: column; align-items: center; gap: 14px; }
         .hm-toggle-visual { display: flex; align-items: center; gap: 8px; }
         .hm-toggle-track { width: 40px; height: 22px; border-radius: 999px; background: #13111E; position: relative; }
-        .hm-toggle-knob { position: absolute; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; animation: hm-toggle-slide 2.6s ease-in-out infinite; }
-        @keyframes hm-toggle-slide { 0%,20%{left:2px} 50%,80%{left:20px} 100%{left:2px} }
+        .hm-toggle-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+        .hm-toggle-knob-click { animation: hm-toggle-click 400ms ease 700ms both; }
+        @keyframes hm-toggle-click { to { left: 20px; } }
         .hm-toggle-label { font: 700 11px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.7); }
         @keyframes hm-cur-views { 0%{left:38%; top:-30%; opacity:0;} 12%{opacity:1;} 26%{left:50%; top:6%;} 100%{left:50%; top:6%; opacity:1;} }
+        /* The click's real outcome: the card itself flips to a print-safe,
+           monochrome, page-bordered look once Print is selected. */
+        .hm-views-card-click { animation: hm-views-print 500ms ease 1000ms both; }
+        @keyframes hm-views-print { to { filter: grayscale(1) contrast(1.08); outline: 2px dashed #94A3B8; outline-offset: 7px; } }
 
-        .hm-live-card { max-width: 460px; }
-        .hm-live-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-        .hm-live-clock { font: 800 20px 'Plus Jakarta Sans', sans-serif; color: #13111E; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-        .hm-live-status { font-size: 12px; color: #6B7280; }
+        .hm-live-card { max-width: 580px; }
+        .hm-live-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        .hm-live-clock { font: 800 24px 'Plus Jakarta Sans', sans-serif; color: #13111E; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+        .hm-live-status { font-size: 13.5px; color: #4B5275; font-weight: 500; }
         .hm-live-status-min { color: #16A34A; font-weight: 700; }
         .hm-live-badge { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font: 700 11px 'Plus Jakarta Sans', sans-serif; color: #16A34A; }
         .hm-live-badge-dot { width: 8px; height: 8px; border-radius: 4px; background: #16A34A; animation: hm-pulse-dot 1.6s ease-in-out infinite; }
         .hm-live-track { position: relative; display: flex; height: 34px; border-radius: 10px; background: #F4F2FE; border: 1px solid #ECE9FB; overflow: hidden; margin-bottom: 6px; }
         .hm-live-band { height: 100%; border-right: 1px solid rgba(19,17,30,0.07); }
         .hm-live-now { position: absolute; top: 0; bottom: 0; left: 46%; width: 2px; background: #EF4444; opacity: 0.5; }
-        .hm-live-legend { display: flex; gap: 14px; margin-bottom: 14px; }
-        .hm-live-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: #8B87AD; }
-        .hm-live-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; }
-        .hm-live-section { margin-bottom: 12px; }
-        .hm-live-section-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 7px; }
+        .hm-live-legend { display: flex; gap: 16px; margin-bottom: 16px; }
+        .hm-live-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #6B7280; font-weight: 500; }
+        .hm-live-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+        .hm-live-section { margin-bottom: 14px; }
+        .hm-live-section-label { font: 700 11px 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
         .hm-live-cards { display: flex; gap: 10px; flex-wrap: wrap; }
-        .hm-live-livecard { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #ECE9FB; border-radius: 13px; padding: 8px 12px; }
-        .hm-live-entity { font-size: 9px; color: #9A95BC; font-weight: 600; }
-        .hm-live-subject { display: inline-block; color: #fff; font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 8px; margin: 2px 0; }
-        .hm-live-teacher { font-size: 10px; color: #6B7280; }
-        .hm-live-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-        .hm-live-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #ECE9FB; border-radius: 8px; padding: 5px 10px; font-size: 11px; color: #13111E; font-weight: 600; }
-        .hm-live-load { font-size: 9px; font-weight: 700; }
+        .hm-live-livecard { display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid #ECE9FB; border-radius: 13px; padding: 9px 14px; }
+        .hm-live-entity { font-size: 10.5px; color: #6B7280; font-weight: 600; }
+        .hm-live-subject { display: inline-block; color: #fff; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; margin: 2px 0; }
+        .hm-live-teacher { font-size: 11px; color: #4B5275; }
+        .hm-live-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+        .hm-live-chip { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #ECE9FB; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: #13111E; font-weight: 600; }
+        .hm-live-load { font-size: 10.5px; font-weight: 700; }
         .hm-live-plus { color: #7C6FE0; font-weight: 800; }
         .hm-live-now-btn { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: #7C6FE0; background: #fff; border: 1px solid #E3DEF7; border-radius: 8px; padding: 3px 9px; }
         .hm-live-section-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
@@ -355,24 +372,37 @@ export function HeroMovie() {
         .hm-live-sort-btn.is-active { color: #7C6FE0; background: #EDE9FF; border-color: #DDD6FE; }
         .hm-live-chip-click { animation: hm-live-chip-assign 450ms ease 3200ms both; }
         @keyframes hm-live-chip-assign { 0%{ transform: scale(1); } 40%{ transform: scale(1.06); background: #EDE9FF; border-color: #7C6FE0; } 100%{ transform: scale(1); background: #EDE9FF; border-color: #7C6FE0; } }
+        .hm-live-assigned { color: #16A34A; }
+        .hm-swap-live .hm-swap-a { animation: hm-swap-out 1ms linear 3200ms both; }
+        .hm-swap-live .hm-swap-b { animation: hm-swap-in 1ms linear 3200ms both; }
+        /* Grabbed at ~16%, dragged right then back left (a real scrub, not
+           a one-way sweep) before settling — the "now" line mirrors it. */
+        .hm-live-now-drag { animation: hm-live-now-scrub 4300ms cubic-bezier(.45,0,.25,1) both; }
+        @keyframes hm-live-now-scrub {
+          0%,16% { left: 46%; }
+          30% { left: 74%; }
+          40% { left: 22%; }
+          50%,100% { left: 46%; }
+        }
         @keyframes hm-cur-live {
           0% { left: 2%; top: 2%; opacity: 0; }
           8% { opacity: 1; }
-          18% { left: 20%; top: 22%; }
-          21% { left: 20%; top: 22%; }
-          32% { left: 65%; top: 22%; }
-          40%,55% { left: 65%; top: 22%; }
+          16% { left: 46%; top: 22%; }
+          21% { left: 46%; top: 22%; }
+          30% { left: 74%; top: 22%; }
+          40% { left: 22%; top: 22%; }
+          50%,58% { left: 46%; top: 22%; }
           74% { left: 8%; top: 90%; }
           100% { left: 8%; top: 90%; opacity: 1; }
         }
 
         /* Calendar Day view (real toolbar/tabs/rows) */
-        .hm-cal-card { max-width: 680px; width: 100%; }
+        .hm-cal-card { max-width: 860px; width: 100%; }
         .hm-cal-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .hm-cal-title { display: flex; align-items: center; gap: 8px; }
         .hm-cal-icon { font-size: 20px; }
         .hm-cal-title-text { font: 800 15px 'Plus Jakarta Sans', sans-serif; color: #13111E; }
-        .hm-cal-date { font-size: 10px; color: #8B87AD; }
+        .hm-cal-date { font-size: 11.5px; color: #6B7280; font-weight: 500; }
         .hm-cal-toolbar-actions { display: flex; align-items: center; gap: 6px; }
         .hm-cal-add { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: #fff; background: #7C6FE0; border-radius: 8px; padding: 6px 10px; }
         .hm-cal-icon-btn { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #E8E4FF; border-radius: 8px; font-size: 11px; color: #4B5275; }
@@ -383,18 +413,18 @@ export function HeroMovie() {
         .hm-cal-multi-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
         .hm-cal-chip { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #4B5275; background: #fff; border: 1.5px solid #E8E4FF; border-radius: 999px; padding: 4px 9px; }
         .hm-cal-chip.is-active { background: #13111E; color: #fff; border-color: #13111E; }
-        .hm-cal-multi-note { font-size: 9px; color: #8B87AD; font-style: italic; }
+        .hm-cal-multi-note { font-size: 11px; color: #6B7280; font-style: italic; font-weight: 500; }
         .hm-cal-rows { display: flex; flex-direction: column; gap: 8px; }
         .hm-cal-row-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-        .hm-cal-row-name { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; flex-shrink: 0; }
-        .hm-cal-row-actions { display: flex; gap: 4px; }
-        .hm-cal-leave { font: 700 8px 'Plus Jakarta Sans', sans-serif; color: #B45309; background: #FFFBF3; border: 1px solid #E5C078; border-radius: 6px; padding: 2px 6px; }
-        .hm-cal-sub { font: 700 8px 'Plus Jakarta Sans', sans-serif; color: #2563EB; background: #E8F0FF; border-radius: 6px; padding: 2px 6px; }
-        .hm-cal-row-count { font-size: 8.5px; color: #9A95BC; margin-left: auto; }
-        .hm-cal-track { display: flex; gap: 2px; height: 40px; }
-        .hm-cal-block { border-radius: 6px; background: #F4F2FE; padding: 4px 6px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
-        .hm-cal-block-label { font-size: 9px; font-weight: 700; color: #13111E; white-space: nowrap; }
-        .hm-cal-block-sub { display: inline-block; margin-top: 2px; color: #fff; font-size: 7.5px; font-weight: 700; border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
+        .hm-cal-row-name { font: 700 12px 'Plus Jakarta Sans', sans-serif; color: #13111E; flex-shrink: 0; }
+        .hm-cal-row-actions { display: flex; gap: 5px; }
+        .hm-cal-leave { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #B45309; background: #FFFBF3; border: 1px solid #E5C078; border-radius: 6px; padding: 3px 7px; }
+        .hm-cal-sub { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #2563EB; background: #E8F0FF; border-radius: 6px; padding: 3px 7px; }
+        .hm-cal-row-count { font-size: 10px; color: #6B7280; font-weight: 500; margin-left: auto; }
+        .hm-cal-track { display: flex; gap: 2px; height: 48px; }
+        .hm-cal-block { border-radius: 6px; background: #F4F2FE; padding: 5px 7px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+        .hm-cal-block-label { font-size: 10.5px; font-weight: 700; color: #13111E; white-space: nowrap; }
+        .hm-cal-block-sub { display: inline-block; margin-top: 2px; color: #fff; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
         .hm-cal-lunch { background: #FDECC8; color: #92702A; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-align: center; }
         .hm-cal-day-tab { animation: hm-tab-flash 500ms ease 380ms both; }
         @keyframes hm-tab-flash { 0%{ box-shadow: none; } 30%{ box-shadow: 0 0 0 3px rgba(124,111,224,0.35); } 100%{ box-shadow: none; } }
@@ -402,6 +432,7 @@ export function HeroMovie() {
         @keyframes hm-chip-activate { to { background: #13111E; color: #fff; border-color: #13111E; } }
         .hm-cal-sub-click { animation: hm-sub-flash 500ms ease 3350ms both; }
         @keyframes hm-sub-flash { 0%{ transform: scale(1); } 40%{ transform: scale(1.12); background: #2563EB; color: #fff; } 100%{ transform: scale(1); } }
+        .hm-cal-covered { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: #16A34A; margin: -2px 0 6px; opacity: 0; animation: hm-lane-in 0.4s ease 3850ms both; }
         @keyframes hm-cur-calendar {
           0% { left: 6%; top: -22%; opacity: 0; }
           6% { opacity: 1; }
@@ -414,22 +445,22 @@ export function HeroMovie() {
         }
 
         /* Assign-a-task modal */
-        .hm-assign-card { max-width: 460px; width: 100%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(124,111,224,0.35); }
+        .hm-assign-card { max-width: 560px; width: 100%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(124,111,224,0.35); }
         .hm-assign-head { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg,#C2740E,#D4920E); padding: 16px 18px; }
         .hm-assign-pin { font-size: 20px; }
         .hm-assign-title { font: 800 15px 'Plus Jakarta Sans', sans-serif; color: #fff; }
         .hm-assign-sub { font-size: 9.5px; color: rgba(255,255,255,0.85); margin-top: 2px; }
         .hm-assign-body { padding: 16px 18px; }
-        .hm-assign-fair { display: flex; align-items: flex-start; gap: 6px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 9px; padding: 9px 11px; font-size: 10.5px; color: #166534; line-height: 1.45; margin-bottom: 12px; }
-        .hm-assign-fair-dot { width: 6px; height: 6px; border-radius: 50%; background: #16A34A; margin-top: 4px; flex-shrink: 0; }
-        .hm-assign-label { font-size: 10.5px; font-weight: 700; color: #13111E; margin-bottom: 6px; }
+        .hm-assign-fair { display: flex; align-items: flex-start; gap: 7px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 9px; padding: 10px 13px; font-size: 12.5px; color: #166534; line-height: 1.5; margin-bottom: 14px; font-weight: 500; }
+        .hm-assign-fair-dot { width: 6px; height: 6px; border-radius: 50%; background: #16A34A; margin-top: 5px; flex-shrink: 0; }
+        .hm-assign-label { font-size: 12px; font-weight: 700; color: #13111E; margin-bottom: 7px; }
         .hm-assign-req { color: #DC2626; }
-        .hm-assign-input { font-size: 10.5px; color: #B8B4D4; border: 1.5px solid #7C6FE0; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
-        .hm-assign-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-        .hm-assign-chip { font-size: 9.5px; font-weight: 700; color: #B45309; border: 1px solid #F3D9A8; border-radius: 8px; padding: 5px 9px; }
+        .hm-assign-input { font-size: 12px; color: #B8B4D4; border: 1.5px solid #7C6FE0; border-radius: 8px; padding: 9px 12px; margin-bottom: 11px; }
+        .hm-assign-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+        .hm-assign-chip { font-size: 11px; font-weight: 700; color: #B45309; border: 1px solid #F3D9A8; border-radius: 8px; padding: 6px 11px; }
         .hm-assign-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        .hm-assign-cancel { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #4B5275; border: 1px solid #E8E4FF; border-radius: 8px; padding: 7px 16px; }
-        .hm-assign-submit { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #B8B4D4; background: #F4F2FE; border-radius: 8px; padding: 7px 16px; }
+        .hm-assign-cancel { font: 700 11.5px 'Plus Jakarta Sans', sans-serif; color: #4B5275; border: 1px solid #E8E4FF; border-radius: 8px; padding: 8px 18px; }
+        .hm-assign-submit { font: 700 11.5px 'Plus Jakarta Sans', sans-serif; color: #B8B4D4; background: #F4F2FE; border-radius: 8px; padding: 8px 18px; }
         .hm-assign-input-typed { display: flex; align-items: center; }
         .hm-type-reveal-2 { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; color: #13111E; animation: hm-type-assign 1.1s steps(19) 400ms both; }
         @keyframes hm-type-assign { to { width: 12ch; } }
@@ -437,6 +468,8 @@ export function HeroMovie() {
         @keyframes hm-assign-chip-select { to { background: #FEF3C7; border-color: #D4920E; color: #92400E; } }
         .hm-assign-submit-click { animation: hm-assign-submit-flash 500ms ease 3900ms both; }
         @keyframes hm-assign-submit-flash { 0%{ transform: scale(1); } 40%{ transform: scale(1.08); background: #16A34A; color: #fff; } 100%{ transform: scale(1); background: #16A34A; color: #fff; } }
+        .hm-swap-assign .hm-swap-a { animation: hm-swap-out 1ms linear 3900ms both; }
+        .hm-swap-assign .hm-swap-b { animation: hm-swap-in 1ms linear 3900ms both; }
         @keyframes hm-cur-assign {
           0% { left: 8%; top: -25%; opacity: 0; }
           6% { opacity: 1; }
@@ -455,6 +488,11 @@ export function HeroMovie() {
         .hm-done-btn { font: 800 12.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; background: #D4920E; border-radius: 9px; padding: 11px 24px; box-shadow: 0 0 30px rgba(212,146,14,0.3); opacity: 0; animation: hm-lane-in 0.5s ease 0.7s both; }
         .hm-done-btn-click { animation: hm-lane-in 0.5s ease 0.7s both, hm-done-btn-press 400ms ease 2400ms both; }
         @keyframes hm-done-btn-press { 0%{ transform: scale(1); } 40%{ transform: scale(0.94); } 100%{ transform: scale(1); } }
+        .hm-done-toast {
+          font: 700 11.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; background: #fff;
+          border-radius: 999px; padding: 8px 16px; opacity: 0; box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+          animation: hm-lane-in 0.4s ease 2800ms both;
+        }
         @keyframes hm-cur-done { 0%{left:70%; top:-30%; opacity:0;} 12%{opacity:1;} 55%{left:50%; top:78%;} 72%,88%{left:50%; top:78%;} 100%{left:50%; top:78%; opacity:1;} }
 
         @media (prefers-reduced-motion: reduce) {
@@ -462,15 +500,19 @@ export function HeroMovie() {
           .hm-or-card { animation: none !important; }
           .hm-or-card-0 { opacity: 1 !important; }
           .hm-or-card-1 { opacity: 0 !important; }
-          .hm-toggle-knob { animation: none !important; left: 2px !important; }
+          .hm-toggle-knob-click { animation: none !important; left: 20px !important; }
           .hm-seg-fill.is-playing { animation: none !important; width: 100% !important; }
           .hm-rec-dot, .hm-card-live-dot, .hm-realclock-dot, .hm-live-badge-dot { animation: none !important; }
           .hm-cursor, .hm-click-ring { display: none !important; }
           .hm-caret { animation: none !important; opacity: 0 !important; }
           .hm-type-reveal, .hm-expr-text, .hm-type-reveal-2 { animation: none !important; width: auto !important; }
           .hm-u-watermark { animation: none !important; opacity: 0.1 !important; stroke-dashoffset: 0 !important; }
-          .hm-input-linked, .hm-done-btn { animation: none !important; opacity: 1 !important; }
-          .hm-cal-day-tab, .hm-cal-chip-click, .hm-cal-sub-click, .hm-assign-chip-click, .hm-assign-submit-click, .hm-live-chip-click, .hm-done-btn-click { animation: none !important; }
+          .hm-input-linked, .hm-done-btn, .hm-cal-covered, .hm-done-toast { animation: none !important; opacity: 1 !important; }
+          .hm-cal-day-tab, .hm-cal-chip-click, .hm-cal-sub-click, .hm-assign-chip-click, .hm-assign-submit-click, .hm-live-chip-click, .hm-done-btn-click, .hm-views-card-click, .hm-live-now-drag { animation: none !important; }
+          .hm-views-card-click { filter: grayscale(1) contrast(1.08) !important; outline: 2px dashed #94A3B8 !important; outline-offset: 7px !important; }
+          .hm-swap-a { animation: none !important; opacity: 0 !important; }
+          .hm-swap-b { animation: none !important; opacity: 1 !important; }
+          .hm-playhead { transition: none !important; }
         }
         @media (max-width: 640px) {
           .hm-combine { grid-template-columns: 1fr; }
@@ -561,7 +603,7 @@ function SceneCombine({ inView }: { inView: boolean }) {
   );
 }
 
-function SceneGrid({ kind, inView }: { kind: "class" | "teacher" | "room" | "subject"; inView: boolean }) {
+function SceneGrid({ kind }: { kind: "class" | "teacher" | "room" | "subject" }) {
   const isClass = kind === "class";
   const otherAxis = isClass ? CLASS_ROWS : kind === "teacher" ? TEACHERS : kind === "room" ? VENUES : SUBJECTS;
   const rowData = (label: string) => (kind === "teacher" ? teacherRow(label) : kind === "room" ? venueRow(label) : subjectRow(label));
@@ -607,7 +649,7 @@ function SceneGrid({ kind, inView }: { kind: "class" | "teacher" | "room" | "sub
             </div>
           ))}
         </div>
-        <PlayHead inView={inView} />
+        <PlayHead />
       </div>
     </div>
   );
@@ -618,23 +660,26 @@ function SceneGrid({ kind, inView }: { kind: "class" | "teacher" | "room" | "sub
 // red line with a red dot + the real, live clock time above it — not a
 // discrete period indicator. Sweeps across the grid to demonstrate it's
 // live across every column; the time label itself is genuinely real time.
-function PlayHead({ inView }: { inView: boolean }) {
+function PlayHead() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  const timeStr = now ? now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--:--";
+  if (!now) return null;
+  const timeStr = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  // The line's position is the ACTUAL current time mapped across the
+  // 9 AM–1 PM column span (HOURS) — not a decorative loop. It moves once
+  // a second, exactly with the wall clock, and stalls outside 9–1 like the
+  // real product's scrubber does before/after the school day.
+  const hourFrac = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+  const fraction = Math.max(0, Math.min(1, (hourFrac - 9) / 4));
 
   return (
-    <div
-      className="hm-playhead"
-      style={{ left: 44, width: "calc((100% - 44px) / 4)", animation: inView ? "hm-sweep-x 7s cubic-bezier(.45,0,.25,1) infinite" : "none" }}
-    >
+    <div className="hm-playhead" style={{ left: `calc(52px + (100% - 52px) * ${fraction})` }}>
       <span className="hm-playhead-badge"><span className="hm-playhead-dot" />{timeStr}</span>
       <span className="hm-playhead-line" />
-      <style>{`@keyframes hm-sweep-x { 0%,4%{transform:translateX(0)} 24%{transform:translateX(100%)} 45%{transform:translateX(200%)} 66%,97%{transform:translateX(300%)} 100%{transform:translateX(0)} }`}</style>
     </div>
   );
 }
@@ -730,6 +775,7 @@ function SceneCalendarDay() {
               </div>
               <div className="hm-cal-row-count">{row.periods} periods</div>
             </div>
+            {ri === 0 && <div className="hm-cal-covered">✓ Covered by Mr. Sharma — Period 4</div>}
             <div className="hm-cal-track">
               {row.blocks.map((b, i) =>
                 b.type === "lunch" ? (
@@ -780,7 +826,12 @@ function SceneTaskAssign() {
         </div>
         <div className="hm-assign-actions">
           <span className="hm-assign-cancel">Cancel</span>
-          <span className="hm-assign-submit hm-assign-submit-click">Assign</span>
+          <span className="hm-assign-submit hm-assign-submit-click">
+            <span className="hm-swap hm-swap-assign">
+              <span className="hm-swap-a">Assign</span>
+              <span className="hm-swap-b">Assigned ✓</span>
+            </span>
+          </span>
         </div>
       </div>
       <Cursor move="hm-cur-assign" clicks={[350, 2650, 3900]} duration={4300} />
@@ -793,11 +844,11 @@ function SceneViews() {
     <div className="hm-views" style={{ position: "relative" }}>
       <div className="hm-toggle-visual">
         <span className="hm-toggle-label">Digital</span>
-        <div className="hm-toggle-track"><div className="hm-toggle-knob" /></div>
+        <div className="hm-toggle-track"><div className="hm-toggle-knob hm-toggle-knob-click" /></div>
         <span className="hm-toggle-label">Print</span>
       </div>
       <Cursor move="hm-cur-views" clicks={[700]} duration={2700} />
-      <div className="hm-card" style={{ maxWidth: 380 }}>
+      <div className="hm-card hm-views-card-click" style={{ maxWidth: 420 }}>
         <div className="hm-card-title"><span>IX-A · Weekly Timetable</span></div>
         <div className="hm-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
           {CLASS_GRID[0].map((c, i) => (
@@ -827,10 +878,18 @@ const LIVE_FREE = [
 ];
 
 function SceneLive() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const clockStr = now ? now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "--:--:--";
+
   return (
     <div className="hm-card hm-live-card" style={{ position: "relative" }}>
       <div className="hm-live-head">
-        <span className="hm-live-clock">10:25:0 AM</span>
+        <span className="hm-live-clock">{clockStr}</span>
         <span className="hm-live-status">Period 3 · <span className="hm-live-status-min">18 min left</span></span>
         <span className="hm-live-badge"><span className="hm-live-badge-dot" />Live</span>
         <span className="hm-live-now-btn">Now</span>
@@ -840,7 +899,7 @@ function SceneLive() {
         {[14, 4, 18, 3, 20, 5, 16].map((w, i) => (
           <div key={i} className="hm-live-band" style={{ flex: w, background: i % 2 === 0 ? "#B9AFF0" : "#F7D9A0" }} />
         ))}
-        <div className="hm-live-now" />
+        <div className="hm-live-now hm-live-now-drag" />
       </div>
       <div className="hm-live-legend">
         <span><i style={{ background: "#B9AFF0" }} />Teaching</span>
@@ -882,12 +941,19 @@ function SceneLive() {
             <span key={f.name} className={`hm-live-chip ${i === 0 ? "hm-live-chip-click" : ""}`}>
               {f.name}
               <span className="hm-live-load" style={{ color: f.load <= 2 ? "#16A34A" : f.load <= 4 ? "#B45309" : "#DC2626" }}>{f.load} today</span>
-              <span className="hm-live-plus">+</span>
+              {i === 0 ? (
+                <span className="hm-swap hm-swap-live">
+                  <span className="hm-swap-a hm-live-plus">+</span>
+                  <span className="hm-swap-b hm-live-assigned">✓</span>
+                </span>
+              ) : (
+                <span className="hm-live-plus">+</span>
+              )}
             </span>
           ))}
         </div>
       </div>
-      <Cursor move="hm-cur-live" clicks={[900, 3200]} duration={4300} />
+      <Cursor move="hm-cur-live" clicks={[690, 3200]} duration={4300} />
     </div>
   );
 }
@@ -900,6 +966,7 @@ function SceneDone() {
         <span className="hm-done-text">0 conflicts. Ready to publish.</span>
       </div>
       <span className="hm-done-btn hm-done-btn-click">Publish timetable →</span>
+      <div className="hm-done-toast">✓ Published — 3 schedules updated</div>
       <Cursor move="hm-cur-done" clicks={[2400]} duration={3300} />
     </div>
   );
