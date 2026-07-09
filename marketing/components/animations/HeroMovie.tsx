@@ -81,17 +81,17 @@ const UNIQUE_BADGES = [
 
 type SceneKey = "input" | "combine" | "calendar" | "class" | "teacher" | "room" | "subject" | "assign" | "views" | "live" | "done";
 const SCENES: { key: SceneKey; label: string; dur: number }[] = [
-  { key: "input", label: "Tell it what you have", dur: 2600 },
-  { key: "combine", label: "One teacher, two subjects, zero clash", dur: 3400 },
-  { key: "calendar", label: "Several schedules, one combined day view", dur: 3400 },
+  { key: "input", label: "You type a name once — it links itself everywhere", dur: 3400 },
+  { key: "combine", label: "Type the rule. Watch it resolve.", dur: 4400 },
+  { key: "calendar", label: "Click Day. Filter schedules. Swap a teacher.", dur: 4600 },
   { key: "class", label: "See it by class", dur: 2200 },
   { key: "teacher", label: "See it by teacher", dur: 2200 },
   { key: "room", label: "See it by room", dur: 2200 },
   { key: "subject", label: "See it by subject — parallel, automatically", dur: 2400 },
-  { key: "assign", label: "Assign extra duty — fairly, automatically", dur: 3400 },
-  { key: "views", label: "Same schedule. Screen or paper.", dur: 2400 },
-  { key: "live", label: "See who's free. Right now.", dur: 3400 },
-  { key: "done", label: "Zero conflicts. Ready to publish.", dur: 3000 },
+  { key: "assign", label: "Pick a duty. Type a note. Assign — fairly.", dur: 4400 },
+  { key: "views", label: "Same schedule. Screen or paper.", dur: 2800 },
+  { key: "live", label: "Drag the clock. Cover the gap.", dur: 4400 },
+  { key: "done", label: "Zero conflicts. Click publish.", dur: 3400 },
 ];
 
 export function HeroMovie() {
@@ -107,7 +107,7 @@ export function HeroMovie() {
 
   useEffect(() => {
     if (!inView) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setSceneIdx(8); return; }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setSceneIdx(SCENES.length - 1); return; }
     let cancelled = false;
     let i = 0;
     function tick() {
@@ -131,7 +131,11 @@ export function HeroMovie() {
     <div ref={ref} className="hm-wrap">
       <div className="hm-stage">
         <div className="hm-vignette" />
-        <div className="hm-rec"><span className="hm-rec-dot" />Product demo</div>
+        <svg key={`u-${sceneIdx}`} className="hm-u-watermark" viewBox="0 0 52 52" aria-hidden="true">
+          <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#fff" strokeWidth={8} strokeLinecap="round" />
+          <circle cx={36} cy={12.5} r={4.5} fill="#D4920E" />
+        </svg>
+        <div className="hm-rec"><span className="hm-rec-dot" />Product demo — user POV</div>
         <div className="hm-realclock" title="This clock is genuinely live — the schedule data around it is illustrative">
           <span className="hm-realclock-dot" />{clockStr}
         </div>
@@ -174,10 +178,30 @@ export function HeroMovie() {
           /* Full-bleed cinematic cover. Height is capped to the viewport
              (minus the ~58px nav) so the bottom subtitle + scrubber are
              never pushed under the fold. */
-          height: clamp(440px, calc(100dvh - 74px), 600px);
+          height: clamp(480px, calc(100dvh - 60px), 660px);
           background: radial-gradient(120% 140% at 50% -10%, #232048 0%, #13111E 55%, #0B0A14 100%);
           border-radius: 0;
         }
+        .hm-u-watermark {
+          position: absolute; right: 20px; bottom: 58px; z-index: 2;
+          width: clamp(46px, 6vw, 64px); height: clamp(46px, 6vw, 64px);
+          opacity: 0.1; pointer-events: none;
+          animation: hm-u-draw 1.1s ease both;
+        }
+        @keyframes hm-u-draw { 0%{ stroke-dasharray: 80; stroke-dashoffset: 80; opacity: 0; } 12%{ opacity: 0.1; } 60%{ stroke-dashoffset: 0; } 100%{ stroke-dashoffset: 0; opacity: 0.1; } }
+
+        .hm-cursor {
+          position: absolute; left: 0; top: 0; width: 20px; height: 20px; z-index: 8; pointer-events: none;
+          animation-timing-function: cubic-bezier(.5,0,.2,1); animation-fill-mode: both;
+        }
+        .hm-cursor-svg { display: block; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.55)); }
+        .hm-click-ring {
+          position: absolute; left: 1px; top: 1px; width: 16px; height: 16px; border-radius: 50%;
+          border: 2px solid #D4920E; opacity: 0; animation: hm-click-pulse 520ms ease-out both;
+        }
+        @keyframes hm-click-pulse { 0%{opacity:0; transform:scale(.3)} 25%{opacity:.9; transform:scale(1)} 100%{opacity:0; transform:scale(2.5)} }
+        .hm-caret { display: inline-block; width: 2px; height: 0.9em; background: #D4920E; margin-left: 1px; vertical-align: -0.1em; animation: hm-caret-blink 0.9s steps(1) infinite; }
+        @keyframes hm-caret-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
         .hm-vignette {
           position: absolute; inset: 0; pointer-events: none;
           background-image:
@@ -205,7 +229,7 @@ export function HeroMovie() {
         .hm-scene {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
-          padding: clamp(44px, 5vw, 52px) clamp(14px, 3vw, 28px) 82px;
+          padding: clamp(36px, 4vw, 44px) clamp(14px, 3vw, 28px) 74px;
           animation: hm-scene-in 0.55s cubic-bezier(.2,.9,.3,1.05) both;
         }
         @keyframes hm-scene-in { 0%{ opacity:0; transform: scale(0.97) translateY(8px);} 100%{ opacity:1; transform: scale(1) translateY(0);} }
@@ -228,12 +252,28 @@ export function HeroMovie() {
         .hm-seg-fill.is-playing { animation-name: hm-fill; animation-timing-function: linear; }
         @keyframes hm-fill { 0%{width:0%} 100%{width:100%} }
 
+        .hm-input-outer { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(18px,3vw,26px); width: 100%; max-width: 680px; }
+        .hm-input-field { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .hm-input-field-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+        .hm-input-field-box { display: inline-flex; align-items: center; min-width: 190px; background: rgba(255,255,255,0.07); border: 1.5px solid #7C6FE0; border-radius: 10px; padding: 10px 14px; font: 700 14px 'Plus Jakarta Sans', sans-serif; color: #fff; }
+        .hm-type-reveal { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; animation: hm-type-name 900ms steps(7) 550ms both; }
+        @keyframes hm-type-name { to { width: 6.4ch; } }
+        .hm-input-linked { font-size: 10.5px; color: #86EFAC; font-weight: 600; opacity: 0; animation: hm-lane-in 0.5s ease 1.55s both; }
+        @keyframes hm-cur-input { 0%{left:14%; top:-30%; opacity:0;} 10%{opacity:1;} 24%{left:24%; top:-6%;} 55%{left:24%; top:-6%;} 100%{left:24%; top:-6%; opacity:1;} }
         .hm-input-chips { display: flex; flex-wrap: wrap; gap: clamp(10px,2vw,18px); justify-content: center; max-width: 640px; }
         .hm-chip { display: flex; flex-direction: column; align-items: center; gap: 5px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 20px 30px; min-width: 122px; animation: hm-chip-in 0.5s cubic-bezier(.2,.9,.3,1.1) both; }
         .hm-chip-num { font: 800 clamp(26px,3.4vw,34px) 'Plus Jakarta Sans', sans-serif; color: #fff; }
         .hm-chip-label { font: 600 11px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.06em; }
         @keyframes hm-chip-in { 0%{opacity:0; transform: translateY(16px) scale(.9)} 100%{opacity:1; transform: translateY(0) scale(1)} }
 
+        .hm-combine-outer { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(14px,2.4vw,20px); width: 100%; max-width: 700px; }
+        .hm-expr-bar { display: flex; align-items: center; gap: 8px; }
+        .hm-expr-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+        .hm-expr-box { display: inline-flex; align-items: center; background: rgba(255,255,255,0.07); border: 1.5px solid #7C6FE0; border-radius: 999px; padding: 7px 14px; font: 700 11.5px 'DM Mono', monospace; color: #fff; }
+        .hm-expr-text { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; animation: hm-expr-type 1.35s steps(36) 0.45s both; }
+        @keyframes hm-expr-type { to { width: 34ch; } }
+        @keyframes hm-cur-combine { 0%{left:2%; top:-38%; opacity:0;} 8%{opacity:1;} 20%{left:20%; top:-20%;} 40%,55%{left:20%; top:-20%;} 100%{left:10%; top:64%; opacity:1;} }
+        .hm-lane-typed { animation-name: hm-lane-in; }
         .hm-combine { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px,3vw,32px); width: 100%; max-width: 640px; }
         .hm-combine-panel { display: flex; flex-direction: column; gap: 8px; }
         .hm-combine-head { font: 500 10px 'DM Mono', monospace; color: #fff; background: rgba(255,255,255,0.1); border-radius: 999px; padding: 5px 10px; align-self: flex-start; }
@@ -281,6 +321,7 @@ export function HeroMovie() {
         .hm-toggle-knob { position: absolute; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; animation: hm-toggle-slide 2.6s ease-in-out infinite; }
         @keyframes hm-toggle-slide { 0%,20%{left:2px} 50%,80%{left:20px} 100%{left:2px} }
         .hm-toggle-label { font: 700 11px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.7); }
+        @keyframes hm-cur-views { 0%{left:38%; top:-30%; opacity:0;} 12%{opacity:1;} 26%{left:50%; top:6%;} 100%{left:50%; top:6%; opacity:1;} }
 
         .hm-live-card { max-width: 460px; }
         .hm-live-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -312,6 +353,18 @@ export function HeroMovie() {
         .hm-live-sort { display: flex; gap: 4px; }
         .hm-live-sort-btn { font: 700 8.5px 'Plus Jakarta Sans', sans-serif; color: #9A95BC; background: #FAFAFE; border: 1px solid #ECE9FB; border-radius: 6px; padding: 3px 7px; }
         .hm-live-sort-btn.is-active { color: #7C6FE0; background: #EDE9FF; border-color: #DDD6FE; }
+        .hm-live-chip-click { animation: hm-live-chip-assign 450ms ease 3200ms both; }
+        @keyframes hm-live-chip-assign { 0%{ transform: scale(1); } 40%{ transform: scale(1.06); background: #EDE9FF; border-color: #7C6FE0; } 100%{ transform: scale(1); background: #EDE9FF; border-color: #7C6FE0; } }
+        @keyframes hm-cur-live {
+          0% { left: 2%; top: 2%; opacity: 0; }
+          8% { opacity: 1; }
+          18% { left: 20%; top: 22%; }
+          21% { left: 20%; top: 22%; }
+          32% { left: 65%; top: 22%; }
+          40%,55% { left: 65%; top: 22%; }
+          74% { left: 8%; top: 90%; }
+          100% { left: 8%; top: 90%; opacity: 1; }
+        }
 
         /* Calendar Day view (real toolbar/tabs/rows) */
         .hm-cal-card { max-width: 680px; width: 100%; }
@@ -343,6 +396,22 @@ export function HeroMovie() {
         .hm-cal-block-label { font-size: 9px; font-weight: 700; color: #13111E; white-space: nowrap; }
         .hm-cal-block-sub { display: inline-block; margin-top: 2px; color: #fff; font-size: 7.5px; font-weight: 700; border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
         .hm-cal-lunch { background: #FDECC8; color: #92702A; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .hm-cal-day-tab { animation: hm-tab-flash 500ms ease 380ms both; }
+        @keyframes hm-tab-flash { 0%{ box-shadow: none; } 30%{ box-shadow: 0 0 0 3px rgba(124,111,224,0.35); } 100%{ box-shadow: none; } }
+        .hm-cal-chip-click { animation: hm-chip-activate 400ms ease 1900ms both; }
+        @keyframes hm-chip-activate { to { background: #13111E; color: #fff; border-color: #13111E; } }
+        .hm-cal-sub-click { animation: hm-sub-flash 500ms ease 3350ms both; }
+        @keyframes hm-sub-flash { 0%{ transform: scale(1); } 40%{ transform: scale(1.12); background: #2563EB; color: #fff; } 100%{ transform: scale(1); } }
+        @keyframes hm-cur-calendar {
+          0% { left: 6%; top: -22%; opacity: 0; }
+          6% { opacity: 1; }
+          8% { left: 20%; top: -8%; }
+          20%,42% { left: 20%; top: -8%; }
+          46% { left: 30%; top: 30%; }
+          60%,74% { left: 30%; top: 30%; }
+          78% { left: 78%; top: 84%; }
+          100% { left: 78%; top: 84%; opacity: 1; }
+        }
 
         /* Assign-a-task modal */
         .hm-assign-card { max-width: 460px; width: 100%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(124,111,224,0.35); }
@@ -361,11 +430,32 @@ export function HeroMovie() {
         .hm-assign-actions { display: flex; justify-content: flex-end; gap: 8px; }
         .hm-assign-cancel { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #4B5275; border: 1px solid #E8E4FF; border-radius: 8px; padding: 7px 16px; }
         .hm-assign-submit { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #B8B4D4; background: #F4F2FE; border-radius: 8px; padding: 7px 16px; }
+        .hm-assign-input-typed { display: flex; align-items: center; }
+        .hm-type-reveal-2 { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; color: #13111E; animation: hm-type-assign 1.1s steps(19) 400ms both; }
+        @keyframes hm-type-assign { to { width: 12ch; } }
+        .hm-assign-chip-click { animation: hm-assign-chip-select 400ms ease 2650ms both; }
+        @keyframes hm-assign-chip-select { to { background: #FEF3C7; border-color: #D4920E; color: #92400E; } }
+        .hm-assign-submit-click { animation: hm-assign-submit-flash 500ms ease 3900ms both; }
+        @keyframes hm-assign-submit-flash { 0%{ transform: scale(1); } 40%{ transform: scale(1.08); background: #16A34A; color: #fff; } 100%{ transform: scale(1); background: #16A34A; color: #fff; } }
+        @keyframes hm-cur-assign {
+          0% { left: 8%; top: -25%; opacity: 0; }
+          6% { opacity: 1; }
+          8% { left: 22%; top: 38%; }
+          20%,55% { left: 22%; top: 38%; }
+          62% { left: 16%; top: 63%; }
+          75%,88% { left: 16%; top: 63%; }
+          91% { left: 70%; top: 92%; }
+          100% { left: 70%; top: 92%; opacity: 1; }
+        }
 
         .hm-done { display: flex; flex-direction: column; align-items: center; gap: 18px; }
         .hm-done-stamp { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 18px 34px; box-shadow: 0 0 70px rgba(212,146,14,0.3); }
         .hm-done-dot { width: 13px; height: 13px; border-radius: 50%; background: #D4920E; }
         .hm-done-text { font: 800 clamp(18px,2.8vw,24px) 'Plus Jakarta Sans', sans-serif; color: #fff; }
+        .hm-done-btn { font: 800 12.5px 'Plus Jakarta Sans', sans-serif; color: #13111E; background: #D4920E; border-radius: 9px; padding: 11px 24px; box-shadow: 0 0 30px rgba(212,146,14,0.3); opacity: 0; animation: hm-lane-in 0.5s ease 0.7s both; }
+        .hm-done-btn-click { animation: hm-lane-in 0.5s ease 0.7s both, hm-done-btn-press 400ms ease 2400ms both; }
+        @keyframes hm-done-btn-press { 0%{ transform: scale(1); } 40%{ transform: scale(0.94); } 100%{ transform: scale(1); } }
+        @keyframes hm-cur-done { 0%{left:70%; top:-30%; opacity:0;} 12%{opacity:1;} 55%{left:50%; top:78%;} 72%,88%{left:50%; top:78%;} 100%{left:50%; top:78%; opacity:1;} }
 
         @media (prefers-reduced-motion: reduce) {
           .hm-scene, .hm-subtitle, .hm-chip, .hm-lane { animation: none !important; opacity: 1 !important; transform: none !important; }
@@ -375,27 +465,61 @@ export function HeroMovie() {
           .hm-toggle-knob { animation: none !important; left: 2px !important; }
           .hm-seg-fill.is-playing { animation: none !important; width: 100% !important; }
           .hm-rec-dot, .hm-card-live-dot, .hm-realclock-dot, .hm-live-badge-dot { animation: none !important; }
+          .hm-cursor, .hm-click-ring { display: none !important; }
+          .hm-caret { animation: none !important; opacity: 0 !important; }
+          .hm-type-reveal, .hm-expr-text, .hm-type-reveal-2 { animation: none !important; width: auto !important; }
+          .hm-u-watermark { animation: none !important; opacity: 0.1 !important; stroke-dashoffset: 0 !important; }
+          .hm-input-linked, .hm-done-btn { animation: none !important; opacity: 1 !important; }
+          .hm-cal-day-tab, .hm-cal-chip-click, .hm-cal-sub-click, .hm-assign-chip-click, .hm-assign-submit-click, .hm-live-chip-click, .hm-done-btn-click { animation: none !important; }
         }
         @media (max-width: 640px) {
           .hm-combine { grid-template-columns: 1fr; }
           .hm-badges { display: none; }
           .hm-realclock { font-size: 9.5px; padding: 3px 7px; }
+          .hm-cursor { display: none; }
         }
       `}</style>
     </div>
   );
 }
 
+// A simulated pointer that moves across a scene and "clicks" — this is
+// what makes the movie read as user POV rather than a passive slideshow.
+// `move` names a CSS keyframe (left/top in %, relative to the nearest
+// position:relative ancestor) and `clicks` are ms offsets, from scene
+// start, at which a click-ring flashes at the cursor's current position.
+function Cursor({ move, clicks, duration }: { move: string; clicks: number[]; duration: number }) {
+  return (
+    <div className="hm-cursor" style={{ animationName: move, animationDuration: `${duration}ms` }}>
+      <svg viewBox="0 0 24 24" width="20" height="20" className="hm-cursor-svg">
+        <path d="M4 2 L4 20 L9 15.5 L12.5 22 L15 20.5 L11.5 14 L18 14 Z" fill="#fff" stroke="#13111E" strokeWidth="1.3" strokeLinejoin="round" />
+      </svg>
+      {clicks.map((t, i) => <span key={i} className="hm-click-ring" style={{ animationDelay: `${t}ms` }} />)}
+    </div>
+  );
+}
+
 function SceneInput() {
   const items = [{ n: "42", l: "Teachers" }, { n: "24", l: "Sections" }, { n: "9", l: "Venues" }, { n: "18", l: "Subjects" }];
+  const name = "Mr. Rao";
   return (
-    <div className="hm-input-chips">
-      {items.map((it, i) => (
-        <div key={it.l} className="hm-chip" style={{ animationDelay: `${i * 0.12}s` }}>
-          <div className="hm-chip-num">{it.n}</div>
-          <div className="hm-chip-label">{it.l}</div>
-        </div>
-      ))}
+    <div className="hm-input-outer">
+      <div className="hm-input-field">
+        <span className="hm-input-field-label">Add a teacher</span>
+        <span className="hm-input-field-box">
+          <span className="hm-type-reveal">{name}</span><span className="hm-caret" />
+        </span>
+        <span className="hm-input-linked">↳ already teaching Science, Maths — 3 more slots auto-linked ✓</span>
+      </div>
+      <div className="hm-input-chips">
+        {items.map((it, i) => (
+          <div key={it.l} className="hm-chip" style={{ animationDelay: `${0.9 + i * 0.12}s` }}>
+            <div className="hm-chip-num">{it.n}</div>
+            <div className="hm-chip-label">{it.l}</div>
+          </div>
+        ))}
+      </div>
+      <Cursor move="hm-cur-input" clicks={[550]} duration={3300} />
     </div>
   );
 }
@@ -403,29 +527,36 @@ function SceneInput() {
 function SceneCombine({ inView }: { inView: boolean }) {
   const lanesFill = ["#EDE9FF", "#DBEAFE", "#DCFCE7"];
   return (
-    <div className="hm-combine">
-      <div className="hm-combine-panel">
-        <span className="hm-combine-head">Physics AND Chemistry AND Economics</span>
-        {AND_LANES.map((l, i) => (
-          <div key={l.subject} className="hm-lane" style={{ background: lanesFill[i], animationDelay: inView ? `${i * 0.15}s` : "0s" }}>
-            <div className="hm-lane-main">{l.subject} · {l.teacher} · {l.venue}</div>
-            <div className="hm-lane-tag">{l.tag}</div>
-          </div>
-        ))}
-        <p className="hm-combine-note">Same slot, different sections &amp; streams — all at once.</p>
+    <div className="hm-combine-outer">
+      <div className="hm-expr-bar">
+        <span className="hm-expr-label">Type a rule:</span>
+        <span className="hm-expr-box"><span className="hm-expr-text">Physics AND Chemistry AND Economics</span><span className="hm-caret" /></span>
       </div>
-      <div className="hm-combine-panel">
-        <span className="hm-combine-head">Physics OR Chemistry</span>
-        <div className="hm-or-stage">
-          {OR_STATES.map((s, i) => (
-            <div key={s.subject} className={`hm-or-card hm-or-card-${i}`} style={{ background: i === 0 ? "#EDE9FF" : "#DBEAFE", borderColor: i === 0 ? "#7C6FE0" : "#3B82F6" }}>
-              <div className="hm-or-subject">{s.subject}</div>
-              <div className="hm-or-reason">{s.reason}</div>
+      <div className="hm-combine">
+        <div className="hm-combine-panel">
+          <span className="hm-combine-head">AND → parallel</span>
+          {AND_LANES.map((l, i) => (
+            <div key={l.subject} className="hm-lane hm-lane-typed" style={{ background: lanesFill[i], animationDelay: inView ? `${1.5 + i * 0.15}s` : "0s" }}>
+              <div className="hm-lane-main">{l.subject} · {l.teacher} · {l.venue}</div>
+              <div className="hm-lane-tag">{l.tag}</div>
             </div>
           ))}
+          <p className="hm-combine-note">Same slot, different sections &amp; streams — all at once.</p>
         </div>
-        <p className="hm-combine-note">One at a time — whichever needs the slot more. Never both.</p>
+        <div className="hm-combine-panel">
+          <span className="hm-combine-head">Physics OR Chemistry</span>
+          <div className="hm-or-stage">
+            {OR_STATES.map((s, i) => (
+              <div key={s.subject} className={`hm-or-card hm-or-card-${i}`} style={{ background: i === 0 ? "#EDE9FF" : "#DBEAFE", borderColor: i === 0 ? "#7C6FE0" : "#3B82F6" }}>
+                <div className="hm-or-subject">{s.subject}</div>
+                <div className="hm-or-reason">{s.reason}</div>
+              </div>
+            ))}
+          </div>
+          <p className="hm-combine-note">One at a time — whichever needs the slot more. Never both.</p>
+        </div>
       </div>
+      <Cursor move="hm-cur-combine" clicks={[420]} duration={4300} />
     </div>
   );
 }
@@ -551,7 +682,7 @@ const CAL_ROWS = [
 
 function SceneCalendarDay() {
   return (
-    <div className="hm-card hm-cal-card">
+    <div className="hm-card hm-cal-card" style={{ position: "relative" }}>
       <div className="hm-cal-toolbar">
         <div className="hm-cal-title">
           <span className="hm-cal-icon">📅</span>
@@ -570,7 +701,7 @@ function SceneCalendarDay() {
       <div className="hm-cal-tabs-row">
         <div className="hm-cal-tabs">
           <span className="hm-cal-tab">● Live</span>
-          <span className="hm-cal-tab is-active">Day</span>
+          <span className="hm-cal-tab hm-cal-day-tab is-active">Day</span>
           <span className="hm-cal-tab">Month</span>
         </div>
         <div className="hm-cal-tabs hm-cal-lens">
@@ -583,19 +714,19 @@ function SceneCalendarDay() {
 
       <div className="hm-cal-multi-row">
         <span className="hm-cal-chip is-active">✓ All (2)</span>
-        <span className="hm-cal-chip">✓ I-V TT</span>
+        <span className="hm-cal-chip hm-cal-chip-click">✓ I-V TT</span>
         <span className="hm-cal-chip">✓ VI-X TT</span>
         <span className="hm-cal-multi-note">Day shows the combined view across all of them</span>
       </div>
 
       <div className="hm-cal-rows">
-        {CAL_ROWS.map((row) => (
+        {CAL_ROWS.map((row, ri) => (
           <div key={row.name} className="hm-cal-row">
             <div className="hm-cal-row-head">
               <div className="hm-cal-row-name">{row.name}</div>
               <div className="hm-cal-row-actions">
                 <span className="hm-cal-leave">⚑ Leave</span>
-                <span className="hm-cal-sub">⇄ Sub</span>
+                <span className={`hm-cal-sub ${ri === 0 ? "hm-cal-sub-click" : ""}`}>⇄ Sub</span>
               </div>
               <div className="hm-cal-row-count">{row.periods} periods</div>
             </div>
@@ -616,6 +747,7 @@ function SceneCalendarDay() {
           </div>
         ))}
       </div>
+      <Cursor move="hm-cur-calendar" clicks={[380, 1900, 3350]} duration={4500} />
     </div>
   );
 }
@@ -626,7 +758,7 @@ const TASK_CHIPS = ["Substitution cover", "Exam invigilation", "Library duty", "
 
 function SceneTaskAssign() {
   return (
-    <div className="hm-assign-card">
+    <div className="hm-assign-card" style={{ position: "relative" }}>
       <div className="hm-assign-head">
         <span className="hm-assign-pin">📌</span>
         <div>
@@ -640,27 +772,31 @@ function SceneTaskAssign() {
           This would be Art &amp; Craft Teacher 2&rsquo;s first extra duty this week — a fair pick. 💪
         </div>
         <div className="hm-assign-label">What should this slot be used for? <span className="hm-assign-req">*</span></div>
-        <div className="hm-assign-input">e.g. Exam invigilation</div>
+        <div className="hm-assign-input hm-assign-input-typed">
+          <span className="hm-type-reveal-2">Substitution cover</span><span className="hm-caret" />
+        </div>
         <div className="hm-assign-chips">
-          {TASK_CHIPS.map((c) => <span key={c} className="hm-assign-chip">{c}</span>)}
+          {TASK_CHIPS.map((c, i) => <span key={c} className={`hm-assign-chip ${i === 0 ? "hm-assign-chip-click" : ""}`}>{c}</span>)}
         </div>
         <div className="hm-assign-actions">
           <span className="hm-assign-cancel">Cancel</span>
-          <span className="hm-assign-submit">Assign</span>
+          <span className="hm-assign-submit hm-assign-submit-click">Assign</span>
         </div>
       </div>
+      <Cursor move="hm-cur-assign" clicks={[350, 2650, 3900]} duration={4300} />
     </div>
   );
 }
 
 function SceneViews() {
   return (
-    <div className="hm-views">
+    <div className="hm-views" style={{ position: "relative" }}>
       <div className="hm-toggle-visual">
         <span className="hm-toggle-label">Digital</span>
         <div className="hm-toggle-track"><div className="hm-toggle-knob" /></div>
         <span className="hm-toggle-label">Print</span>
       </div>
+      <Cursor move="hm-cur-views" clicks={[700]} duration={2700} />
       <div className="hm-card" style={{ maxWidth: 380 }}>
         <div className="hm-card-title"><span>IX-A · Weekly Timetable</span></div>
         <div className="hm-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
@@ -692,7 +828,7 @@ const LIVE_FREE = [
 
 function SceneLive() {
   return (
-    <div className="hm-card hm-live-card">
+    <div className="hm-card hm-live-card" style={{ position: "relative" }}>
       <div className="hm-live-head">
         <span className="hm-live-clock">10:25:0 AM</span>
         <span className="hm-live-status">Period 3 · <span className="hm-live-status-min">18 min left</span></span>
@@ -742,8 +878,8 @@ function SceneLive() {
           </div>
         </div>
         <div className="hm-live-chips">
-          {LIVE_FREE.map((f) => (
-            <span key={f.name} className="hm-live-chip">
+          {LIVE_FREE.map((f, i) => (
+            <span key={f.name} className={`hm-live-chip ${i === 0 ? "hm-live-chip-click" : ""}`}>
               {f.name}
               <span className="hm-live-load" style={{ color: f.load <= 2 ? "#16A34A" : f.load <= 4 ? "#B45309" : "#DC2626" }}>{f.load} today</span>
               <span className="hm-live-plus">+</span>
@@ -751,17 +887,20 @@ function SceneLive() {
           ))}
         </div>
       </div>
+      <Cursor move="hm-cur-live" clicks={[900, 3200]} duration={4300} />
     </div>
   );
 }
 
 function SceneDone() {
   return (
-    <div className="hm-done">
+    <div className="hm-done" style={{ position: "relative" }}>
       <div className="hm-done-stamp">
         <span className="hm-done-dot" />
         <span className="hm-done-text">0 conflicts. Ready to publish.</span>
       </div>
+      <span className="hm-done-btn hm-done-btn-click">Publish timetable →</span>
+      <Cursor move="hm-cur-done" clicks={[2400]} duration={3300} />
     </div>
   );
 }
