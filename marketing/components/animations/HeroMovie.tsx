@@ -26,7 +26,8 @@ const VENUES = ["R-12", "Lab-1", "R-04", "R-08"];
 const SUBJECTS = ["Maths", "Science", "English", "Social Sci."];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const PERIODS = ["P1", "P2", "P3", "P4"];
-const TODAY_ROW = 2;
+const HOURS = ["9 AM", "10 AM", "11 AM", "12 PM"];
+const CLASS_ROWS = ["I-A", "I-B", "I-C", "I-D", "I-E"];
 const TINTS: Record<string, string> = { Maths: "#EDE9FF", Science: "#DBEAFE", English: "#DCFCE7", "Social Sci.": "#FCE7F3" };
 
 const CLASS_GRID = PERIODS.map((_, r) =>
@@ -170,9 +171,12 @@ export function HeroMovie() {
         .hm-wrap { width: 100%; }
         .hm-stage {
           position: relative; width: 100%; overflow: hidden;
-          height: clamp(540px, 68vw, 720px);
+          /* Full-bleed cinematic cover. Height is capped to the viewport
+             (minus the ~58px nav) so the bottom subtitle + scrubber are
+             never pushed under the fold. */
+          height: clamp(440px, calc(100dvh - 74px), 600px);
           background: radial-gradient(120% 140% at 50% -10%, #232048 0%, #13111E 55%, #0B0A14 100%);
-          border-radius: 20px; box-shadow: 0 30px 90px rgba(19,17,30,0.35);
+          border-radius: 0;
         }
         .hm-vignette {
           position: absolute; inset: 0; pointer-events: none;
@@ -201,7 +205,7 @@ export function HeroMovie() {
         .hm-scene {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
-          padding: clamp(40px, 6vw, 56px) clamp(14px, 3vw, 28px) 84px;
+          padding: clamp(44px, 5vw, 52px) clamp(14px, 3vw, 28px) 82px;
           animation: hm-scene-in 0.55s cubic-bezier(.2,.9,.3,1.05) both;
         }
         @keyframes hm-scene-in { 0%{ opacity:0; transform: scale(0.97) translateY(8px);} 100%{ opacity:1; transform: scale(1) translateY(0);} }
@@ -224,10 +228,10 @@ export function HeroMovie() {
         .hm-seg-fill.is-playing { animation-name: hm-fill; animation-timing-function: linear; }
         @keyframes hm-fill { 0%{width:0%} 100%{width:100%} }
 
-        .hm-input-chips { display: flex; flex-wrap: wrap; gap: clamp(8px,2vw,14px); justify-content: center; max-width: 560px; }
-        .hm-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; min-width: 96px; animation: hm-chip-in 0.5s cubic-bezier(.2,.9,.3,1.1) both; }
-        .hm-chip-num { font: 800 clamp(20px,3vw,26px) 'Plus Jakarta Sans', sans-serif; color: #fff; }
-        .hm-chip-label { font: 600 10px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+        .hm-input-chips { display: flex; flex-wrap: wrap; gap: clamp(10px,2vw,18px); justify-content: center; max-width: 640px; }
+        .hm-chip { display: flex; flex-direction: column; align-items: center; gap: 5px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 20px 30px; min-width: 122px; animation: hm-chip-in 0.5s cubic-bezier(.2,.9,.3,1.1) both; }
+        .hm-chip-num { font: 800 clamp(26px,3.4vw,34px) 'Plus Jakarta Sans', sans-serif; color: #fff; }
+        .hm-chip-label { font: 600 11px 'Plus Jakarta Sans', sans-serif; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.06em; }
         @keyframes hm-chip-in { 0%{opacity:0; transform: translateY(16px) scale(.9)} 100%{opacity:1; transform: translateY(0) scale(1)} }
 
         .hm-combine { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px,3vw,32px); width: 100%; max-width: 640px; }
@@ -255,17 +259,21 @@ export function HeroMovie() {
         .hm-grid { display: grid; gap: 3px; grid-template-columns: 44px repeat(4, 1fr); }
         .hm-g-head { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #8B87AD; text-align: center; text-transform: uppercase; padding: 3px 0; }
         .hm-g-row-label { font: 700 10px 'Plus Jakarta Sans', sans-serif; color: #13111E; display: flex; align-items: center; padding-left: 3px; }
-        .hm-g-row-label.is-today { color: #7C6FE0; }
-        .hm-g-cell { border-radius: 6px; padding: 4px 5px; display: flex; flex-direction: column; justify-content: center; min-height: 34px; }
-        .hm-g-cell.is-today { outline: 1.5px solid #C4B5FD; outline-offset: -1.5px; }
+        .hm-g-cell { border-radius: 6px; padding: 6px 7px; display: flex; flex-direction: column; justify-content: center; min-height: 44px; }
         .hm-g-cell.free { background: #FAFAFE; border: 1px dashed #E8E4FF; align-items: center; justify-content: center; }
         .hm-g-title { font: 700 9px 'Plus Jakarta Sans', sans-serif; color: #13111E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .hm-g-meta { font: 500 7px 'Plus Jakarta Sans', sans-serif; color: #4B5275; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .hm-g-free-label { font-size: 7.5px; color: #B8B4D4; font-weight: 600; }
         .hm-g-multi { font: 600 7.5px 'Plus Jakarta Sans', sans-serif; color: #4B5275; line-height: 1.3; }
-        .hm-pulse { position: absolute; pointer-events: none; border-top: 2px solid #D4920E; background: rgba(212,146,14,0.08); }
-        .hm-pulse-tag { position: absolute; top: -20px; left: -2px; font: 800 8px 'Plus Jakarta Sans', sans-serif; color: #92702A; background: #FDF6E7; border-radius: 4px; padding: 2px 5px; white-space: nowrap; }
-        .hm-pulse-knob { position: absolute; top: -6px; left: -6px; width: 9px; height: 9px; border-radius: 50%; background: #D4920E; box-shadow: 0 0 10px rgba(212,146,14,0.7); }
+        /* The real Play-Head: full-height red line, red dot + live time badge above it */
+        .hm-playhead { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+        .hm-playhead-line { position: absolute; top: 20px; bottom: 0; left: 50%; width: 2px; background: #EF4444; transform: translateX(-50%); }
+        .hm-playhead-badge {
+          position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+          display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+          font: 800 9.5px 'Plus Jakarta Sans', sans-serif; color: #EF4444;
+        }
+        .hm-playhead-dot { width: 6px; height: 6px; border-radius: 50%; background: #EF4444; }
 
         .hm-views { display: flex; flex-direction: column; align-items: center; gap: 14px; }
         .hm-toggle-visual { display: flex; align-items: center; gap: 8px; }
@@ -355,9 +363,9 @@ export function HeroMovie() {
         .hm-assign-submit { font: 700 10.5px 'Plus Jakarta Sans', sans-serif; color: #B8B4D4; background: #F4F2FE; border-radius: 8px; padding: 7px 16px; }
 
         .hm-done { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-        .hm-done-stamp { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 12px 24px; box-shadow: 0 0 60px rgba(212,146,14,0.25); }
-        .hm-done-dot { width: 11px; height: 11px; border-radius: 50%; background: #D4920E; }
-        .hm-done-text { font: 800 clamp(14px,2.4vw,18px) 'Plus Jakarta Sans', sans-serif; color: #fff; }
+        .hm-done-stamp { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 18px 34px; box-shadow: 0 0 70px rgba(212,146,14,0.3); }
+        .hm-done-dot { width: 13px; height: 13px; border-radius: 50%; background: #D4920E; }
+        .hm-done-text { font: 800 clamp(18px,2.8vw,24px) 'Plus Jakarta Sans', sans-serif; color: #fff; }
 
         @media (prefers-reduced-motion: reduce) {
           .hm-scene, .hm-subtitle, .hm-chip, .hm-lane { animation: none !important; opacity: 1 !important; transform: none !important; }
@@ -424,9 +432,9 @@ function SceneCombine({ inView }: { inView: boolean }) {
 
 function SceneGrid({ kind, inView }: { kind: "class" | "teacher" | "room" | "subject"; inView: boolean }) {
   const isClass = kind === "class";
-  const otherAxis = isClass ? DAYS : kind === "teacher" ? TEACHERS : kind === "room" ? VENUES : SUBJECTS;
+  const otherAxis = isClass ? CLASS_ROWS : kind === "teacher" ? TEACHERS : kind === "room" ? VENUES : SUBJECTS;
   const rowData = (label: string) => (kind === "teacher" ? teacherRow(label) : kind === "room" ? venueRow(label) : subjectRow(label));
-  const title = isClass ? "IX-A · Class view" : `${kind[0].toUpperCase()}${kind.slice(1)} view`;
+  const title = isClass ? "Class view — Day" : `${kind[0].toUpperCase()}${kind.slice(1)} view`;
 
   return (
     <div className="hm-card">
@@ -437,15 +445,15 @@ function SceneGrid({ kind, inView }: { kind: "class" | "teacher" | "room" | "sub
       <div className="hm-grid-wrap">
         <div className="hm-grid">
           <div />
-          {PERIODS.map((p) => <div key={p} className="hm-g-head">{p}</div>)}
+          {HOURS.map((h) => <div key={h} className="hm-g-head">{h}</div>)}
           {otherAxis.map((rowKey, rIdx) => (
             <div key={rowKey} style={{ display: "contents" }}>
-              <div className={`hm-g-row-label ${isClass && rIdx === TODAY_ROW ? "is-today" : ""}`}>{rowKey}</div>
-              {PERIODS.map((_, cIdx) => {
+              <div className="hm-g-row-label">{rowKey}</div>
+              {HOURS.map((_, cIdx) => {
                 if (isClass) {
                   const cell = CLASS_GRID[cIdx][rIdx];
                   return (
-                    <div key={cIdx} className={`hm-g-cell ${rIdx === TODAY_ROW ? "is-today" : ""}`} style={{ background: TINTS[cell.subject] }}>
+                    <div key={cIdx} className="hm-g-cell" style={{ background: TINTS[cell.subject] }}>
                       <div className="hm-g-title">{cell.subject}</div>
                       <div className="hm-g-meta">{cell.teacher} · {cell.venue}</div>
                     </div>
@@ -468,23 +476,33 @@ function SceneGrid({ kind, inView }: { kind: "class" | "teacher" | "room" | "sub
             </div>
           ))}
         </div>
-        <Pulse fixedRow={isClass ? TODAY_ROW : undefined} inView={inView} />
+        <PlayHead inView={inView} />
       </div>
     </div>
   );
 }
 
-function Pulse({ fixedRow, inView }: { fixedRow?: number; inView: boolean }) {
-  const isFixed = fixedRow !== undefined;
+// The real Play-Head, exactly as it appears in the actual Calendar Day view
+// (frontend/src/pages/calendar.tsx MomentScrubber "now" line): a full-height
+// red line with a red dot + the real, live clock time above it — not a
+// discrete period indicator. Sweeps across the grid to demonstrate it's
+// live across every column; the time label itself is genuinely real time.
+function PlayHead({ inView }: { inView: boolean }) {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const timeStr = now ? now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--:--";
+
   return (
     <div
-      className={`hm-pulse ${isFixed ? "" : "hm-pulse-full"}`}
-      style={isFixed
-        ? { top: `calc(18px + ${fixedRow} * 35px)`, height: 32, left: 44, width: "calc((100% - 44px) / 4)", animation: inView ? "hm-sweep-x 6s cubic-bezier(.45,0,.25,1) infinite" : "none" }
-        : { top: 18, bottom: 0, left: 44, width: "calc((100% - 44px) / 4)", animation: inView ? "hm-sweep-x 6s cubic-bezier(.45,0,.25,1) infinite" : "none" }}
+      className="hm-playhead"
+      style={{ left: 44, width: "calc((100% - 44px) / 4)", animation: inView ? "hm-sweep-x 7s cubic-bezier(.45,0,.25,1) infinite" : "none" }}
     >
-      <span className="hm-pulse-tag">Pulse — live</span>
-      <span className="hm-pulse-knob" />
+      <span className="hm-playhead-badge"><span className="hm-playhead-dot" />{timeStr}</span>
+      <span className="hm-playhead-line" />
       <style>{`@keyframes hm-sweep-x { 0%,4%{transform:translateX(0)} 24%{transform:translateX(100%)} 45%{transform:translateX(200%)} 66%,97%{transform:translateX(300%)} 100%{transform:translateX(0)} }`}</style>
     </div>
   );

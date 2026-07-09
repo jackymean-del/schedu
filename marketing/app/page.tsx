@@ -86,13 +86,11 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_APPLICATION_SCHEMA) }}
       />
 
-      {/* Hero — the movie plays immediately, right after the nav, full width */}
-      <section className="bg-gradient-to-b from-[#F8F7FF] to-white px-[3vw] pb-12 pt-4">
-        <div className="mx-auto w-full max-w-[1400px]">
-          <HeroMovie />
-        </div>
+      {/* Hero — the movie plays immediately, right after the nav, full-bleed */}
+      <section className="bg-gradient-to-b from-[#F8F7FF] to-white pb-12">
+        <HeroMovie />
 
-        <div className="mx-auto mt-9 max-w-[1000px] text-center">
+        <div className="mx-auto mt-10 max-w-[1000px] px-6 text-center">
           <div className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[#E8C88A] bg-[#FDF6E7] px-4 py-[5px] text-xs font-semibold text-[#92702A]">
             <span className="inline-block size-[7px] shrink-0 rounded-full bg-[#D4920E]" />
             The only scheduler with a live Tuner Console
