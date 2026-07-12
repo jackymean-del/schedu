@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "./useInView";
+import { appHref } from "@/lib/appUrl";
 
 /**
  * HeroWalkthrough — the simulated product walkthrough hero.
@@ -31,12 +32,12 @@ const SCENES: { key: string; caption: string; dur: number }[] = [
   { key: "dnd", caption: "Fine-tune by drag and drop — clashes flagged as you move.", dur: 5200 },
   { key: "load", caption: "Balance faculty workload with one click.", dur: 5200 },
   { key: "cal", caption: "Every schedule, one combined calendar.", dur: 4400 },
-  { key: "live", caption: "Live — who's teaching, who's free, this minute.", dur: 6400 },
+  { key: "live", caption: "Live — drag through the day. Sessions and free staff update at every minute.", dur: 9600 },
   { key: "task", caption: "Assign duties fairly — workload is checked first.", dur: 5600 },
   { key: "sub", caption: "An absence? Ranked substitutes in seconds.", dur: 5600 },
   { key: "print", caption: "Print-ready — full page, or paper-saving compact.", dur: 5200 },
   { key: "rep", caption: "Insights across the term.", dur: 4000 },
-  { key: "close", caption: "The last schedule you'll ever fix by hand.", dur: 4200 },
+  { key: "close", caption: "The last schedule you'll ever fix by hand.", dur: 7000 },
 ];
 const RM_PIN = 7; // views scene — the most informative resolved frame
 
@@ -63,6 +64,20 @@ export function HeroWalkthrough() {
 
   const jump = (i: number) => { manualRef.current = true; setIdx(i); };
   const scene = SCENES[idx];
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Scale the scene up on larger stages. Set via JS (not media queries) so
+  // the factor the cursor reads is exactly the factor in effect — no race
+  // between viewport settling and target measurement.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const el = stage.querySelector(".hw-scene") as HTMLElement | null;
+    if (!el) return;
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const z = w >= 1300 && h >= 600 ? 1.35 : w >= 1050 && h >= 540 ? 1.22 : w >= 860 && h >= 500 ? 1.1 : 1;
+    (el.style as CSSStyleDeclaration & { zoom: string }).zoom = String(z);
+  }, [idx]);
 
   return (
     <div ref={ref} className="hw-wrap">
@@ -74,7 +89,7 @@ export function HeroWalkthrough() {
           <span className="hw-url">app.schedu.bhusku.com</span>
           <span className="hw-chrome-right">⟳ ⋯ 🔒</span>
         </div>
-        <div key={idx} className="hw-stage">
+        <div key={idx} ref={stageRef} className="hw-stage">
           {scene.key === "dash" && <SDash />}
           {scene.key === "numbers" && <SNumbers />}
           {scene.key === "res" && <SRes />}
@@ -127,13 +142,19 @@ function Cursor({ steps, dur, grab }: { steps: CurStep[]; dur: number; grab?: [n
     // whole point is that every click lands on the real control.
     const timer = setTimeout(() => {
     const s = scene.getBoundingClientRect();
+    // The scene content is zoomed up on large stages (JS-set `zoom` on
+    // .hw-scene). Rects are viewport px (post-zoom) but the cursor's own
+    // translate happens inside the zoomed context, so divide by the factor.
+    // Read the zoom style directly — it's the exact value in effect.
+    const zoomEl = scene.querySelector(".hw-scene") as HTMLElement | null;
+    const k = zoomEl ? parseFloat(getComputedStyle(zoomEl).zoom) || 1 : 1;
     const center = (sel: string) => {
       const el = scene.querySelector(sel);
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2 };
+      return { x: (r.left - s.left + r.width / 2) / k, y: (r.top - s.top + r.height / 2) / k };
     };
-    const kf: Keyframe[] = [{ offset: 0, transform: `translate(${s.width * 0.12}px, ${s.height * 0.82}px)`, opacity: 0 }];
+    const kf: Keyframe[] = [{ offset: 0, transform: `translate(${(s.width * 0.12) / k}px, ${(s.height * 0.82) / k}px)`, opacity: 0 }];
     let lastOff = 0;
     let lastP: { x: number; y: number } | null = null;
     const push = (p: { x: number; y: number }, ms: number) => {
@@ -178,11 +199,13 @@ function Fly({ from, to, start, end, className, children }: { from: string; to: 
     if (!scene) return;
     const timer = setTimeout(() => {
     const s = scene.getBoundingClientRect();
+    const zoomEl = scene.querySelector(".hw-scene") as HTMLElement | null;
+    const k = zoomEl ? parseFloat(getComputedStyle(zoomEl).zoom) || 1 : 1;
     const c = (sel: string) => {
       const t = scene.querySelector(sel);
       if (!t) return null;
       const r = t.getBoundingClientRect();
-      return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2 };
+      return { x: (r.left - s.left + r.width / 2) / k, y: (r.top - s.top + r.height / 2) / k };
     };
     const a = c(from), b = c(to);
     if (!a || !b) return;
@@ -758,7 +781,15 @@ function SCal() {
   );
 }
 
-// ─── 12 · Live (calendar.tsx LiveBoard — real clock, real %) ────────────
+// ─── 12 · Live (calendar.tsx LiveBoard — reproduced exactly) ────────────
+// Every element mirrors the real LiveBoard/MomentScrubber (calendar.tsx
+// 1458-1742): 46px scrubber with proportional violet/amber density bands,
+// hour gridlines + labels, the 3px handle line with the 15px circular knob,
+// red now-tick, 30px clock header with "N min left", Live/Paused states,
+// In-session cards (ring with % inside, entity, subject pill, teacher) and
+// the Free-now chips with load badges + the Lightest/Heaviest sort control.
+// The clock and ring percentages run off the real wall clock; dragging the
+// knob swaps the whole board to the scrubbed moment's state and back.
 const LIVE_CARDS = [
   ["VI-A", "Science", "Science Teacher 1", "#6B7280", "#F3F4F6"],
   ["VI-B", "Hindi", "Hindi Teacher 1", "#C2740E", "#FEF3C7"],
@@ -767,6 +798,16 @@ const LIVE_CARDS = [
   ["VIII-B", "Mathematics", "Mathematics Teacher 5", "#1D4ED8", "#DBEAFE"],
   ["VIII-C", "Hindi", "Hindi Teacher 2", "#C2740E", "#FEF3C7"],
 ];
+const LIVE_CARDS_ALT = [
+  ["VI-A", "Mathematics", "Mathematics Teacher 1", "#1D4ED8", "#DBEAFE"],
+  ["VII-B", "English", "English Teacher 1", "#166534", "#DCFCE7"],
+  ["IX-C", "Science", "Science Teacher 3", "#6B7280", "#F3F4F6"],
+];
+// Real scrubber band geometry: [width-share, teachFrac] — bands stack a
+// violet teaching share over an amber break share, like the real strip.
+const LIVE_SEGS: [number, number][] = [[6, 0], [20, 1], [4, 0], [22, 0.85], [22, 1], [26, 0], [24, 0.7], [22, 1], [20, 0]];
+// Choreography (ms): grab 1500 → drag +fwd 2600 → hold → drag back 4400 →
+// hold reading the changed board → release 6200 → Now 7600 → settle.
 function SLive() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
@@ -776,10 +817,11 @@ function SLive() {
   }, []);
   const clock = now ? now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--:--";
   const dateStr = now ? `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}` : "";
-  const frac = now ? Math.max(0.04, Math.min(0.96, ((now.getHours() + now.getMinutes() / 60) - 9) / 6.5)) : 0.45;
+  const frac = now ? Math.max(0.05, Math.min(0.95, ((now.getHours() + now.getMinutes() / 60) - 9) / 6.5)) : 0.45;
   const secOfPeriod = now ? ((now.getMinutes() % 40) * 60 + now.getSeconds()) : 0;
   const pct = Math.min(99, Math.max(1, Math.round((secOfPeriod / 2400) * 100)));
   const minLeft = Math.max(1, 40 - Math.floor(secOfPeriod / 60));
+  const P = 1500, BACK = 7600; // pin start / back-to-live ms
 
   return (
     <div className="hw-scene hw-app">
@@ -787,7 +829,7 @@ function SLive() {
         <span className="hw-nav-btn">‹</span>
         <span className="hw-date-box hw-mono">{dateStr} 📅</span>
         <span className="hw-nav-btn">›</span>
-        <span className="hw-btn-ghost" style={{ fontSize: 8.5, padding: "4px 9px" }}>Today</span>
+        <span className="hw-btn-ghost" style={{ padding: "4px 10px" }}>Today</span>
         <span style={{ flex: 1 }} />
         <span className="hw-tabs-pill"><i className="is-on">● Live</i><i>Day</i><i>Month</i></span>
         <span className="hw-tabs-pill"><i>👥 Teachers</i><i className="is-on" style={{ color: "#7C6FE0" }}>🎓 Classes</i><i>📖 Subjects</i><i>🏛 Venues</i></span>
@@ -798,63 +840,112 @@ function SLive() {
         <span className="hw-filter-chip">✓ VI-X TT</span>
         <span className="hw-live-note">· Live follows the wall clock across every active schedule and their bells</span>
       </div>
-      <div className="hw-row-between" style={{ alignItems: "center", marginTop: 6 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <b className="hw-live-clock hw-swap" style={{ display: "inline-grid" }}>
-            <span className="hw-sa2" style={{ animationDelay: "1400ms" }}>{clock}</span>
-            <span style={{ animation: "hw-show 1ms linear 1400ms both, hw-hide 1ms linear 3000ms both" }}>12:40 PM</span>
-            <span style={{ animation: "hw-show 1ms linear 3000ms both, hw-hide 1ms linear 5200ms both" }}>10:15 AM</span>
-            <span style={{ animation: "hw-hide 1ms linear 0ms both, hw-show 1ms linear 5200ms both" }}>{clock}</span>
-          </b>
-          <span className="hw-sub" style={{ display: "inline" }}>In session · <b style={{ color: "#16A34A" }}>{minLeft} min left</b></span>
+
+      {/* The real LiveBoard card */}
+      <div className="hw-board-card">
+        <div className="hw-row-between" style={{ alignItems: "center", padding: "10px 14px 8px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <b className="hw-live-clock hw-swap" style={{ display: "inline-grid" }}>
+              <span className="hw-sa2" style={{ animationDelay: `${P}ms` }}>{clock}</span>
+              <span style={{ animation: `hw-show 1ms linear ${P}ms both, hw-hide 1ms linear 3400ms both` }}>12:40 PM</span>
+              <span style={{ animation: `hw-show 1ms linear 3400ms both, hw-hide 1ms linear ${BACK}ms both` }}>10:15 AM</span>
+              <span style={{ animation: `hw-hide 1ms linear 0ms both, hw-show 1ms linear ${BACK}ms both` }}>{clock}</span>
+            </b>
+            <span className="hw-sub" style={{ display: "inline", fontSize: 11 }}>Period 3 · <b style={{ color: "#16A34A" }}>{minLeft} min left</b></span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="hw-swap" style={{ display: "inline-grid", fontSize: 10.5, fontWeight: 700 }}>
+              <span className="hw-live-badge hw-sa2" style={{ animationDelay: `${P}ms` }}>● Live</span>
+              <span style={{ color: "#9A95BC", animation: `hw-show 1ms linear ${P}ms both, hw-hide 1ms linear ${BACK}ms both` }}>● Paused</span>
+              <span className="hw-live-badge" style={{ animation: `hw-hide 1ms linear 0ms both, hw-show 1ms linear ${BACK}ms both` }}>● Live</span>
+            </span>
+            <span className="hw-now-btn hw-flash" data-hw="nowbtn" style={{ animationDelay: `${BACK - 200}ms` }}>Now</span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span className="hw-swap" style={{ display: "inline-grid", fontSize: 9, fontWeight: 700 }}>
-            <span className="hw-live-badge hw-sa2" style={{ animationDelay: "1400ms" }}>● Live</span>
-            <span style={{ color: "#9CA3AF", animation: "hw-show 1ms linear 1400ms both, hw-hide 1ms linear 5200ms both" }}>● Paused</span>
-            <span className="hw-live-badge" style={{ animation: "hw-hide 1ms linear 0ms both, hw-show 1ms linear 5200ms both" }}>● Live</span>
-          </span>
-          <span className="hw-now-btn hw-flash" data-hw="nowbtn" style={{ animationDelay: "5100ms" }}>Now</span>
+
+        {/* MomentScrubber — density bands, hour gridlines, handle + knob */}
+        <div style={{ padding: "0 14px 8px" }}>
+          <div className="hw-scrub-track">
+            {LIVE_SEGS.map(([w, tf], i) => (
+              <span key={i} className="hw-scrub-band" style={{ flex: w }}>
+                {tf > 0 && <i style={{ flex: tf, background: "#B9AFF0" }} />}
+                {tf < 1 && <i style={{ flex: 1 - tf, background: "#F7D9A0" }} />}
+              </span>
+            ))}
+            {[1, 2, 3, 4, 5, 6].map((h) => <i key={h} className="hw-scrub-hr" style={{ left: `${(h / 6.5) * 100}%` }} />)}
+            <i className="hw-scrub-nowtick" style={{ left: `${frac * 100}%` }} />
+            <span className="hw-playhead" style={{ left: `${frac * 100}%` }}>
+              <span className="hw-playhead-drag">
+                <i className="hw-ph-line" />
+                <i className="hw-ph-knob" data-hw="knob" />
+              </span>
+            </span>
+          </div>
+          <div className="hw-hours">{["9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM"].map((h) => <span key={h}>{h}</span>)}</div>
+          <div className="hw-legend"><span><i style={{ background: "#B9AFF0" }} />Teaching</span><span><i style={{ background: "#F7D9A0" }} />Break / free</span></div>
         </div>
-      </div>
-      <div className="hw-live-track">
-        {[6, 20, 4, 22, 22, 26, 24, 22, 20].map((w, i) => (
-          <span key={i} style={{ flex: w, background: [1, 3, 4].includes(i) ? "#B9AFF0" : "#F7D9A0" }} />
-        ))}
-        <span className="hw-playhead" style={{ left: `${frac * 100}%` }}>
-          <span className="hw-playhead-drag">
-            <i className="hw-ph-line" />
-            <i className="hw-ph-knob" data-hw="knob" />
-          </span>
-        </span>
-      </div>
-      <div className="hw-hours">{["9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM"].map((h) => <span key={h}>{h}</span>)}</div>
-      <div className="hw-legend"><span><i style={{ background: "#B9AFF0" }} />Teaching</span><span><i style={{ background: "#F7D9A0" }} />Break / free</span></div>
-      <div className="hw-live-section" style={{ color: "#16A34A" }}>● IN SESSION · 11</div>
-      <div className="hw-live-grid">
-        {LIVE_CARDS.map(([n, s, t, fg, bg]) => (
-          <div key={String(n)} className="hw-live-card">
-            <svg width="30" height="30" viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="15" fill="none" stroke="#F0EEFA" strokeWidth="4.5" />
-              <circle cx="20" cy="20" r="15" fill="none" stroke={String(fg)} strokeWidth="4.5" strokeDasharray="94"
-                strokeDashoffset={94 - (pct / 100) * 94} strokeLinecap="round" transform="rotate(-90 20 20)"
-                style={{ transition: "stroke-dashoffset 1s linear" }} />
-              <text x="20" y="24" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#13111E">{pct}%</text>
-            </svg>
-            <div>
-              <div className="hw-faint" style={{ fontWeight: 700, color: "#8B87AD" }}>{n}</div>
-              <span className="hw-live-subj" style={{ background: String(bg), color: String(fg) }}>{s}</span>
-              <div className="hw-live-teacher">{t}</div>
+
+        {/* Board — swaps state while scrubbed, back on Now */}
+        <div className="hw-board-body hw-swap">
+          {/* State A — live now */}
+          <div className="hw-sa2" style={{ animationDelay: "3600ms" }}>
+            <div className="hw-live-section" style={{ color: "#16A34A" }}><i className="hw-sec-dot" style={{ background: "#16A34A" }} />In session · 11</div>
+            <div className="hw-live-grid">
+              {LIVE_CARDS.map(([n, s, t, fg, bg]) => <LiveMiniCard key={String(n)} n={String(n)} s={String(s)} t={String(t)} fg={String(fg)} bg={String(bg)} pct={pct} />)}
+            </div>
+            <div className="hw-row-between" style={{ alignItems: "center", marginTop: 8 }}>
+              <div className="hw-live-section" style={{ color: "#9A95BC", margin: 0 }}><i className="hw-sec-dot" style={{ background: "#9A95BC" }} />Free now · 3</div>
+              <span className="hw-sort-seg"><i className="is-on">Lightest first</i><i>Heaviest first</i></span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+              {[["English Teacher 2", 1, "#16A34A"], ["Arts Teacher 1", 2, "#16A34A"], ["S.St Teacher 3", 4, "#B45309"]].map(([n, l, c]) => (
+                <span key={String(n)} className="hw-free-chip">{n} <b className="hw-load-badge" style={{ color: String(c) }}>{l} today</b> <i className="hw-plus">＋</i></span>
+              ))}
             </div>
           </div>
-        ))}
+          {/* State B — the scrubbed moment (10:15 AM): fewer sessions, more free */}
+          <div style={{ animation: `hw-show 1ms linear 3600ms both, hw-hide 1ms linear ${BACK}ms both`, opacity: 0 }}>
+            <div className="hw-live-section" style={{ color: "#16A34A" }}><i className="hw-sec-dot" style={{ background: "#16A34A" }} />In session · 3 <span className="hw-faint" style={{ textTransform: "none", letterSpacing: 0 }}>— at 10:15 AM</span></div>
+            <div className="hw-live-grid">
+              {LIVE_CARDS_ALT.map(([n, s, t, fg, bg]) => <LiveMiniCard key={String(n)} n={String(n)} s={String(s)} t={String(t)} fg={String(fg)} bg={String(bg)} pct={38} />)}
+            </div>
+            <div className="hw-row-between" style={{ alignItems: "center", marginTop: 8 }}>
+              <div className="hw-live-section" style={{ color: "#9A95BC", margin: 0 }}><i className="hw-sec-dot" style={{ background: "#9A95BC" }} />Free now · 8</div>
+              <span className="hw-sort-seg"><i className="is-on">Lightest first</i><i>Heaviest first</i></span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+              {[["Hindi Teacher 2", 1, "#16A34A"], ["Science Teacher 1", 2, "#16A34A"], ["Maths Teacher 3", 2, "#16A34A"], ["English Teacher 2", 3, "#B45309"], ["Arts Teacher 1", 4, "#B45309"]].map(([n, l, c]) => (
+                <span key={String(n)} className="hw-free-chip">{n} <b className="hw-load-badge" style={{ color: String(c) }}>{l} today</b> <i className="hw-plus">＋</i></span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-      <Cursor dur={6400} grab={[1400, 4400]} steps={[
-        { t: '[data-hw="knob"]', at: 1300, click: true, hold: 300 },
-        { t: '[data-hw="knob"]', at: 2400, dx: 110, hold: 500 },
-        { t: '[data-hw="knob"]', at: 3600, dx: -80, hold: 700 },
-        { t: '[data-hw="nowbtn"]', at: 5000, click: true, hold: 600 },
+      <Cursor dur={9600} grab={[P, 6200]} steps={[
+        { t: '[data-hw="knob"]', at: 1400, click: true, hold: 300 },
+        { t: '[data-hw="knob"]', at: 2600, dx: 120, hold: 600 },
+        { t: '[data-hw="knob"]', at: 4400, dx: -90, hold: 1500 },
+        { t: '[data-hw="nowbtn"]', at: 7400, click: true, hold: 900 },
       ]} />
+    </div>
+  );
+}
+function LiveMiniCard({ n, s, t, fg, bg, pct }: { n: string; s: string; t: string; fg: string; bg: string; pct: number }) {
+  return (
+    <div className="hw-live-card">
+      <span className="hw-ring-wrap">
+        <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: "rotate(-90deg)" }}>
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#F0EEFA" strokeWidth="4" />
+          <circle cx="20" cy="20" r="16" fill="none" stroke={fg} strokeWidth="4" strokeLinecap="round"
+            strokeDasharray="100.5" strokeDashoffset={100.5 * (1 - pct / 100)} style={{ transition: "stroke-dashoffset 1s linear" }} />
+        </svg>
+        <b style={{ color: fg }}>{pct}%</b>
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div className="hw-live-entity">{n}</div>
+        <span className="hw-live-subj" style={{ background: bg, color: fg }}>{s}</span>
+        <div className="hw-live-teacher">{t}</div>
+      </div>
     </div>
   );
 }
@@ -1050,7 +1141,7 @@ function SRep() {
   );
 }
 
-// ─── 17 · Brand close ────────────────────────────────────────────────────
+// ─── 17 · Brand close — the Start Now button is a REAL link ─────────────
 function SClose() {
   return (
     <div className="hw-scene hw-close">
@@ -1058,10 +1149,13 @@ function SClose() {
         <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" className="hw-u-path" />
         <circle cx="36" cy="12.5" r="4.5" fill="#D4920E" className="hw-u-knob" />
       </svg>
-      <In d={2200} className="hw-close-h">The last schedule you&rsquo;ll ever fix by hand.</In>
-      <In d={2900}><span className="hw-close-cta" data-hw="cta">Start free — no credit card</span></In>
-      <Cursor dur={4200} steps={[
-        { t: '[data-hw="cta"]', at: 3400, hold: 700 },
+      <In d={1800} className="hw-close-h">The last schedule you&rsquo;ll ever fix by hand.</In>
+      <In d={2400}>
+        <a href={appHref("/register")} className="hw-close-cta" data-hw="cta">Start Now — free, no credit card</a>
+      </In>
+      <In d={3100} className="hw-close-sub">This button is real. So is the product.</In>
+      <Cursor dur={7000} steps={[
+        { t: '[data-hw="cta"]', at: 3200, hold: 3600 },
       ]} />
     </div>
   );
@@ -1075,7 +1169,7 @@ const CSS = `
 .hw-dot { width: 9px; height: 9px; border-radius: 50%; }
 .hw-url { flex: 1; text-align: center; font: 500 10.5px 'DM Mono', monospace; color: #6B7280; background: #fff; border-radius: 6px; padding: 3px 10px; margin: 0 12px; }
 .hw-chrome-right { font-size: 9px; color: #9CA3AF; letter-spacing: 2px; }
-.hw-stage { position: relative; height: clamp(410px, calc(100dvh - 235px), 580px); background: #fff; overflow: hidden; }
+.hw-stage { position: relative; height: clamp(430px, calc(100dvh - 235px), 640px); background: #fff; overflow: hidden; }
 .hw-caption { margin: 14px 0 8px; text-align: center; font: 700 clamp(15px,2.2vw,19px)/1.35 'Plus Jakarta Sans', sans-serif; color: #13111E; animation: hw-cap-in 0.4s ease both; }
 @keyframes hw-cap-in { 0%{opacity:0; transform:translateY(5px)} 100%{opacity:1; transform:translateY(0)} }
 .hw-dots { display: flex; justify-content: center; gap: 5px; padding-bottom: 6px; flex-wrap: wrap; }
@@ -1086,8 +1180,10 @@ const CSS = `
 .hw-seg.is-past .hw-seg-fill { width: 100%; background: #C9C0F0; }
 @keyframes hw-fill { 0%{width:0} 100%{width:100%} }
 
+/* Entrance is opacity-only: a transform here would skew the cursor's
+   target measurements taken during the first frames. */
 .hw-scene { position: absolute; inset: 0; padding: clamp(14px,2vw,26px); animation: hw-scene-in 0.4s ease both; overflow: hidden; }
-@keyframes hw-scene-in { 0%{opacity:0; transform: scale(0.985)} 100%{opacity:1; transform: scale(1)} }
+@keyframes hw-scene-in { 0%{opacity:0} 100%{opacity:1} }
 .hw-app { background: #FAFAFE; }
 
 /* primitives */
@@ -1292,30 +1388,42 @@ const CSS = `
 .hw-filter-chip { font-size: 8px; font-weight: 700; color: #2563EB; background: #fff; border: 1.5px solid #BFDBFE; border-radius: 8px; padding: 3px 8px; }
 .hw-filter-chip.is-on { background: #1E3A8A; color: #fff; border-color: #1E3A8A; }
 .hw-live-note { font-size: 8px; color: #4F46E5; font-weight: 500; }
-.hw-live-clock { font-size: 17px; color: #13111E; font-weight: 800; }
+.hw-live-clock { font-size: 20px; color: #13111E; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .hw-live-clock > * { grid-area: 1/1; white-space: nowrap; }
-.hw-live-badge { font-size: 9px; font-weight: 700; color: #16A34A; }
-.hw-now-btn { font-size: 9px; font-weight: 700; color: #7C6FE0; background: #fff; border: 1px solid #E3DEF7; border-radius: 7px; padding: 2px 8px; }
-.hw-live-track { position: relative; display: flex; height: 22px; border-radius: 8px; background: #F4F2FE; border: 1px solid #ECE9FB; overflow: visible; margin-top: 6px; }
-.hw-live-track > span:not(.hw-playhead) { height: 100%; border-right: 1px solid rgba(19,17,30,0.06); }
-.hw-live-track > span:first-child { border-radius: 8px 0 0 8px; }
+.hw-live-badge { font-size: 10.5px; font-weight: 700; color: #16A34A; }
+.hw-now-btn { font-size: 10.5px; font-weight: 700; color: #7C6FE0; background: #fff; border: 1px solid #E3DEF7; border-radius: 8px; padding: 4px 11px; }
+/* The real LiveBoard card + MomentScrubber (calendar.tsx 1458-1742) */
+.hw-board-card { background: #fff; border: 1px solid #ECE9FB; border-radius: 14px; overflow: hidden; margin-top: 8px; }
+.hw-board-body { border-top: 1px solid #F2F0FB; padding: 10px 14px 12px; background: #FBFAFF; }
+.hw-scrub-track { position: relative; height: 34px; border-radius: 10px; background: #F4F2FE; border: 1px solid #ECE9FB; display: flex; gap: 2px; padding: 4px 0; }
+.hw-scrub-band { display: flex; flex-direction: column; border-radius: 5px; overflow: hidden; border: 1px solid rgba(19,17,30,0.07); }
+.hw-scrub-band i { display: block; }
+.hw-scrub-hr { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(19,17,30,0.14); pointer-events: none; }
+.hw-scrub-nowtick { position: absolute; top: 0; bottom: 0; width: 2px; background: #EF4444; opacity: 0.5; pointer-events: none; }
 .hw-playhead { position: absolute; top: 0; bottom: 0; width: 0; }
-.hw-playhead-drag { position: absolute; inset: 0; animation: hw-scrub-k 6400ms cubic-bezier(.45,0,.25,1) both; }
-@keyframes hw-scrub-k { 0%,21%{ transform: translateX(0); } 38%{ transform: translateX(110px); } 56%{ transform: translateX(-80px); } 66%,79%{ transform: translateX(-80px); } 83%,100%{ transform: translateX(0); } }
-.hw-ph-line { position: absolute; top: -3px; bottom: -3px; left: -1px; width: 2px; background: #7C6FE0; border-radius: 2px; }
-.hw-ph-knob { position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%); width: 11px; height: 11px; border-radius: 50%; background: #fff; border: 3px solid #7C6FE0; box-shadow: 0 1px 4px rgba(19,17,30,0.25); }
-.hw-hours { display: flex; justify-content: space-between; margin-top: 3px; font-size: 7px; color: #9CA3AF; padding: 0 2px; }
-.hw-legend { display: flex; gap: 12px; margin: 5px 0 6px; }
-.hw-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: #6B7280; }
-.hw-legend i { width: 8px; height: 8px; border-radius: 2px; }
-.hw-live-section { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 4px 0; }
-.hw-live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.hw-live-card { display: flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #ECE9FB; border-radius: 10px; padding: 6px 9px; }
-.hw-live-subj { display: inline-block; font-size: 8px; font-weight: 700; border-radius: 5px; padding: 1px 6px; margin: 1px 0; }
-.hw-live-teacher { font-size: 7.5px; color: #6B7280; }
-.hw-free-chip { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #ECE9FB; border-radius: 8px; padding: 4px 9px; font-size: 9.5px; font-weight: 600; color: #13111E; }
-.hw-free-chip b { font-size: 8px; }
-.hw-plus { font-style: normal; color: #7C6FE0; font-weight: 800; }
+.hw-playhead-drag { position: absolute; inset: 0; animation: hw-scrub-k 9600ms cubic-bezier(.45,0,.25,1) both; }
+@keyframes hw-scrub-k { 0%,16%{ transform: translateX(0); } 27%{ transform: translateX(120px); } 34%{ transform: translateX(120px); } 46%{ transform: translateX(-90px); } 65%,79%{ transform: translateX(-90px); } 84%,100%{ transform: translateX(0); } }
+.hw-ph-line { position: absolute; top: -3px; bottom: -3px; left: -1.5px; width: 3px; background: #7C6FE0; border-radius: 3px; box-shadow: 0 0 0 3px rgba(124,111,224,0.18); }
+.hw-ph-knob { position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%); width: 15px; height: 15px; border-radius: 50%; background: #7C6FE0; border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(124,111,224,0.4); }
+.hw-hours { position: relative; display: flex; justify-content: space-between; margin-top: 4px; font-size: 9px; font-weight: 700; color: #A9A4C8; padding: 0 2px; }
+.hw-legend { display: flex; gap: 14px; margin: 5px 0 2px; }
+.hw-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #8B87AD; }
+.hw-legend i { width: 10px; height: 10px; border-radius: 3px; border: 1px solid rgba(19,17,30,0.08); }
+.hw-live-section { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin: 4px 0 8px; }
+.hw-sec-dot { width: 7px; height: 7px; border-radius: 4px; }
+.hw-live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hw-live-card { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #ECE9FB; border-radius: 13px; padding: 9px 11px; }
+.hw-ring-wrap { position: relative; width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.hw-ring-wrap b { position: absolute; font-size: 9.5px; font-weight: 800; }
+.hw-live-entity { font-size: 10.5px; font-weight: 700; color: #9A95BC; margin-bottom: 1px; }
+.hw-live-subj { display: inline-block; font-size: 10px; font-weight: 800; border-radius: 6px; padding: 1.5px 8px; margin: 1px 0; white-space: nowrap; }
+.hw-live-teacher { font-size: 9.5px; color: #6B7280; margin-top: 2px; }
+.hw-free-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #ECE9FB; border-radius: 8px; padding: 5px 11px; font-size: 10.5px; font-weight: 600; color: #6B7280; }
+.hw-load-badge { font-size: 9px; font-weight: 800; background: #F6F4FD; padding: 1px 6px; border-radius: 6px; }
+.hw-sort-seg { display: inline-flex; gap: 2px; padding: 2px; background: #F1EEFB; border-radius: 8px; }
+.hw-sort-seg i { font-style: normal; font-size: 9px; font-weight: 700; color: #8B87AD; padding: 3px 9px; border-radius: 6px; }
+.hw-sort-seg i.is-on { background: #fff; color: #7C6FE0; box-shadow: 0 1px 4px rgba(124,111,224,0.18); }
+.hw-plus { font-style: normal; color: #B5B0CF; font-weight: 800; }
 .hw-task-tag { font-style: normal; font-size: 8px; font-weight: 700; color: #92400E; background: #FEF3C7; border-radius: 5px; padding: 1px 6px; }
 
 /* task modal */
@@ -1361,8 +1469,10 @@ const CSS = `
 @keyframes hw-u-k { to { stroke-dashoffset: 0; } }
 .hw-u-knob { opacity: 0; animation: hw-knob-k 300ms cubic-bezier(.2,.9,.3,1.4) 1900ms both; }
 @keyframes hw-knob-k { 0%{opacity:0; transform: scale(0.3); transform-origin: 36px 12.5px;} 100%{opacity:1; transform: scale(1);} }
-.hw-close-h { font-size: clamp(14px, 2.4vw, 20px); font-weight: 400; color: #fff; text-align: center; max-width: 340px; }
-.hw-close-cta { background: #D4920E; color: #13111E; font-weight: 800; font-size: 11px; padding: 9px 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(212,146,14,0.35); }
+.hw-close-h { font-size: clamp(15px, 2.4vw, 22px); font-weight: 400; color: #fff; text-align: center; max-width: 380px; }
+.hw-close-cta { display: inline-block; background: #D4920E; color: #13111E; font-weight: 800; font-size: 13px; padding: 11px 26px; border-radius: 9px; box-shadow: 0 0 34px rgba(212,146,14,0.4); text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.hw-close-cta:hover { transform: translateY(-2px); box-shadow: 0 0 44px rgba(212,146,14,0.55); }
+.hw-close-sub { font-size: 9.5px; color: rgba(255,255,255,0.45); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   .hw-scene, .hw-caption { animation: none !important; }
