@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
 import { HeroWalkthrough } from '@/components/animations/HeroWalkthrough'
 import { LiveDemo } from '@/components/animations/LiveDemo'
+import { UniqueFeatures } from '@/components/UniqueFeatures'
 import { appHref } from '@/lib/appUrl'
 
 const BOARDS = [
@@ -18,15 +19,6 @@ const STATS = [
   { value: '180+', label: 'Countries & territories' },
 ]
 
-const UNIQUE_FEATURES = [
-  { icon: '🔀', title: 'Cross-timetable clash detection', desc: 'The same faculty member double-booked across two entirely separate timetables — caught instantly, not just within one schedule.' },
-  { icon: '🔗', title: 'Directory auto-link, any naming convention', desc: 'Name your levels "KG1", "Grade 1", "Year 7", or "Class-I" — schedU adapts and groups them. Type a faculty or room name that already exists and it links automatically: one record, reused everywhere.' },
-  { icon: '🍱', title: 'Per-grade staggered breaks', desc: 'Nursery breaks after P3, Class VI after P5, Class XI after P6 — every grade\'s break lands at its own real time, automatically.' },
-  { icon: '🔁', title: 'Transpose any view instantly', desc: 'Flip Class, Faculty, Venue, or Subject views between periods-as-columns and days-as-columns with one click.' },
-  { icon: '🧩', title: 'True AND / OR combination engine', desc: 'AND runs subjects in genuine parallel across sections, streams, and blocks. OR competes for a single slot based on real period need — never a fake simultaneous split.' },
-  { icon: '📡', title: 'A live Pulse on every view', desc: 'Every schedule view — class, faculty, venue, subject — carries the same live "now" indicator, not just one dashboard.' },
-  { icon: '🛟', title: 'Live substitution & fair duty assignment', desc: 'Mark a faculty member absent and get ranked cover suggestions scored on real workload — assign in one click, right from the Live board, with a fairness note on every pick.' },
-]
 
 const TIERS = [
   {
@@ -150,15 +142,8 @@ export default function HomePage() {
         <h2 className="mb-9 max-w-[560px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
           Seven things <span className="italic text-[#7C6FE0]">only schedU does.</span>
         </h2>
-        <div className="grid w-full max-w-[1040px] grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
-          {UNIQUE_FEATURES.map(f => (
-            <div key={f.title} className={`rounded-xl border border-[#E8E4FF] bg-[#FAFAFE] px-6 py-6 ${cardHover}`}>
-              <div className="mb-3 text-[26px] leading-none">{f.icon}</div>
-              <h3 className="mb-2 text-[14.5px] font-bold text-[#13111E]">{f.title}</h3>
-              <p className="text-[13px] leading-[1.65] text-[#4B5275]">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mb-7 text-center text-[13px] text-[#8B87AD]">Click any card to try the actual mechanic — every demo is interactive.</p>
+        <UniqueFeatures />
       </section>
 
       {/* Global board support */}

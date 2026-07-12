@@ -182,7 +182,7 @@ function Cursor({ steps, dur, grab }: { steps: CurStep[]; dur: number; grab?: [n
         <svg viewBox="0 0 24 24" width="18" height="18" style={grab ? { animation: `hw-hide 1ms linear ${grab[0]}ms both, hw-show 1ms linear ${grab[1]}ms both` } : undefined}>
           <path d="M4 2 L4 20 L9 15.5 L12.5 22 L15 20.5 L11.5 14 L18 14 Z" fill="#fff" stroke="#13111E" strokeWidth="1.3" strokeLinejoin="round" />
         </svg>
-        {grab && <span className="hw-cur-hand" style={{ animation: `hw-show 1ms linear ${grab[0]}ms both, hw-hide 1ms linear ${grab[1]}ms both` }}>✊</span>}
+        {grab && <span className="hw-cur-hand" style={{ opacity: 0, animation: `hw-show 1ms linear ${grab[0]}ms both, hw-hide 1ms linear ${grab[1]}ms both` }}>✊</span>}
       </span>
       {steps.filter((st) => st.click).map((st, i) => <span key={i} className="hw-ring" style={{ animationDelay: `${st.at + 120}ms` }} />)}
     </div>
@@ -339,7 +339,7 @@ function SRes() {
           ))}
           <In d={900} className="hw-ai-pill hw-swap">
             <span className="hw-sa2" style={{ animationDelay: "2200ms" }}>Applying CBSE standards…</span>
-            <span className="hw-green" style={{ animation: "hw-show 1ms linear 2200ms both" }}>✓ CBSE assigned</span>
+            <span className="hw-green" style={{ opacity: 0, animation: "hw-show 1ms linear 2200ms both" }}>✓ CBSE assigned</span>
           </In>
         </div>
         <div className="hw-panel hw-swap">
@@ -660,10 +660,10 @@ function SDnd() {
         <div className="hw-h2">IX-A · Edit mode <span className="hw-edit-chip">✏ editing</span></div>
         <span className="hw-swap" style={{ fontSize: 10, fontWeight: 700 }}>
           <span className="hw-sa2" style={{ animationDelay: `${DND_T.grab}ms`, color: "#8B87AD" }}>drag any lesson to move it</span>
-          <span style={{ color: "#7C6FE0", animation: `hw-show 1ms linear ${DND_T.grab}ms both, hw-hide 1ms linear ${DND_T.bad}ms both` }}>✊ dragging Maths · A. Carter…</span>
-          <span style={{ color: "#DC2626", animation: `hw-show 1ms linear ${DND_T.bad}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}>✕ can&rsquo;t drop here — A. Carter teaches X-B at this time</span>
-          <span style={{ color: "#7C6FE0", animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both, hw-hide 1ms linear ${DND_T.drop}ms both` }}>✊ dragging Maths · A. Carter…</span>
-          <span style={{ color: "#059669", animation: `hw-show 1ms linear ${DND_T.drop}ms both` }}>✓ dropped — no clashes, saved</span>
+          <span style={{ color: "#7C6FE0", opacity: 0, animation: `hw-show 1ms linear ${DND_T.grab}ms both, hw-hide 1ms linear ${DND_T.bad}ms both` }}>✊ dragging Maths · A. Carter…</span>
+          <span style={{ color: "#DC2626", opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}>✕ can&rsquo;t drop here — A. Carter teaches X-B at this time</span>
+          <span style={{ color: "#7C6FE0", opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both, hw-hide 1ms linear ${DND_T.drop}ms both` }}>✊ dragging Maths · A. Carter…</span>
+          <span style={{ color: "#059669", opacity: 0, animation: `hw-show 1ms linear ${DND_T.drop}ms both` }}>✓ dropped — no clashes, saved</span>
         </span>
       </div>
       <div className="hw-tt-grid hw-dnd-grid" style={{ marginTop: 8 }}>
@@ -679,20 +679,20 @@ function SDnd() {
               if (c === "SRC") return (
                 <span key={ci} className="hw-tt-cell hw-dnd-src hw-swap" data-hw="src">
                   <b className="hw-sa2" style={{ animationDelay: `${DND_T.grab}ms`, background: TINT.Maths }}>Maths<i>A. Carter</i></b>
-                  <i className="hw-dnd-empty" style={{ animation: `hw-show 1ms linear ${DND_T.grab}ms both` }} />
+                  <i className="hw-dnd-empty" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.grab}ms both` }} />
                 </span>
               );
               if (c === "TGT") return (
                 <span key={ci} className="hw-tt-cell hw-dnd-tgt hw-swap" data-hw="tgt">
                   <i className="hw-dnd-ok hw-sa2" style={{ animationDelay: `${DND_T.drop}ms` }}>free — drop here</i>
-                  <b className="hw-dnd-landed" style={{ animation: `hw-show 1ms linear ${DND_T.drop}ms both`, background: TINT.Maths }}>Maths<i>A. Carter</i></b>
+                  <b className="hw-dnd-landed" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.drop}ms both`, background: TINT.Maths }}>Maths<i>A. Carter</i></b>
                 </span>
               );
               if (c === "BAD") return (
                 <span key={ci} className="hw-tt-cell hw-swap" data-hw="bad">
                   <span className="hw-sa2" style={{ animationDelay: `${DND_T.bad - 150}ms` }}><b style={{ background: TINT.Hindi }}>Hindi<i>M. Lopez</i></b></span>
-                  <span className="hw-dnd-bad" style={{ animation: `hw-show 1ms linear ${DND_T.bad - 150}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}><b>✕ A. Carter busy</b></span>
-                  <span style={{ animation: `hw-hide 1ms linear 0ms both, hw-show 1ms linear ${DND_T.bad + 900}ms both` }}><b style={{ background: TINT.Hindi }}>Hindi<i>M. Lopez</i></b></span>
+                  <span className="hw-dnd-bad" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad - 150}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}><b>✕ A. Carter busy</b></span>
+                  <span style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both` }}><b style={{ background: TINT.Hindi }}>Hindi<i>M. Lopez</i></b></span>
                 </span>
               );
               return <span key={ci} className="hw-tt-cell" style={{ background: TINT[c] }}><b>{c}<i>{FACULTY[(ci + 1) % 5]}</i></b></span>;
@@ -722,8 +722,8 @@ function SLoad() {
         <span className="hw-btn-violet hw-press" data-hw="reopt" style={{ animationDelay: "2100ms", fontSize: 10, padding: "7px 13px" }}>
           <span className="hw-swap" style={{ display: "inline-grid" }}>
             <span className="hw-sa2" style={{ animationDelay: "2300ms" }}>⚖ Optimize load</span>
-            <span style={{ animation: "hw-show 1ms linear 2300ms both, hw-hide 1ms linear 3400ms both" }}>Optimising…</span>
-            <span style={{ animation: "hw-hide 1ms linear 0ms both, hw-show 1ms linear 3400ms both" }}>⚖ Optimize load</span>
+            <span style={{ opacity: 0, animation: "hw-show 1ms linear 2300ms both, hw-hide 1ms linear 3400ms both" }}>Optimising…</span>
+            <span style={{ opacity: 0, animation: "hw-show 1ms linear 3400ms both" }}>⚖ Optimize load</span>
           </span>
         </span>
       </div>
@@ -736,7 +736,7 @@ function SLoad() {
             </span>
             <span className="hw-mono hw-swap" style={{ fontSize: 8.5, color: "#6B7280", display: "inline-grid" }}>
               <span className="hw-sa2" style={{ animationDelay: "3700ms" }}>{Math.round(w0 * 0.32)}/wk</span>
-              <span style={{ animation: "hw-show 1ms linear 3700ms both" }}>{Math.round(w1 * 0.32)}/wk</span>
+              <span style={{ opacity: 0, animation: "hw-show 1ms linear 3700ms both" }}>{Math.round(w1 * 0.32)}/wk</span>
             </span>
           </In>
         ))}
@@ -879,17 +879,17 @@ function SLive() {
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <b className="hw-live-clock hw-swap" style={{ display: "inline-grid" }}>
               <span className="hw-sa2" style={{ animationDelay: `${P}ms` }}>{clock}</span>
-              <span style={{ animation: `hw-show 1ms linear ${P}ms both, hw-hide 1ms linear 3400ms both` }}>12:40 PM</span>
-              <span style={{ animation: `hw-show 1ms linear 3400ms both, hw-hide 1ms linear ${BACK}ms both` }}>10:15 AM</span>
-              <span style={{ animation: `hw-hide 1ms linear 0ms both, hw-show 1ms linear ${BACK}ms both` }}>{clock}</span>
+              <span style={{ opacity: 0, animation: `hw-show 1ms linear ${P}ms both, hw-hide 1ms linear 3400ms both` }}>12:40 PM</span>
+              <span style={{ opacity: 0, animation: `hw-show 1ms linear 3400ms both, hw-hide 1ms linear ${BACK}ms both` }}>10:15 AM</span>
+              <span style={{ opacity: 0, animation: `hw-show 1ms linear ${BACK}ms both` }}>{clock}</span>
             </b>
             <span className="hw-sub" style={{ display: "inline", fontSize: 11 }}>Period 3 · <b style={{ color: "#16A34A" }}>{minLeft} min left</b></span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className="hw-swap" style={{ display: "inline-grid", fontSize: 10.5, fontWeight: 700 }}>
               <span className="hw-live-badge hw-sa2" style={{ animationDelay: `${P}ms` }}>● Live</span>
-              <span style={{ color: "#9A95BC", animation: `hw-show 1ms linear ${P}ms both, hw-hide 1ms linear ${BACK}ms both` }}>● Paused</span>
-              <span className="hw-live-badge" style={{ animation: `hw-hide 1ms linear 0ms both, hw-show 1ms linear ${BACK}ms both` }}>● Live</span>
+              <span style={{ color: "#9A95BC", opacity: 0, animation: `hw-show 1ms linear ${P}ms both, hw-hide 1ms linear ${BACK}ms both` }}>● Paused</span>
+              <span className="hw-live-badge" style={{ opacity: 0, animation: `hw-show 1ms linear ${BACK}ms both` }}>● Live</span>
             </span>
             <span className="hw-now-btn hw-flash" data-hw="nowbtn" style={{ animationDelay: `${BACK - 200}ms` }}>Now</span>
           </div>
@@ -1053,7 +1053,7 @@ function SSub() {
           <div className="hw-row-between" style={{ marginBottom: 3 }}>
             <b className="hw-swap" style={{ fontSize: 10.5 }}>
               <span className="hw-sa2" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>M. Lopez</span>
-              <span style={{ color: "#DC2626", animation: `hw-show 1ms linear ${SUB_T.leave + 150}ms both` }}>M. Lopez · on leave</span>
+              <span style={{ color: "#DC2626", opacity: 0, animation: `hw-show 1ms linear ${SUB_T.leave + 150}ms both` }}>M. Lopez · on leave</span>
             </b>
             <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
               <span className="hw-leave-btn hw-press" data-hw="leave" style={{ animationDelay: `${SUB_T.leave}ms` }}>⚑ Leave</span>
@@ -1149,32 +1149,54 @@ function SPrint() {
           <span className="hw-cta hw-press" data-hw="export" style={{ padding: "5px 14px", fontSize: 10, animationDelay: "2000ms" }}>Export</span>
         </div>
       </div>
-      <In d={2300} className="hw-print-sheet">
-        <div className="hw-print-head">
-          <svg viewBox="0 0 52 52" width="14" height="14"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#000" strokeWidth="9" strokeLinecap="round" /></svg>
-          <b>schedU</b> · Eden&rsquo;s Academy · IX-A
-          <span className="hw-compact-toggle hw-flash" data-hw="compact" style={{ animationDelay: "3500ms" }}>
-            <span className="hw-swap" style={{ display: "inline-grid" }}>
-              <span className="hw-sa2" style={{ animationDelay: "3700ms" }}>◻ Compact</span>
-              <span style={{ animation: "hw-show 1ms linear 3700ms both" }}>☑ Compact</span>
+      <div className="hw-center-abs">
+        <In d={2300} className="hw-print-sheet">
+          <div className="hw-print-head">
+            <svg viewBox="0 0 52 52" width="16" height="16"><path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#000" strokeWidth="9" strokeLinecap="round" /></svg>
+            <b>schedU</b> · Eden&rsquo;s Academy · Class IX-A · AY 2026–27
+            <span className="hw-compact-toggle hw-flash" data-hw="compact" style={{ animationDelay: "3500ms" }}>
+              <span className="hw-swap" style={{ display: "inline-grid" }}>
+                <span className="hw-sa2" style={{ animationDelay: "3700ms" }}>◻ Compact</span>
+                <span style={{ opacity: 0, animation: "hw-show 1ms linear 3700ms both" }}>☑ Compact</span>
+              </span>
             </span>
-          </span>
-        </div>
-        <div className="hw-swap">
-          <div className="hw-sa2" style={{ animationDelay: "3800ms" }}>
-            <div className="hw-print-grid">
-              {Array.from({ length: 15 }, (_, i) => <span key={i} className="hw-print-cell">{["Mathematics", "Science", "English", "Hindi", "Soc. Studies"][i % 5]}</span>)}
-            </div>
-            <div className="hw-print-note">1 section / page</div>
           </div>
-          <div style={{ animation: "hw-show 1ms linear 3800ms both", opacity: 0 }}>
-            <div className="hw-print-grid hw-print-compact">
-              {Array.from({ length: 30 }, (_, i) => <span key={i} className="hw-print-cell">{["Mat", "Sci", "Eng", "Hin", "SSt"][i % 5]}</span>)}
+          <div className="hw-swap">
+            {/* Full print layout — real buildPrintHTML shape: periods across, days down */}
+            <div className="hw-sa2" style={{ animationDelay: "3800ms" }}>
+              <div className="hw-print-table">
+                <div className="hw-print-row hw-print-hrow">
+                  {["", "P1 · 8:10", "P2 · 8:50", "P3 · 9:30", "P4 · 11:40", "P5 · 12:20"].map((h, i) => <span key={i}>{h}</span>)}
+                </div>
+                {[["Mon", ["Mathematics", "Science", "English", "Hindi", "Soc. Studies"]], ["Tue", ["English", "Mathematics", "Soc. Studies", "Science", "Hindi"]], ["Wed", ["Mathematics", "Soc. Studies", "Science", "English", "Mathematics"]], ["Thu", ["Science", "English", "Mathematics", "Soc. Studies", "Hindi"]], ["Fri", ["Hindi", "Mathematics", "Soc. Studies", "English", "Science"]]].map(([d, cells]) => (
+                  <div key={String(d)} className="hw-print-row">
+                    <span className="hw-print-day">{d}</span>
+                    {(cells as string[]).map((c, i) => <span key={i}>{c}<i>{FACULTY[i % 5]}</i></span>)}
+                  </div>
+                ))}
+              </div>
+              <div className="hw-print-note">1 section / page · subject names printed as text — grayscale-safe</div>
             </div>
-            <div className="hw-print-note hw-green">✓ short names · 2 sections / page — half the paper</div>
+            {/* Paper-saving compact — short names, two sections per page */}
+            <div style={{ animation: "hw-show 1ms linear 3800ms both", opacity: 0 }}>
+              {["IX-A", "IX-B"].map((sec) => (
+                <div key={sec} className="hw-print-table hw-print-compact" style={{ marginBottom: 6 }}>
+                  <div className="hw-print-row hw-print-hrow">
+                    {[sec, "P1", "P2", "P3", "P4", "P5"].map((h, i) => <span key={i}>{h}</span>)}
+                  </div>
+                  {[["Mon", ["Mat", "Sci", "Eng", "Hin", "SSt"]], ["Tue", ["Eng", "Mat", "SSt", "Sci", "Hin"]], ["Wed", ["Mat", "SSt", "Sci", "Eng", "Mat"]]].map(([d, cells]) => (
+                    <div key={String(d)} className="hw-print-row">
+                      <span className="hw-print-day">{d}</span>
+                      {(cells as string[]).map((c, i) => <span key={i}>{c}</span>)}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div className="hw-print-note hw-green">✓ short names · 2 sections / page — half the paper</div>
+            </div>
           </div>
-        </div>
-      </In>
+        </In>
+      </div>
       <Cursor dur={5600} steps={[
         { t: '[data-hw="fmtprint"]', at: 900, click: true, hold: 500 },
         { t: '[data-hw="export"]', at: 1900, click: true, hold: 500 },
@@ -1465,14 +1487,21 @@ const CSS = `
 .hw-fmt-check { color: #7C6FE0; opacity: 0; animation: hw-show 1ms linear both; }
 .hw-export-panel.hw-sa2 { animation-name: hw-panel-away; animation-duration: 400ms; animation-timing-function: ease; }
 @keyframes hw-panel-away { to { opacity: 0; visibility: hidden; transform: translateY(-14px); } }
-/* Print sheet — centered and large: the payoff of the scene */
-.hw-print-sheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -46%); width: min(440px, 72%); background: #fff; border: 1px solid #D1D5DB; outline: 2.5px dashed #CBD5E1; outline-offset: 7px; border-radius: 5px; padding: 14px 16px; box-shadow: 0 28px 70px rgba(0,0,0,0.3); }
-.hw-print-head { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #000; border-bottom: 1.5px solid #000; padding-bottom: 7px; margin-bottom: 8px; }
-.hw-compact-toggle { margin-left: auto; font-size: 9px; font-weight: 700; color: #374151; border: 1px solid #D1D5DB; border-radius: 6px; padding: 3px 8px; }
-.hw-print-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
-.hw-print-cell { border: 0.5px solid #9CA3AF; font-size: 8.5px; color: #111; text-align: center; padding: 7px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hw-print-compact .hw-print-cell { padding: 3.5px 0; font-size: 7.5px; }
-.hw-print-note { font-size: 9px; color: #6B7280; margin-top: 7px; text-align: center; }
+/* Print sheet — centered via flex wrapper (transform-free, so the hw-in
+   entrance animation can't knock it off-center) and large: the payoff. */
+.hw-center-abs { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px; pointer-events: none; }
+.hw-print-sheet { width: min(560px, 86%); background: #fff; border: 1px solid #D1D5DB; outline: 2.5px dashed #CBD5E1; outline-offset: 8px; border-radius: 5px; padding: 16px 18px; box-shadow: 0 28px 70px rgba(0,0,0,0.3); }
+.hw-print-head { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #000; border-bottom: 1.5px solid #000; padding-bottom: 8px; margin-bottom: 9px; }
+.hw-compact-toggle { margin-left: auto; font-size: 9.5px; font-weight: 700; color: #374151; border: 1px solid #D1D5DB; border-radius: 6px; padding: 3px 9px; }
+.hw-print-table { border: 1px solid #6B7280; }
+.hw-print-row { display: grid; grid-template-columns: 0.6fr repeat(5, 1fr); }
+.hw-print-row span { border: 0.5px solid #9CA3AF; font-size: 8.5px; color: #111; text-align: center; padding: 5px 2px; overflow: hidden; }
+.hw-print-row span i { display: block; font-style: normal; font-size: 7px; color: #4B5563; }
+.hw-print-hrow span { font-weight: 700; background: #F3F4F6; font-family: 'DM Mono', monospace; font-size: 8px; }
+.hw-print-day { font-weight: 700; background: #F9FAFB; }
+.hw-print-compact .hw-print-row span { padding: 2.5px 2px; font-size: 7.5px; }
+.hw-print-compact .hw-print-row span i { display: none; }
+.hw-print-note { font-size: 9.5px; color: #6B7280; margin-top: 8px; text-align: center; }
 
 /* live / calendar */
 .hw-live-toolbar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
@@ -1490,8 +1519,8 @@ const CSS = `
 .hw-live-badge { font-size: 10.5px; font-weight: 700; color: #16A34A; }
 .hw-now-btn { font-size: 10.5px; font-weight: 700; color: #7C6FE0; background: #fff; border: 1px solid #E3DEF7; border-radius: 8px; padding: 4px 11px; }
 /* The real LiveBoard card + MomentScrubber (calendar.tsx 1458-1742) */
-.hw-board-card { background: #fff; border: 1px solid #ECE9FB; border-radius: 14px; overflow: hidden; margin-top: 8px; }
-.hw-board-body { border-top: 1px solid #F2F0FB; padding: 10px 14px 12px; background: #FBFAFF; }
+.hw-board-card { background: #fff; border: 1px solid #ECE9FB; border-radius: 14px; overflow: hidden; margin-top: 6px; }
+.hw-board-body { border-top: 1px solid #F2F0FB; padding: 8px 14px 10px; background: #FBFAFF; }
 .hw-scrub-track { position: relative; height: 44px; border-radius: 12px; background: #F4F2FE; border: 1px solid #ECE9FB; display: flex; gap: 2px; padding: 6px 0; }
 .hw-scrub-band { display: flex; flex-direction: column; border-radius: 5px; overflow: hidden; border: 1px solid rgba(19,17,30,0.07); }
 .hw-scrub-band i { display: block; }
@@ -1508,9 +1537,10 @@ const CSS = `
 .hw-legend i { width: 10px; height: 10px; border-radius: 3px; border: 1px solid rgba(19,17,30,0.08); }
 .hw-live-section { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin: 4px 0 8px; }
 .hw-sec-dot { width: 7px; height: 7px; border-radius: 4px; }
-.hw-live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.hw-live-card { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #ECE9FB; border-radius: 13px; padding: 9px 11px; }
-.hw-ring-wrap { position: relative; width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.hw-live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hw-live-card { display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid #ECE9FB; border-radius: 13px; padding: 6px 10px; }
+.hw-ring-wrap { position: relative; width: 36px; height: 36px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.hw-ring-wrap svg { width: 36px; height: 36px; }
 .hw-ring-wrap b { position: absolute; font-size: 9.5px; font-weight: 800; }
 .hw-live-entity { font-size: 10.5px; font-weight: 700; color: #9A95BC; margin-bottom: 1px; }
 .hw-live-subj { display: inline-block; font-size: 10px; font-weight: 800; border-radius: 6px; padding: 1.5px 8px; margin: 1px 0; white-space: nowrap; }

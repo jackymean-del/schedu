@@ -50,11 +50,18 @@ export function LiveDemo() {
   const [sort, setSort] = useState<"light" | "heavy">("light");
   const [absent, setAbsent] = useState<string | null>(null);
   const [covered, setCovered] = useState(false);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
+    // Follow the visitor's real clock while it's inside the demo school day;
+    // outside school hours (evenings, other timezones) anchor "now" at 11 AM
+    // and keep it ticking, so the drag-ahead / mark-absent flow always works.
+    const mounted = Date.now();
     const tick = () => {
       const d = new Date();
-      setNow(Math.max(DAY_START, Math.min(DAY_END, d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60)));
+      const real = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+      if (real >= DAY_START && real <= DAY_END - 45) setNow(real);
+      else setNow(11 * 60 + (Date.now() - mounted) / 60000);
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -66,9 +73,17 @@ export function LiveDemo() {
   const zone = value < 11.5 * 60 ? "morning" : value < 12.75 * 60 ? "noon" : "afternoon";
   const cards = zone === "morning" ? MORNING : zone === "noon" ? NOON : AFTERNOON;
   const ringPct = Math.min(99, Math.max(5, Math.round(((value % 40) / 40) * 100)));
+  // You plan cover for periods that haven't happened yet — marking someone
+  // absent for a finished lesson makes no sense. So "mark absent" only
+  // appears once the visitor scrubs AHEAD of the real clock.
+  const isFuture = value > now + 1;
+
+  const q = query.trim().toLowerCase();
+  const matches = (c: Card) => !q || c.t.toLowerCase().includes(q) || c.s.toLowerCase().includes(q) || c.n.toLowerCase().includes(q);
 
   const free = [...FREE[zone]]
     .filter(([n]) => n !== absent)
+    .filter(([n]) => !q || n.toLowerCase().includes(q))
     .sort((a, b) => (sort === "light" ? a[1] - b[1] : b[1] - a[1]) || a[0].localeCompare(b[0]));
 
   const seek = (clientX: number) => {
@@ -85,7 +100,7 @@ export function LiveDemo() {
     window.addEventListener("pointerup", up);
   };
 
-  const visibleCards = absent ? cards.filter((c) => c.t !== absent || covered) : cards;
+  const visibleCards = (absent ? cards.filter((c) => c.t !== absent || covered) : cards).filter(matches);
 
   return (
     <div className="ld-wrap">
@@ -126,7 +141,16 @@ export function LiveDemo() {
         </div>
 
         <div className="ld-body">
-          <div className="ld-seclabel" style={{ color: "#16A34A" }}><i style={{ background: "#16A34A" }} />In session · {visibleCards.length}</div>
+          <div className="ld-toprow">
+            <div className="ld-seclabel" style={{ color: isFuture ? "#7C6FE0" : "#16A34A", margin: 0 }}>
+              <i style={{ background: isFuture ? "#7C6FE0" : "#16A34A" }} />
+              {isFuture ? `Upcoming at ${fmt(value)} · ${visibleCards.length}` : `In session · ${visibleCards.length}`}
+            </div>
+            <input className="ld-search" type="search" placeholder="🔎 search faculty, class, or subject…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search faculty, class, or subject" />
+          </div>
+          {!isFuture && !absent && (
+            <div className="ld-plan-hint">Planning cover? Drag the timeline <b>ahead of now</b> — you mark an absence for an upcoming period, not one that&rsquo;s already over.</div>
+          )}
           <div className="ld-grid">
             {visibleCards.map((c) => (
               <div key={c.n} className="ld-session">
@@ -143,7 +167,7 @@ export function LiveDemo() {
                   <div className="ld-teacher">
                     {c.t === absent && covered ? <><s>{c.t}</s> → D. Novak <b className="ld-green">(sub) ✓</b></> : c.t}
                   </div>
-                  {c.t !== absent && !absent && (
+                  {c.t !== absent && !absent && isFuture && (
                     <button className="ld-absent-btn" onClick={() => { setAbsent(c.t); setCovered(false); }}>mark absent</button>
                   )}
                 </div>
@@ -153,7 +177,7 @@ export function LiveDemo() {
 
           {absent && !covered && (
             <div className="ld-subpanel">
-              <b>{absent} marked absent.</b> Ranked cover for this slot:
+              <b>{absent} marked absent for the {fmt(value)} period.</b> Ranked cover for this slot:
               <div className="ld-cands">
                 <button className="ld-cand ld-cand-top" onClick={() => setCovered(true)}>① D. Novak · Tier 1 · free now · 1 today ✓ — <u>assign</u></button>
                 <span className="ld-cand">② L. Silva · Tier 2 · free · 4 today</span>
@@ -208,6 +232,10 @@ export function LiveDemo() {
         .ld-legend i { width: 10px; height: 10px; border-radius: 3px; border: 1px solid rgba(19,17,30,0.08); }
         .ld-hint { color: #7C6FE0 !important; margin-left: auto; }
         .ld-body { border-top: 1px solid #F2F0FB; padding: 16px 18px; background: #FBFAFF; }
+        .ld-toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .ld-search { border: 1px solid #E3DEF7; border-radius: 9px; padding: 6px 12px; font-size: 12px; font-family: inherit; color: #13111E; background: #fff; outline: none; min-width: 240px; }
+        .ld-search:focus { border-color: #7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.12); }
+        .ld-plan-hint { margin-bottom: 12px; background: #F5F3FF; border: 1px solid #DDD8FF; border-radius: 9px; padding: 8px 12px; font-size: 11.5px; color: #5B52A8; }
         .ld-seclabel { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
         .ld-seclabel i { width: 7px; height: 7px; border-radius: 4px; }
         .ld-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
