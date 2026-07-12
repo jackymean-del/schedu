@@ -84,13 +84,13 @@ export default function OpengraphImage() {
             lineHeight: 1.08,
           }}
         >
-          <span>Timetables that tune</span>
-          <span>themselves.</span>
+          <span>Schedules that</span>
+          <span style={{ fontStyle: "italic", color: "#B9AFF0" }}>stay alive.</span>
         </div>
 
         {/* tagline */}
         <div style={{ display: "flex", fontSize: 24, fontWeight: 500, color: "#8B87AD", marginTop: 18 }}>
-          Academic planning &amp; scheduling intelligence for schools.
+          A live board that follows the clock — for any institution, any curriculum.
         </div>
 
         {/* bhusku attribution */}

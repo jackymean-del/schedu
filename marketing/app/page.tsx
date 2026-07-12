@@ -59,8 +59,8 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'schedU — The last schedule you\'ll ever fix by hand',
-  description: 'schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere.',
+  title: 'schedU — Schedules That Stay Alive | AI Timetable Generator',
+  description: 'AI-generated, conflict-free timetables that keep living after publish day: a live board that follows the clock, fair one-click substitutions, and workload balancing. Any board, any curriculum, anywhere.',
   alternates: { canonical: '/' },
 }
 
@@ -95,15 +95,15 @@ export default function HomePage() {
         <div className="mx-auto mt-10 max-w-[1000px] px-6 text-center">
           <div className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[#E8C88A] bg-[#FDF6E7] px-4 py-[5px] text-xs font-semibold text-[#92702A]">
             <span className="inline-block size-[7px] shrink-0 rounded-full bg-[#D4920E]" />
-            The only scheduler with a live Tuner Console
+            The only scheduler with a live board that follows the clock
           </div>
           <h1 className="mb-[16px] text-[clamp(30px,5.5vw,50px)] font-normal leading-[1.12] tracking-[-1.4px] text-[#13111E]">
-            The last schedule you&rsquo;ll ever{' '}
-            <span className="italic text-[#7C6FE0]">fix by hand.</span>
+            Schedules that <span className="italic text-[#7C6FE0]">stay alive.</span>
           </h1>
-          <p className="mx-auto mb-8 max-w-[620px] text-base leading-[1.75] text-[#4B5275]">
-            Tune it like sound, resolve it like a puzzle — across every building, room,
-            and combination your institution runs.
+          <p className="mx-auto mb-8 max-w-[640px] text-base leading-[1.75] text-[#4B5275]">
+            Most timetables die the day they&rsquo;re published. Yours follows the clock —
+            who&rsquo;s teaching, who&rsquo;s free, who&rsquo;s covering — every minute of term,
+            across every schedule your institution runs.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <a href={appHref('/login')} className="no-underline">
