@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
 import { HeroWalkthrough } from '@/components/animations/HeroWalkthrough'
+import { LiveDemo } from '@/components/animations/LiveDemo'
 import { appHref } from '@/lib/appUrl'
 
 const BOARDS = [
@@ -18,12 +19,13 @@ const STATS = [
 ]
 
 const UNIQUE_FEATURES = [
-  { icon: '🔀', title: 'Cross-timetable clash detection', desc: 'The same teacher double-booked across two entirely separate timetables — caught instantly, not just within one schedule.' },
-  { icon: '🔗', title: 'Directory auto-link', desc: 'Type a teacher or room name that already exists elsewhere and schedU links it automatically — one record, reused everywhere.' },
+  { icon: '🔀', title: 'Cross-timetable clash detection', desc: 'The same faculty member double-booked across two entirely separate timetables — caught instantly, not just within one schedule.' },
+  { icon: '🔗', title: 'Directory auto-link, any naming convention', desc: 'Name your levels "KG1", "Grade 1", "Year 7", or "Class-I" — schedU adapts and groups them. Type a faculty or room name that already exists and it links automatically: one record, reused everywhere.' },
   { icon: '🍱', title: 'Per-grade staggered breaks', desc: 'Nursery breaks after P3, Class VI after P5, Class XI after P6 — every grade\'s break lands at its own real time, automatically.' },
-  { icon: '🔁', title: 'Transpose any view instantly', desc: 'Flip Class, Teacher, Room, or Subject views between periods-as-columns and days-as-columns with one click.' },
+  { icon: '🔁', title: 'Transpose any view instantly', desc: 'Flip Class, Faculty, Venue, or Subject views between periods-as-columns and days-as-columns with one click.' },
   { icon: '🧩', title: 'True AND / OR combination engine', desc: 'AND runs subjects in genuine parallel across sections, streams, and blocks. OR competes for a single slot based on real period need — never a fake simultaneous split.' },
-  { icon: '📡', title: 'A live Pulse on every view', desc: 'Every schedule view — class, teacher, room, subject — carries the same live "now" indicator, not just one dashboard.' },
+  { icon: '📡', title: 'A live Pulse on every view', desc: 'Every schedule view — class, faculty, venue, subject — carries the same live "now" indicator, not just one dashboard.' },
+  { icon: '🛟', title: 'Live substitution & fair duty assignment', desc: 'Mark a faculty member absent and get ranked cover suggestions scored on real workload — assign in one click, right from the Live board, with a fairness note on every pick.' },
 ]
 
 const TIERS = [
@@ -130,11 +132,23 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Try it live — a genuinely interactive Live board, not a video */}
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16">
+        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">No signup needed — try it right here</p>
+        <h2 className="mb-2 max-w-[640px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
+          Drag through a school day, <span className="italic text-[#7C6FE0]">live.</span>
+        </h2>
+        <p className="mb-8 max-w-[560px] text-center text-[14px] leading-[1.65] text-[#4B5275]">
+          This is the Live board. Drag the timeline, sort free faculty by load, mark someone absent and assign a fairness-checked substitute — the same mechanics as the product.
+        </p>
+        <LiveDemo />
+      </section>
+
       {/* Unique features — dense grid, no empty space */}
       <section id="unique" className="flex flex-col items-center bg-white px-6 py-16">
         <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Not used by anyone else</p>
         <h2 className="mb-9 max-w-[560px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
-          Six things <span className="italic text-[#7C6FE0]">only schedU does.</span>
+          Seven things <span className="italic text-[#7C6FE0]">only schedU does.</span>
         </h2>
         <div className="grid w-full max-w-[1040px] grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
           {UNIQUE_FEATURES.map(f => (
