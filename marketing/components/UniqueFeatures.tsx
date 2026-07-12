@@ -78,7 +78,7 @@ function DemoClash() {
   const [booked, setBooked] = useState(false);
   return (
     <div>
-      <p className="uf-p">Two <b>separately published</b> timetables. Book A. Carter into both at the same period:</p>
+      <p className="uf-p">Two <b>separately published</b> timetables. Book J. Abraham into both at the same period:</p>
       <div className="uf-two-col">
         {["I-V TT", "VI-X TT"].map((tt, i) => (
           <div key={tt} className="uf-mini-card">
@@ -87,15 +87,15 @@ function DemoClash() {
               {["P1", "P2", "P3"].map((p, pi) => (
                 <div key={p} className={`uf-cell ${booked && pi === 1 ? "uf-cell-clash" : ""}`}>
                   <b>{p}</b>
-                  {pi === 1 ? <span>{booked ? "A. Carter ⚠" : i === 0 ? "A. Carter" : "— free —"}</span> : <span>{["R. Patel", "", "S. Kim"][pi]}</span>}
+                  {pi === 1 ? <span>{booked ? "J. Abraham ⚠" : i === 0 ? "J. Abraham" : "— free —"}</span> : <span>{["M. Esther", "", "D. Samuel"][pi]}</span>}
                 </div>
               ))}
             </div>
           </div>
         ))}
       </div>
-      <button className="uf-btn" onClick={() => setBooked((b) => !b)}>{booked ? "Undo" : "Book A. Carter in VI-X TT · P2"}</button>
-      {booked && <div className="uf-alert">⚠ Cross-timetable clash — A. Carter is already teaching in <b>I-V TT</b> at P2. Caught the moment you typed it, across two separate schedules.</div>}
+      <button className="uf-btn" onClick={() => setBooked((b) => !b)}>{booked ? "Undo" : "Book J. Abraham in VI-X TT · P2"}</button>
+      {booked && <div className="uf-alert">⚠ Cross-timetable clash — J. Abraham is already teaching in <b>I-V TT</b> at P2. Caught the moment you typed it, across two separate schedules.</div>}
     </div>
   );
 }
@@ -113,15 +113,15 @@ function DemoNaming() {
   const [level, setLevel] = useState("");
   const [fac, setFac] = useState("");
   const parsed = parseLevel(level);
-  const linked = "a. carter".startsWith(fac.trim().toLowerCase()) && fac.trim().length >= 3;
+  const linked = "j. abraham".startsWith(fac.trim().toLowerCase()) && fac.trim().length >= 3;
   return (
     <div>
       <p className="uf-p">Type a level in <b>your</b> convention — “KG1”, “Grade 1”, “Year 7”, “Class-I”, anything:</p>
       <input className="uf-input" placeholder="e.g. KG1 or Year 7" value={level} onChange={(e) => setLevel(e.target.value)} />
       {parsed && <div className="uf-ok">✓ Understood — grouped under <b>{parsed}</b>, spacing tidied, sections auto-built.</div>}
-      <p className="uf-p" style={{ marginTop: 14 }}>Now start typing a faculty name that already exists (try “A. C…”):</p>
-      <input className="uf-input" placeholder="e.g. A. Carter" value={fac} onChange={(e) => setFac(e.target.value)} />
-      {linked && <div className="uf-ok">🔗 Linked to the existing directory record <b>A. Carter</b> — one person, reused across every schedule. No duplicates, ever.</div>}
+      <p className="uf-p" style={{ marginTop: 14 }}>Now start typing a faculty name that already exists (try “J. A…”):</p>
+      <input className="uf-input" placeholder="e.g. J. Abraham" value={fac} onChange={(e) => setFac(e.target.value)} />
+      {linked && <div className="uf-ok">🔗 Linked to the existing directory record <b>J. Abraham</b> — one person, reused across every schedule. No duplicates, ever.</div>}
     </div>
   );
 }
@@ -157,7 +157,7 @@ function DemoTranspose() {
   const [flipped, setFlipped] = useState(false);
   const days = ["Mon", "Tue", "Wed"];
   const periods = ["P1", "P2", "P3"];
-  const cell = (d: number, p: number) => ["Maths", "Science", "English", "Hindi", "S.St", "Art", "G.K.", "Maths", "Science"][d * 3 + p];
+  const cell = (d: number, p: number) => ["Maths", "Science", "English", "French", "History", "Art", "Music", "Maths", "Science"][d * 3 + p];
   const cols = flipped ? days : periods;
   const rowsL = flipped ? periods : days;
   return (
@@ -189,9 +189,9 @@ function DemoAndOr() {
       </div>
       {mode === "and" ? (
         <div>
-          <div className="uf-lane" style={{ background: "#EDE9FF" }}>Physics · A. Carter · Lab-1 <i>Cross-section</i></div>
-          <div className="uf-lane" style={{ background: "#DBEAFE" }}>Chemistry · R. Patel · Lab-2 <i>Cross-stream</i></div>
-          <div className="uf-lane" style={{ background: "#DCFCE7" }}>Economics · S. Kim · R-12 <i>Cross-block</i></div>
+          <div className="uf-lane" style={{ background: "#EDE9FF" }}>Physics · J. Abraham · Lab-1 <i>Cross-section</i></div>
+          <div className="uf-lane" style={{ background: "#DBEAFE" }}>Chemistry · M. Esther · Lab-2 <i>Cross-stream</i></div>
+          <div className="uf-lane" style={{ background: "#DCFCE7" }}>Economics · D. Samuel · R-12 <i>Cross-block</i></div>
           <p className="uf-p">All three run in the <b>same slot</b>, across sections, streams, and blocks — genuine parallel, not a visual trick.</p>
         </div>
       ) : (
@@ -216,7 +216,7 @@ function DemoPulse() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  const LENSES = [["Classes", ["IX-A · Maths", "IX-B · Science", "X-A · English"]], ["Faculty", ["A. Carter · IX-A", "R. Patel · IX-B", "S. Kim · X-A"]], ["Venues", ["Lab-1 · IX-B", "R-12 · IX-A", "Hall · X-A"]], ["Subjects", ["Maths · 3 classes", "Science · 2 classes", "English · 2 classes"]]] as const;
+  const LENSES = [["Classes", ["IX-A · Maths", "IX-B · Science", "X-A · English"]], ["Faculty", ["J. Abraham · IX-A", "M. Esther · IX-B", "D. Samuel · X-A"]], ["Venues", ["Lab-1 · IX-B", "R-12 · IX-A", "Hall · X-A"]], ["Subjects", ["Maths · 3 classes", "Science · 2 classes", "English · 2 classes"]]] as const;
   const frac = now ? Math.max(0.05, Math.min(0.95, ((now.getHours() + now.getMinutes() / 60) % 12) / 12)) : 0.4;
   return (
     <div>
@@ -238,20 +238,20 @@ function DemoSub() {
   return (
     <div>
       <div className="uf-mini-card" style={{ marginBottom: 10 }}>
-        <div className="uf-mini-title">Upcoming · P4 · X-B Hindi</div>
+        <div className="uf-mini-title">Upcoming · P4 · X-B French</div>
         <div className="uf-cell" style={{ textAlign: "left" }}>
-          <span>{step < 2 ? "M. Lopez" : <><s>M. Lopez</s> → D. Novak <b style={{ color: "#059669" }}>(sub) ✓</b></>}</span>
+          <span>{step < 2 ? "R. Naomi" : <><s>R. Naomi</s> → T. Moses <b style={{ color: "#059669" }}>(sub) ✓</b></>}</span>
         </div>
       </div>
-      {step === 0 && <button className="uf-btn" onClick={() => setStep(1)}>⚑ Mark M. Lopez absent for P4</button>}
+      {step === 0 && <button className="uf-btn" onClick={() => setStep(1)}>⚑ Mark R. Naomi absent for P4</button>}
       {step === 1 && (
         <div className="uf-subpanel">
           <b>Ranked cover — scored on real workload:</b>
-          <button className="uf-cand is-top" onClick={() => setStep(2)}>① D. Novak · free at P4 · 1 duty today · light week ✓ — <u>assign</u></button>
-          <div className="uf-cand">② L. Silva · free at P4 · 4 today</div>
+          <button className="uf-cand is-top" onClick={() => setStep(2)}>① T. Moses · free at P4 · 1 duty today · light week ✓ — <u>assign</u></button>
+          <div className="uf-cand">② E. Ruth · free at P4 · 4 today</div>
         </div>
       )}
-      {step === 2 && <div className="uf-ok">✓ Assigned. Fairness note: this is D. Novak&rsquo;s <b>first extra duty this week</b> — the lightest-loaded eligible pick. <button className="uf-reset" onClick={() => setStep(0)}>reset</button></div>}
+      {step === 2 && <div className="uf-ok">✓ Assigned. Fairness note: this is T. Moses&rsquo;s <b>first extra duty this week</b> — the lightest-loaded eligible pick. <button className="uf-reset" onClick={() => setStep(0)}>reset</button></div>}
       {step === 0 && <p className="uf-p">You plan cover <b>ahead of time</b> — mark the absence for an upcoming period and schedU ranks who can take it, fairly.</p>}
     </div>
   );

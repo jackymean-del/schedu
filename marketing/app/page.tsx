@@ -51,7 +51,7 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'schedU — Schedules That Stay Alive | AI Timetable Generator',
+  title: 'schedU — The First Timetable That Stays Alive | AI Timetable Generator',
   description: 'AI-generated, conflict-free timetables that keep living after publish day: a live board that follows the clock, fair one-click substitutions, and workload balancing. Any board, any curriculum, anywhere.',
   alternates: { canonical: '/' },
 }
@@ -90,7 +90,7 @@ export default function HomePage() {
             The only scheduler with a live board that follows the clock
           </div>
           <h1 className="mb-[16px] text-[clamp(30px,5.5vw,50px)] font-normal leading-[1.12] tracking-[-1.4px] text-[#13111E]">
-            Schedules that <span className="italic text-[#7C6FE0]">stay alive.</span>
+            The first timetable that <span className="italic text-[#7C6FE0]">stays alive.</span>
           </h1>
           <p className="mx-auto mb-8 max-w-[640px] text-base leading-[1.75] text-[#4B5275]">
             Most timetables die the day they&rsquo;re published. Yours follows the clock —

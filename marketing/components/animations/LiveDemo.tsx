@@ -17,24 +17,24 @@ const HOURS = ["9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM"];
 
 type Card = { n: string; s: string; t: string; fg: string; bg: string };
 const MORNING: Card[] = [
-  { n: "VI-A", s: "Science", t: "R. Patel", fg: "#6B7280", bg: "#F3F4F6" },
-  { n: "VI-B", s: "Hindi", t: "M. Lopez", fg: "#C2740E", bg: "#FEF3C7" },
-  { n: "VII-A", s: "Mathematics", t: "A. Carter", fg: "#1D4ED8", bg: "#DBEAFE" },
-  { n: "VIII-C", s: "English", t: "S. Kim", fg: "#166534", bg: "#DCFCE7" },
+  { n: "VI-A", s: "Science", t: "M. Esther", fg: "#6B7280", bg: "#F3F4F6" },
+  { n: "VI-B", s: "French", t: "R. Naomi", fg: "#C2740E", bg: "#FEF3C7" },
+  { n: "VII-A", s: "Mathematics", t: "J. Abraham", fg: "#1D4ED8", bg: "#DBEAFE" },
+  { n: "VIII-C", s: "English", t: "D. Samuel", fg: "#166534", bg: "#DCFCE7" },
 ];
 const NOON: Card[] = [
-  { n: "VI-C", s: "Social Science", t: "D. Novak", fg: "#EA580C", bg: "#FFEDD5" },
-  { n: "IX-A", s: "Mathematics", t: "A. Carter", fg: "#1D4ED8", bg: "#DBEAFE" },
+  { n: "VI-C", s: "Geography", t: "T. Moses", fg: "#EA580C", bg: "#FFEDD5" },
+  { n: "IX-A", s: "Mathematics", t: "J. Abraham", fg: "#1D4ED8", bg: "#DBEAFE" },
 ];
 const AFTERNOON: Card[] = [
-  { n: "IX-B", s: "Science", t: "R. Patel", fg: "#6B7280", bg: "#F3F4F6" },
-  { n: "X-A", s: "English", t: "S. Kim", fg: "#166534", bg: "#DCFCE7" },
-  { n: "X-B", s: "Art", t: "J. Okafor", fg: "#7C2D3F", bg: "#FCE7F3" },
+  { n: "IX-B", s: "Science", t: "M. Esther", fg: "#6B7280", bg: "#F3F4F6" },
+  { n: "X-A", s: "English", t: "D. Samuel", fg: "#166534", bg: "#DCFCE7" },
+  { n: "X-B", s: "Art", t: "P. Daniel", fg: "#7C2D3F", bg: "#FCE7F3" },
 ];
 const FREE: Record<string, [string, number][]> = {
-  morning: [["J. Okafor", 1], ["D. Novak", 2], ["L. Silva", 4]],
-  noon: [["S. Kim", 2], ["J. Okafor", 1], ["M. Lopez", 3], ["L. Silva", 4], ["R. Patel", 3]],
-  afternoon: [["M. Lopez", 1], ["A. Carter", 3], ["D. Novak", 4]],
+  morning: [["P. Daniel", 1], ["T. Moses", 2], ["E. Ruth", 4]],
+  noon: [["D. Samuel", 2], ["P. Daniel", 1], ["R. Naomi", 3], ["E. Ruth", 4], ["M. Esther", 3]],
+  afternoon: [["R. Naomi", 1], ["J. Abraham", 3], ["T. Moses", 4]],
 };
 
 function fmt(min: number): string {
@@ -52,16 +52,19 @@ export function LiveDemo() {
   const [covered, setCovered] = useState(false);
   const [query, setQuery] = useState("");
 
+  const [afterHours, setAfterHours] = useState<null | "before" | "after">(null);
   useEffect(() => {
-    // Follow the visitor's real clock while it's inside the demo school day;
-    // outside school hours (evenings, other timezones) anchor "now" at 11 AM
-    // and keep it ticking, so the drag-ahead / mark-absent flow always works.
-    const mounted = Date.now();
+    // "Now" is always the visitor's REAL local time. Inside school hours the
+    // red tick sits at that time and anything you scrub past it is "upcoming".
+    // Outside school hours there is no upcoming period left today, so the
+    // board honestly switches to planning the NEXT school day: now anchors at
+    // the day's start and the whole timeline is ahead of now.
     const tick = () => {
       const d = new Date();
       const real = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
-      if (real >= DAY_START && real <= DAY_END - 45) setNow(real);
-      else setNow(11 * 60 + (Date.now() - mounted) / 60000);
+      if (real < DAY_START) { setNow(DAY_START); setAfterHours("before"); }
+      else if (real > DAY_END - 30) { setNow(DAY_START); setAfterHours("after"); }
+      else { setNow(real); setAfterHours(null); }
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -111,6 +114,9 @@ export function LiveDemo() {
             <span className="ld-status">{zone === "noon" ? "Lunch window · mixed" : "In session"}</span>
           </div>
           <div className="ld-headright">
+            {afterHours && (
+              <span className="ld-tomorrow">{afterHours === "after" ? "🌙 today's classes are over — planning tomorrow" : "🌅 school hasn't started — planning ahead"}</span>
+            )}
             <span className="ld-livebadge" style={{ color: scrub === null ? "#16A34A" : "#9A95BC" }}>
               <i style={{ background: scrub === null ? "#16A34A" : "#CBC9DA" }} />
               {scrub === null ? "Live" : "Paused"}
@@ -149,7 +155,7 @@ export function LiveDemo() {
             <input className="ld-search" type="search" placeholder="🔎 search faculty, class, or subject…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search faculty, class, or subject" />
           </div>
           {!isFuture && !absent && (
-            <div className="ld-plan-hint">Planning cover? Drag the timeline <b>ahead of now</b> — you mark an absence for an upcoming period, not one that&rsquo;s already over.</div>
+            <div className="ld-plan-hint">Planning cover? Drag the timeline <b>ahead of the red &ldquo;now&rdquo; tick</b> — you mark an absence for an upcoming period, not one that&rsquo;s already over.</div>
           )}
           <div className="ld-grid">
             {visibleCards.map((c) => (
@@ -165,7 +171,7 @@ export function LiveDemo() {
                   <div className="ld-entity">{c.n}</div>
                   <span className="ld-subj" style={{ background: c.bg, color: c.fg }}>{c.s}</span>
                   <div className="ld-teacher">
-                    {c.t === absent && covered ? <><s>{c.t}</s> → D. Novak <b className="ld-green">(sub) ✓</b></> : c.t}
+                    {c.t === absent && covered ? <><s>{c.t}</s> → T. Moses <b className="ld-green">(sub) ✓</b></> : c.t}
                   </div>
                   {c.t !== absent && !absent && isFuture && (
                     <button className="ld-absent-btn" onClick={() => { setAbsent(c.t); setCovered(false); }}>mark absent</button>
@@ -179,14 +185,14 @@ export function LiveDemo() {
             <div className="ld-subpanel">
               <b>{absent} marked absent for the {fmt(value)} period.</b> Ranked cover for this slot:
               <div className="ld-cands">
-                <button className="ld-cand ld-cand-top" onClick={() => setCovered(true)}>① D. Novak · Tier 1 · free now · 1 today ✓ — <u>assign</u></button>
-                <span className="ld-cand">② L. Silva · Tier 2 · free · 4 today</span>
+                <button className="ld-cand ld-cand-top" onClick={() => setCovered(true)}>① T. Moses · Tier 1 · free now · 1 today ✓ — <u>assign</u></button>
+                <span className="ld-cand">② E. Ruth · Tier 2 · free · 4 today</span>
               </div>
               <button className="ld-reset" onClick={() => setAbsent(null)}>undo</button>
             </div>
           )}
           {absent && covered && (
-            <div className="ld-covered-note">✓ D. Novak is covering — fairness-checked (first extra duty this week). <button className="ld-reset" onClick={() => { setAbsent(null); setCovered(false); }}>reset demo</button></div>
+            <div className="ld-covered-note">✓ T. Moses is covering — fairness-checked (first extra duty this week). <button className="ld-reset" onClick={() => { setAbsent(null); setCovered(false); }}>reset demo</button></div>
           )}
 
           <div className="ld-freerow">
@@ -217,6 +223,7 @@ export function LiveDemo() {
         .ld-livebadge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
         .ld-livebadge i { width: 8px; height: 8px; border-radius: 4px; }
         .ld-nowbtn { padding: 7px 14px; border-radius: 9px; border: 1px solid #E3DEF7; background: #fff; font-size: 12.5px; font-weight: 700; color: #7C6FE0; cursor: pointer; font-family: inherit; }
+        .ld-tomorrow { font-size: 11px; font-weight: 600; color: #8B87AD; background: #F4F2FE; border-radius: 8px; padding: 4px 10px; }
         .ld-scrubwrap { padding: 0 18px 12px; }
         .ld-track { position: relative; height: 46px; border-radius: 12px; background: #F4F2FE; border: 1px solid #ECE9FB; cursor: pointer; touch-action: none; user-select: none; display: flex; gap: 2px; padding: 6px 0; }
         .ld-band { display: flex; flex-direction: column; border-radius: 6px; overflow: hidden; border: 1px solid rgba(19,17,30,0.07); pointer-events: none; }

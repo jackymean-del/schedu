@@ -84,8 +84,8 @@ export default function OpengraphImage() {
             lineHeight: 1.08,
           }}
         >
-          <span>Schedules that</span>
-          <span style={{ fontStyle: "italic", color: "#B9AFF0" }}>stay alive.</span>
+          <span>The first timetable</span>
+          <span style={{ fontStyle: "italic", color: "#B9AFF0" }}>that stays alive.</span>
         </div>
 
         {/* tagline */}

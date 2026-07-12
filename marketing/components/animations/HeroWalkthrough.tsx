@@ -20,24 +20,24 @@ import { appHref } from "@/lib/appUrl";
  * clickable — pressing it replays the solve.
  */
 
-const SCENES: { key: string; caption: string; dur: number }[] = [
-  { key: "dash", caption: "Create a schedule in one click.", dur: 4400 },
-  { key: "numbers", caption: "Enter just the numbers — in your own naming. schedU builds every resource.", dur: 6600 },
-  { key: "res", caption: "All 24 classes, 38 subjects, 42 faculty, 60 venues — generated, fully editable.", dur: 5200 },
-  { key: "bell", caption: "Type start and end. schedU plans every period and break.", dur: 5600 },
-  { key: "alloc", caption: "Every subject allocated, every faculty member matched — and checked.", dur: 4800 },
-  { key: "combo", caption: "Electives and cross-section groups — AND/OR logic built in.", dur: 5400 },
-  { key: "gen", caption: "One click. A conflict-free timetable.", dur: 6000 },
-  { key: "views", caption: "One timetable — Class, Faculty, Venue, and Subject views.", dur: 6400 },
-  { key: "dnd", caption: "Fine-tune by drag and drop — clashes flagged as you move.", dur: 6000 },
-  { key: "load", caption: "Balance faculty load with one click.", dur: 5200 },
-  { key: "cal", caption: "Every schedule, one combined calendar.", dur: 4400 },
-  { key: "live", caption: "Live — drag through the day. Sessions and free faculty update at every minute.", dur: 9600 },
-  { key: "task", caption: "Assign duties fairly — workload is checked first.", dur: 5600 },
-  { key: "sub", caption: "An absence? Covered in Calendar and Live — in seconds.", dur: 6800 },
-  { key: "print", caption: "Print-ready — full page, or paper-saving compact.", dur: 5600 },
-  { key: "rep", caption: "Insights across the term.", dur: 4000 },
-  { key: "close", caption: "The last schedule you'll ever fix by hand.", dur: 7000 },
+const SCENES: { key: string; ch: string; caption: string; dur: number }[] = [
+  { key: "dash", ch: "Dashboard", caption: "Create a schedule in one click.", dur: 4400 },
+  { key: "numbers", ch: "Create a schedule", caption: "Enter just the numbers — in your own naming. schedU builds every resource.", dur: 6600 },
+  { key: "res", ch: "Wizard 1/5 · Resources", caption: "All 24 classes, 38 subjects, 42 faculty, 60 venues — generated, fully editable.", dur: 5200 },
+  { key: "bell", ch: "Wizard 2/5 · Shift & timing", caption: "Type start and end. schedU plans every period and break.", dur: 5600 },
+  { key: "alloc", ch: "Wizard 3/5 · Allocation", caption: "Every subject allocated, every faculty member matched — and checked.", dur: 4800 },
+  { key: "combo", ch: "Wizard 4/5 · Groups & combos", caption: "Electives and cross-section groups — AND/OR logic built in.", dur: 5400 },
+  { key: "gen", ch: "Wizard 5/5 · Generate", caption: "One click. A conflict-free timetable.", dur: 6000 },
+  { key: "views", ch: "Timetable · all views", caption: "One timetable — Class, Faculty, Venue, and Subject views.", dur: 6400 },
+  { key: "dnd", ch: "Timetable · edit mode", caption: "Fine-tune by drag and drop — clashes flagged as you move.", dur: 6000 },
+  { key: "load", ch: "Analytics · faculty load", caption: "Balance faculty load with one click.", dur: 5200 },
+  { key: "cal", ch: "Calendar · Day", caption: "Every schedule, one combined calendar.", dur: 4400 },
+  { key: "live", ch: "Live board", caption: "Live — drag through the day. Sessions and free faculty update at every minute.", dur: 9600 },
+  { key: "task", ch: "Live · assign a duty", caption: "Assign duties fairly — workload is checked first.", dur: 5600 },
+  { key: "sub", ch: "Substitution", caption: "An absence? Covered in Calendar and Live — in seconds.", dur: 6800 },
+  { key: "print", ch: "Export · print", caption: "Print-ready — full page, or paper-saving compact.", dur: 5600 },
+  { key: "rep", ch: "Reports", caption: "Insights across the term.", dur: 4000 },
+  { key: "close", ch: "Get started", caption: "The last schedule you'll ever fix by hand.", dur: 7000 },
 ];
 const RM_PIN = 7; // views scene — the most informative resolved frame
 
@@ -90,6 +90,7 @@ export function HeroWalkthrough() {
           <span className="hw-chrome-right">⟳ ⋯ 🔒</span>
         </div>
         <div key={idx} ref={stageRef} className="hw-stage">
+          <div className="hw-chapter"><b>{idx + 1}<i>/{SCENES.length}</i></b>{scene.ch}</div>
           {scene.key === "dash" && <SDash />}
           {scene.key === "numbers" && <SNumbers />}
           {scene.key === "res" && <SRes />}
@@ -226,9 +227,9 @@ function Fly({ from, to, start, end, className, children }: { from: string; to: 
 }
 
 // ─── Shared bits ─────────────────────────────────────────────────────────
-const TINT: Record<string, string> = { Maths: "#EDE9FF", Science: "#DBEAFE", English: "#DCFCE7", Hindi: "#FCE7F3", "S.St": "#FEF9C3" };
+const TINT: Record<string, string> = { Maths: "#EDE9FF", Science: "#DBEAFE", English: "#DCFCE7", French: "#FCE7F3", "History": "#FEF9C3" };
 // The demo school's faculty (Eden's Academy) — used consistently everywhere.
-const FACULTY = ["A. Carter", "R. Patel", "S. Kim", "M. Lopez", "J. Okafor"];
+const FACULTY = ["J. Abraham", "M. Esther", "D. Samuel", "R. Naomi", "P. Daniel"];
 
 function In({ d, children, className, style }: { d: number; children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return <div className={`hw-in ${className ?? ""}`} style={{ ...style, animationDelay: `${d}ms` }}>{children}</div>;
@@ -352,7 +353,7 @@ function SRes() {
           </div>
           <div style={{ animation: "hw-show 1ms linear 2900ms both", opacity: 0 }}>
             <div className="hw-table-head"><span>Name</span><span>Subjects</span><span>Max/wk</span><span>Status</span></div>
-            {[["A. Carter", "Maths", "32"], ["R. Patel", "Science", "32"], ["S. Kim", "English", "30"], ["M. Lopez", "Hindi", "30"], ["J. Okafor", "Art · G.K.", "28"], ["D. Novak", "S.St", "30"]].map((r, i) => (
+            {[["J. Abraham", "Maths", "32"], ["M. Esther", "Science", "32"], ["D. Samuel", "English", "30"], ["R. Naomi", "French", "30"], ["P. Daniel", "Art · Music", "28"], ["T. Moses", "History", "30"]].map((r, i) => (
               <In key={r[0]} d={3000 + i * 120} className="hw-table-row"><span>{r[0]}</span><span>{r[1]}</span><span className="hw-mono">{r[2]}</span><span className="hw-green">✓ ready</span></In>
             ))}
             <In d={3900} className="hw-more-row">…and 36 more faculty — all 42 created ✓</In>
@@ -447,7 +448,7 @@ function SAlloc() {
       <div className="hw-swap" style={{ marginTop: 8 }}>
         <div className="hw-sa2" style={{ animationDelay: "3000ms" }}>
           <div className="hw-alloc-grid">
-            <div className="hw-alloc-row hw-alloc-head"><span /><span>Maths</span><span>Science</span><span>English</span><span>Hindi</span><span>S.St</span><span>Total</span></div>
+            <div className="hw-alloc-row hw-alloc-head"><span /><span>Maths</span><span>Science</span><span>English</span><span>French</span><span>History</span><span>Total</span></div>
             {ALLOC.map((r, ri) => (
               <div key={r[0]} className="hw-alloc-row">
                 <span className="hw-alloc-sec">{r[0]}</span>
@@ -534,7 +535,7 @@ function SCombo() {
 
 // ─── 7 · Step 5 Generate — REAL clickable button ────────────────────────
 const SOLVE_LABELS = ["Reading school setup…", "Matching teachers to subjects…", "Building the weekly schedule…", "Ensuring no teacher is double-booked…", "Checking for conflicts and gaps…"];
-const FEED = ["IX-A → Maths · A. Carter", "X-B → Science · R. Patel", "VII-C → English · S. Kim", "VI-A → Hindi · M. Lopez", "IX-B → S.St · D. Novak", "X-A → Art · J. Okafor"];
+const FEED = ["IX-A → Maths · J. Abraham", "X-B → Science · M. Esther", "VII-C → English · D. Samuel", "VI-A → French · R. Naomi", "IX-B → History · T. Moses", "X-A → Art · P. Daniel"];
 function SGen() {
   const [run, setRun] = useState(0);
   return (
@@ -582,10 +583,10 @@ function SGen() {
 // the entity of the active lens — class, faculty, venue, or subject.
 const VIEW_HEAD = ["", "P1 · 8:10", "P2 · 8:50", "P3 · 9:30", "P4 · 11:40", "P5 · 12:20"];
 const VIEW_GRID: Record<string, { rows: [string, string[]][]; head: string[] }> = {
-  class: { head: VIEW_HEAD, rows: [["IX-A", ["Maths", "Science", "English", "Hindi", "S.St"]], ["IX-B", ["Science", "Maths", "S.St", "English", "Hindi"]], ["X-A", ["English", "S.St", "Maths", "Science", "Hindi"]], ["X-B", ["Hindi", "English", "Science", "S.St", "Maths"]]] },
-  teacher: { head: VIEW_HEAD, rows: [["A. Carter", ["IX-A", "IX-B", "—", "X-A", "X-B"]], ["R. Patel", ["IX-B", "IX-A", "X-B", "—", "X-A"]], ["S. Kim", ["X-A", "—", "IX-A", "IX-B", "—"]], ["M. Lopez", ["X-B", "—", "—", "IX-A", "IX-B"]]] },
+  class: { head: VIEW_HEAD, rows: [["IX-A", ["Maths", "Science", "English", "French", "History"]], ["IX-B", ["Science", "Maths", "History", "English", "French"]], ["X-A", ["English", "History", "Maths", "Science", "French"]], ["X-B", ["French", "English", "Science", "History", "Maths"]]] },
+  teacher: { head: VIEW_HEAD, rows: [["J. Abraham", ["IX-A", "IX-B", "—", "X-A", "X-B"]], ["M. Esther", ["IX-B", "IX-A", "X-B", "—", "X-A"]], ["D. Samuel", ["X-A", "—", "IX-A", "IX-B", "—"]], ["R. Naomi", ["X-B", "—", "—", "IX-A", "IX-B"]]] },
   room: { head: VIEW_HEAD, rows: [["Lab-1", ["IX-A", "X-B", "—", "IX-B", "X-A"]], ["R-201", ["IX-B", "IX-A", "X-A", "—", "—"]], ["R-202", ["X-A", "—", "IX-B", "X-B", "IX-A"]], ["Hall", ["—", "X-A", "X-B", "—", "—"]]] },
-  subject: { head: VIEW_HEAD, rows: [["Maths", ["IX-A", "IX-B", "X-A", "X-B", "—"]], ["Science", ["IX-B", "IX-A", "—", "X-A", "X-B"]], ["English", ["X-A", "—", "IX-A", "IX-B", "—"]], ["Hindi", ["X-B", "—", "—", "IX-A", "IX-B"]]] },
+  subject: { head: VIEW_HEAD, rows: [["Maths", ["IX-A", "IX-B", "X-A", "X-B", "—"]], ["Science", ["IX-B", "IX-A", "—", "X-A", "X-B"]], ["English", ["X-A", "—", "IX-A", "IX-B", "—"]], ["French", ["X-B", "—", "—", "IX-A", "IX-B"]]] },
 };
 const VIEW_ORDER = ["class", "teacher", "room", "subject"] as const;
 const VIEW_LABEL: Record<string, string> = { class: "Classes", teacher: "Faculty", room: "Venues", subject: "Subjects" };
@@ -650,7 +651,7 @@ function SViews() {
 // ─── 9 · Drag & drop slot editing (timetable.tsx edit mode) ─────────────
 // Periods as columns, days as rows. Beats: pick up Wed·P2 Maths → the cell
 // empties and a ghost chip follows the pointer → hovering Wed·P4 flashes
-// red (A. Carter already teaches then) → drop on Fri·P4 lands with a green
+// red (J. Abraham already teaches then) → drop on Fri·P4 lands with a green
 // ring → toast. A status line narrates each beat so nothing is ambiguous.
 const DND_T = { grab: 1400, bad: 2600, drop: 4000 };
 function SDnd() {
@@ -660,39 +661,39 @@ function SDnd() {
         <div className="hw-h2">IX-A · Edit mode <span className="hw-edit-chip">✏ editing</span></div>
         <span className="hw-swap" style={{ fontSize: 10, fontWeight: 700 }}>
           <span className="hw-sa2" style={{ animationDelay: `${DND_T.grab}ms`, color: "#8B87AD" }}>drag any lesson to move it</span>
-          <span style={{ color: "#7C6FE0", opacity: 0, animation: `hw-show 1ms linear ${DND_T.grab}ms both, hw-hide 1ms linear ${DND_T.bad}ms both` }}>✊ dragging Maths · A. Carter…</span>
-          <span style={{ color: "#DC2626", opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}>✕ can&rsquo;t drop here — A. Carter teaches X-B at this time</span>
-          <span style={{ color: "#7C6FE0", opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both, hw-hide 1ms linear ${DND_T.drop}ms both` }}>✊ dragging Maths · A. Carter…</span>
+          <span style={{ color: "#7C6FE0", opacity: 0, animation: `hw-show 1ms linear ${DND_T.grab}ms both, hw-hide 1ms linear ${DND_T.bad}ms both` }}>✊ dragging Maths · J. Abraham…</span>
+          <span style={{ color: "#DC2626", opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}>✕ can&rsquo;t drop here — J. Abraham teaches X-B at this time</span>
+          <span style={{ color: "#7C6FE0", opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both, hw-hide 1ms linear ${DND_T.drop}ms both` }}>✊ dragging Maths · J. Abraham…</span>
           <span style={{ color: "#059669", opacity: 0, animation: `hw-show 1ms linear ${DND_T.drop}ms both` }}>✓ dropped — no clashes, saved</span>
         </span>
       </div>
       <div className="hw-tt-grid hw-dnd-grid" style={{ marginTop: 8 }}>
         <div className="hw-tt-row hw-tt-head"><span /><span className="hw-mono">P1 · 8:10</span><span className="hw-mono">P2 · 8:50</span><span className="hw-mono">P3 · 9:30</span><span className="hw-mono">P4 · 11:40</span></div>
         {[
-          ["Mon", ["Maths", "Science", "English", "Hindi"]],
+          ["Mon", ["Maths", "Science", "English", "French"]],
           ["Wed", ["Science", "SRC", "English", "BAD"]],
-          ["Fri", ["English", "S.St", "Maths", "TGT"]],
+          ["Fri", ["English", "History", "Maths", "TGT"]],
         ].map(([day, cells]) => (
           <div key={String(day)} className="hw-tt-row">
             <span className="hw-tt-p">{day}</span>
             {(cells as string[]).map((c, ci) => {
               if (c === "SRC") return (
                 <span key={ci} className="hw-tt-cell hw-dnd-src hw-swap" data-hw="src">
-                  <b className="hw-sa2" style={{ animationDelay: `${DND_T.grab}ms`, background: TINT.Maths }}>Maths<i>A. Carter</i></b>
+                  <b className="hw-sa2" style={{ animationDelay: `${DND_T.grab}ms`, background: TINT.Maths }}>Maths<i>J. Abraham</i></b>
                   <i className="hw-dnd-empty" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.grab}ms both` }} />
                 </span>
               );
               if (c === "TGT") return (
                 <span key={ci} className="hw-tt-cell hw-dnd-tgt hw-swap" data-hw="tgt">
                   <i className="hw-dnd-ok hw-sa2" style={{ animationDelay: `${DND_T.drop}ms` }}>free — drop here</i>
-                  <b className="hw-dnd-landed" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.drop}ms both`, background: TINT.Maths }}>Maths<i>A. Carter</i></b>
+                  <b className="hw-dnd-landed" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.drop}ms both`, background: TINT.Maths }}>Maths<i>J. Abraham</i></b>
                 </span>
               );
               if (c === "BAD") return (
                 <span key={ci} className="hw-tt-cell hw-swap" data-hw="bad">
-                  <span className="hw-sa2" style={{ animationDelay: `${DND_T.bad - 150}ms` }}><b style={{ background: TINT.Hindi }}>Hindi<i>M. Lopez</i></b></span>
-                  <span className="hw-dnd-bad" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad - 150}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}><b>✕ A. Carter busy</b></span>
-                  <span style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both` }}><b style={{ background: TINT.Hindi }}>Hindi<i>M. Lopez</i></b></span>
+                  <span className="hw-sa2" style={{ animationDelay: `${DND_T.bad - 150}ms` }}><b style={{ background: TINT.French }}>French<i>R. Naomi</i></b></span>
+                  <span className="hw-dnd-bad" style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad - 150}ms both, hw-hide 1ms linear ${DND_T.bad + 900}ms both` }}><b>✕ J. Abraham busy</b></span>
+                  <span style={{ opacity: 0, animation: `hw-show 1ms linear ${DND_T.bad + 900}ms both` }}><b style={{ background: TINT.French }}>French<i>R. Naomi</i></b></span>
                 </span>
               );
               return <span key={ci} className="hw-tt-cell" style={{ background: TINT[c] }}><b>{c}<i>{FACULTY[(ci + 1) % 5]}</i></b></span>;
@@ -701,8 +702,8 @@ function SDnd() {
         ))}
       </div>
       <In d={DND_T.drop + 300} className="hw-toast">✓ Moved to Fri · P4. No clashes — saved.</In>
-      <Fly from='[data-hw="src"]' to='[data-hw="bad"]' start={DND_T.grab} end={DND_T.bad} className="hw-fly-chip">Maths · A. Carter</Fly>
-      <Fly from='[data-hw="bad"]' to='[data-hw="tgt"]' start={DND_T.bad + 600} end={DND_T.drop} className="hw-fly-chip">Maths · A. Carter</Fly>
+      <Fly from='[data-hw="src"]' to='[data-hw="bad"]' start={DND_T.grab} end={DND_T.bad} className="hw-fly-chip">Maths · J. Abraham</Fly>
+      <Fly from='[data-hw="bad"]' to='[data-hw="tgt"]' start={DND_T.bad + 600} end={DND_T.drop} className="hw-fly-chip">Maths · J. Abraham</Fly>
       <Cursor dur={6000} grab={[DND_T.grab, DND_T.drop]} steps={[
         { t: '[data-hw="src"]', at: DND_T.grab - 150, click: true, hold: 300 },
         { t: '[data-hw="bad"]', at: DND_T.bad, hold: 900 },
@@ -713,7 +714,7 @@ function SDnd() {
 }
 
 // ─── 10 · Workload optimization (ReviewDashboard load balancing) ────────
-const LOADS: [string, number, number][] = [["A. Carter", 92, 74], ["R. Patel", 55, 72], ["S. Kim", 88, 76], ["M. Lopez", 48, 70], ["D. Novak", 78, 74]];
+const LOADS: [string, number, number][] = [["J. Abraham", 92, 74], ["M. Esther", 55, 72], ["D. Samuel", 88, 76], ["R. Naomi", 48, 70], ["T. Moses", 78, 74]];
 function SLoad() {
   return (
     <div className="hw-scene hw-app">
@@ -754,9 +755,9 @@ function SLoad() {
 
 // ─── 11 · Calendar Day (pages/calendar.tsx Day view) ────────────────────
 const CAL_ROWS = [
-  { name: "A. Carter", periods: 7, blocks: [["X-D · Maths", 2], ["X-C · Maths", 3], ["LUNCH", 2], ["VI-A · Maths", 3], ["VII-B · Maths", 3]] },
-  { name: "J. Okafor", periods: 6, blocks: [["", 2], ["V-D · Art", 2], ["LUNCH", 2], ["IV-C · G.K.", 3], ["V-B · Art", 3]] },
-  { name: "S. Kim", periods: 7, blocks: [["II-A · English", 2], ["I-B · English", 2], ["LUNCH", 2], ["III-D · English", 3], ["II-D · English", 3]] },
+  { name: "J. Abraham", periods: 7, blocks: [["X-D · Maths", 2], ["X-C · Maths", 3], ["LUNCH", 2], ["VI-A · Maths", 3], ["VII-B · Maths", 3]] },
+  { name: "P. Daniel", periods: 6, blocks: [["", 2], ["V-D · Art", 2], ["LUNCH", 2], ["IV-C · Music", 3], ["V-B · Art", 3]] },
+  { name: "D. Samuel", periods: 7, blocks: [["II-A · English", 2], ["I-B · English", 2], ["LUNCH", 2], ["III-D · English", 3], ["II-D · English", 3]] },
 ];
 function SCal() {
   return (
@@ -823,17 +824,17 @@ function SCal() {
 // The clock and ring percentages run off the real wall clock; dragging the
 // knob swaps the whole board to the scrubbed moment's state and back.
 const LIVE_CARDS = [
-  ["VI-A", "Science", "R. Patel", "#6B7280", "#F3F4F6"],
-  ["VI-B", "Hindi", "M. Lopez", "#C2740E", "#FEF3C7"],
-  ["VI-C", "Social Science", "D. Novak", "#EA580C", "#FFEDD5"],
-  ["VII-A", "Science", "A. Osei", "#6B7280", "#F3F4F6"],
-  ["VIII-B", "Mathematics", "A. Carter", "#1D4ED8", "#DBEAFE"],
-  ["VIII-C", "Hindi", "T. Weber", "#C2740E", "#FEF3C7"],
+  ["VI-A", "Science", "M. Esther", "#6B7280", "#F3F4F6"],
+  ["VI-B", "French", "R. Naomi", "#C2740E", "#FEF3C7"],
+  ["VI-C", "Geography", "T. Moses", "#EA580C", "#FFEDD5"],
+  ["VII-A", "Science", "N. Caleb", "#6B7280", "#F3F4F6"],
+  ["VIII-B", "Mathematics", "J. Abraham", "#1D4ED8", "#DBEAFE"],
+  ["VIII-C", "French", "H. Hannah", "#C2740E", "#FEF3C7"],
 ];
 const LIVE_CARDS_ALT = [
-  ["VI-A", "Mathematics", "A. Carter", "#1D4ED8", "#DBEAFE"],
-  ["VII-B", "English", "S. Kim", "#166534", "#DCFCE7"],
-  ["IX-C", "Science", "R. Patel", "#6B7280", "#F3F4F6"],
+  ["VI-A", "Mathematics", "J. Abraham", "#1D4ED8", "#DBEAFE"],
+  ["VII-B", "English", "D. Samuel", "#166534", "#DCFCE7"],
+  ["IX-C", "Science", "M. Esther", "#6B7280", "#F3F4F6"],
 ];
 // Real scrubber band geometry: [width-share, teachFrac] — bands stack a
 // violet teaching share over an amber break share, like the real strip.
@@ -931,7 +932,7 @@ function SLive() {
               <span className="hw-sort-seg"><i className="is-on">Lightest first</i><i>Heaviest first</i></span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-              {[["R. Patel", 1, "#16A34A"], ["J. Okafor", 2, "#16A34A"], ["L. Silva", 4, "#B45309"]].map(([n, l, c]) => (
+              {[["M. Esther", 1, "#16A34A"], ["P. Daniel", 2, "#16A34A"], ["E. Ruth", 4, "#B45309"]].map(([n, l, c]) => (
                 <span key={String(n)} className="hw-free-chip">{n} <b className="hw-load-badge" style={{ color: String(c) }}>{l} today</b> <i className="hw-plus">＋</i></span>
               ))}
             </div>
@@ -947,7 +948,7 @@ function SLive() {
               <span className="hw-sort-seg"><i className="is-on">Lightest first</i><i>Heaviest first</i></span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-              {[["T. Weber", 1, "#16A34A"], ["R. Patel", 2, "#16A34A"], ["L. Silva", 2, "#16A34A"], ["A. Osei", 3, "#B45309"], ["J. Okafor", 4, "#B45309"]].map(([n, l, c]) => (
+              {[["H. Hannah", 1, "#16A34A"], ["M. Esther", 2, "#16A34A"], ["E. Ruth", 2, "#16A34A"], ["N. Caleb", 3, "#B45309"], ["P. Daniel", 4, "#B45309"]].map(([n, l, c]) => (
                 <span key={String(n)} className="hw-free-chip">{n} <b className="hw-load-badge" style={{ color: String(c) }}>{l} today</b> <i className="hw-plus">＋</i></span>
               ))}
             </div>
@@ -989,20 +990,20 @@ function STask() {
     <div className="hw-scene hw-app">
       <div className="hw-live-section" style={{ color: "#9A95BC" }}>● FREE NOW · 3</div>
       <div style={{ display: "flex", gap: 6 }}>
-        <span className="hw-free-chip">R. Patel <b style={{ color: "#16A34A" }}>2 today</b>
+        <span className="hw-free-chip">M. Esther <b style={{ color: "#16A34A" }}>2 today</b>
           <span className="hw-swap" style={{ display: "inline-grid" }}>
             <i className="hw-plus hw-sa2" data-hw="plus" style={{ animationDelay: "4400ms" }}>＋</i>
             <In d={4400} className="hw-task-tag" style={{ display: "inline" }}>Exam invig. · P4 ✓</In>
           </span>
         </span>
-        <span className="hw-free-chip">J. Okafor <b style={{ color: "#B45309" }}>4 today</b> <i className="hw-plus">＋</i></span>
+        <span className="hw-free-chip">P. Daniel <b style={{ color: "#B45309" }}>4 today</b> <i className="hw-plus">＋</i></span>
       </div>
       <In d={1100} className="hw-overlay hw-sa2-wrap">
         <div className="hw-sa2" style={{ animationDelay: "4400ms", width: "100%", display: "flex", justifyContent: "center" }}>
           <div className="hw-modal hw-assign-modal">
-            <div className="hw-assign-head">📌 <b>Assign a task</b><br /><span>Teacher: <b>R. Patel</b> · Period 4 · 2026-07-11</span></div>
+            <div className="hw-assign-head">📌 <b>Assign a task</b><br /><span>Teacher: <b>M. Esther</b> · Period 4 · 2026-07-11</span></div>
             <div className="hw-assign-body">
-              <In d={1500} className="hw-fair">● This would be R. Patel&rsquo;s first extra duty this week — a fair pick. 💪</In>
+              <In d={1500} className="hw-fair">● This would be M. Esther&rsquo;s first extra duty this week — a fair pick. 💪</In>
               <div className="hw-field-label" style={{ marginTop: 6 }}>What should this slot be used for? <b className="hw-req">*</b></div>
               <div className="hw-input"><span className="hw-type" style={{ ["--ch" as string]: "17ch", animationDelay: "2500ms", animationDuration: "900ms" }}>Exam invigilation</span><span className="hw-caret" /></div>
               <div className="hw-chips-row" style={{ marginTop: 6 }}>
@@ -1029,8 +1030,8 @@ function STask() {
 
 // ─── 14 · Substitution — staged in Calendar Day, confirmed in Live ──────
 // Beats: in the Calendar Day view (Faculty lens, the same real toolbar as
-// the Day scene) mark M. Lopez on leave → her lessons hatch red → Sub →
-// ranked candidates → assign D. Novak → her Day row shows the covered
+// the Day scene) mark R. Naomi on leave → her lessons hatch red → Sub →
+// ranked candidates → assign T. Moses → her Day row shows the covered
 // blue block. Then the Live tab flashes and the board shows the same
 // cover as an "On assignment" card — the substitution is visible in BOTH
 // calendar and live modes, as it is in the product.
@@ -1052,8 +1053,8 @@ function SSub() {
         <div className="hw-sa2" style={{ animationDelay: `${SUB_T.live}ms` }}>
           <div className="hw-row-between" style={{ marginBottom: 3 }}>
             <b className="hw-swap" style={{ fontSize: 10.5 }}>
-              <span className="hw-sa2" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>M. Lopez</span>
-              <span style={{ color: "#DC2626", opacity: 0, animation: `hw-show 1ms linear ${SUB_T.leave + 150}ms both` }}>M. Lopez · on leave</span>
+              <span className="hw-sa2" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>R. Naomi</span>
+              <span style={{ color: "#DC2626", opacity: 0, animation: `hw-show 1ms linear ${SUB_T.leave + 150}ms both` }}>R. Naomi · on leave</span>
             </b>
             <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
               <span className="hw-leave-btn hw-press" data-hw="leave" style={{ animationDelay: `${SUB_T.leave}ms` }}>⚑ Leave</span>
@@ -1064,15 +1065,15 @@ function SSub() {
           <div className="hw-day-track" style={{ height: 30, marginTop: 0 }}>
             <span className="hw-day-block hw-swap" style={{ flex: 3 }}>
               <span className="hw-sa2" style={{ animationDelay: `${SUB_T.assign + 300}ms` }}>
-                <span className="hw-uncover" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>X-B · Hindi</span>
+                <span className="hw-uncover" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>X-B · French</span>
               </span>
-              <In d={SUB_T.assign + 300} className="hw-covered">X-B · Hindi — D. Novak <i>(sub)</i> ✓</In>
+              <In d={SUB_T.assign + 300} className="hw-covered">X-B · French — T. Moses <i>(sub)</i> ✓</In>
             </span>
             <span className="hw-day-block hw-day-lunch" style={{ flex: 2 }}>Lunch</span>
-            <span className="hw-day-block" style={{ flex: 3 }}><span className="hw-uncover" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>IX-A · Hindi</span></span>
+            <span className="hw-day-block" style={{ flex: 3 }}><span className="hw-uncover" style={{ animationDelay: `${SUB_T.leave + 150}ms` }}>IX-A · French</span></span>
           </div>
           {/* other faculty rows for context */}
-          <div className="hw-row-between" style={{ margin: "8px 0 3px" }}><b style={{ fontSize: 10.5 }}>A. Carter</b><span className="hw-faint">7 periods</span></div>
+          <div className="hw-row-between" style={{ margin: "8px 0 3px" }}><b style={{ fontSize: 10.5 }}>J. Abraham</b><span className="hw-faint">7 periods</span></div>
           <div className="hw-day-track" style={{ height: 30, marginTop: 0 }}>
             <span className="hw-day-block" style={{ flex: 3 }}>X-D · Maths</span>
             <span className="hw-day-block hw-day-lunch" style={{ flex: 2 }}>Lunch</span>
@@ -1080,18 +1081,18 @@ function SSub() {
           </div>
           <In d={SUB_T.sub + 300} className="hw-sub-panel hw-sa2-wrap">
             <div className="hw-sa2" style={{ animationDelay: `${SUB_T.assign + 300}ms` }}>
-              <div className="hw-h2" style={{ fontSize: 10.5 }}>Substitute — M. Lopez · Period 2 · X-B Hindi</div>
+              <div className="hw-h2" style={{ fontSize: 10.5 }}>Substitute — R. Naomi · Period 2 · X-B French</div>
               {[
-                ["①", "D. Novak", "Tier 1 · free now · 1 today · light week ✓", true],
-                ["②", "R. Patel", "Tier 2 · free · 2 today", false],
-                ["③", "S. Kim", "Tier 2 · free · 3 today", false],
+                ["①", "T. Moses", "Tier 1 · free now · 1 today · light week ✓", true],
+                ["②", "M. Esther", "Tier 2 · free · 2 today", false],
+                ["③", "D. Samuel", "Tier 2 · free · 3 today", false],
               ].map(([r, n, meta, top], i) => (
                 <In key={String(n)} d={SUB_T.sub + 400 + i * 220} className={`hw-cand ${top ? "hw-cand-top" : ""}`}>
                   <b>{r} {n}</b><span className="hw-faint">{meta}</span>
                 </In>
               ))}
               <In d={SUB_T.sub + 1200} style={{ textAlign: "right" }}>
-                <span className="hw-btn-violet hw-press" data-hw="assignsub" style={{ animationDelay: `${SUB_T.assign}ms` }}>Assign D. Novak</span>
+                <span className="hw-btn-violet hw-press" data-hw="assignsub" style={{ animationDelay: `${SUB_T.assign}ms` }}>Assign T. Moses</span>
               </In>
             </div>
           </In>
@@ -1107,13 +1108,13 @@ function SSub() {
               <div className="hw-live-section" style={{ color: "#B45309" }}><i className="hw-sec-dot" style={{ background: "#B45309" }} />On assignment · 1</div>
               <div className="hw-ontask-card">
                 <div>
-                  <div className="hw-live-entity">D. Novak</div>
-                  <div className="hw-ontask-title">📌 Covering X-B · Hindi <span className="hw-faint">(for M. Lopez)</span></div>
+                  <div className="hw-live-entity">T. Moses</div>
+                  <div className="hw-ontask-title">📌 Covering X-B · French <span className="hw-faint">(for R. Naomi)</span></div>
                 </div>
                 <b className="hw-green">✓</b>
               </div>
               <div className="hw-live-section" style={{ color: "#DC2626", marginTop: 8 }}><i className="hw-sec-dot" style={{ background: "#DC2626" }} />On leave · 1</div>
-              <span className="hw-free-chip" style={{ color: "#DC2626", borderColor: "#FECACA" }}>M. Lopez <b className="hw-load-badge" style={{ color: "#DC2626" }}>full day</b></span>
+              <span className="hw-free-chip" style={{ color: "#DC2626", borderColor: "#FECACA" }}>R. Naomi <b className="hw-load-badge" style={{ color: "#DC2626" }}>full day</b></span>
             </div>
           </div>
         </div>
@@ -1168,7 +1169,7 @@ function SPrint() {
                 <div className="hw-print-row hw-print-hrow">
                   {["", "P1 · 8:10", "P2 · 8:50", "P3 · 9:30", "P4 · 11:40", "P5 · 12:20"].map((h, i) => <span key={i}>{h}</span>)}
                 </div>
-                {[["Mon", ["Mathematics", "Science", "English", "Hindi", "Soc. Studies"]], ["Tue", ["English", "Mathematics", "Soc. Studies", "Science", "Hindi"]], ["Wed", ["Mathematics", "Soc. Studies", "Science", "English", "Mathematics"]], ["Thu", ["Science", "English", "Mathematics", "Soc. Studies", "Hindi"]], ["Fri", ["Hindi", "Mathematics", "Soc. Studies", "English", "Science"]]].map(([d, cells]) => (
+                {[["Mon", ["Mathematics", "Science", "English", "French", "History"]], ["Tue", ["English", "Mathematics", "History", "Science", "French"]], ["Wed", ["Mathematics", "History", "Science", "English", "Mathematics"]], ["Thu", ["Science", "English", "Mathematics", "History", "French"]], ["Fri", ["French", "Mathematics", "History", "English", "Science"]]].map(([d, cells]) => (
                   <div key={String(d)} className="hw-print-row">
                     <span className="hw-print-day">{d}</span>
                     {(cells as string[]).map((c, i) => <span key={i}>{c}<i>{FACULTY[i % 5]}</i></span>)}
@@ -1184,7 +1185,7 @@ function SPrint() {
                   <div className="hw-print-row hw-print-hrow">
                     {[sec, "P1", "P2", "P3", "P4", "P5"].map((h, i) => <span key={i}>{h}</span>)}
                   </div>
-                  {[["Mon", ["Mat", "Sci", "Eng", "Hin", "SSt"]], ["Tue", ["Eng", "Mat", "SSt", "Sci", "Hin"]], ["Wed", ["Mat", "SSt", "Sci", "Eng", "Mat"]]].map(([d, cells]) => (
+                  {[["Mon", ["Mat", "Sci", "Eng", "Fre", "His"]], ["Tue", ["Eng", "Mat", "His", "Sci", "Fre"]], ["Wed", ["Mat", "His", "Sci", "Eng", "Mat"]]].map(([d, cells]) => (
                     <div key={String(d)} className="hw-print-row">
                       <span className="hw-print-day">{d}</span>
                       {(cells as string[]).map((c, i) => <span key={i}>{c}</span>)}
@@ -1276,6 +1277,19 @@ const CSS = `
 .hw-url { flex: 1; text-align: center; font: 500 10.5px 'DM Mono', monospace; color: #6B7280; background: #fff; border-radius: 6px; padding: 3px 10px; margin: 0 12px; }
 .hw-chrome-right { font-size: 9px; color: #9CA3AF; letter-spacing: 2px; }
 .hw-stage { position: relative; height: clamp(430px, calc(100dvh - 235px), 640px); background: #fff; overflow: hidden; }
+/* Chapter chip — tells a first-time viewer exactly which product screen
+   this scene is, and where we are in the story. */
+.hw-chapter {
+  position: absolute; top: 10px; left: 12px; z-index: 20;
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #13111E; color: #fff; border-radius: 999px; padding: 5px 13px 5px 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.01em;
+  box-shadow: 0 6px 18px rgba(19,17,30,0.25);
+  animation: hw-chapter-in 0.45s cubic-bezier(.2,.9,.3,1.1) both;
+}
+.hw-chapter b { display: inline-flex; align-items: baseline; background: #D4920E; color: #13111E; border-radius: 999px; padding: 2px 8px; font-size: 10.5px; font-weight: 800; }
+.hw-chapter b i { font-style: normal; font-weight: 700; font-size: 8.5px; opacity: 0.65; }
+@keyframes hw-chapter-in { 0%{ opacity: 0; transform: translateY(-8px); } 100%{ opacity: 1; transform: translateY(0); } }
 .hw-caption { margin: 14px 0 8px; text-align: center; font: 700 clamp(15px,2.2vw,19px)/1.35 'Plus Jakarta Sans', sans-serif; color: #13111E; animation: hw-cap-in 0.4s ease both; }
 @keyframes hw-cap-in { 0%{opacity:0; transform:translateY(5px)} 100%{opacity:1; transform:translateY(0)} }
 .hw-dots { display: flex; justify-content: center; gap: 5px; padding-bottom: 6px; flex-wrap: wrap; }
@@ -1602,7 +1616,7 @@ const CSS = `
 .hw-close-sub { font-size: 9.5px; color: rgba(255,255,255,0.45); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hw-scene, .hw-caption { animation: none !important; }
+  .hw-scene, .hw-caption, .hw-chapter { animation: none !important; }
   .hw-in { animation: none !important; opacity: 1 !important; transform: none !important; }
   .hw-sa2 { animation: none !important; opacity: 0 !important; visibility: hidden !important; }
   .hw-cursor, .hw-ring, .hw-caret, .hw-fly { display: none !important; }
