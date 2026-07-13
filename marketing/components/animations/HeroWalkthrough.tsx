@@ -37,7 +37,7 @@ const SCENES: { key: string; ch: string; caption: string; dur: number }[] = [
   { key: "sub", ch: "Substitution", caption: "An absence? Covered in Calendar and Live — in seconds.", dur: 6800 },
   { key: "print", ch: "Export · print", caption: "Print-ready — full page, or paper-saving compact.", dur: 5600 },
   { key: "rep", ch: "Reports", caption: "Insights across the term.", dur: 4000 },
-  { key: "close", ch: "Get started", caption: "The last schedule you'll ever fix by hand.", dur: 7000 },
+  { key: "close", ch: "Get started", caption: "Add life to your schedules, smartly.", dur: 7000 },
 ];
 const RM_PIN = 7; // views scene — the most informative resolved frame
 
@@ -584,7 +584,12 @@ function SGen() {
           </div>
         </In>
         <In d={run ? 3700 : 4700} className="hw-done-row">
-          <span className="hw-conflict-pill"><i /> 0 conflicts</span>
+          <div className="hw-done-stats">
+            <span className="hw-conflict-pill"><i /> 0 conflicts</span>
+            <span className="hw-done-stat"><b>620</b> lessons placed</span>
+            <span className="hw-done-stat"><b>1.1</b> load stddev — fair</span>
+            <span className="hw-done-stat"><b>4.8s</b> solve time</span>
+          </div>
           <span className="hw-cta hw-press" data-hw="view" style={{ animationDelay: "5500ms" }}>View Schedule (Draft) →</span>
         </In>
       </div>
@@ -1274,7 +1279,7 @@ function SClose() {
         <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" className="hw-u-path" />
         <circle cx="36" cy="12.5" r="4.5" fill="#D4920E" className="hw-u-knob" />
       </svg>
-      <In d={1800} className="hw-close-h">The last schedule you&rsquo;ll ever fix by hand.</In>
+      <In d={1800} className="hw-close-h">Add life to your schedules, <i style={{ color: "#B9AFF0" }}>smartly.</i></In>
       <In d={2400}>
         <a href={appHref("/register")} className="hw-close-cta" data-hw="cta">Start Now — free, no credit card</a>
       </In>
@@ -1323,8 +1328,8 @@ const CSS = `
 /* Content width is capped and centered; the JS auto-fit then zooms the
    whole scene until it fills the stage height — big, slide-like, readable.
    Extra top padding keeps content clear of the chapter chip. */
-.hw-scene { position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: 0 auto; max-width: 1020px; padding: clamp(44px,6vh,54px) clamp(14px,2vw,26px) clamp(14px,2vh,22px); animation: hw-scene-in 0.4s ease both; overflow: hidden; }
-@keyframes hw-scene-in { 0%{opacity:0} 100%{opacity:1} }
+.hw-scene { position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: 0 auto; max-width: 1020px; padding: clamp(44px,6vh,54px) clamp(14px,2vw,26px) clamp(14px,2vh,22px); animation: hw-scene-in 0.55s cubic-bezier(.22,.9,.3,1) both; overflow: hidden; }
+@keyframes hw-scene-in { 0%{ opacity: 0; transform: translateY(10px) scale(0.992); filter: blur(2px); } 100%{ opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
 .hw-app { background: transparent; }
 
 /* primitives */
@@ -1452,7 +1457,7 @@ const CSS = `
 /* generate */
 .hw-center-col { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
 .hw-preflight { font-size: 10px; color: #15803D; font-weight: 600; }
-.hw-solve { width: min(400px, 94%); background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 12px 14px; }
+.hw-solve { width: min(460px, 94%); background: #fff; border: 1px solid #E5E7EB; border-radius: 14px; padding: 14px 16px; box-shadow: 0 18px 50px rgba(124,111,224,0.12); }
 .hw-ring-row { display: flex; align-items: center; gap: 12px; }
 .hw-ring-arc { animation: hw-ring-fill 3200ms cubic-bezier(.4,0,.4,1) both; }
 @keyframes hw-ring-fill { 0%{ stroke-dashoffset: 113; } 100%{ stroke-dashoffset: 3; } }
@@ -1461,7 +1466,10 @@ const CSS = `
 @keyframes hw-label-k { 0%{opacity:0} 10%,88%{opacity:1} 100%{opacity:0} }
 .hw-feed { margin-top: 8px; text-align: left; display: flex; flex-direction: column; gap: 3px; }
 .hw-feed-line { font-size: 9px; color: #374151; font-family: 'DM Mono', monospace; }
-.hw-done-row { display: flex; align-items: center; gap: 10px; }
+.hw-done-row { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.hw-done-stats { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.hw-done-stat { font-size: 9.5px; font-weight: 600; color: #6B7280; background: #fff; border: 1px solid #ECE9FB; border-radius: 999px; padding: 5px 11px; }
+.hw-done-stat b { color: #13111E; font-family: 'DM Mono', monospace; margin-right: 3px; }
 .hw-conflict-pill { display: inline-flex; align-items: center; gap: 6px; background: #13111E; color: #fff; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 7px 16px; }
 .hw-conflict-pill i { width: 8px; height: 8px; border-radius: 50%; background: #D4920E; }
 

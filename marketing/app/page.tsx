@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
 import { HeroWalkthrough } from '@/components/animations/HeroWalkthrough'
 import { LiveDemo } from '@/components/animations/LiveDemo'
+import { CalendarShowcase } from '@/components/animations/CalendarShowcase'
 import { UniqueFeatures } from '@/components/UniqueFeatures'
 import { appHref } from '@/lib/appUrl'
 
@@ -134,6 +135,18 @@ export default function HomePage() {
           This is the Live board. Drag the timeline, sort free faculty by load, mark someone absent and assign a fairness-checked substitute — the same mechanics as the product.
         </p>
         <LiveDemo />
+      </section>
+
+      {/* Calendar mode — full-width day timetable with the real red Playhead */}
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#FAFAFE] px-6 py-16">
+        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Calendar mode — every lens, one timeline</p>
+        <h2 className="mb-2 max-w-[680px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
+          The day, hour by hour — with the <span className="italic text-[#EF4444]">red Playhead</span> on your clock.
+        </h2>
+        <p className="mb-9 max-w-[600px] text-center text-[14px] leading-[1.65] text-[#4B5275]">
+          The same school day through four lenses — Classes, Faculty, Venues, Subjects. The timeline is the heading, and the Playhead is genuinely your local time, moving as you read this.
+        </p>
+        <CalendarShowcase />
       </section>
 
       {/* Unique features — dense grid, no empty space */}
