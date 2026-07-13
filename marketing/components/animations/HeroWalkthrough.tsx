@@ -66,17 +66,37 @@ export function HeroWalkthrough() {
   const scene = SCENES[idx];
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // Scale the scene up on larger stages. Set via JS (not media queries) so
-  // the factor the cursor reads is exactly the factor in effect — no race
-  // between viewport settling and target measurement.
+  // AUTO-FIT: every scene scales like a slide to genuinely fill the stage.
+  // Measure the scene's natural content height at zoom 1, then zoom it to
+  // whichever runs out first — stage height or stage width (content width
+  // is capped at 1020px and centered by CSS). Set via JS so the factor the
+  // cursor reads is exactly the factor in effect.
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
     const el = stage.querySelector(".hw-scene") as HTMLElement | null;
     if (!el) return;
-    const w = stage.clientWidth, h = stage.clientHeight;
-    const z = w >= 1300 && h >= 600 ? 1.35 : w >= 1050 && h >= 540 ? 1.22 : w >= 860 && h >= 500 ? 1.1 : 1;
-    (el.style as CSSStyleDeclaration & { zoom: string }).zoom = String(z);
+    const style = el.style as CSSStyleDeclaration & { zoom: string };
+    style.zoom = "1";
+    // The scene box is inset:0 (full stage) so scrollHeight lies about the
+    // content. Measure the real extent: the bottom edge of every in-flow
+    // child; for stretch overlays (modals, the centered print sheet) use
+    // the inner card's own height plus breathing room.
+    const sTop = el.getBoundingClientRect().top;
+    const bottoms: number[] = [320];
+    for (const child of Array.from(el.children) as HTMLElement[]) {
+      if (child.classList.contains("hw-cursor") || child.classList.contains("hw-fly")) continue;
+      if (getComputedStyle(child).position === "absolute") {
+        const inner = child.firstElementChild as HTMLElement | null;
+        if (inner) bottoms.push(inner.getBoundingClientRect().height + 100);
+        continue;
+      }
+      bottoms.push(child.getBoundingClientRect().bottom - sTop);
+    }
+    const contentH = Math.max(...bottoms) + 18;
+    const contentW = Math.min(1020, el.clientWidth);
+    const z = Math.max(1, Math.min(stage.clientWidth / (contentW + 30), stage.clientHeight / contentH, 1.9));
+    style.zoom = z.toFixed(3);
   }, [idx]);
 
   return (
@@ -136,7 +156,7 @@ function Cursor({ steps, dur, grab }: { steps: CurStep[]; dur: number; grab?: [n
   useEffect(() => {
     const cur = ref.current;
     if (!cur || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const scene = cur.closest(".hw-stage") as HTMLElement | null;
+    const scene = cur.closest(".hw-scene") as HTMLElement | null;
     if (!scene) return;
     // Measure AFTER the 400ms scene-in scale animation has finished —
     // measuring mid-scale skews every rect by a few pixels — and after
@@ -148,8 +168,7 @@ function Cursor({ steps, dur, grab }: { steps: CurStep[]; dur: number; grab?: [n
     // .hw-scene). Rects are viewport px (post-zoom) but the cursor's own
     // translate happens inside the zoomed context, so divide by the factor.
     // Read the zoom style directly — it's the exact value in effect.
-    const zoomEl = scene.querySelector(".hw-scene") as HTMLElement | null;
-    const k = zoomEl ? parseFloat(getComputedStyle(zoomEl).zoom) || 1 : 1;
+    const k = parseFloat(getComputedStyle(scene).zoom) || 1;
     const center = (sel: string) => {
       const el = scene.querySelector(sel);
       if (!el) return null;
@@ -197,12 +216,11 @@ function Fly({ from, to, start, end, className, children }: { from: string; to: 
     const el = ref.current;
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { el.style.display = "none"; return; }
-    const scene = el.closest(".hw-stage") as HTMLElement | null;
+    const scene = el.closest(".hw-scene") as HTMLElement | null;
     if (!scene) return;
     const timer = setTimeout(() => {
     const s = scene.getBoundingClientRect();
-    const zoomEl = scene.querySelector(".hw-scene") as HTMLElement | null;
-    const k = zoomEl ? parseFloat(getComputedStyle(zoomEl).zoom) || 1 : 1;
+    const k = parseFloat(getComputedStyle(scene).zoom) || 1;
     const c = (sel: string) => {
       const t = scene.querySelector(sel);
       if (!t) return null;
@@ -1276,7 +1294,7 @@ const CSS = `
 .hw-dot { width: 9px; height: 9px; border-radius: 50%; }
 .hw-url { flex: 1; text-align: center; font: 500 10.5px 'DM Mono', monospace; color: #6B7280; background: #fff; border-radius: 6px; padding: 3px 10px; margin: 0 12px; }
 .hw-chrome-right { font-size: 9px; color: #9CA3AF; letter-spacing: 2px; }
-.hw-stage { position: relative; height: clamp(430px, calc(100dvh - 235px), 640px); background: #fff; overflow: hidden; }
+.hw-stage { position: relative; height: clamp(430px, calc(100dvh - 235px), 640px); background: #FAFAFE; overflow: hidden; }
 /* Chapter chip — tells a first-time viewer exactly which product screen
    this scene is, and where we are in the story. */
 .hw-chapter {
@@ -1302,9 +1320,12 @@ const CSS = `
 
 /* Entrance is opacity-only: a transform here would skew the cursor's
    target measurements taken during the first frames. */
-.hw-scene { position: absolute; inset: 0; padding: clamp(14px,2vw,26px); animation: hw-scene-in 0.4s ease both; overflow: hidden; }
+/* Content width is capped and centered; the JS auto-fit then zooms the
+   whole scene until it fills the stage height — big, slide-like, readable.
+   Extra top padding keeps content clear of the chapter chip. */
+.hw-scene { position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: 0 auto; max-width: 1020px; padding: clamp(44px,6vh,54px) clamp(14px,2vw,26px) clamp(14px,2vh,22px); animation: hw-scene-in 0.4s ease both; overflow: hidden; }
 @keyframes hw-scene-in { 0%{opacity:0} 100%{opacity:1} }
-.hw-app { background: #FAFAFE; }
+.hw-app { background: transparent; }
 
 /* primitives */
 .hw-in { opacity: 0; animation: hw-in 0.4s cubic-bezier(.2,.9,.3,1.05) both; }
@@ -1493,7 +1514,7 @@ const CSS = `
 .hw-load-std { font-size: 9px; font-weight: 700; color: #B45309; }
 
 /* print/export */
-.hw-dim-bg { position: absolute; inset: 0; background: rgba(19,17,30,0.35); }
+.hw-dim-bg { display: none; }
 .hw-export-panel { position: relative; width: min(300px, 60%); margin: 14px auto 0; background: #fff; border-radius: 12px; border: 1px solid #E5E7EB; box-shadow: 0 16px 50px rgba(0,0,0,0.18); padding: 12px 14px; }
 .hw-fmt-card { display: flex; justify-content: space-between; align-items: center; border: 1.5px solid #E5E7EB; border-radius: 8px; padding: 7px 10px; font-size: 9.5px; font-weight: 600; color: #374151; margin-top: 6px; }
 .hw-fmt-sel { animation: hw-fmt-sel-k 300ms ease both; }
@@ -1604,7 +1625,7 @@ const CSS = `
 .hw-chart-tip { opacity: 0; animation: hw-show 200ms ease 2950ms both; }
 
 /* close */
-.hw-close { background: radial-gradient(120% 140% at 50% -10%, #232048 0%, #13111E 60%, #0B0A14 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.hw-close { max-width: none; background: radial-gradient(120% 140% at 50% -10%, #232048 0%, #13111E 60%, #0B0A14 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
 .hw-close-mark { width: 64px; height: 64px; }
 .hw-u-path { stroke-dasharray: 80; stroke-dashoffset: 80; animation: hw-u-k 1400ms ease 500ms both; }
 @keyframes hw-u-k { to { stroke-dashoffset: 0; } }
