@@ -42,6 +42,12 @@ function fmt(min: number): string {
   const h12 = ((h + 11) % 12) + 1;
   return `${h12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
+function fmtSec(min: number): string {
+  const total = Math.floor(min * 60);
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
 
 export function LiveDemo() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -52,19 +58,19 @@ export function LiveDemo() {
   const [covered, setCovered] = useState(false);
   const [query, setQuery] = useState("");
 
-  const [afterHours, setAfterHours] = useState<null | "before" | "after">(null);
   useEffect(() => {
-    // "Now" is always the visitor's REAL local time. Inside school hours the
-    // red tick sits at that time and anything you scrub past it is "upcoming".
-    // Outside school hours there is no upcoming period left today, so the
-    // board honestly switches to planning the NEXT school day: now anchors at
-    // the day's start and the whole timeline is ahead of now.
+    // A marketing Live board must ALWAYS look alive — a visitor at 11 PM must
+    // still see a class in session. So "now" is a genuine ticking clock (it
+    // advances one real second per second, seconds visible in the badge) but
+    // anchored inside a morning teaching window and gently wrapped, so it is
+    // always mid-lesson. It is honestly labelled "demo time", not the
+    // visitor's wall clock — we never fake real local time. Dragging the
+    // scrubber ahead of this tick opens the plan-ahead / mark-absent flow.
+    const WIN_START = 9 * 60 + 45, WIN_END = 11 * 60 + 5; // always teaching
+    const mounted = Date.now();
     const tick = () => {
-      const d = new Date();
-      const real = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
-      if (real < DAY_START) { setNow(DAY_START); setAfterHours("before"); }
-      else if (real > DAY_END - 30) { setNow(DAY_START); setAfterHours("after"); }
-      else { setNow(real); setAfterHours(null); }
+      const elapsed = (Date.now() - mounted) / 1000; // seconds → demo seconds
+      setNow(WIN_START + (elapsed % ((WIN_END - WIN_START) * 60)) / 60);
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -110,18 +116,16 @@ export function LiveDemo() {
       <div className="ld-card">
         <div className="ld-head">
           <div className="ld-clockrow">
-            <b className="ld-clock">{fmt(value)}</b>
-            <span className="ld-status">{zone === "noon" ? "Lunch window · mixed" : "In session"}</span>
+            <b className="ld-clock">{fmtSec(value)}</b>
+            <span className="ld-status">{isFuture ? `Previewing ${fmt(value)}` : zone === "noon" ? "Lunch window · mixed" : "In session"}</span>
           </div>
           <div className="ld-headright">
-            {afterHours && (
-              <span className="ld-tomorrow">{afterHours === "after" ? "🌙 today's classes are over — planning tomorrow" : "🌅 school hasn't started — planning ahead"}</span>
-            )}
+            <span className="ld-demo-tag">demo clock</span>
             <span className="ld-livebadge" style={{ color: scrub === null ? "#16A34A" : "#9A95BC" }}>
               <i style={{ background: scrub === null ? "#16A34A" : "#CBC9DA" }} />
               {scrub === null ? "Live" : "Paused"}
             </span>
-            <button className="ld-nowbtn" onClick={() => setScrub(null)}>Now</button>
+            <button className="ld-nowbtn" onClick={() => { setScrub(null); setAbsent(null); setCovered(false); }}>Now</button>
           </div>
         </div>
 
@@ -142,7 +146,7 @@ export function LiveDemo() {
           <div className="ld-legend">
             <span><i style={{ background: "#B9AFF0" }} />Teaching</span>
             <span><i style={{ background: "#F7D9A0" }} />Break / free</span>
-            <span className="ld-hint">← drag the timeline, it&rsquo;s real</span>
+            <span className="ld-hint">← drag ahead to plan cover</span>
           </div>
         </div>
 
@@ -223,7 +227,7 @@ export function LiveDemo() {
         .ld-livebadge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
         .ld-livebadge i { width: 8px; height: 8px; border-radius: 4px; }
         .ld-nowbtn { padding: 7px 14px; border-radius: 9px; border: 1px solid #E3DEF7; background: #fff; font-size: 12.5px; font-weight: 700; color: #7C6FE0; cursor: pointer; font-family: inherit; }
-        .ld-tomorrow { font-size: 11px; font-weight: 600; color: #8B87AD; background: #F4F2FE; border-radius: 8px; padding: 4px 10px; }
+        .ld-demo-tag { font-size: 10px; font-weight: 700; color: #8B87AD; background: #F4F2FE; border: 1px solid #ECE9FB; border-radius: 8px; padding: 4px 9px; text-transform: uppercase; letter-spacing: 0.04em; }
         .ld-scrubwrap { padding: 0 18px 12px; }
         .ld-track { position: relative; height: 46px; border-radius: 12px; background: #F4F2FE; border: 1px solid #ECE9FB; cursor: pointer; touch-action: none; user-select: none; display: flex; gap: 2px; padding: 6px 0; }
         .ld-band { display: flex; flex-direction: column; border-radius: 6px; overflow: hidden; border: 1px solid rgba(19,17,30,0.07); pointer-events: none; }
