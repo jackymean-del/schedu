@@ -17,8 +17,7 @@ const FEATURES = [
   { icon: "🍱", key: "breaks", title: "Per-grade staggered breaks", desc: "Nursery breaks after P3, Class VI after P5, Class XI after P6 — every grade's break lands at its own real time, automatically." },
   { icon: "🔁", key: "transpose", title: "Transpose any view instantly", desc: "Flip Class, Faculty, Venue, or Subject views between periods-as-columns and days-as-columns with one click." },
   { icon: "🧩", key: "andor", title: "True AND / OR combination engine", desc: "AND runs subjects in genuine parallel across sections, streams, and blocks. OR competes for a single slot based on real period need — never a fake simultaneous split." },
-  { icon: "📡", key: "pulse", title: "A live Pulse on every view", desc: "Every schedule view — class, faculty, venue, subject — carries the same live “now” indicator, not just one dashboard." },
-  { icon: "🛟", key: "sub", title: "Live substitution & fair duty assignment", desc: "Mark a faculty member absent and get ranked cover suggestions scored on real workload — assign in one click, right from the Live board, with a fairness note on every pick." },
+  { icon: "🛟", key: "sub", title: "Live mode with substitutions & fair duty assignments", desc: "A board that follows the clock on every view. Drag ahead to any upcoming period, mark a faculty member absent, and get ranked cover scored on real workload — assign in one click, with a fairness note on every pick." },
 ];
 
 export function UniqueFeatures() {
@@ -60,7 +59,6 @@ export function UniqueFeatures() {
               {open === "breaks" && <DemoBreaks />}
               {open === "transpose" && <DemoTranspose />}
               {open === "andor" && <DemoAndOr />}
-              {open === "pulse" && <DemoPulse />}
               {open === "sub" && <DemoSub />}
             </div>
             <div className="uf-modal-foot">Illustrative data — the mechanic is the real one.</div>
@@ -207,32 +205,7 @@ function DemoAndOr() {
   );
 }
 
-// ── 6 · Live Pulse on every view ─────────────────────────────────────────
-function DemoPulse() {
-  const [lens, setLens] = useState(0);
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const LENSES = [["Classes", ["IX-A · Maths", "IX-B · Science", "X-A · English"]], ["Faculty", ["J. Abraham · IX-A", "M. Esther · IX-B", "D. Samuel · X-A"]], ["Venues", ["Lab-1 · IX-B", "R-12 · IX-A", "Hall · X-A"]], ["Subjects", ["Maths · 3 classes", "Science · 2 classes", "English · 2 classes"]]] as const;
-  const frac = now ? Math.max(0.05, Math.min(0.95, ((now.getHours() + now.getMinutes() / 60) % 12) / 12)) : 0.4;
-  return (
-    <div>
-      <div className="uf-seg">
-        {LENSES.map(([l], i) => <button key={String(l)} className={lens === i ? "is-on" : ""} onClick={() => setLens(i)}>{l}</button>)}
-      </div>
-      <div className="uf-pulse-box">
-        <i className="uf-nowline" style={{ left: `${frac * 100}%` }}><b>{now ? now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : ""}</b></i>
-        {LENSES[lens][1].map((r) => <div key={r} className="uf-pulse-row">{r}</div>)}
-      </div>
-      <p className="uf-p">That red line is <b>your real clock, ticking now</b> — and it follows you into every lens, not just one dashboard.</p>
-    </div>
-  );
-}
-
-// ── 7 · Live substitution & fair duty ────────────────────────────────────
+// ── 6 · Live mode: substitutions & fair duty ─────────────────────────────
 function DemoSub() {
   const [step, setStep] = useState(0);
   return (
@@ -299,10 +272,6 @@ const CSS = `
 .uf-lunch { font-size: 10.5px; font-weight: 700; color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 6px; padding: 5px; text-align: center; }
 .uf-lane { border-radius: 9px; padding: 9px 13px; font-size: 12.5px; color: #13111E; font-weight: 600; margin-bottom: 7px; }
 .uf-lane i { display: block; font-style: normal; font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: #7C6FE0; margin-top: 3px; }
-.uf-pulse-box { position: relative; border: 1px solid #E8E4FF; border-radius: 10px; padding: 10px 12px; background: #fff; overflow: hidden; }
-.uf-pulse-row { font-size: 12.5px; color: #374151; padding: 6px 4px; border-bottom: 1px solid #FAFAFA; }
-.uf-nowline { position: absolute; top: 0; bottom: 0; width: 2px; background: #EF4444; }
-.uf-nowline b { position: absolute; top: 2px; left: 4px; font-size: 9px; font-weight: 800; color: #EF4444; white-space: nowrap; }
 .uf-subpanel { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: #374151; }
 .uf-cand { text-align: left; font-size: 12px; padding: 8px 11px; border-radius: 8px; border: 1px solid #F0EEFA; color: #4B5275; background: #fff; font-family: inherit; }
 .uf-cand.is-top { border-color: #A7F3D0; background: #F0FDF9; cursor: pointer; color: #13111E; font-weight: 600; }

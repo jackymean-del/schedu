@@ -153,7 +153,7 @@ export default function HomePage() {
       <section id="unique" className="flex flex-col items-center bg-white px-6 py-16">
         <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Not used by anyone else</p>
         <h2 className="mb-9 max-w-[560px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
-          Seven things <span className="italic text-[#7C6FE0]">only schedU does.</span>
+          Six things <span className="italic text-[#7C6FE0]">only schedU does.</span>
         </h2>
         <p className="mb-7 text-center text-[13px] text-[#8B87AD]">Click any card to try the actual mechanic — every demo is interactive.</p>
         <UniqueFeatures />
