@@ -731,7 +731,13 @@ export function CalendarPage() {
   const liveStart = multiActive ? gridStart : dayStart
   const liveEnd = multiActive ? gridEnd : dayEnd
   const clampDay = (m: number) => Math.max(liveStart, Math.min(liveEnd, m))
-  const activeScrub = scrub ?? clampDay(nowMin)
+  // Following the clock on TODAY means the real minute — never clamped into
+  // the school day. Clamping used to force the moment onto the day's edge, so
+  // at 00:52 the board read "Assembly · 15 min left" and the header froze at
+  // the day's end all evening. Outside the day there is simply no active
+  // period, which is what "Before/After school" and the idle board want.
+  // (The scrubber handle clamps its own position — see MomentScrubber.)
+  const activeScrub = scrub ?? (viewingToday ? nowMin : clampDay(nowMin))
 
   const dayEvents = events
     .filter(e => e.date === toISODate(date))
@@ -1679,6 +1685,7 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
   const ref = useRef<HTMLDivElement>(null)
   const span = Math.max(1, dayEnd - dayStart)
   const pct = (m: number) => ((m - dayStart) / span) * 100
+  const handlePct = Math.max(0, Math.min(100, pct(value)))
   const seek = (clientX: number) => {
     const r = ref.current?.getBoundingClientRect(); if (!r) return
     const m = dayStart + ((clientX - r.left) / r.width) * span
@@ -1728,9 +1735,11 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
         {nowMin !== null && nowMin >= dayStart && nowMin <= dayEnd && (
           <div style={{ position: 'absolute', left: `${pct(nowMin)}%`, top: 0, bottom: 0, width: 2, background: '#EF4444', opacity: 0.5, pointerEvents: 'none' }} />
         )}
-        {/* handle */}
-        <div style={{ position: 'absolute', left: `${pct(value)}%`, top: -3, bottom: -3, width: 3, background: '#7C6FE0', borderRadius: 3, transform: 'translateX(-50%)', pointerEvents: 'none', boxShadow: '0 0 0 3px rgba(124,111,224,0.18)' }} />
-        <div style={{ position: 'absolute', left: `${pct(value)}%`, top: '50%', width: 15, height: 15, background: '#7C6FE0', borderRadius: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', border: '2.5px solid #fff', boxShadow: '0 2px 6px rgba(124,111,224,0.4)' }} />
+        {/* handle — the moment can legitimately sit outside the school day
+            (before/after hours while following the clock), so pin the handle
+            to the track's edge rather than letting it render off-scale. */}
+        <div style={{ position: 'absolute', left: `${handlePct}%`, top: -3, bottom: -3, width: 3, background: '#7C6FE0', borderRadius: 3, transform: 'translateX(-50%)', pointerEvents: 'none', boxShadow: '0 0 0 3px rgba(124,111,224,0.18)' }} />
+        <div style={{ position: 'absolute', left: `${handlePct}%`, top: '50%', width: 15, height: 15, background: '#7C6FE0', borderRadius: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', border: '2.5px solid #fff', boxShadow: '0 2px 6px rgba(124,111,224,0.4)' }} />
       </div>
       <div style={{ position: 'relative', height: 14, marginTop: 3 }}>
         {hours.map(t => (
