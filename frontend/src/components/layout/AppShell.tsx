@@ -43,7 +43,10 @@ const SECTIONS: NavSection[] = [
     heading: 'HELP & SUPPORT',
     items: [
       { icon: LifeBuoy, label: 'Support Center', href: '/support' },
-      { icon: BookOpen, label: 'Documentation',  href: '/docs' },
+      // Docs live on the marketing site since the domain split. Open them in
+      // a new tab — navigating this tab there would drop a signed-in user
+      // into logged-out marketing chrome and look like being signed out.
+      { icon: BookOpen, label: 'Documentation',  href: 'https://schedu.bhusku.com/docs', external: true },
       { icon: Video,    label: 'Book a Demo',     href: '/demo' },
     ],
   },

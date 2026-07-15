@@ -20,7 +20,7 @@ export function SupportPage() {
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-          <LinkCard icon={<BookOpen size={18} />} title="Documentation" desc="Step-by-step guides" href="/docs" />
+          <LinkCard icon={<BookOpen size={18} />} title="Documentation" desc="Step-by-step guides" href="https://schedu.bhusku.com/docs" />
           <LinkCard icon={<PlayCircle size={18} />} title="Watch a demo" desc="See schedU in action" href="/demo" />
           <LinkCard icon={<Mail size={18} />} title="Email us" desc="support@bhusku.com" href="mailto:support@bhusku.com" />
         </div>
@@ -44,8 +44,10 @@ export function SupportPage() {
 }
 
 function LinkCard({ icon, title, desc, href }: { icon: React.ReactNode; title: string; desc: string; href: string }) {
+  const external = href.startsWith('http')
   return (
-    <a href={href} style={{ textDecoration: 'none', background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 18, display: 'block' }}>
+    <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
+      style={{ textDecoration: 'none', background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 18, display: 'block' }}>
       <div style={{ color: '#7C6FE0', marginBottom: 10 }}>{icon}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E' }}>{title}</div>
       <div style={{ fontSize: 12.5, color: '#8B87AD', marginTop: 2 }}>{desc}</div>

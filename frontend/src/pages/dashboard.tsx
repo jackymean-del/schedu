@@ -170,7 +170,7 @@ const SIDE_SECTIONS: SideSection[] = [
     heading: 'HELP & SUPPORT',
     items: [
       { key: 'support', icon: LifeBuoy, label: 'Support Center', href: '/support'        },
-      { key: 'docs',    icon: BookOpen, label: 'Documentation',  href: '/docs'                  },
+      { key: 'docs',    icon: BookOpen, label: 'Documentation',  href: 'https://schedu.bhusku.com/docs', external: true },
       { key: 'demo',    icon: Video,    label: 'Book a Demo',    href: '/demo'                  },
     ],
   },

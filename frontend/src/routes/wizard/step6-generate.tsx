@@ -902,6 +902,52 @@ export function Step6Generate() {
         )}
       </div>
 
+      {/* ── Journey strip — where you are in the schedule's lifecycle, so the
+           next move is always guessable without leaving the page ── */}
+      {(() => {
+        const published = store.timetableStatus === 'published'
+        // Stage index: 0 Setup · 1 Generate · 2 Review · 3 Publish · 4 Live
+        const current =
+          job?.status === "running"   ? 1 :
+          job?.status === "completed" ? 2 :
+          job?.status === "failed"    ? 1 :
+          hasExistingTT ? (published ? 4 : 2) : 1
+        const STAGES = [
+          { label: 'Set up',   sub: 'wizard steps 1–4' },
+          { label: 'Generate', sub: 'AI builds the draft' },
+          { label: 'Review',   sub: 'fine-tune any cell' },
+          { label: 'Publish',  sub: 'share & export' },
+          { label: 'Go live',  sub: 'calendar follows the clock' },
+        ]
+        return (
+          <div style={{ display:"flex", alignItems:"flex-start", gap:0, animation:"fade-up 0.4s ease 0.05s both", maxWidth:560, width:"100%" }}>
+            {STAGES.map((s, i) => {
+              const done = i < current
+              const isNow = i === current
+              return (
+                <div key={s.label} style={{ flex:1, display:"flex", flexDirection:"column" as const, alignItems:"center", position:"relative" }}>
+                  {i > 0 && (
+                    <div style={{ position:"absolute", top:11, right:"50%", width:"100%", height:2, background: i <= current ? P : "#E8E4FF", zIndex:0 }} />
+                  )}
+                  <div style={{
+                    width:22, height:22, borderRadius:"50%", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:11, fontWeight:800, fontFamily:"inherit",
+                    background: done ? P : isNow ? "#fff" : "#F1EEFB",
+                    color: done ? "#fff" : isNow ? P : "#B5B0CF",
+                    border: isNow ? `2.5px solid ${P}` : "2.5px solid transparent",
+                    boxShadow: isNow ? `0 0 0 4px ${P_L}` : "none",
+                  }}>
+                    {done ? "✓" : i + 1}
+                  </div>
+                  <span style={{ fontSize:11, fontWeight: isNow ? 800 : 600, color: isNow ? "#13111E" : done ? "#4B5275" : "#B5B0CF", marginTop:6 }}>{s.label}</span>
+                  <span style={{ fontSize:9, color: isNow ? "#8B87AD" : "#C4C0DC", marginTop:1 }}>{s.sub}</span>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
+
       {/* ── Progress ring + percentage ── */}
       {job && (
         <div style={{ position:"relative", width:148, height:148, animation:"fade-up 0.4s ease 0.1s both" }}>
@@ -1181,23 +1227,48 @@ export function Step6Generate() {
         )}
 
         {job?.status === "completed" && (
-          <>
-            <button onClick={() => window.location.href='/timetable'}
-              style={{ padding:"13px 32px", borderRadius:10, border:"none", background:P, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(124,111,224,0.3)" }}>
-              View {T.schedule} (Draft) →
-            </button>
+          <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:14, width:"100%" }}>
+            {/* What's next — the three real paths from a fresh draft, so the
+                next move never needs guessing */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:10, width:"100%", maxWidth:640 }}>
+              {[
+                { icon:"✏️", title:`Review & fine-tune`, desc:"Open the draft — drag any lesson to move it, clashes checked live.", href:"/timetable", primary:true },
+                { icon:"📤", title:"Publish & export", desc:"Share links, Excel, or print-ready PDFs when the draft looks right.", href:"/timetable" },
+                { icon:"📡", title:"Watch it live", desc:"The Calendar's Live board follows the clock from day one.", href:"/calendar" },
+              ].map(c => (
+                <button key={c.title} onClick={() => window.location.href = c.href}
+                  style={{
+                    textAlign:"left" as const, padding:"13px 15px", borderRadius:12, cursor:"pointer", fontFamily:"inherit",
+                    border: c.primary ? "none" : "1.5px solid #E8E4FF",
+                    background: c.primary ? P : "#fff",
+                    boxShadow: c.primary ? "0 4px 20px rgba(124,111,224,0.3)" : "none",
+                  }}>
+                  <div style={{ fontSize:17, marginBottom:5 }}>{c.icon}</div>
+                  <div style={{ fontSize:13, fontWeight:800, color: c.primary ? "#fff" : "#13111E" }}>{c.title} →</div>
+                  <div style={{ fontSize:11, lineHeight:1.5, marginTop:3, color: c.primary ? "rgba(255,255,255,0.85)" : "#8B87AD" }}>{c.desc}</div>
+                </button>
+              ))}
+            </div>
             <button onClick={() => { setJob(null); setShowRegenConfirm(false) }}
-              style={{ padding:"13px 18px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
-              ↺ Re-generate
+              style={{ padding:"9px 16px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:12.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
+              ↺ Not happy? Re-generate with the same setup
             </button>
-          </>
+          </div>
         )}
 
         {job?.status === "failed" && (
-          <button onClick={() => setJob(null)}
-            style={{ padding:"13px 22px", borderRadius:10, border:"none", background:"#dc2626", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-            Try Again
-          </button>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" as const, justifyContent:"center" }}>
+            <button onClick={() => setJob(null)}
+              style={{ padding:"13px 22px", borderRadius:10, border:"none", background:"#dc2626", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+              Try Again
+            </button>
+            {/* Most generation failures trace back to allocation gaps — offer
+                the fix path directly instead of a dead end */}
+            <button onClick={() => setStep(3)}
+              style={{ padding:"13px 20px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
+              ← Check Allocation (Step 3)
+            </button>
+          </div>
         )}
       </div>
     </div>
