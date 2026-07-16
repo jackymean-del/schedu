@@ -23,7 +23,7 @@ import { ScoreBreakdownPopover } from './ScoreBreakdownPopover'
 import {
   type BlockedSlot, type DynamicLearningGroup,
   blockedCategoryLabel, blockedRemedy,
-  reoptimizeTeachers,
+  reoptimizeTeachers, buildTeacherTT,
 } from '@/lib/schedulingEngine'
 import { DLGInspector } from './DLGInspector'
 import { ConflictResolutionWizard } from './ConflictResolutionWizard'
@@ -212,6 +212,14 @@ export function ReviewDashboard({
         subjectAllocations: liveStore.subjectAllocations ?? {},
       })
       const stddevBefore = loadStats.stddev
+      // PERSIST the improved assignment — previously only the load bars were
+      // updated, so the chart claimed reassignments the timetable never got.
+      // reassignedCount === 0 means the engine kept the incumbent (it only
+      // accepts genuinely better results now); nothing to write in that case.
+      if (result.reassignedCount > 0) {
+        liveStore.setClassTT?.(result.classTT)
+        liveStore.setTeacherTT?.(buildTeacherTT(result.classTT, staff, workDays))
+      }
       setReoptimizedLoad(result.teacherWeeklyLoad)
       setReoptimizeResult({
         reassignedCount: result.reassignedCount,
@@ -424,15 +432,23 @@ export function ReviewDashboard({
             border: `1px solid ${reoptimizeResult.stddevAfter < reoptimizeResult.stddevBefore ? '#BBF7D0' : '#FDE68A'}`,
             marginBottom: 10, fontSize: 11,
           }}>
-            <span style={{ fontWeight: 700, color: reoptimizeResult.stddevAfter < reoptimizeResult.stddevBefore ? '#15803D' : '#92400E' }}>
-              {reoptimizeResult.stddevAfter < reoptimizeResult.stddevBefore ? '✓ Improved' : '↔ No change'}
+            <span style={{ fontWeight: 700, color: reoptimizeResult.reassignedCount > 0 ? '#15803D' : '#92400E' }}>
+              {reoptimizeResult.reassignedCount > 0 ? '✓ Improved' : '↔ Already optimal — kept as-is'}
             </span>
-            <span style={{ color: '#4B5275' }}>
-              {reoptimizeResult.reassignedCount} slot{reoptimizeResult.reassignedCount !== 1 ? 's' : ''} reassigned
-            </span>
-            <span style={{ color: '#8B87AD', fontFamily: "'DM Mono', monospace" }}>
-              stddev: {reoptimizeResult.stddevBefore.toFixed(2)} → {reoptimizeResult.stddevAfter.toFixed(2)}
-            </span>
+            {reoptimizeResult.reassignedCount > 0 ? (
+              <>
+                <span style={{ color: '#4B5275' }}>
+                  {reoptimizeResult.reassignedCount} slot{reoptimizeResult.reassignedCount !== 1 ? 's' : ''} reassigned
+                </span>
+                <span style={{ color: '#8B87AD', fontFamily: "'DM Mono', monospace" }}>
+                  stddev: {reoptimizeResult.stddevBefore.toFixed(2)} → {reoptimizeResult.stddevAfter.toFixed(2)}
+                </span>
+              </>
+            ) : (
+              <span style={{ color: '#4B5275' }}>
+                No reassignment beats the current balance (stddev {reoptimizeResult.stddevBefore.toFixed(2)}) — your schedule was left untouched.
+              </span>
+            )}
             <button
               onClick={() => { setReoptimizeResult(null); setReoptimizedLoad(null) }}
               style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#8B87AD', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: '0 2px' }}
@@ -606,15 +622,22 @@ export function ReviewDashboard({
 
       {/* ─── G. Unplaced Slots (Why-this-was-blocked) ─── */}
       {blockedSlots.length > 0 && (() => {
-        // Split into two categories:
+        // Split into three categories:
         // • "free" — quota-met / all-subjects-exhausted slots (expected empty periods, not errors)
+        // • "dispersal" — the class's day is simply over (expected structure, not errors)
         // • "hard" — scope-locked, no-teacher, etc. (genuine placement failures)
         const freeCategories = new Set(['subject-quota-met', 'all-subjects-exhausted'])
+        const expectedCategories = new Set([...freeCategories, 'after-dispersal'])
         const freeSlots = blockedSlots.filter(s =>
           s.reasons.length > 0 && s.reasons.every(r => freeCategories.has(r.category))
         )
+        const dispersalSlots = blockedSlots.filter(s =>
+          s.reasons.length > 0 &&
+          s.reasons.every(r => expectedCategories.has(r.category)) &&
+          s.reasons.some(r => r.category === 'after-dispersal')
+        )
         const hardSlots = blockedSlots.filter(s =>
-          s.reasons.some(r => !freeCategories.has(r.category))
+          s.reasons.some(r => !expectedCategories.has(r.category))
         )
         return (
           <Card
@@ -627,12 +650,17 @@ export function ReviewDashboard({
               {hardSlots.length > 0 && (
                 <Pill color="#D4920E" bg="#FEF3C7" label={`${hardSlots.length} unplaced slot${hardSlots.length !== 1 ? 's' : ''}`} />
               )}
+              {dispersalSlots.length > 0 && (
+                <Pill color="#6B7280" bg="#F3F4F6" label={`${dispersalSlots.length} after day end`} />
+              )}
               {freeSlots.length > 0 && (
                 <Pill color="#6B7280" bg="#F3F4F6" label={`${freeSlots.length} free period${freeSlots.length !== 1 ? 's' : ''}`} />
               )}
               <span style={{ fontSize: 11, color: '#4B5275' }}>
                 {hardSlots.length > 0
                   ? 'Some slots couldn\'t be filled — see details below.'
+                  : dispersalSlots.length > 0
+                  ? 'No genuine gaps — junior classes simply end their day earlier; those slots don\'t exist for them.'
                   : 'All subjects met their weekly quota — remaining slots are free/activity periods.'
                 }
               </span>
@@ -651,6 +679,20 @@ export function ReviewDashboard({
                 )}
               </div>
             )}
+
+            {/* Day-already-over slots — collapsed summary, never a wall of rows */}
+            {dispersalSlots.length > 0 && (() => {
+              const bySection = new Map<string, number>()
+              dispersalSlots.forEach(s => bySection.set(s.section, (bySection.get(s.section) ?? 0) + 1))
+              const names = [...bySection.keys()].sort()
+              const label = names.length <= 5 ? names.join(', ') : `${names.slice(0, 4).join(', ')} +${names.length - 4} more`
+              return (
+                <div style={{ padding: '8px 12px', borderRadius: 8, background: '#F8F9FA', border: '1px solid #E5E7EB', fontSize: 11, color: '#6B7280', marginBottom: freeSlots.length > 0 ? 8 : 0 }}>
+                  🕒 <strong>{label}</strong> finish their day earlier than the longest grid — the {dispersalSlots.length} slot{dispersalSlots.length !== 1 ? 's' : ''} after
+                  their dispersal simply don&rsquo;t exist for them. Nothing to fix; extend their bell in <em>Shift &amp; timing</em> only if they should stay longer.
+                </div>
+              )
+            })()}
 
             {/* Free periods — collapsed summary, not a list of rows */}
             {freeSlots.length > 0 && (

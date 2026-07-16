@@ -169,11 +169,25 @@ function inferType(name: string, category?: string): 'academic' | 'activity' {
 
 function readOpt(sub: any): OptInfo {
   const cfgs = (sub.classConfigs ?? []) as any[]
-  const optional = sub.isOptional === true || cfgs.some(c => c.isOptional === true)
-  const slot = sub.electiveSlotId ?? cfgs.find(c => c.electiveSlotId)?.electiveSlotId
+  const optionalCfgs = cfgs.filter(c => c.isOptional === true)
+  const optional = sub.isOptional === true || optionalCfgs.length > 0
+  const slot = sub.electiveSlotId
+    ?? optionalCfgs.find(c => c.electiveSlotId)?.electiveSlotId
+    ?? cfgs.find(c => c.electiveSlotId)?.electiveSlotId
   const category = sub.category ?? cfgs.find(c => c.category)?.category
-  const fromCfg = cfgs.map(c => c.sectionName).filter(Boolean) as string[]
-  const sections = [...new Set([...fromCfg, ...(sub.sections ?? [])])]
+  // Elective SCOPE is per-section. Marking any section elective also sets the
+  // subject-level isOptional flag (types/index.ts) — that flag must not widen
+  // the scope back to every section the subject is merely TAUGHT in, or "PE
+  // elective in XI–XII" drags LKG–X into the combo cards too. When explicit
+  // per-section elective flags exist, they alone define the scope; the
+  // subject-level flag with no per-section detail keeps the legacy
+  // everywhere-it's-taught behaviour.
+  const sections = optionalCfgs.length > 0
+    ? [...new Set(optionalCfgs.map(c => c.sectionName).filter(Boolean) as string[])]
+    : [...new Set([
+        ...(cfgs.map(c => c.sectionName).filter(Boolean) as string[]),
+        ...(sub.sections ?? []),
+      ])]
   return { sub, optional, slot, category, type: inferType(sub.name, category), sections }
 }
 
@@ -182,7 +196,7 @@ function readOpt(sub: any): OptInfo {
  * (academic vs activity) is a hard separator. Cards that share the same section
  * set are tagged with the same blockId so they render under one fixed rail.
  */
-function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[] {
+export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[] {
   const opts = subjects.map(readOpt).filter(o => o.optional && o.sections.length > 0)
 
   const byKey = new Map<string, OptInfo[]>()

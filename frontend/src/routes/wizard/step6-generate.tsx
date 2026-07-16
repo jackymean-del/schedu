@@ -438,6 +438,10 @@ function lockEarlyDispersal(
     if (tc == null || tc >= classPeriods.length || tc < minGenuine) return sec
     const scope = JSON.parse(JSON.stringify(sec.scope ?? {}))
     scope.cells ??= {}
+    // Remember WHICH locks are dispersal locks (day already over) so the gap
+    // report can say "this class's day has ended" instead of the misleading
+    // generic "unlock this section scope".
+    scope.dispersalIds = classPeriods.slice(tc).map(p => p.id)
     for (const day of workDays) {
       scope.cells[day] ??= {}
       for (const p of classPeriods.slice(tc)) scope.cells[day][p.id] = 'locked'

@@ -427,6 +427,7 @@ export interface SolverOutput {
 export type BlockedReasonCategory =
   | 'subject-scope-locked'
   | 'section-scope-locked'
+  | 'after-dispersal'
   | 'no-eligible-teachers'
   | 'subject-quota-met'
   | 'subject-max-per-day'
@@ -451,6 +452,7 @@ export function blockedCategoryLabel(c: BlockedReasonCategory): string {
   switch (c) {
     case 'subject-scope-locked':   return 'Subject scope-locked'
     case 'section-scope-locked':   return 'Section scope-locked'
+    case 'after-dispersal':        return 'After day end'
     case 'no-eligible-teachers':   return 'No eligible teacher'
     case 'subject-quota-met':      return 'All subjects met quota'
     case 'subject-max-per-day':    return 'Daily limit reached'
@@ -463,6 +465,7 @@ export function blockedRemedy(c: BlockedReasonCategory): string {
   switch (c) {
     case 'subject-scope-locked':   return 'Loosen the subject scope OR allow another subject at this slot'
     case 'section-scope-locked':   return 'Unlock this section scope at this slot'
+    case 'after-dispersal':        return 'This class’s day has already ended at this period — it isn’t a gap. Trim its weekly allocations to fit its shorter day, or extend its bell in Shift & timing'
     case 'no-eligible-teachers':   return 'Add a teacher to the subject pool or expand subject lists'
     case 'subject-quota-met':      return 'Increase the periods-per-week target for this section'
     case 'subject-max-per-day':    return 'Raise maxPeriodsPerDay for this subject'
@@ -1069,8 +1072,18 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           ? (sec.scope.cells?.[day]?.[period.id] ?? 'allowed')
           : 'allowed'
         if (sectionScopeState === 'locked') {
-          recordBlock(sec.name, day, period.id, 'section-scope-locked',
-            `${sec.name} is scope-locked at this slot`, sec.name)
+          // A dispersal lock means the class's day is simply over — that is
+          // expected structure, not a schedule failure. Reporting it as a
+          // generic scope lock ("unlock this scope") sent users chasing a
+          // non-existent problem.
+          const isDispersal = ((sec.scope as any)?.dispersalIds ?? []).includes(period.id)
+          if (isDispersal) {
+            recordBlock(sec.name, day, period.id, 'after-dispersal',
+              `${sec.name}'s day has already ended by this period`, sec.name)
+          } else {
+            recordBlock(sec.name, day, period.id, 'section-scope-locked',
+              `${sec.name} is scope-locked at this slot`, sec.name)
+          }
           return
         }
 
@@ -1273,37 +1286,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   })
 
   // ── Build Teacher Timetable ──
-  const teacherTT: Record<string, TeacherSchedule> = {}
-  staff.forEach(st => {
-    teacherTT[st.name] = {
-      classes: [...(st.classes ?? [])],
-      subjects: [...(st.subjects ?? [])],
-      schedule: Object.fromEntries(workDays.map(d => [d, {}])),
-    }
-  })
-
-  Object.entries(classTT).forEach(([secName, secData]) => {
-    Object.entries(secData).forEach(([day, dayData]) => {
-      Object.entries(dayData).forEach(([periodId, cell]) => {
-        if (!cell?.teacher) return
-        if (!teacherTT[cell.teacher]) {
-          teacherTT[cell.teacher] = { classes: [], subjects: [], schedule: Object.fromEntries(workDays.map(d => [d, {}])) }
-        }
-        const existing = teacherTT[cell.teacher].schedule[day]?.[periodId]
-        if (existing) {
-          existing.subject += ` / ${cell.subject}(${secName})`
-          existing.conflict = true
-        } else {
-          teacherTT[cell.teacher].schedule[day][periodId] = {
-            subject: `${cell.subject} (${secName})`,
-            room: cell.room,
-            sectionName: secName,
-            isClassTeacher: cell.isClassTeacher,
-          }
-        }
-      })
-    })
-  })
+  const teacherTT = buildTeacherTT(classTT, staff, workDays)
 
   // ── Detect Hard Conflicts ──
   // Uses the same optional-block-aware logic as the exported detectConflicts()
@@ -1382,6 +1365,45 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   }
 }
 
+/** Derive the teacher-view timetable from a class timetable. Extracted from
+ *  the solver so re-optimise (and any other classTT mutation) can rebuild
+ *  the teacher view consistently instead of leaving it stale. */
+export function buildTeacherTT(
+  classTT: ClassTimetable, staff: Staff[], workDays: string[],
+): Record<string, TeacherSchedule> {
+  const teacherTT: Record<string, TeacherSchedule> = {}
+  staff.forEach(st => {
+    teacherTT[st.name] = {
+      classes: [...(st.classes ?? [])],
+      subjects: [...(st.subjects ?? [])],
+      schedule: Object.fromEntries(workDays.map(d => [d, {}])),
+    }
+  })
+  Object.entries(classTT).forEach(([secName, secData]) => {
+    Object.entries(secData).forEach(([day, dayData]) => {
+      Object.entries(dayData).forEach(([periodId, cell]) => {
+        if (!cell?.teacher) return
+        if (!teacherTT[cell.teacher]) {
+          teacherTT[cell.teacher] = { classes: [], subjects: [], schedule: Object.fromEntries(workDays.map(d => [d, {}])) }
+        }
+        const existing = teacherTT[cell.teacher].schedule[day]?.[periodId]
+        if (existing) {
+          existing.subject += ` / ${cell.subject}(${secName})`
+          existing.conflict = true
+        } else {
+          teacherTT[cell.teacher].schedule[day][periodId] = {
+            subject: `${cell.subject} (${secName})`,
+            room: cell.room,
+            sectionName: secName,
+            isClassTeacher: cell.isClassTeacher,
+          }
+        }
+      })
+    })
+  })
+  return teacherTT
+}
+
 // ─── Teacher Re-optimisation Pass ────────────────────────
 /**
  * reoptimizeTeachers — re-run the AI teacher-assignment scoring on an
@@ -1416,9 +1438,45 @@ export interface ReoptimizeResult {
   reassignedCount: number
 }
 
+/** Weekly load per teacher + stddev + cap violations for a classTT — used to
+ *  judge whether a re-optimise attempt actually improved on the incumbent. */
+function measureLoads(
+  classTT: ClassTimetable, sections: Section[], staff: Staff[], workDays: string[],
+  classPeriods: Period[],
+): { load: Record<string, number>; stddev: number; overCap: number } {
+  const load: Record<string, number> = {}
+  staff.forEach(t => { load[t.name] = 0 })
+  sections.forEach(sec => {
+    const secData = classTT[sec.name] ?? {}
+    workDays.forEach(day => {
+      classPeriods.forEach(p => {
+        const cell: any = (secData as any)[day]?.[p.id]
+        if (cell?.teacher != null && cell.teacher !== '' && load[cell.teacher] !== undefined) load[cell.teacher]++
+      })
+    })
+  })
+  const active = Object.values(load).filter(l => l > 0)
+  let stddev = 0
+  if (active.length) {
+    const mean = active.reduce((a, b) => a + b, 0) / active.length
+    stddev = Math.sqrt(active.reduce((a, l) => a + (l - mean) ** 2, 0) / active.length)
+  }
+  let overCap = 0
+  staff.forEach(t => {
+    const max = (t as any).maxPeriodsPerWeek ?? 40
+    if (max > 0 && (load[t.name] ?? 0) > max) overCap += (load[t.name] ?? 0) - max
+  })
+  return { load, stddev, overCap }
+}
+
 export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   const { sections, staff, subjects, periods, workDays } = input
   const classPeriods = periods.filter(p => p.type === 'class')
+
+  // Incumbent stats — the bar any re-optimise attempt must beat. Without
+  // this, a greedy pass that happened to land WORSE (higher stddev, new cap
+  // violations) was still returned and applied.
+  const before = measureLoads(input.classTT, sections, staff, workDays, classPeriods)
 
   // Deep-clone classTT — we mutate the clone, never the caller's data
   const classTT: ClassTimetable = JSON.parse(JSON.stringify(input.classTT))
@@ -1437,6 +1495,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   type WorkItem = {
     secName: string; day: string; periodId: string
     subject: string; periodIdx: number
+    prevTeacher: string   // incumbent — "reassigned" means it actually changed
   }
   const workItems: WorkItem[] = []
 
@@ -1452,8 +1511,9 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
             teacherBusy[cell.teacher]?.[day]?.add(period.id)
           }
         } else {
+          const prevTeacher = cell.teacher ?? ''
           cell.teacher = ''   // clear — will be re-assigned below
-          workItems.push({ secName: sec.name, day, periodId: period.id, subject: cell.subject, periodIdx: pi })
+          workItems.push({ secName: sec.name, day, periodId: period.id, subject: cell.subject, periodIdx: pi, prevTeacher })
         }
       })
     })
@@ -1482,7 +1542,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   let reassignedCount = 0
 
   // ── Phase 3: re-assign teachers using composite scoring ──
-  workItems.forEach(({ secName, day, periodId, subject, periodIdx }) => {
+  workItems.forEach(({ secName, day, periodId, subject, periodIdx, prevTeacher }) => {
     const sec   = sections.find(s => s.name === secName)
     const sectionKey = `${secName}::${subject}`
     const gradeKey   = sec?.grade ? `${(sec as any).grade}::${subject}` : ''
@@ -1508,12 +1568,26 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       return subs.includes(subject)
     }
 
+    // Weekly cap is a HARD constraint here: a teacher already at their max
+    // must not win another slot just because they score well on subject
+    // match. Only if a tier has no under-cap candidate do we relax within
+    // that tier (an overload warning beats a blank cell — same philosophy
+    // as the main solver).
+    const underCap = (st: Staff): boolean => {
+      const maxWeek = (st as any).maxPeriodsPerWeek ?? 40
+      return maxWeek <= 0 || (teacherWeeklyLoad[st.name] ?? 0) < maxWeek
+    }
+    const pickTier = (pool: Staff[]): Staff[] => {
+      const capped = pool.filter(underCap)
+      return capped.length ? capped : pool
+    }
     let eligible = staff.filter(st => matchesSub(st) && isAvailable(st))
     if (!eligible.length) eligible = staff.filter(st =>
       ((st as any).subjects ?? []).includes(subject) && isAvailable(st)
     )
     if (!eligible.length) eligible = staff.filter(st => isAvailable(st))
     if (!eligible.length) return   // no teacher available — slot stays blank
+    eligible = pickTier(eligible)
 
     // Today's load snapshot (for exhaustion penalty)
     const teacherLoadToday: Record<string, number> = {}
@@ -1569,7 +1643,9 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     teacherWeeklyLoad[teacher.name] = (teacherWeeklyLoad[teacher.name] ?? 0) + 1
     teacherSubjectSet[teacher.name]?.add(subject)
     teacherSectionSet[teacher.name]?.add(secName)
-    reassignedCount++
+    // "Reassigned" = the teacher actually changed. Re-picking the incumbent
+    // is not a change — counting it made the banner claim absurd numbers.
+    if (teacher.name !== prevTeacher) reassignedCount++
   })
 
   // ── Phase 4: compute stddev + workload penalties ──
@@ -1599,6 +1675,38 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
         })
       }
     })
+  }
+
+  // ── Phase 5: accept only if genuinely better ──
+  // "Better" = fewer cap violations, or equal violations with lower stddev.
+  // Otherwise keep the incumbent untouched and say so — re-optimise must
+  // never be able to make a schedule worse.
+  const after = measureLoads(classTT, sections, staff, workDays, classPeriods)
+  const improved = after.overCap < before.overCap ||
+    (after.overCap === before.overCap && after.stddev < before.stddev - 1e-9)
+  if (!improved) {
+    // Report the incumbent's own penalties so the score history stays honest.
+    const keptPenalties: ReoptimizeResult['penalties'] = []
+    const balancePenalty = Math.min(50, Math.round(before.stddev * 4))
+    if (balancePenalty > 0) keptPenalties.push({
+      constraint: 'workload-imbalance', penalty: balancePenalty,
+      details: `Teacher loads stddev=${before.stddev.toFixed(2)} — re-optimise found nothing better, kept as-is`,
+    })
+    staff.forEach(t => {
+      const load = before.load[t.name] ?? 0
+      const max = (t as any).maxPeriodsPerWeek ?? 40
+      if (max > 0 && load > max) keptPenalties.push({
+        constraint: 'teacher-overload', penalty: (load - max) * 5,
+        details: `${t.name} has ${load} periods/week (max ${max})`,
+      })
+    })
+    return {
+      classTT: input.classTT,
+      teacherWeeklyLoad: before.load,
+      teacherLoadStddev: before.stddev,
+      penalties: keptPenalties,
+      reassignedCount: 0,
+    }
   }
 
   return { classTT, teacherWeeklyLoad, teacherLoadStddev, penalties, reassignedCount }

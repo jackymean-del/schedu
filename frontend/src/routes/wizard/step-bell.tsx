@@ -606,7 +606,7 @@ function approxLunchTime(
  *             Uses buildBellRowsFromCw → returns populated cwRows so the
  *             classwise timing path is taken in handleNext.
  */
-function smartGenerateBellConfig(
+export function smartGenerateBellConfig(
   startTime:        string,
   endTime:          string,
   maxPeriods:       number,
@@ -643,26 +643,34 @@ function smartGenerateBellConfig(
   // ── CwBreakRow path (smart lunch OR morning break active) ────
   const cwRows: CwBreakRow[] = []
 
-  // Optional morning break — placed earliest (before the shared short break)
-  if (morningBreak) {
-    cwRows.push({
-      id: makeId(), name: 'Morning Break', type: 'short-break',
-      classes: [...allKeys],
-      afterPeriod: morningBreakPos,
-      duration: morningBreakDur,
-    })
-  }
-
   // When a morning break is already configured, it serves as the mid-morning
   // short break — use its position as the reference slot so we don't end up
   // with two separate short-type breaks in the generated schedule.
   const effectiveSbAfterP = morningBreak ? morningBreakPos : sbAfterP
 
   // Determine if Pre-Primary is eating at (or before) the short-break slot.
-  // If so, they eat lunch while everyone else takes their short break — skip them from sb.
+  // If so, they eat lunch while everyone else takes their short break — skip
+  // them from that break. This must apply to the Morning Break row too:
+  // including them there put their lunch IMMEDIATELY after the morning break
+  // (two consecutive breaks, zero teaching between) — a schedule no school
+  // would run.
   const prePrimaryKeys = activeClasses.filter(c => c.group === 'Pre-Primary').map(c => c.key)
   const ppLunchAP      = lunchAfterPeriod['Pre-Primary'] ?? effectiveSbAfterP
   const ppEatsEarly    = lunchMode !== 'single' && prePrimaryKeys.length > 0 && ppLunchAP <= effectiveSbAfterP
+
+  // Optional morning break — placed earliest (before the shared short break).
+  // Groups whose lunch replaces this pause are excluded (see above).
+  if (morningBreak) {
+    const mbClasses = ppEatsEarly ? allKeys.filter(k => !prePrimaryKeys.includes(k)) : [...allKeys]
+    if (mbClasses.length > 0) {
+      cwRows.push({
+        id: makeId(), name: 'Morning Break', type: 'short-break',
+        classes: mbClasses,
+        afterPeriod: morningBreakPos,
+        duration: morningBreakDur,
+      })
+    }
+  }
 
   // Only add a separate mid-morning Short Break when morning break is NOT already
   // configured — otherwise the morning break already fills this role.
