@@ -655,8 +655,15 @@ export function smartGenerateBellConfig(
   // (two consecutive breaks, zero teaching between) — a schedule no school
   // would run.
   const prePrimaryKeys = activeClasses.filter(c => c.group === 'Pre-Primary').map(c => c.key)
-  const ppLunchAP      = lunchAfterPeriod['Pre-Primary'] ?? effectiveSbAfterP
-  const ppEatsEarly    = lunchMode !== 'single' && prePrimaryKeys.length > 0 && ppLunchAP <= effectiveSbAfterP
+  // Default PP lunch slot carries a clock floor (≥ ~80 teaching minutes into
+  // the day) so a direct caller without an explicit Pre-Primary slot can't
+  // produce a 9:50 AM "lunch". An explicit user-chosen slot is respected.
+  const ppLunchAP      = lunchAfterPeriod['Pre-Primary']
+    ?? Math.max(effectiveSbAfterP, Math.ceil(80 / Math.max(1, periodDur)))
+  // "Eats early" = PP's lunch is their one morning pause (they skip the
+  // shared break). This holds when their slot is at the break slot OR just
+  // one period past it — the clock floor above typically lands it there.
+  const ppEatsEarly    = lunchMode !== 'single' && prePrimaryKeys.length > 0 && ppLunchAP <= effectiveSbAfterP + 1
 
   // Optional morning break — placed earliest (before the shared short break).
   // Groups whose lunch replaces this pause are excluded (see above).
@@ -698,9 +705,9 @@ export function smartGenerateBellConfig(
       const grpKeys = activeClasses.filter(c => c.group === g.group).map(c => c.key)
       if (!grpKeys.length) continue
       const isPrePrimary = g.group === 'Pre-Primary'
-      const desired      = lunchAfterPeriod[g.group] ?? (isPrePrimary ? effectiveSbAfterP : effectiveSbAfterP + 1)
+      const desired      = lunchAfterPeriod[g.group] ?? (isPrePrimary ? ppLunchAP : effectiveSbAfterP + 1)
       const effective    = isPrePrimary && ppEatsEarly
-        ? Math.max(1, Math.min(desired, effectiveSbAfterP))       // can eat at or before sb slot
+        ? Math.max(1, Math.min(desired, effectiveSbAfterP + 1))   // at the break slot or one period past it
         : Math.max(effectiveSbAfterP + 1, Math.min(desired, maxPeriods))  // must be after sb
       cwRows.push({
         id: makeId(), name: 'Lunch Break', type: 'lunch',
@@ -2361,8 +2368,12 @@ export function StepBell() {
     const asmEnd = toMins(startTime) + asmDur
     const sbEnd  = asmEnd + sbAfterP * effPeriodDur + sbDurUsed  // clock when the break ends
 
-    // Pre-Primary eats at the shared break slot (earliest lunch).
-    const prePrimaryP = sbAfterP
+    // Pre-Primary eats first in the ladder — but "first" must still be a
+    // sane LUNCH time, not a 9:50 AM meal right after one period. Floor the
+    // slot so at least ~80 teaching minutes pass before their lunch begins
+    // (2 × 40-min periods; scales with the actual period length).
+    const ppFloorP    = Math.ceil(80 / Math.max(1, effPeriodDur))
+    const prePrimaryP = Math.max(sbAfterP, ppFloorP)
 
     // Remaining 4 groups distribute across slots AFTER the break (before 2 PM cap).
     const LATEST_LUNCH = 14 * 60  // 2 PM hard cap
@@ -4980,7 +4991,8 @@ export function StepBell() {
 
                           const ppLunchAP   = effectiveLunchAP['Pre-Primary'] ?? sbAPShared
                           const ppKeys      = activeClasses.filter(c => c.group === 'Pre-Primary').map(c => c.key)
-                          const ppEatsEarly = ppKeys.length > 0 && ppLunchAP <= sbAPShared
+                          // Mirror the generator: eats-early includes one period past the break slot
+                          const ppEatsEarly = ppKeys.length > 0 && ppLunchAP <= sbAPShared + 1
                           // Effective duration of the period that OTHER classes have while Pre-Primary eats lunch.
                           // This period starts right after the short break (sbAP + 1).
                           const lunchDurConst = lunchBreakDur

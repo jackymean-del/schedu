@@ -884,23 +884,31 @@ export function Step6Generate() {
   const elapsed = job?.startedAt ? ((Date.now() - job.startedAt) / 1000).toFixed(1) : "0.0"
 
   return (
-    <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", minHeight:"70vh", gap:28, padding:"40px 24px", textAlign:"center" as const }}>
+    <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", minHeight:"70vh", gap:24, padding:"36px 24px 48px", textAlign:"center" as const }}>
 
       <style>{`
         @keyframes spin-ring { to { transform: rotate(360deg) } }
         @keyframes fade-up   { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
         @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.25} }
+        @keyframes gen-glow  { 0%,100%{ box-shadow: 0 6px 26px rgba(124,111,224,0.35) } 50%{ box-shadow: 0 6px 34px rgba(124,111,224,0.55) } }
+        .g6-input { width:100%; padding:10px 13px; border:1.5px solid #E8E4FF; border-radius:10px; font-size:13.5px; outline:none; box-sizing:border-box; background:#fff; font-family:inherit; color:#13111E; transition: border-color .15s, box-shadow .15s; }
+        .g6-input:focus { border-color:#7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.13); }
+        .g6-gen:hover { filter: brightness(1.05); }
+        .g6-ghost:hover { background:#F8F7FF; }
       `}</style>
 
       {/* ── Title ── */}
       <div style={{ animation:"fade-up 0.4s ease" }}>
-        <h2 style={{ fontFamily:"'Plus Jakarta Sans',Georgia,serif", fontSize:28, margin:"0 0 4px" }}>
+        <h2 style={{ fontFamily:"'Plus Jakarta Sans',Georgia,serif", fontSize:30, letterSpacing:"-0.5px", margin:"0 0 6px" }}>
           {!job && hasExistingTT && !showRegenConfirm ? `Your ${T.schedule.toLowerCase()} is saved ✓` :
-           !job                       ? `Ready to generate your ${T.schedule.toLowerCase()}` :
+           !job                       ? <>Everything&rsquo;s staged. <span style={{ color:P, fontStyle:"italic" }}>Generate.</span></> :
            job.status === "running"   ? `Building your ${T.schedule.toLowerCase()}…` :
            job.status === "completed" ? `${T.schedule} is ready! 🎉` :
            "Something went wrong"}
         </h2>
+        {!job && !hasExistingTT && (
+          <p style={{ fontSize:13, color:"#8B87AD", margin:0 }}>Review the briefing, name your {T.schedule.toLowerCase()}, and press the button — the solver does the rest.</p>
+        )}
         {job?.status === "running" && (
           <p style={{ fontSize:12, color:"#8B87AD", margin:0, fontFamily:"'DM Mono',monospace" }}>{elapsed}s</p>
         )}
@@ -1021,168 +1029,199 @@ export function Step6Generate() {
            revealed a few at a time in step with the progress ring. Not
            fabricated: these are literally output.classTT entries. ── */}
       {job?.status === "running" && liveFeed.length > 0 && (
-        <div style={{ width:"100%", maxWidth:420, display:"flex", flexDirection:"column" as const, gap:6 }}>
-          {liveFeed.map((line, i) => (
-            <div key={line + i} style={{
-              animation:"fade-up 0.25s ease", fontSize:12.5, color:"#4B5275",
-              background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:9,
-              padding:"7px 12px", textAlign:"left" as const,
-              opacity: 1 - i * 0.22,
-            }}>
-              <span style={{ color:"#22C55E", fontWeight:700, marginRight:6 }}>✓</span>{line}
-            </div>
-          ))}
+        <div style={{
+          width:"100%", maxWidth:460, background:"#171522", borderRadius:14,
+          border:"1px solid #2C2844", padding:"12px 16px", textAlign:"left" as const,
+          boxShadow:"0 16px 44px rgba(19,17,30,0.28)",
+        }}>
+          <div style={{ fontSize:9.5, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"#7C6FE0", marginBottom:8 }}>
+            ● Solver — placing real lessons
+          </div>
+          <div style={{ display:"flex", flexDirection:"column" as const, gap:5 }}>
+            {liveFeed.map((line, i) => (
+              <div key={line + i} style={{
+                animation:"fade-up 0.25s ease", fontSize:12, color:"#C9C4E4",
+                fontFamily:"'DM Mono',monospace",
+                opacity: 1 - i * 0.22,
+              }}>
+                <span style={{ color:"#22C55E", fontWeight:700, marginRight:8 }}>✓</span>{line}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* ── Briefing card — stats + pre-flight judgment, merged into one
-           panel, shown only before generating (irrelevant once it's
-           actually running or done) ── */}
+      {/* ── Launch console — briefing on the left, identity + launch on the
+           right. One glance answers: what will be generated, is it healthy,
+           and what happens when I press the button. ── */}
       {!job && (
-        <div style={{ width:"100%", maxWidth:520, background:"#fff", borderRadius:14, border:`1.5px solid ${P_B}`, padding:"18px 20px", animation:"fade-up 0.4s ease 0.2s both", textAlign:"left" as const }}>
-          {/* Stat row */}
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" as const, justifyContent:"space-between", marginBottom: preflight ? 16 : 0 }}>
-            {stats.map(s => {
-              const Icon = s.icon
-              return (
-                <div key={s.label} style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:4, flex:"1 1 72px", minWidth:64 }}>
-                  <Icon size={17} color={P} />
-                  <span style={{ fontSize:20, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"#13111E", lineHeight:1 }}>{s.value}</span>
-                  <span style={{ fontSize:9.5, color:"#8B87AD", fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.05em" }}>{s.label}</span>
+        <div style={{
+          display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(320px, 1fr))", gap:16,
+          width:"100%", maxWidth:960, textAlign:"left" as const, animation:"fade-up 0.4s ease 0.15s both",
+        }}>
+
+          {/* LEFT · Briefing */}
+          <div style={{ background:"#fff", borderRadius:16, border:`1.5px solid ${P_B}`, padding:"20px 22px", display:"flex", flexDirection:"column" as const, gap:14 }}>
+            <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD" }}>
+              Briefing — what the solver will work with
+            </div>
+
+            {/* Stat tiles */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(96px, 1fr))", gap:8 }}>
+              {stats.map(s => {
+                const Icon = s.icon
+                return (
+                  <div key={s.label} style={{ background:"#FAFAFE", border:"1px solid #F0EEFA", borderRadius:12, padding:"10px 12px", display:"flex", flexDirection:"column" as const, gap:3 }}>
+                    <Icon size={15} color={P} />
+                    <span style={{ fontSize:21, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"#13111E", lineHeight:1.1 }}>{s.value}</span>
+                    <span style={{ fontSize:9.5, color:"#8B87AD", fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.05em" }}>{s.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {preflight && (
+              <>
+                {/* Day shapes */}
+                <div style={{ display:"flex", flexDirection:"column" as const, gap:5 }}>
+                  {preflight.shapes.map(s => (
+                    <div key={`${s.label}-${s.end}`} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275" }}>
+                      <Clock size={13} color="#9B96BD" />
+                      <span style={{ fontWeight:700, color:"#13111E" }}>{s.label}</span>
+                      <span style={{ color:"#9B96BD" }}>·</span>
+                      <span>{s.count} period{s.count !== 1 ? "s" : ""}/day</span>
+                      <span style={{ color:"#9B96BD" }}>·</span>
+                      <span>ends <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
+                    </div>
+                  ))}
                 </div>
-              )
-            })}
+
+                {/* Workload line */}
+                <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275", flexWrap:"wrap" as const }}>
+                  <BookOpen size={13} color="#9B96BD" />
+                  <span><strong style={{ fontFamily:"'DM Mono',monospace" }}>{preflight.totalWeekly}</strong> lessons/week</span>
+                  {preflight.doubleSubjects > 0 && (
+                    <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.doubleSubjects} double-period subject{preflight.doubleSubjects !== 1 ? "s" : ""}</span></>
+                  )}
+                  {preflight.parallelGroups > 0 && (
+                    <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.parallelGroups} parallel group{preflight.parallelGroups !== 1 ? "s" : ""}</span></>
+                  )}
+                  {preflight.dayOffRules > 0 && (
+                    <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.dayOffRules} day-off rule{preflight.dayOffRules !== 1 ? "s" : ""}</span></>
+                  )}
+                </div>
+
+                {/* Readiness check */}
+                {preflight.overCap.length > 0 ? (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:10, padding:"9px 12px" }}>
+                    <span>⚠</span>
+                    <span>
+                      <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
+                      ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
+                      extra lessons will be dropped. Trim in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
+                    </span>
+                  </div>
+                ) : preflight.unallocated.length > 0 ? (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:10, padding:"9px 12px" }}>
+                    <span>ℹ</span>
+                    <span>
+                      {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
+                      ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) — they'll come out empty.
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, fontWeight:600, color:"#15803D", background:"#F0FDF4", border:"1px solid #BBF7D0", borderRadius:10, padding:"9px 12px" }}>
+                    <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {preflight && (
-            <div style={{ borderTop: `1px solid ${P_L}`, paddingTop:14 }}>
-              {/* Day shapes — one line per distinct (periods/day, end time) */}
-              <div style={{ display:"flex", flexDirection:"column" as const, gap:5, marginBottom:10 }}>
-                {preflight.shapes.map(s => (
-                  <div key={`${s.label}-${s.end}`} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275" }}>
-                    <Clock size={13} color="#9B96BD" />
-                    <span style={{ fontWeight:700, color:"#13111E" }}>{s.label}</span>
-                    <span style={{ color:"#9B96BD" }}>·</span>
-                    <span>{s.count} period{s.count !== 1 ? "s" : ""}/day</span>
-                    <span style={{ color:"#9B96BD" }}>·</span>
-                    <span>ends <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
-                  </div>
-                ))}
+          {/* RIGHT · Saved state OR identity + launch */}
+          {hasExistingTT && !showRegenConfirm ? (
+            <div style={{ background:"#fff", borderRadius:16, border:"1.5px solid #BBF7D0", padding:"22px 24px", display:"flex", flexDirection:"column" as const, gap:12, justifyContent:"center", textAlign:"center" as const }}>
+              <div style={{ fontSize:30 }}>✅</div>
+              <div style={{ fontSize:16, fontWeight:800, color:"#059669" }}>
+                {T.schedule} already generated
+              </div>
+              <div style={{ fontSize:12.5, color:"#4B5275" }}>
+                {config.timetableName && <><strong>{config.timetableName}</strong> · </>}
+                {Object.keys(store.classTT ?? {}).length} classes · {store.timetableStatus === 'published' ? '🟢 Published' : '🟡 Draft'}
+              </div>
+              <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" as const, marginTop:6 }}>
+                <button
+                  onClick={() => window.location.href='/timetable'}
+                  style={{ padding:"12px 28px", borderRadius:11, border:"none", background:P, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 16px rgba(124,111,224,0.3)", fontFamily:"inherit" }}>
+                  View {T.schedule} →
+                </button>
+                <button className="g6-ghost"
+                  onClick={() => setShowRegenConfirm(true)}
+                  style={{ padding:"12px 20px", borderRadius:11, border:"1.5px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
+                  ↺ Regenerate
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ background:"#fff", borderRadius:16, border:`1.5px solid ${P_B}`, padding:"20px 22px", display:"flex", flexDirection:"column" as const, gap:13 }}>
+              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD" }}>
+                Identity &amp; launch
               </div>
 
-              {/* Workload line */}
-              <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#4B5275", marginBottom:10, flexWrap:"wrap" as const }}>
-                <BookOpen size={13} color="#9B96BD" />
-                <span><strong style={{ fontFamily:"'DM Mono',monospace" }}>{preflight.totalWeekly}</strong> lessons/week</span>
-                {preflight.doubleSubjects > 0 && (
-                  <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.doubleSubjects} double-period subject{preflight.doubleSubjects !== 1 ? "s" : ""}</span></>
-                )}
-                {preflight.parallelGroups > 0 && (
-                  <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.parallelGroups} parallel group{preflight.parallelGroups !== 1 ? "s" : ""}</span></>
-                )}
-                {preflight.dayOffRules > 0 && (
-                  <><span style={{ color:"#9B96BD" }}>·</span><span>{preflight.dayOffRules} day-off rule{preflight.dayOffRules !== 1 ? "s" : ""}</span></>
-                )}
-              </div>
-
-              {/* Checks */}
-              {preflight.overCap.length > 0 ? (
-                <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:8, padding:"7px 11px" }}>
-                  <span>⚠</span>
-                  <span>
-                    <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
-                    ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
-                    extra lessons will be dropped. Trim in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
-                  </span>
-                </div>
-              ) : preflight.unallocated.length > 0 ? (
-                <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:8, padding:"7px 11px" }}>
-                  <span>ℹ</span>
-                  <span>
-                    {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
-                    ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) — they'll come out empty.
-                  </span>
-                </div>
-              ) : (
-                <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11.5, color:"#15803D" }}>
-                  <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
+              {showRegenConfirm && (
+                <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:10, padding:"10px 14px", fontSize:12, color:"#92400e" }}>
+                  ⚠️ This will <strong>replace</strong> your existing timetable. Make sure you've reviewed the draft first.
                 </div>
               )}
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* ── Already-generated banner (persisted across sessions) ── */}
-      {!job && hasExistingTT && !showRegenConfirm && (
-        <div style={{ width:"100%", maxWidth:500, background:"#f0fdf4", borderRadius:14, border:"1.5px solid #86efac", padding:"22px 26px", animation:"fade-up 0.4s ease 0.2s both", textAlign:"center" as const }}>
-          <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
-          <div style={{ fontSize:15, fontWeight:700, color:"#059669", marginBottom:4 }}>
-            {T.schedule} already generated
-          </div>
-          <div style={{ fontSize:12, color:"#4B5275", marginBottom:18 }}>
-            {config.timetableName && <><strong>{config.timetableName}</strong> · </>}
-            {Object.keys(store.classTT ?? {}).length} classes · {store.timetableStatus === 'published' ? '🟢 Published' : '🟡 Draft'}
-          </div>
-          <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" as const }}>
-            <button
-              onClick={() => window.location.href='/timetable'}
-              style={{ padding:"11px 28px", borderRadius:10, border:"none", background:P, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 16px rgba(124,111,224,0.3)" }}>
-              View {T.schedule} →
-            </button>
-            <button
-              onClick={() => setShowRegenConfirm(true)}
-              style={{ padding:"11px 20px", borderRadius:10, border:"1.5px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
-              ↺ Regenerate
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Timetable identity form (shown before first generate or on regen) ── */}
-      {!job && (!hasExistingTT || showRegenConfirm) && (
-        <div style={{ width:"100%", maxWidth:460, background:"#FAFAFE", borderRadius:12, border:"1px solid #E8E4FF", padding:"20px 24px", animation:"fade-up 0.4s ease 0.25s both", textAlign:"left" as const }}>
-          {showRegenConfirm && (
-            <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, padding:"10px 14px", marginBottom:14, fontSize:12, color:"#92400e" }}>
-              ⚠️ This will <strong>replace</strong> your existing timetable. Make sure you've reviewed the draft first.
-            </div>
-          )}
-          <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#8B87AD", marginBottom:14 }}>📋 Schedule Details</div>
-          <div style={{ display:"flex", flexDirection:"column" as const, gap:12 }}>
-
-            {/* Name */}
-            <div>
-              <label style={{ fontSize:11, fontWeight:600, color:"#4B5275", display:"block", marginBottom:4 }}>Schedule Name</label>
-              <input
-                value={ttName} onChange={e => setTtName(e.target.value)}
-                placeholder="e.g. Annual Schedule 2025-26"
-                style={{ width:"100%", padding:"9px 12px", border:"1px solid #E8E4FF", borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box" as const, background:"#fff" }}
-              />
-            </div>
-
-            {/* Dates */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               <div>
-                <label style={{ fontSize:11, fontWeight:600, color:"#4B5275", display:"block", marginBottom:4 }}>Start Date</label>
-                <input
-                  type="date" value={ttStart} onChange={e => setTtStart(e.target.value)}
-                  style={{ width:"100%", padding:"8px 10px", border:"1px solid #E8E4FF", borderRadius:8, fontSize:12, outline:"none", boxSizing:"border-box" as const, background:"#fff", cursor:"pointer" }}
+                <label style={{ fontSize:11.5, fontWeight:700, color:"#4B5275", display:"block", marginBottom:5 }}>Schedule name</label>
+                <input className="g6-input"
+                  value={ttName} onChange={e => setTtName(e.target.value)}
+                  placeholder="e.g. Annual Schedule 2025-26"
                 />
               </div>
-              <div>
-                <label style={{ fontSize:11, fontWeight:600, color:"#4B5275", display:"block", marginBottom:4 }}>End Date</label>
-                <input
-                  type="date" value={ttEnd} onChange={e => setTtEnd(e.target.value)}
-                  style={{ width:"100%", padding:"8px 10px", border:"1px solid #E8E4FF", borderRadius:8, fontSize:12, outline:"none", boxSizing:"border-box" as const, background:"#fff", cursor:"pointer" }}
-                />
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div>
+                  <label style={{ fontSize:11.5, fontWeight:700, color:"#4B5275", display:"block", marginBottom:5 }}>Start date</label>
+                  <input className="g6-input" type="date" value={ttStart} onChange={e => setTtStart(e.target.value)} style={{ cursor:"pointer" }} />
+                </div>
+                <div>
+                  <label style={{ fontSize:11.5, fontWeight:700, color:"#4B5275", display:"block", marginBottom:5 }}>End date</label>
+                  <input className="g6-input" type="date" value={ttEnd} onChange={e => setTtEnd(e.target.value)} style={{ cursor:"pointer" }} />
+                </div>
+              </div>
+
+              {/* Launch */}
+              <button className="g6-gen" onClick={startGenerate}
+                style={{
+                  marginTop:2, width:"100%", padding:"15px 20px", borderRadius:12, border:"none",
+                  background:`linear-gradient(135deg, ${P}, #5D4FCF)`, color:"#fff",
+                  fontSize:15.5, fontWeight:800, cursor:"pointer", fontFamily:"inherit",
+                  animation:"gen-glow 2.4s ease-in-out infinite",
+                }}>
+                {showRegenConfirm ? "↺ Regenerate now" : `✨ Generate ${T.schedule}`}
+              </button>
+
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                <div style={{ fontSize:10.5, color:"#8B87AD", display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ fontSize:13 }}>💡</span>
+                  Saved as a <strong>Draft</strong> — review, then publish.
+                </div>
+                {showRegenConfirm
+                  ? <button className="g6-ghost" onClick={() => setShowRegenConfirm(false)}
+                      style={{ padding:"7px 14px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:11.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
+                      Cancel
+                    </button>
+                  : <button className="g6-ghost" onClick={() => setStep(4)}
+                      style={{ padding:"7px 14px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:11.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
+                      ← Student Groups
+                    </button>
+                }
               </div>
             </div>
-
-            <div style={{ fontSize:10, color:"#8B87AD", display:"flex", alignItems:"center", gap:6 }}>
-              <span style={{ fontSize:14 }}>💡</span>
-              The timetable is saved as a <strong>Draft</strong> after generation. Review it, then publish when ready.
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1209,27 +1248,9 @@ export function Step6Generate() {
         </div>
       )}
 
-      {/* ── CTA buttons ── */}
+      {/* ── CTA buttons (post-run states only — pre-run launch lives in the
+           right console panel) ── */}
       <div style={{ display:"flex", gap:10, flexWrap:"wrap" as const, justifyContent:"center", animation:"fade-up 0.4s ease 0.35s both" }}>
-        {!job && (!hasExistingTT || showRegenConfirm) && (
-          <>
-            <button onClick={startGenerate}
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"13px 36px", borderRadius:10, border:"none", background:P, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(79,70,229,0.35)" }}>
-              {showRegenConfirm ? "↺ Regenerate" : `✨ Generate ${T.schedule}`}
-            </button>
-            {showRegenConfirm
-              ? <button onClick={() => setShowRegenConfirm(false)}
-                  style={{ padding:"13px 20px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
-                  Cancel
-                </button>
-              : <button onClick={() => setStep(4)}
-                  style={{ padding:"13px 20px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer" }}>
-                  ← Student Groups
-                </button>
-            }
-          </>
-        )}
-
         {job?.status === "completed" && (
           <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:14, width:"100%" }}>
             {/* What's next — the three real paths from a fresh draft, so the
