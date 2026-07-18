@@ -606,6 +606,37 @@ function approxLunchTime(
  *             Uses buildBellRowsFromCw → returns populated cwRows so the
  *             classwise timing path is taken in handleNext.
  */
+// Youngest → oldest. Younger children eat lunch first (they get hungry
+// sooner), so the staggered-lunch ladder is strictly monotonic in this order.
+const GROUP_AGE_ORDER = ['Pre-Primary', 'Primary', 'Middle', 'Senior', 'Senior Secondary']
+export function groupAgeRank(g: string): number {
+  const i = GROUP_AGE_ORDER.indexOf(g)
+  return i === -1 ? GROUP_AGE_ORDER.length : i
+}
+/**
+ * Build a youngest-first staggered-lunch ladder. `orderedGroups` must be
+ * pre-sorted youngest → oldest. Each group eats strictly AFTER the younger
+ * one when the window allows; when slots run out, later groups share the
+ * latest slot — a younger group is NEVER placed after an older one.
+ *
+ * This replaced a two-track scheme (Pre-Primary floored independently, the
+ * rest even-spread from sbAfterP+1) where the floor could push Pre-Primary
+ * to or past Primary — the exact "I–V eats before Nursery/LKG" inversion.
+ */
+export function lunchLadder(orderedGroups: string[], floorP: number, maxLunchP: number): Record<string, number> {
+  const out: Record<string, number> = {}
+  const n = orderedGroups.length
+  const hi = Math.max(floorP, maxLunchP)
+  let prev = floorP - 1
+  orderedGroups.forEach((g, i) => {
+    const ideal = n <= 1 ? floorP : Math.round(floorP + (i * (hi - floorP)) / (n - 1))
+    const slot = Math.min(hi, Math.max(prev + 1, ideal))
+    out[g] = slot
+    prev = slot
+  })
+  return out
+}
+
 export function smartGenerateBellConfig(
   startTime:        string,
   endTime:          string,
@@ -655,11 +686,15 @@ export function smartGenerateBellConfig(
   // (two consecutive breaks, zero teaching between) — a schedule no school
   // would run.
   const prePrimaryKeys = activeClasses.filter(c => c.group === 'Pre-Primary').map(c => c.key)
-  // Default PP lunch slot carries a clock floor (≥ ~80 teaching minutes into
-  // the day) so a direct caller without an explicit Pre-Primary slot can't
-  // produce a 9:50 AM "lunch". An explicit user-chosen slot is respected.
-  const ppLunchAP      = lunchAfterPeriod['Pre-Primary']
-    ?? Math.max(effectiveSbAfterP, Math.ceil(80 / Math.max(1, periodDur)))
+  // Fallback youngest-first ladder for any group WITHOUT an explicit slot
+  // (direct callers / tests; the app always passes a full ladder). Clock
+  // floor of ≥ ~80 teaching minutes so a bare call can't produce a 9:50 AM
+  // "lunch", and monotonic so a younger group is never after an older one.
+  const genFloorP    = Math.max(effectiveSbAfterP, Math.ceil(80 / Math.max(1, periodDur)))
+  const genOrdered   = [...new Set(activeClasses.map(c => c.group))]
+    .sort((a, b) => groupAgeRank(a) - groupAgeRank(b))
+  const genLadder    = lunchLadder(genOrdered, genFloorP, maxPeriods)
+  const ppLunchAP      = lunchAfterPeriod['Pre-Primary'] ?? genLadder['Pre-Primary'] ?? genFloorP
   // "Eats early" = PP's lunch is their one morning pause (they skip the
   // shared break). This holds when their slot is at the break slot OR just
   // one period past it — the clock floor above typically lands it there.
@@ -705,7 +740,7 @@ export function smartGenerateBellConfig(
       const grpKeys = activeClasses.filter(c => c.group === g.group).map(c => c.key)
       if (!grpKeys.length) continue
       const isPrePrimary = g.group === 'Pre-Primary'
-      const desired      = lunchAfterPeriod[g.group] ?? (isPrePrimary ? ppLunchAP : effectiveSbAfterP + 1)
+      const desired      = lunchAfterPeriod[g.group] ?? genLadder[g.group] ?? (isPrePrimary ? ppLunchAP : effectiveSbAfterP + 1)
       const effective    = isPrePrimary && ppEatsEarly
         ? Math.max(1, Math.min(desired, effectiveSbAfterP + 1))   // at the break slot or one period past it
         : Math.max(effectiveSbAfterP + 1, Math.min(desired, maxPeriods))  // must be after sb
@@ -2368,27 +2403,21 @@ export function StepBell() {
     const asmEnd = toMins(startTime) + asmDur
     const sbEnd  = asmEnd + sbAfterP * effPeriodDur + sbDurUsed  // clock when the break ends
 
-    // Pre-Primary eats first in the ladder — but "first" must still be a
-    // sane LUNCH time, not a 9:50 AM meal right after one period. Floor the
-    // slot so at least ~80 teaching minutes pass before their lunch begins
-    // (2 × 40-min periods; scales with the actual period length).
-    const ppFloorP    = Math.ceil(80 / Math.max(1, effPeriodDur))
-    const prePrimaryP = Math.max(sbAfterP, ppFloorP)
+    // The youngest group eats first, but "first" must still be a sane LUNCH
+    // time — floor it so ≥ ~80 teaching minutes pass before the earliest
+    // lunch (≈ 2 × 40-min periods; scales with the real period length).
+    const floorP = Math.max(sbAfterP, Math.ceil(80 / Math.max(1, effPeriodDur)))
 
-    // Remaining 4 groups distribute across slots AFTER the break (before 2 PM cap).
-    const LATEST_LUNCH = 14 * 60  // 2 PM hard cap
+    // Latest lunch fits before the 2 PM cap.
+    const LATEST_LUNCH = 14 * 60
     const minsAfterSb  = LATEST_LUNCH - sbEnd
     const maxLunchP    = Math.min(maxPeriods, sbAfterP + Math.max(1, Math.floor(minsAfterSb / effPeriodDur)))
-    const minLunchP    = sbAfterP + 1
-    const availSlots   = Math.max(1, maxLunchP - minLunchP + 1)
 
-    const LATER_GROUPS = ['Primary', 'Middle', 'Senior', 'Senior Secondary'] as const
-    const defaults: Record<string, number> = { 'Pre-Primary': prePrimaryP }
-    LATER_GROUPS.forEach((g, i) => {
-      const slotIdx = LATER_GROUPS.length <= 1 ? 0
-        : Math.round(i * (availSlots - 1) / (LATER_GROUPS.length - 1))
-      defaults[g] = Math.max(minLunchP, Math.min(maxLunchP, minLunchP + slotIdx))
-    })
+    // One monotonic youngest-first ladder across ALL active groups — replaces
+    // the old independent Pre-Primary vs later-groups tracks that could invert.
+    const orderedGroups = [...new Set(activeClassGroups.map(g => g.group))]
+      .sort((a, b) => groupAgeRank(a) - groupAgeRank(b))
+    const defaults = lunchLadder(orderedGroups, floorP, maxLunchP)
     return { ...defaults, ...smartLunchAP }
   }, [maxPeriods, periodDur, periodDurMin, startTime, smartLunchAP,
       morningBreak, morningBreakPos, morningBreakDur, lunchBreakDur, activeClassGroups])

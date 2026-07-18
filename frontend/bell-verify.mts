@@ -58,4 +58,45 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
   console.log('case2 LKG:', lkg.map(r => r.name).join(' → '))
 }
 
+
+
+// ── Case 3: age ordering — younger groups eat lunch strictly no later than
+// older ones (Pre-Primary ≤ Primary ≤ Middle ≤ Senior ≤ Senior Secondary),
+// via lunchLadder + the generator's own placement. Regression for the
+// "I–V eats before Nursery/LKG" inversion.
+{
+  const fullClasses = [
+    { key: 'LKG', group: 'Pre-Primary' }, { key: 'UKG', group: 'Pre-Primary' },
+    { key: 'III', group: 'Primary' }, { key: 'VII', group: 'Middle' },
+    { key: 'X', group: 'Senior' }, { key: 'XII', group: 'Senior Secondary' },
+  ]
+  const fullGroups = [...new Set(fullClasses.map(c => c.group))].map(group => ({ group }))
+  // No explicit slots → the generator's fallback ladder decides.
+  const { rows } = smartGenerateBellConfig(
+    '09:00', '15:30', 8, 40, 'smart', {}, fullGroups, fullClasses,
+    false, 1, 15, undefined, 30, 15, false,
+  )
+  // Lunch afterPeriod per group (from the class each group owns).
+  const lunchAP: Record<string, number> = {}
+  for (const c of fullClasses) {
+    const seq = forClass(rows, c.key)
+    let ap = 0, teach = 0
+    for (const r of seq) {
+      if (r.type === 'teaching') teach++
+      if (r.type === 'lunch' || /lunch/i.test(r.name)) { ap = teach; break }
+    }
+    lunchAP[c.group] = ap
+  }
+  const order = ['Pre-Primary', 'Primary', 'Middle', 'Senior', 'Senior Secondary']
+  console.log('lunch afterPeriod by group:', order.map(g => `${g}=${lunchAP[g]}`).join(', '))
+  let monotonic = true
+  for (let i = 1; i < order.length; i++) {
+    if (lunchAP[order[i]] < lunchAP[order[i - 1]]) monotonic = false
+  }
+  console.log('case3 younger-eats-first (monotonic):', monotonic ? 'PASS' : 'FAIL')
+  const ppFirst = lunchAP['Pre-Primary'] <= lunchAP['Primary']
+  console.log('case3 Pre-Primary not after Primary:', ppFirst ? 'PASS' : 'FAIL')
+  if (!monotonic || !ppFirst) fails++
+}
+
 process.exit(fails ? 1 : 0)
