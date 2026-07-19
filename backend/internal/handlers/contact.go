@@ -15,6 +15,7 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 		Name    string `json:"name"`
 		Email   string `json:"email"`
 		Message string `json:"message"`
+		Source  string `json:"source"`
 	}
 	if err := c.Bind().JSON(&body); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
@@ -23,6 +24,14 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 	name := strings.TrimSpace(body.Name)
 	email := strings.TrimSpace(body.Email)
 	message := strings.TrimSpace(body.Message)
+
+	// Source is allowlisted (never trust arbitrary client input in a stored,
+	// team-visible field). Defaults to the marketing contact form; the app's
+	// "Notify me when Pro launches" button sends "pro-waitlist".
+	source := "marketing-contact"
+	if body.Source == "pro-waitlist" {
+		source = "pro-waitlist"
+	}
 
 	if name == "" || email == "" || message == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "name, email and message are required")
@@ -37,13 +46,13 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 	_, err := h.db.Exec(c.Context(), `
 		INSERT INTO contact_messages (name, email, message, source, ip, user_agent)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
-		name, email, message, "marketing-contact", c.IP(), c.Get("User-Agent"),
+		name, email, message, source, c.IP(), c.Get("User-Agent"),
 	)
 	if err != nil {
 		slog.Error("contact: insert failed", "err", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "could not save your message — please email us directly")
 	}
 
-	slog.Info("contact: message received", "email", email)
+	slog.Info("contact: message received", "email", email, "source", source)
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"ok": true})
 }
