@@ -30,7 +30,41 @@ func annualDiscountPct() int {
 	if full == 0 {
 		return 0
 	}
-	return int(float64(full-proYearlyINR) / float64(full) * 100.0)
+	// Round (not truncate) so it matches the frontend's rounded fallback — a
+	// truncating int() would show 16% here but 17% when billing is disabled.
+	return int(float64(full-proYearlyINR)/float64(full)*100.0 + 0.5)
+}
+
+// razorpayWebhook is the slice of a Razorpay subscription webhook we parse.
+// Named (not anonymous) so the parsing can be exercised by a test fixture.
+type razorpayWebhook struct {
+	Event   string `json:"event"`
+	Payload struct {
+		Subscription struct {
+			Entity struct {
+				ID         string `json:"id"`
+				Status     string `json:"status"`
+				CurrentEnd int64  `json:"current_end"`
+				Notes      struct {
+					ClerkID string `json:"clerk_id"`
+				} `json:"notes"`
+			} `json:"entity"`
+		} `json:"subscription"`
+	} `json:"payload"`
+}
+
+// planForEvent maps a Razorpay subscription lifecycle event to the plan it
+// should produce. "" means "no plan change — record status only". Pure, so the
+// billing decision is unit-testable without a DB or the network.
+func planForEvent(event string) string {
+	switch event {
+	case "subscription.activated", "subscription.charged", "subscription.resumed", "subscription.authenticated":
+		return "pro"
+	case "subscription.cancelled", "subscription.completed", "subscription.expired", "subscription.halted", "subscription.paused":
+		return "free"
+	default:
+		return ""
+	}
 }
 
 // BillingConfig is a PUBLIC endpoint the subscription page reads to render
@@ -196,21 +230,7 @@ func (h *Handler) BillingWebhook(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "invalid signature")
 	}
 
-	var evt struct {
-		Event   string `json:"event"`
-		Payload struct {
-			Subscription struct {
-				Entity struct {
-					ID         string `json:"id"`
-					Status     string `json:"status"`
-					CurrentEnd int64  `json:"current_end"`
-					Notes      struct {
-						ClerkID string `json:"clerk_id"`
-					} `json:"notes"`
-				} `json:"entity"`
-			} `json:"subscription"`
-		} `json:"payload"`
-	}
+	var evt razorpayWebhook
 	if err := json.Unmarshal(raw, &evt); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
@@ -239,16 +259,8 @@ func (h *Handler) BillingWebhook(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"ok": true, "ignored": evt.Event})
 	}
 
-	// Decide the resulting plan from the event.
-	plan := ""
-	switch evt.Event {
-	case "subscription.activated", "subscription.charged", "subscription.resumed", "subscription.authenticated":
-		plan = "pro"
-	case "subscription.cancelled", "subscription.completed", "subscription.expired", "subscription.halted", "subscription.paused":
-		plan = "free"
-	default:
-		// Other lifecycle events (pending, updated) — record status only.
-	}
+	// Decide the resulting plan from the event (pure, unit-tested).
+	plan := planForEvent(evt.Event)
 
 	var periodEnd *time.Time
 	if sub.CurrentEnd > 0 {
