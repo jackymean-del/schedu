@@ -42,6 +42,16 @@ func main() {
 
 	ctx := context.Background()
 
+	// Idempotent self-migration (currently the billing schema). Runs on every
+	// boot using the private DATABASE_URL — no public DB proxy, no manual step.
+	// Non-fatal: log and continue if it fails, so a schema hiccup can't take the
+	// whole API down; the billing endpoints degrade to "free" until it succeeds.
+	if err := db.EnsureSchema(ctx, pool); err != nil {
+		slog.Error("schema ensure failed", "err", err)
+	} else {
+		slog.Info("schema ensured (billing)")
+	}
+
 	// ---------------------------------------------------------------------------
 	// Bootstrap curriculum intelligence system
 	// ---------------------------------------------------------------------------
