@@ -33,6 +33,10 @@ import {
   type FreeAssignment, type AssignKind,
 } from '@/lib/freeAssignments'
 import { loadActiveBundles, patchBundleSubstitutions, type ScheduleBundle } from '@/lib/activeSchedules'
+import {
+  loadPullouts, savePullouts, coverFor, pulloutsForEntity,
+  type UrgentPullout, type PullKind,
+} from '@/lib/urgentReassignments'
 import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
 import { bootstrapDirectoryFromSchedules } from '@/lib/directoryBootstrap'
 
@@ -233,6 +237,15 @@ export function CalendarPage() {
   const [assignments, setAssignments] = useState<FreeAssignment[]>(() => loadAssignments(uid))
   const updateAssignments = (next: FreeAssignment[]) => { setAssignments(next); saveAssignments(uid, next) }
   const [taskFor, setTaskFor] = useState<{ sid: string; sname: string; kind: AssignKind; entity: string; periodId: string; periodName: string } | null>(null)
+
+  // ── urgent pull-outs (in-session faculty/venue → one-off task, auto-covered) ──
+  const [pullouts, setPullouts] = useState<UrgentPullout[]>(() => loadPullouts(uid))
+  const updatePullouts = (next: UrgentPullout[]) => { setPullouts(next); savePullouts(uid, next) }
+  const [pullFor, setPullFor] = useState<
+    | { kind: PullKind; sid: string; sname: string; periodId: string; periodName: string
+        section: string; subject: string; original: string; suggestions: string[] }
+    | null
+  >(null)
 
   const activeScheduleId = getActiveTimetableId()
 
@@ -583,6 +596,50 @@ export function CalendarPage() {
     const next = { ...bundleById(sid).substitutions }; delete next[`${section}|${dayKey}|${periodId}`]
     writeSubs(sid, next)
   }
+
+  // ── urgent pull-out helpers ───────────────────────────────────────────────
+  // Rooms with nothing scheduled at this period in the owning schedule — the
+  // pool an in-session venue can be swapped into when pulled for a task.
+  const freeRoomsAt = (sid: string, periodId: string, exceptRoom: string): string[] => {
+    const tb = bundleById(sid)
+    const occupied = new Set<string>()
+    for (const s of tb.sections) {
+      const c = tb.classTT[s.name]?.[dayKey]?.[periodId]
+      if (c?.room) occupied.add(String(c.room).trim())
+    }
+    const all = new Set<string>()
+    for (const r of tb.rooms ?? []) { const n = r.actualName || r.generatedName || r.name; if (n) all.add(n) }
+    return Array.from(all).filter(n => n !== exceptRoom && !occupied.has(n)).sort()
+  }
+
+  // Open the pull-out modal for an in-session teacher/venue, pre-computing the
+  // ranked list of free replacements (best-first): the substitute-finder for a
+  // teacher, free rooms for a venue.
+  const openPullout = (
+    kind: PullKind, sid: string, sname: string, periodId: string,
+    section: string, subject: string, original: string,
+  ) => {
+    const per = bundleById(sid).periods.find((p: any) => p.id === periodId)
+    const periodName = per?.name || periodId
+    const suggestions = kind === 'teacher'
+      ? candidatesFor(sid, section, periodId, subject, original).map(c => c.name)
+      : freeRoomsAt(sid, periodId, original)
+    setPullFor({ kind, sid, sname, periodId, periodName, section, subject, original, suggestions })
+  }
+
+  const confirmPullout = (replacement: string, task: string, note: string) => {
+    if (!pullFor) return
+    const rec: UrgentPullout = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date: isoDate, sid: pullFor.sid, periodId: pullFor.periodId, section: pullFor.section,
+      kind: pullFor.kind, original: pullFor.original, replacement: replacement.trim(),
+      task: task.trim(), note: note.trim() || undefined,
+    }
+    updatePullouts([...pullouts, rec])
+    setPullFor(null)
+  }
+
+  const clearPullout = (id: string) => updatePullouts(pullouts.filter(p => p.id !== id))
   // Auto-assign the best candidate to every uncovered slot of the absent
   // teacher — only among faculty flagged Auto (not Manual) in Faculty Settings.
   // Slots can span several schedules, so writes are batched per owning schedule.
@@ -609,19 +666,28 @@ export function CalendarPage() {
     // its own wall-clock time (resolved per its schedule's bell).
     for (const c of gridData.cells) {
       const key = `${c.sid}|${c.section}|${c.periodId}`
+      // An urgent pull-out for this exact slot on this date overrides the
+      // effective teacher/room: the original is gone (on a task), the
+      // replacement stands in — a teacher pull-out even overrides any recurring
+      // substitution. Empty replacement = the slot is left uncovered.
+      const cov = coverFor(pullouts, isoDate, c.sid, c.section, c.periodId)
+      const effT = cov?.kind === 'teacher' ? (cov.teacher ?? '') : (c.sub || c.teacher || '')
+      const effR = cov?.kind === 'room' ? (cov.room ?? '') : (c.room || '')
+      // `sub` drives the "covered" chip styling — set when this slot is covered
+      // (by a recurring sub or a pull-out) so all lenses flag it.
+      const subChip = cov?.kind === 'teacher' ? (cov.teacher || undefined) : (c.sub || undefined)
       if (mode === 'class') {
         if (c.section !== entity) continue
-        out.push(mk(key, c, c.subject, undefined, c.sub || c.teacher || '', c.room, c.subject, c.sub))
+        out.push(mk(key, c, c.subject, undefined, effT, effR, c.subject, subChip))
       } else if (mode === 'teacher') {
-        const effective = c.sub || c.teacher
-        if (effective !== entity) continue
-        out.push(mk(key, c, c.section, c.subject, '', c.room, c.subject, c.sub && c.sub === entity ? c.sub : undefined))
+        if (effT !== entity) continue
+        out.push(mk(key, c, c.section, c.subject, '', effR, c.subject, subChip && subChip === entity ? subChip : undefined))
       } else if (mode === 'room') {
-        if (c.room !== entity) continue
-        out.push(mk(key, c, c.section, c.subject, c.sub || c.teacher || '', '', c.subject, c.sub))
+        if (effR !== entity) continue
+        out.push(mk(key, c, c.section, c.subject, effT, '', c.subject, subChip))
       } else {
         if (c.subject !== entity) continue
-        out.push(mk(key, c, c.section, undefined, c.sub || c.teacher || '', c.room, entity, c.sub))
+        out.push(mk(key, c, c.section, undefined, effT, effR, entity, subChip))
       }
     }
     // Free-slot assignments for this entity today render as dashed TASK blocks.
@@ -635,6 +701,19 @@ export function CalendarPage() {
         const t = bundleWallTimes(bundleById(a.sid ?? openId))[a.periodId]
         if (!t) continue
         out.push({ key: `task|${a.id}`, title: a.title, line2: a.note ?? '', room: '', startMin: t.s, endMin: t.e, color: TASK_COLOR, task: true })
+      }
+      // Urgent pull-outs put an in-session teacher/venue on a task for this
+      // slot; show it in that resource's own row (faculty/venue lens).
+      if (kind === 'teacher' || kind === 'room') {
+        for (const p of pulloutsForEntity(pullouts, isoDate, kind, entity)) {
+          const t = bundleWallTimes(bundleById(p.sid || openId))[p.periodId]
+          if (!t) continue
+          out.push({
+            key: `pull|${p.id}`, title: p.task,
+            line2: p.replacement ? `↳ covered by ${p.replacement}` : 'uncovered',
+            room: '', startMin: t.s, endMin: t.e, color: TASK_COLOR, task: true,
+          })
+        }
       }
     }
     // Break/assembly/dispersal blocks — one per schedule this entity actually
@@ -1008,10 +1087,12 @@ export function CalendarPage() {
               periods={periods} periodTimes={periodTimes}
               classTT={classTT} dayKey={dayKey} mode={mode} colLabel={colLabel}
               entities={multiActive ? gridEntities : entityList} sections={sections} substitutions={substitutions} h24={h24}
-              isoDate={isoDate} assignments={assignments}
+              isoDate={isoDate} assignments={assignments} pullouts={pullouts}
               multiActive={multiActive} cells={gridData.cells} sources={sources} openId={openId}
               onAssignTask={(kind, entity, sid, periodId, periodName, sname) => setTaskFor({ kind, entity, sid, sname, periodId, periodName })}
               onClearTask={id => updateAssignments(assignments.filter(a => a.id !== id))}
+              onPullOut={openPullout}
+              onClearPull={clearPullout}
             />
           )
           : (
@@ -1182,6 +1263,15 @@ export function CalendarPage() {
           />
         )
       })()}
+
+      {pullFor && (
+        <PulloutModal
+          target={pullFor}
+          terms={terms}
+          onClose={() => setPullFor(null)}
+          onConfirm={confirmPullout}
+        />
+      )}
     </div>
   )
 }
@@ -1201,6 +1291,9 @@ interface LiveActivity {
   color: SubjectColor
   elapsed: number; total: number
   sid: string; sname: string   // owning schedule — groups "In session" by timetable
+  // Slot context for the in-session lesson — enables "pull out for urgent task"
+  // (present only on busy teacher/venue cards).
+  slot?: { kind: PullKind; section: string; periodId: string; subject: string; original: string }
 }
 
 function LiveBoard(props: {
@@ -1211,21 +1304,41 @@ function LiveBoard(props: {
   classTT: Record<string, any>; dayKey: string; mode: Mode; colLabel: string
   entities: { id: string; name: string }[]; sections: any[]
   substitutions: Record<string, string>; h24: boolean
-  isoDate: string; assignments: FreeAssignment[]
+  isoDate: string; assignments: FreeAssignment[]; pullouts: UrgentPullout[]
   multiActive: boolean; cells: any[]; sources: ScheduleBundle[]; openId: string
   onAssignTask: (kind: AssignKind, entity: string, sid: string, periodId: string, periodName: string, sname: string) => void
   onClearTask: (id: string) => void
+  onPullOut: (kind: PullKind, sid: string, sname: string, periodId: string, section: string, subject: string, original: string) => void
+  onClearPull: (id: string) => void
 }) {
   const { scrub, onScrub, onNow, following, nowMin, viewingToday, dayStart, dayEnd,
     periods, periodTimes, classTT, dayKey, mode, colLabel, entities, sections, substitutions, h24,
-    isoDate, assignments, multiActive, cells, sources, openId, onAssignTask, onClearTask } = props
+    isoDate, assignments, pullouts, multiActive, cells, sources, openId, onAssignTask, onClearTask, onPullOut, onClearPull } = props
 
   // Free resources can be given a task; lens → assignment kind (subjects can't).
   const assignKind: AssignKind | null = mode === 'teacher' ? 'teacher' : mode === 'room' ? 'room' : mode === 'class' ? 'class' : null
 
-  const effTeacher = (section: string, pid: string, cell: any) =>
-    substitutions[`${section}|${dayKey}|${pid}`] || cell?.teacher || ''
-  const effTeacherCell = (c: any) => c.sub || c.teacher || ''
+  // Effective teacher/room, honouring a date-scoped urgent pull-out for this
+  // slot (original leaves session, replacement stands in), then any recurring
+  // substitution. Keeps the Live board's who's-in-session consistent with the
+  // Day grid and every lens.
+  const effTeacher = (section: string, pid: string, cell: any) => {
+    const cov = coverFor(pullouts, isoDate, openId, section, pid)
+    if (cov?.kind === 'teacher') return cov.teacher ?? ''
+    return substitutions[`${section}|${dayKey}|${pid}`] || cell?.teacher || ''
+  }
+  const effRoom = (section: string, pid: string, cell: any) => {
+    const cov = coverFor(pullouts, isoDate, openId, section, pid)
+    return cov?.kind === 'room' ? (cov.room ?? '') : (cell?.room ?? '')
+  }
+  const effTeacherCell = (c: any) => {
+    const cov = coverFor(pullouts, isoDate, c.sid, c.section, c.periodId)
+    return cov?.kind === 'teacher' ? (cov.teacher ?? '') : (c.sub || c.teacher || '')
+  }
+  const effRoomCell = (c: any) => {
+    const cov = coverFor(pullouts, isoDate, c.sid, c.section, c.periodId)
+    return cov?.kind === 'room' ? (cov.room ?? '') : (c.room ?? '')
+  }
 
   // With several schedules live, "the active period" dissolves — each bell runs
   // its own periods, so at a given wall-clock minute one group can be mid-lesson
@@ -1254,18 +1367,19 @@ function LiveBoard(props: {
         let cell: any = null
         if (mode === 'class') {
           cell = running.find((c: any) => c.section === ent.id)
-          if (cell) a = { title: cell.subject, sub: [effTeacherCell(cell), cell.room].filter(Boolean).join(' · '), seed: cell.subject }
+          if (cell) a = { title: cell.subject, sub: [effTeacherCell(cell), effRoomCell(cell)].filter(Boolean).join(' · '), seed: cell.subject }
         } else if (mode === 'teacher') {
           cell = running.find((c: any) => effTeacherCell(c) === ent.id)
-          if (cell) a = { title: cell.section, chip: cell.subject, sub: cell.room ?? '', seed: cell.subject }
+          if (cell) a = { title: cell.section, chip: cell.subject, sub: effRoomCell(cell), seed: cell.subject }
         } else if (mode === 'room') {
-          cell = running.find((c: any) => c.room === ent.id)
+          cell = running.find((c: any) => effRoomCell(c) === ent.id)
           if (cell) a = { title: cell.section, chip: cell.subject, sub: effTeacherCell(cell), seed: cell.subject }
         } else {
           const classes = running.filter((c: any) => c.subject === ent.id).map((c: any) => c.section)
           if (classes.length) { cell = running.find((c: any) => c.subject === ent.id); a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name } }
         }
-        if (a && cell) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - cell.startMin, total: cell.endMin - cell.startMin, sid: cell.sid, sname: cell.sname })
+        if (a && cell) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - cell.startMin, total: cell.endMin - cell.startMin, sid: cell.sid, sname: cell.sname,
+          slot: (mode === 'teacher' || mode === 'room') ? { kind: mode, section: cell.section, periodId: cell.periodId, subject: cell.subject, original: ent.id } : undefined })
         else idle.push(ent.name)
       }
     }
@@ -1282,18 +1396,19 @@ function LiveBoard(props: {
     if (active && !isBreak) {
       for (const ent of entities) {
         let a: { title: string; chip?: string; sub: string; seed: string } | null = null
+        let slot: { kind: PullKind; section: string; periodId: string; subject: string; original: string } | undefined
         if (mode === 'class') {
           const c = classTT[ent.id]?.[dayKey]?.[active.id]
-          if (c?.subject) a = { title: c.subject, sub: [effTeacher(ent.id, active.id, c), c.room].filter(Boolean).join(' · '), seed: c.subject }
+          if (c?.subject) a = { title: c.subject, sub: [effTeacher(ent.id, active.id, c), effRoom(ent.id, active.id, c)].filter(Boolean).join(' · '), seed: c.subject }
         } else if (mode === 'teacher') {
           for (const s of sections) {
             const c = classTT[s.name]?.[dayKey]?.[active.id]
-            if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: s.name, chip: c.subject, sub: c.room ?? '', seed: c.subject }; break }
+            if (c?.subject && effTeacher(s.name, active.id, c) === ent.id) { a = { title: s.name, chip: c.subject, sub: effRoom(s.name, active.id, c), seed: c.subject }; slot = { kind: 'teacher', section: s.name, periodId: active.id, subject: c.subject, original: ent.id }; break }
           }
         } else if (mode === 'room') {
           for (const s of sections) {
             const c = classTT[s.name]?.[dayKey]?.[active.id]
-            if (c?.subject && (c.room ?? '') === ent.id) { a = { title: s.name, chip: c.subject, sub: effTeacher(s.name, active.id, c), seed: c.subject }; break }
+            if (c?.subject && effRoom(s.name, active.id, c) === ent.id) { a = { title: s.name, chip: c.subject, sub: effTeacher(s.name, active.id, c), seed: c.subject }; slot = { kind: 'room', section: s.name, periodId: active.id, subject: c.subject, original: ent.id }; break }
           }
         } else {
           const classes: string[] = []
@@ -1303,7 +1418,7 @@ function LiveBoard(props: {
           }
           if (classes.length) a = { title: ent.name, sub: `${classes.length} class${classes.length !== 1 ? 'es' : ''} · ${classes.slice(0, 3).join(', ')}${classes.length > 3 ? '…' : ''}`, seed: ent.name }
         }
-        if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin, sid: openId, sname: '' })
+        if (a) busy.push({ id: ent.id, title: a.title, chip: a.chip, sub: a.sub, color: subjectColor(a.seed), elapsed: scrub - at!.startMin, total: at!.endMin - at!.startMin, sid: openId, sname: '', slot })
         else idle.push(ent.name)
       }
     }
@@ -1369,10 +1484,27 @@ function LiveBoard(props: {
   // Anyone busyElsewhere (occupied in another active schedule right now) is
   // skipped entirely — not free, not offered a task, genuinely unavailable.
   const onTask: { entity: string; a: FreeAssignment }[] = []
+  const onPull: { entity: string; p: UrgentPullout }[] = []
   const free: string[] = []
   const anchors: Record<string, { sid: string; sname: string; periodId: string; periodName: string } | null> = {}
+  // Which pulled-out resources are on their urgent task at THIS moment (their
+  // vacated period is the one currently running). Such a resource left its
+  // lesson (the replacement is now shown in session) and belongs under "On
+  // assignment", never "Free".
+  const runningNow = multiActive
+    ? new Set(cells.filter((c: any) => scrub >= c.startMin && scrub < c.endMin).map((c: any) => `${c.sid}|${c.periodId}`))
+    : new Set<string>(active && !isBreak ? [`${openId}|${active.id}`] : [])
+  const pulledNow = new Map<string, UrgentPullout>()
+  if (assignKind === 'teacher' || assignKind === 'room') {
+    for (const p of pullouts) {
+      if (p.date !== isoDate || p.kind !== assignKind) continue
+      if (!runningNow.has(`${p.sid}|${p.periodId}`)) continue
+      pulledNow.set(p.original, p)
+    }
+  }
   for (const name of idle) {
     if (busyElsewhere.has(name)) continue
+    if (pulledNow.has(name)) { onPull.push({ entity: name, p: pulledNow.get(name)! }); continue }
     const anchor = assignKind ? anchorFor(name) : null
     anchors[name] = anchor
     const a = anchor ? assignmentAt(assignments, isoDate, anchor.periodId, assignKind!, name, anchor.sid) : undefined
@@ -1503,7 +1635,7 @@ function LiveBoard(props: {
         ) : (
           <>
             {busy.length > 0 && (
-              <div style={{ marginBottom: (onTask.length + free.length) ? 18 : 0 }}>
+              <div style={{ marginBottom: (onTask.length + onPull.length + free.length) ? 18 : 0 }}>
                 {segmentBySchedule ? (
                   <>
                     <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
@@ -1525,7 +1657,7 @@ function LiveBoard(props: {
                                   {sch.name} <span style={{ color: '#9A95BC', fontWeight: 700 }}>· {group.length}</span>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-                                  {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                                  {group.map(b => <LiveCard key={`${sch.id}|${b.id}`} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} onPullOut={onPullOut} />)}
                                 </div>
                               </div>
                             )
@@ -1538,16 +1670,29 @@ function LiveBoard(props: {
                   <>
                     <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
-                      {busy.map(b => <LiveCard key={b.id} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} />)}
+                      {busy.map(b => <LiveCard key={b.id} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} onPullOut={onPullOut} />)}
                     </div>
                   </>
                 )}
               </div>
             )}
-            {onTask.length > 0 && (
+            {(onTask.length + onPull.length) > 0 && (
               <div style={{ marginBottom: free.length ? 18 : 0 }}>
-                <SectionLabel text={`On assignment · ${onTask.length}`} tone="#B45309" />
+                <SectionLabel text={`On assignment · ${onTask.length + onPull.length}`} tone="#B45309" />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
+                  {onPull.map(({ entity, p }) => (
+                    <div key={`pull|${p.id}`} style={{ background: '#FFF7F0', border: '1.5px dashed #E5A878', borderRadius: 13, padding: '12px 13px', display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#9A95BC', marginBottom: 2 }}>{entity} <span style={{ color: '#C2410C', fontWeight: 800 }}>· pulled out</span></div>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: '#C2410C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>⚡ {p.task}</div>
+                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.replacement ? `${p.section} covered by ${p.replacement}` : `${p.section} — uncovered`}</div>
+                      </div>
+                      <button onClick={() => onClearPull(p.id)} title="Undo pull-out"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#D08A5C', display: 'inline-flex', flexShrink: 0 }}>
+                        <X size={15} />
+                      </button>
+                    </div>
+                  ))}
                   {onTask.map(({ entity, a }) => (
                     <div key={entity} style={{ background: '#FFFBF3', border: '1.5px dashed #E5C078', borderRadius: 13, padding: '12px 13px', display: 'flex', gap: 10, alignItems: 'center' }}>
                       <div style={{ minWidth: 0, flex: 1 }}>
@@ -1618,9 +1763,15 @@ function LiveBoard(props: {
   )
 }
 
-function LiveCard({ entity, a }: { entity: string; a: LiveActivity }) {
+function LiveCard({ entity, a, onPullOut }: {
+  entity: string; a: LiveActivity
+  onPullOut?: (kind: PullKind, sid: string, sname: string, periodId: string, section: string, subject: string, original: string) => void
+}) {
   const { accent, bg } = a.color
   const pct = a.total > 0 ? Math.max(0, Math.min(1, a.elapsed / a.total)) : 0
+  // In-session faculty/venue can be pulled out for an urgent task. `slot` carries
+  // the lesson context and is set only on teacher/venue lens cards.
+  const canPull = !!a.slot && !!onPullOut
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 13, padding: '12px 13px', display: 'flex', gap: 12, alignItems: 'center' }}>
       {/* progress ring */}
@@ -1644,6 +1795,14 @@ function LiveCard({ entity, a }: { entity: string; a: LiveActivity }) {
         )}
         {a.sub && <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.sub}</div>}
       </div>
+      {canPull && a.slot && (
+        <button
+          onClick={() => onPullOut!(a.slot!.kind, a.sid, a.sname, a.slot!.periodId, a.slot!.section, a.slot!.subject, a.slot!.original)}
+          title="Pull out for an urgent task (auto-covers this lesson)"
+          style={{ flexShrink: 0, border: '1px solid #F0D9C0', background: '#FFF7F0', color: '#C2410C', borderRadius: 8, cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '5px 7px' }}>
+          ⚡
+        </button>
+      )}
     </div>
   )
 }
@@ -2194,6 +2353,84 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
 // ── Assign-task modal ──────────────────────────────────────────
 // Give a free resource a job for this slot: quick presets per resource kind,
 // free-text title, optional note. Date + period are fixed by where you clicked.
+// Pull an in-session teacher/venue out for a one-off urgent task, choosing the
+// cover for the lesson they leave (auto-suggested best-free, editable).
+function PulloutModal({ target, terms, onClose, onConfirm }: {
+  target: { kind: PullKind; sid: string; sname: string; periodId: string; periodName: string; section: string; subject: string; original: string; suggestions: string[] }
+  terms: Terms
+  onClose: () => void
+  onConfirm: (replacement: string, task: string, note: string) => void
+}) {
+  const [task, setTask] = useState('')
+  const [note, setNote] = useState('')
+  const [replacement, setReplacement] = useState(target.suggestions[0] ?? '')
+  const presets = TASK_PRESETS[target.kind]
+  const kindLabel = target.kind === 'teacher' ? terms.teacher : terms.venue
+  const valid = task.trim().length > 0
+  const submit = () => { if (valid) onConfirm(replacement, task, note) }
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: 520, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+        <div style={{ background: 'linear-gradient(135deg,#EA580C,#C2410C)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ color: '#fff' }}>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>⚡ Pull out for an urgent task</div>
+            <div style={{ fontSize: 12.5, opacity: 0.92, marginTop: 2 }}>
+              {kindLabel}: <strong>{target.original}</strong> · leaving {target.section} · {target.subject} · {target.periodName}
+              {target.sname && <> · 🔀 {target.sname}</>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={16} /></button>
+        </div>
+
+        <div style={{ padding: 22 }}>
+          <Field label="Urgent task" required>
+            <input value={task} onChange={e => setTask(e.target.value)} placeholder="e.g. Emergency parent meeting" autoFocus style={inp}
+              onKeyDown={e => { if (e.key === 'Enter') submit() }} />
+          </Field>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: -6, marginBottom: 16 }}>
+            {presets.map(p => (
+              <button key={p} onClick={() => setTask(p)}
+                style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  border: task === p ? '1.5px solid #C2410C' : '1.5px solid #F0DCC9',
+                  background: task === p ? '#FFF3EA' : '#fff', color: '#C2410C',
+                }}>{p}</button>
+            ))}
+          </div>
+
+          <Field label={`Cover ${target.section} with (${kindLabel.toLowerCase()})`}>
+            {target.suggestions.length > 0 ? (
+              <select value={replacement} onChange={e => setReplacement(e.target.value)} style={inp}>
+                {target.suggestions.map((s, i) => <option key={s} value={s}>{s}{i === 0 ? ' — best free pick' : ''}</option>)}
+                <option value="">— leave uncovered —</option>
+              </select>
+            ) : (
+              <div style={{ fontSize: 12.5, color: '#B45309', fontWeight: 600 }}>
+                No free {kindLabel.toLowerCase()} is available for this period — the lesson will be left uncovered.
+              </div>
+            )}
+          </Field>
+
+          <Field label="Note (optional)">
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Any detail worth remembering…" style={inp} />
+          </Field>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <button onClick={onClose}
+              style={{ flex: '0 0 auto', padding: '11px 18px', borderRadius: 10, border: '1.5px solid #E5E7EB', background: '#fff', color: '#4B5275', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+            <button onClick={submit} disabled={!valid}
+              style={{ flex: 1, padding: '11px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#EA580C,#C2410C)', color: '#fff', fontWeight: 800, fontSize: 13.5, cursor: valid ? 'pointer' : 'not-allowed', opacity: valid ? 1 : 0.5, fontFamily: 'inherit' }}>
+              {replacement ? `Pull out & cover with ${replacement}` : 'Pull out (leave uncovered)'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AssignTaskModal({ target, date, terms, history, weekCount, multiActive, onClose, onAssign }: {
   target: { sid: string; sname: string; kind: AssignKind; entity: string; periodId: string; periodName: string }
   date: string; terms: Terms
