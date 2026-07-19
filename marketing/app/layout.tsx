@@ -32,15 +32,17 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
-  // Google Search Console ownership verification. Paste the code from the
-  // "HTML tag" method (Settings → Ownership verification) into the
-  // NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION env var — then redeploy. Without
-  // verifying + submitting the sitemap in Search Console, a brand-new domain
-  // relies on slow organic discovery, which is the real reason it isn't
-  // showing up in Google yet (there is no crawl blocker in the code).
-  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
-    : {}),
+  // Google Search Console ownership verification (HTML-tag method).
+  // The token is committed here as the permanent source of truth so
+  // verification can NEVER be lost to an env-var change or a fresh deploy —
+  // it is version-controlled and always emitted. The token is public (it
+  // ships in the page HTML for anyone to read), so committing it is safe.
+  // NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION can still override it if the
+  // property is ever re-verified with a new token.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ?? "t_HVg1SLuoc0M_koE_e9UKPTmY1se_r2UKvKQchex28",
+  },
 };
 
 export default function RootLayout({
