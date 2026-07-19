@@ -110,41 +110,48 @@ func main() {
 
 	// Public endpoints (no auth)
 	app.Post("/api/contact", h.SubmitContact)
-	app.Get("/api/share/:token", h.GetShare)                    // public read-only timetable shares
-	app.Post("/api/share/:token/access", h.AccessShare)         // unlock a restricted share by email (no verification)
+	app.Get("/api/share/:token", h.GetShare)                       // public read-only timetable shares
+	app.Post("/api/share/:token/access", h.AccessShare)            // unlock a restricted share by email (no verification)
 	app.Post("/api/share/:token/request-code", h.RequestShareCode) // email a one-time code (magic-link)
-	app.Post("/api/share/:token/verify", h.VerifyShareCode)     // verify the code, return the timetable
+	app.Post("/api/share/:token/verify", h.VerifyShareCode)        // verify the code, return the timetable
+	app.Get("/api/billing/config", h.BillingConfig)                // public: prices + whether billing is live
+	app.Post("/api/billing/webhook", h.BillingWebhook)             // Razorpay webhook (HMAC-verified, not Clerk-authed)
 
 	api := app.Group("/api/v1", middleware.Auth())
 
 	// --- Auth / current user ---
 	api.Post("/me", h.Me) // upsert + return the signed-in user (Clerk-backed)
 
+	// --- Billing (Razorpay) ---
+	api.Post("/billing/subscribe", h.CreateSubscription) // start checkout for the signed-in user
+	api.Get("/billing/status", h.BillingStatus)          // current plan + subscription state
+	api.Post("/billing/cancel", h.CancelSubscription)    // cancel at end of cycle
+
 	// --- Timetable routes ---
-	api.Get("/timetables",                   h.ListTimetables)
-	api.Post("/timetables",                  h.CreateTimetable)
-	api.Get("/timetables/:id",               h.GetTimetable)
-	api.Put("/timetables/:id",               h.UpdateTimetable)
-	api.Delete("/timetables/:id",            h.DeleteTimetable)
-	api.Post("/timetables/generate",         h.GenerateTimetable)
-	api.Post("/timetables/:id/export",       h.ExportTimetable)
-	api.Post("/timetables/:id/substitute",   h.Substitute)
-	api.Post("/timetables/share",            h.CreateShare)
-	api.Get("/org-config",                   h.GetOrgConfig)
+	api.Get("/timetables", h.ListTimetables)
+	api.Post("/timetables", h.CreateTimetable)
+	api.Get("/timetables/:id", h.GetTimetable)
+	api.Put("/timetables/:id", h.UpdateTimetable)
+	api.Delete("/timetables/:id", h.DeleteTimetable)
+	api.Post("/timetables/generate", h.GenerateTimetable)
+	api.Post("/timetables/:id/export", h.ExportTimetable)
+	api.Post("/timetables/:id/substitute", h.Substitute)
+	api.Post("/timetables/share", h.CreateShare)
+	api.Get("/org-config", h.GetOrgConfig)
 
 	// --- Curriculum routes ---
 	cur := handlers.NewCurriculumHandlerFromHandler(h)
 
 	// Read endpoints — available to authenticated users
 	api.Get("/curriculum/templates", cur.GetTemplates)
-	api.Get("/curriculum/boards",    cur.GetBoards)
-	api.Get("/curriculum/changes",   cur.GetChanges)
-	api.Get("/curriculum/versions",  cur.GetVersions)
+	api.Get("/curriculum/boards", cur.GetBoards)
+	api.Get("/curriculum/changes", cur.GetChanges)
+	api.Get("/curriculum/versions", cur.GetVersions)
 
 	// School overrides — per-school read/write
-	api.Get("/curriculum/overrides",         cur.GetOverrides)
-	api.Post("/curriculum/overrides",        cur.UpsertOverride)
-	api.Delete("/curriculum/overrides/:id",  cur.DeleteOverride)
+	api.Get("/curriculum/overrides", cur.GetOverrides)
+	api.Post("/curriculum/overrides", cur.UpsertOverride)
+	api.Delete("/curriculum/overrides/:id", cur.DeleteOverride)
 
 	// Admin-only mutation endpoints
 	// POST /curriculum/review — approve or reject pending changes
@@ -152,10 +159,10 @@ func main() {
 	api.Post("/curriculum/review", cur.ReviewChanges)
 
 	// POST /curriculum/apply — actually write approved changes to templates
-	api.Post("/curriculum/apply",  cur.ApplyApproved)
+	api.Post("/curriculum/apply", cur.ApplyApproved)
 
 	// POST /curriculum/reset — restore built-in seed templates
-	api.Post("/curriculum/reset",  cur.ResetTemplates)
+	api.Post("/curriculum/reset", cur.ResetTemplates)
 
 	// Serve built frontend LAST so it only catches paths not handled by an
 	// explicit route above (otherwise this greedy wildcard shadows the API).

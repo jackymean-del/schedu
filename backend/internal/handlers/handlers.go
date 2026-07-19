@@ -7,11 +7,18 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jackymean-del/smart-sched/internal/billing"
 )
 
-type Handler struct{ db *pgxpool.Pool }
+type Handler struct {
+	db   *pgxpool.Pool
+	bill billing.Config
+}
 
-func New(db *pgxpool.Pool) *Handler { return &Handler{db: db} }
+func New(db *pgxpool.Pool) *Handler {
+	return &Handler{db: db, bill: billing.LoadConfig()}
+}
 
 // clerkID pulls the authenticated user's Clerk id from the request locals.
 // Empty means the auth middleware did not set one (treated as unauthorized).
@@ -96,8 +103,8 @@ func (h *Handler) CreateTimetable(c fiber.Ctx) error {
 
 	ctx := context.Background()
 	var (
-		id, status         string
-		createdAt          any
+		id, status string
+		createdAt  any
 	)
 	err := h.db.QueryRow(ctx, `
 		WITH u AS (
@@ -134,9 +141,9 @@ func (h *Handler) GetTimetable(c fiber.Ctx) error {
 	}
 	ctx := context.Background()
 	var (
-		name, status        string
-		config, data        []byte
-		createdAt, updated  any
+		name, status       string
+		config, data       []byte
+		createdAt, updated any
 	)
 	err = h.db.QueryRow(ctx, `
 		SELECT t.name, t.config, t.data, t.status::text, t.created_at, t.updated_at
@@ -243,7 +250,7 @@ func (h *Handler) GenerateTimetable(c fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"job_id": jobID, "status": "queued",
 		"estimated_seconds": 5,
-		"poll_url": "/api/v1/jobs/" + jobID,
+		"poll_url":          "/api/v1/jobs/" + jobID,
 	})
 }
 
@@ -263,7 +270,7 @@ func (h *Handler) Substitute(c fiber.Ctx) error {
 	c.Bind().JSON(&req)
 	return c.JSON(fiber.Map{
 		"timetable_id": c.Params("id"),
-		"absent": req.AbsentStaff, "day": req.Day,
+		"absent":       req.AbsentStaff, "day": req.Day,
 		"suggestions": []fiber.Map{},
 	})
 }
@@ -272,6 +279,6 @@ func (h *Handler) GetOrgConfig(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"org_type": c.Query("org_type", "school"),
 		"country":  c.Query("country", "IN"),
-		"norms": fiber.Map{"max_periods_week": 36, "max_periods_day": 6, "hours_week": 40},
+		"norms":    fiber.Map{"max_periods_week": 36, "max_periods_day": 6, "hours_week": 40},
 	})
 }

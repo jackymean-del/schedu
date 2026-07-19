@@ -28,8 +28,11 @@ export const SCHEDU_MARK = `<svg width="22" height="22" viewBox="0 0 52 52" fill
 
 /**
  * Institution branding for print/PDF headers, read from the stores
- * (best-effort). `isPaid` controls whether the schedU footer watermark shows
- * (free tier = watermark; pro/enterprise = none).
+ * (best-effort). `isPaid` controls whether the schedU footer watermark shows.
+ * Product decision: exports are watermark-free on EVERY tier — a printed
+ * timetable is the school's own document, so we never brand it. Pro is
+ * differentiated by capacity/limits, not by watermarking Free. Hence isPaid is
+ * always true here; the field is kept so print components need no change.
  */
 export function institutionInfo(): { name: string; logo?: string; address?: string; isPaid: boolean } {
   const user = useAuthStore.getState().user as any
@@ -39,8 +42,7 @@ export function institutionInfo(): { name: string; logo?: string; address?: stri
     user?.schoolName || org?.name || cfg?.schoolName || cfg?.orgName || cfg?.institutionName || 'Your Institution'
   const logo = org?.logoUrl || cfg?.logoUrl || user?.logoUrl || undefined
   const address = org?.address || cfg?.address || user?.address || undefined
-  const plan = (user?.plan ?? 'free') as string
-  const isPaid = plan === 'pro' || plan === 'enterprise' || plan === 'paid'
+  const isPaid = true // watermark-free for all tiers (see note above)
   return { name, logo, address, isPaid }
 }
 

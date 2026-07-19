@@ -51,6 +51,22 @@ export const meApi = {
     apiClient.post<{ id: string; email: string; name: string; plan: string; role?: string }>('/me', data),
 }
 
+/** Billing / subscriptions (Razorpay). Authed endpoints go through apiClient. */
+export interface BillingStatus {
+  plan: string
+  enabled: boolean
+  status?: string
+  interval?: 'monthly' | 'yearly'
+  hasSubscription?: boolean
+  currentPeriodEnd?: string
+}
+export const billingApi = {
+  status:    ()                                => apiClient.get<BillingStatus>('/billing/status'),
+  subscribe: (interval: 'monthly' | 'yearly')  =>
+    apiClient.post<{ subscriptionId: string; keyId: string; shortUrl?: string; interval: string }>('/billing/subscribe', { interval }),
+  cancel:    ()                                => apiClient.post<{ ok: boolean; status: string; message: string }>('/billing/cancel'),
+}
+
 // ─────────────────────────────────────────────────────────────
 // ORGANIZATION & SESSION
 // ─────────────────────────────────────────────────────────────
