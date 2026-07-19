@@ -2,21 +2,39 @@ import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
 import { appHref } from '@/lib/appUrl'
 
+// Pricing here MUST match the in-app checkout (Razorpay, INR): Pro is ₹333/mo
+// or ₹3,333/yr, and the Free caps match what the app actually enforces. If these
+// numbers change, update the backend billing config + the app subscription page
+// (frontend/src/pages/subscription.tsx) to match.
 const TIERS = [
   {
-    name: 'Starter', price: 'Free', period: '',
+    name: 'Free', price: '₹0', period: '/mo', sub: '',
     desc: 'Everything a small team needs to try AI scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
-    features: ['Up to 2 classes', 'Up to 20 subjects', 'AI auto-schedule', 'Real-time conflict detection', 'PDF export'],
+    features: [
+      'AI auto-scheduling — conflict-free in minutes',
+      '1 active schedule',
+      'Up to 40 classes',
+      'Class, Faculty, Venue & Subject views',
+      'Live calendar (view mode)',
+      'Excel & print / PDF export',
+    ],
   },
   {
-    name: 'Pro', price: '$29', period: '/mo',
+    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
     desc: 'For a single institution running multiple streams and electives.',
-    cta: 'Start free', href: appHref('/login'), popular: true,
-    features: ['Unlimited classes', 'Unlimited subjects', 'Elective OR/AND groups', 'Multi-stream support', 'Room & resource planning', 'Priority support'],
+    cta: 'Get Pro', href: appHref('/login'), popular: true,
+    features: [
+      'Unlimited schedules & classes',
+      'Live task assignment & substitutions',
+      'Team collaboration — invite & manage users',
+      'Advanced AI & multi-shift / block scheduling',
+      'Workload analytics & optimisation',
+      'Priority support',
+    ],
   },
   {
-    name: 'Enterprise', price: '$99', period: '/mo',
+    name: 'Enterprise', price: 'Custom', period: '', sub: '',
     desc: 'For groups managing many campuses or institutions.',
     cta: 'Talk to sales', href: 'mailto:hello@bhusku.com', popular: false,
     features: ['Everything in Pro', 'Multi-campus management', 'API access', 'SSO / SAML', 'Dedicated success manager'],
@@ -24,10 +42,10 @@ const TIERS = [
 ]
 
 const FAQ = [
-  { q: 'Is there really a free plan?', a: 'Yes. Starter is free forever for up to 2 classes and 20 subjects — no credit card required.' },
-  { q: 'Can I change plans later?', a: 'Anytime. Upgrade or downgrade from your account; changes take effect immediately and billing is prorated.' },
+  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — 1 active schedule and up to 40 classes, with full AI auto-scheduling. No credit card required.' },
+  { q: 'How much is Pro, and what does it add?', a: 'Pro is ₹333/month or ₹3,333/year (save ~17%). It removes the Free limits — unlimited schedules and classes — and adds live task assignment, team collaboration, workload analytics, and priority support.' },
+  { q: 'What payment methods do you accept?', a: 'Payments are processed securely via Razorpay in INR — UPI, cards, and netbanking. International cards are supported too. You can cancel anytime and keep access until the end of your billing period.' },
   { q: 'Do you support any curriculum?', a: 'schedU has no built-in board restrictions. Enter your own period counts, subject names, and grading labels — it adapts to you.' },
-  { q: 'What does Enterprise add?', a: 'Multi-campus management, API access, SSO/SAML, and a dedicated success manager for rolling schedU out across many institutions.' },
 ]
 
 const cardHover =
@@ -35,7 +53,7 @@ const cardHover =
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'Simple, transparent pricing for schedU. Start free, then scale to unlimited classes, multi-stream electives, and multi-campus management. Starter / Pro / Enterprise.',
+  description: 'Simple, transparent pricing for schedU. Start free, then upgrade to Pro (₹333/mo) for unlimited classes, multi-stream electives, and team collaboration. Free / Pro / Enterprise.',
   alternates: { canonical: '/pricing' },
 }
 
@@ -50,7 +68,7 @@ export default function PricingPage() {
           <span className="italic text-[#7C6FE0]">institution.</span>
         </h1>
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
-          Start free on Starter. Upgrade when you need unlimited classes, electives, and multi-campus control.
+          Start free. Upgrade to Pro when you need unlimited classes, electives, live task assignment, and team collaboration.
         </p>
       </section>
 
@@ -72,10 +90,11 @@ export default function PricingPage() {
                 </span>
               )}
               <h2 className="text-base font-bold text-[#13111E]">{t.name}</h2>
-              <div className="mb-1.5 mt-3.5 flex items-baseline gap-1">
+              <div className="mt-3.5 flex items-baseline gap-1">
                 <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">{t.price}</span>
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
               </div>
+              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub}</p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href} className="no-underline">
                 <button

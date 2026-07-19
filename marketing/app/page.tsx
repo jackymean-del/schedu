@@ -21,21 +21,23 @@ const STATS = [
 ]
 
 
+// Keep in sync with /pricing and the in-app Razorpay checkout (INR): Pro is
+// ₹333/mo or ₹3,333/yr; Free caps match what the app enforces.
 const TIERS = [
   {
-    name: 'Starter', price: 'Free', period: '',
+    name: 'Free', price: '₹0', period: '/mo', sub: '',
     desc: 'Everything a small team needs to try AI scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
-    features: ['Up to 2 classes', 'Up to 20 subjects', 'AI auto-schedule', 'Real-time conflict detection', 'PDF export'],
+    features: ['AI auto-scheduling — conflict-free', '1 active schedule', 'Up to 40 classes', 'All timetable views', 'Excel & PDF export'],
   },
   {
-    name: 'Pro', price: '$29', period: '/mo',
+    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
     desc: 'For a single institution running multiple streams and electives.',
-    cta: 'Start free', href: appHref('/login'), popular: true,
-    features: ['Unlimited classes', 'Unlimited subjects', 'Elective OR/AND groups', 'Multi-stream support', 'Room & resource planning', 'Priority support'],
+    cta: 'Get Pro', href: appHref('/login'), popular: true,
+    features: ['Unlimited schedules & classes', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced AI & multi-shift scheduling', 'Priority support'],
   },
   {
-    name: 'Enterprise', price: '$99', period: '/mo',
+    name: 'Enterprise', price: 'Custom', period: '', sub: '',
     desc: 'For groups managing many campuses or institutions.',
     cta: 'Talk to sales', href: 'mailto:hello@bhusku.com', popular: false,
     features: ['Everything in Pro', 'Multi-campus management', 'API access', 'SSO / SAML', 'Dedicated success manager'],
@@ -65,11 +67,13 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   operatingSystem: 'Web',
   url: 'https://schedu.bhusku.com',
   description: 'AI-generated, conflict-free timetables for schools, colleges, and universities — any board, any curriculum.',
-  offers: TIERS.map(t => ({
+  // Only the numeric INR tiers become Offers; Enterprise ("Custom") is omitted
+  // rather than advertised with a fake price.
+  offers: TIERS.filter(t => t.price.startsWith('₹')).map(t => ({
     '@type': 'Offer',
     name: t.name,
-    price: t.price === 'Free' ? '0' : t.price.replace('$', ''),
-    priceCurrency: 'USD',
+    price: t.price.replace(/[₹,]/g, ''),
+    priceCurrency: 'INR',
   })),
 }
 
@@ -198,10 +202,11 @@ export default function HomePage() {
                 </span>
               )}
               <h3 className="text-base font-bold text-[#13111E]">{t.name}</h3>
-              <div className="mb-1.5 mt-3.5 flex items-baseline gap-1">
+              <div className="mt-3.5 flex items-baseline gap-1">
                 <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">{t.price}</span>
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
               </div>
+              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub}</p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href} className="no-underline">
                 <button
