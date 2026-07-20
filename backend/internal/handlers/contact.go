@@ -27,10 +27,14 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 
 	// Source is allowlisted (never trust arbitrary client input in a stored,
 	// team-visible field). Defaults to the marketing contact form; the app's
-	// "Notify me when Pro launches" button sends "pro-waitlist".
+	// "Notify me when Pro launches" button sends "pro-waitlist"; the bhusku
+	// parent-brand site's contact form sends "bhusku-contact".
 	source := "marketing-contact"
-	if body.Source == "pro-waitlist" {
+	switch body.Source {
+	case "pro-waitlist":
 		source = "pro-waitlist"
+	case "bhusku-contact":
+		source = "bhusku-contact"
 	}
 
 	if name == "" || email == "" || message == "" {
