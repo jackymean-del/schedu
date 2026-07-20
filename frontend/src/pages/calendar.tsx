@@ -607,8 +607,15 @@ export function CalendarPage() {
       const c = tb.classTT[s.name]?.[dayKey]?.[periodId]
       if (c?.room) occupied.add(String(c.room).trim())
     }
+    // Candidate rooms = defined venues ∪ any venue referenced inline in the
+    // schedule (many schedules assign rooms on cells without a defined list),
+    // minus the ones occupied at this period.
     const all = new Set<string>()
-    for (const r of tb.rooms ?? []) { const n = r.actualName || r.generatedName || r.name; if (n) all.add(n) }
+    for (const r of tb.rooms ?? []) { const n = r.actualName || r.generatedName || r.name; if (n) all.add(String(n).trim()) }
+    for (const s of tb.sections) {
+      const sd = tb.classTT[s.name]?.[dayKey] ?? {}
+      for (const pid of Object.keys(sd)) { const rm = sd[pid]?.room; if (rm) all.add(String(rm).trim()) }
+    }
     return Array.from(all).filter(n => n !== exceptRoom && !occupied.has(n)).sort()
   }
 
