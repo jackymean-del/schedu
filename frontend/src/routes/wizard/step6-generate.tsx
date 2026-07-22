@@ -1,295 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useTerminology } from "@/hooks/useTerminology"
-import { buildPeriodSequence, buildPeriodSequenceFromCw, rebuildTeacherTT } from "@/lib/aiEngine"
-import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from "@/lib/schedulingEngine"
 import { parseAllocation } from "@/lib/allocationSyntax"
+import {
+  runGenerationPipeline, sectionKey, teachCountFromRows,
+  type GenerationPayload, type GenerationResult,
+} from "@/lib/generationPipeline"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import { getCountry } from "@/lib/orgData"
 import type { OptionalBlock, OptionalOption, Period, ClassTimetable } from "@/types"
 import { GraduationCap, Users, BookOpen, Building2, CalendarDays, Clock } from "lucide-react"
 import { P, P_D, P_L, P_B } from "@/components/resources/shared"
-
-// ── DLG → OptionalBlock bridge ─────────────────────────────────────────────
-//
-// Step 4 (Student Groups) produces `dynamicLearningGroups` — one DLG per
-// subject group with an explicit day + periodId (e.g. "Monday" / "P6").
-// The solver, however, expects `optionalBlocks` (OptionalBlock[]).
-//
-// When the user has gone through Step 4 but never hand-authored manual
-// optional blocks, we convert the Step-4 DLGs into OptionalBlocks so the
-// solver honours the user's period assignments instead of re-deriving from
-// scratch (which would pick Period 2 — the first available slot).
-//
-// Normalisation:
-//   - day: "Monday" / "monday"  → "MONDAY"   (matches workDays format)
-//   - periodId: "P6" / "p6"    → "p6"        (matches buildPeriodSequence ids)
-//   - Fallback: if the normalised period doesn't exist in the bell schedule,
-//     use the last class period so the block is still placed.
-//
-// Grouping: DLGs with the same (sorted) sectionNames are parallel subject
-// choices for those sections → one OptionalBlock with multiple options.
-function dlgsToOptionalBlocks(
-  dlgs: Array<{
-    id: string; subject: string; sectionNames: string[]
-    totalStrength: number; teacher: string; room: string
-    behavior: string; day: string; periodId: string
-    slotId?: string; slotLabel?: string
-  }>,
-  classPeriods: Period[],
-  workDays: string[],
-): OptionalBlock[] {
-  if (!dlgs.length) return []
-
-  const validPids  = new Set(classPeriods.map(p => p.id))
-  const blockMap = new Map<string, OptionalBlock & { _secSet?: Set<string> }>()
-
-  dlgs.forEach(dlg => {
-    // Groups no longer carry a pinned slot — leave day/periodId EMPTY so the
-    // engine schedules the block across its full period quota on free slots.
-    // (Any legacy day/periodId is still honoured as a starting hint if present.)
-    const day = (dlg.day || '').toUpperCase()
-    const rawPid = (dlg.periodId || '').toLowerCase()
-    const periodId = validPids.has(rawPid) ? rawPid : ''
-
-    // Grouping key:
-    //  • slotted DLG (R1/R2/R3) → group by slotId, so all options of a slot form
-    //    ONE block (Hindi/Odia/English under R1) and a DIFFERENT slot with the
-    //    same subject (R2:Hindi) stays a SEPARATE block — the section attends
-    //    both, so the solver schedules them in different periods.
-    //  • plain DLG → group by its section set (unchanged behaviour).
-    const secKey = dlg.slotId
-      ? `slot:${dlg.slotId}`
-      : [...(dlg.sectionNames ?? [])].sort().join('|')
-
-    if (!blockMap.has(secKey)) {
-      const idx = blockMap.size + 1
-      blockMap.set(secKey, {
-        id: dlg.slotId ? `slot-${dlg.slotId}` : `dlg-block-${idx}`,
-        name: dlg.slotId ? `Slot ${dlg.slotId}` : `Optional Block ${idx}`,
-        sectionNames: [...(dlg.sectionNames ?? [])],
-        day,
-        periodId,
-        options: [],
-        logic: 'OR',
-        slotId: dlg.slotId,
-        _secSet: new Set(dlg.sectionNames ?? []),
-      } as any)
-    }
-
-    const block = blockMap.get(secKey)!
-    // Union sections across a slot's options (students of each choice differ)
-    for (const sn of (dlg.sectionNames ?? [])) (block as any)._secSet.add(sn)
-    block.sectionNames = [...(block as any)._secSet]
-    ;(block.options as any[]).push({
-      subject: dlg.subject,
-      teacher: dlg.teacher ?? '',
-      room: dlg.room ?? '',
-      capacity: dlg.totalStrength ?? 0,
-      allocatedStrength: dlg.totalStrength ?? 0,
-    })
-  })
-
-  return [...blockMap.values()].map(({ _secSet, ...b }) => b as OptionalBlock)
-}
-
-// ── Subject Combos (Step 4, Tab 2) → OptionalBlock bridge ──────────────────
-//
-// OR/AND combos live in `store.subjectGroups` (SubjectAndOrGroup[]). The
-// solver only understands OptionalBlocks, so each combo becomes one block:
-//
-//   AND — all subjects run in parallel in the same slot, students split —
-//         exactly the engine's parallel-options semantics.
-//   OR  — one of the subjects runs per slot (rotation). Same shared-slot
-//         block; the engine books every option's teacher in those slots,
-//         the conservative reading that guarantees zero teacher clashes.
-//
-// Sections: the authored list when present; otherwise every section where
-// ALL the combo's subjects are offered (intersection of their assignments).
-// A combo whose subjects carry no assignments anywhere is skipped rather
-// than assumed to apply school-wide.
-// Teachers: resolved per option (subjectMappings first, then any teacher of
-// the subject), each teacher used for at most one option per block.
-function comboGroupsToOptionalBlocks(
-  groups: Array<{
-    id: string; name?: string; logic: 'AND' | 'OR'
-    subjects: string[]; sections?: string[]; periodsPerWeek?: number; slotLabel?: string
-  }>,
-  subjects: any[],
-  sections: any[],
-  staff: any[],
-): OptionalBlock[] {
-  if (!groups?.length) return []
-  const allSecNames = sections.map((s: any) => s.name as string)
-
-  // subject → sections it is explicitly offered in ([] = unconstrained)
-  const subjSecs = (subName: string): string[] => {
-    const sub = subjects.find((s: any) => s.name === subName)
-    if (!sub) return []
-    const fromConfigs = ((sub as any).classConfigs ?? [])
-      .map((c: any) => c.sectionName).filter(Boolean) as string[]
-    return [...new Set([...((sub.sections as string[]) ?? []), ...fromConfigs])]
-  }
-
-  const teacherFor = (subName: string, secNames: string[], taken: Set<string>): string => {
-    const mapped = staff.find((t: any) =>
-      !taken.has(t.name) &&
-      ((t.subjectMappings ?? []) as Array<{ subject: string; classes?: string[] }>)
-        .some(m => m.subject === subName && (m.classes ?? []).some(c => secNames.includes(c))))
-    if (mapped) return mapped.name
-    const any = staff.find((t: any) => !taken.has(t.name) && (
-      ((t.subjects ?? []) as string[]).some(s => s === subName || s.endsWith(`::${subName}`)) ||
-      ((t.subjectMappings ?? []) as Array<{ subject: string }>).some(m => m.subject === subName)))
-    return any?.name ?? ''
-  }
-
-  const blocks: OptionalBlock[] = []
-  groups.forEach((g, gi) => {
-    const subs = (g.subjects ?? []).filter(Boolean)
-    if (subs.length < 2) return
-
-    let secNames = (g.sections ?? []).filter(sn => allSecNames.includes(sn))
-    if (!secNames.length) {
-      if (subs.every(sub => subjSecs(sub).length === 0)) return
-      secNames = allSecNames.filter(sn =>
-        subs.every(sub => {
-          const ss = subjSecs(sub)
-          return ss.length === 0 || ss.includes(sn)
-        }))
-    }
-    if (!secNames.length) return
-
-    const taken = new Set<string>()
-    const options = subs.map(sub => {
-      const t = teacherFor(sub, secNames, taken)
-      if (t) taken.add(t)
-      return { subject: sub, teacher: t, room: '' }
-    })
-
-    blocks.push({
-      id: `combo-${g.id || gi}`,
-      name: g.slotLabel || g.name || `${g.logic} Combo ${gi + 1}`,
-      sectionNames: secNames,
-      day: '', periodId: '',
-      options,
-      periodsPerWeek: g.periodsPerWeek && g.periodsPerWeek > 0 ? g.periodsPerWeek : undefined,
-      logic: g.logic,
-      slotId: g.slotLabel || undefined,
-    })
-  })
-  return blocks
-}
-
-// ── AND Combo Groups → OptionalBlocks bridge ──────────────────────────────────
-//
-// Each AndComboGroup defines mutually-exclusive bundles (PCM vs PCB).
-// For the solver, each bundle that runs parallel to other bundles in the same
-// time slot becomes an AND-logic OptionalBlock. We create one OptionalBlock
-// per AndComboGroup that has generated teaching groups — the solver then
-// knows to run all bundles simultaneously in the same period.
-/** Map the Groups-step merge rule (Same/Cross × section/grade/stream/block) to a
- *  behaviour key the views label (NO_GROUPING/SAME_GRADE_ONLY/SAME_STREAM_ONLY/
- *  SAME_GRADE_STREAM/CROSS_GRADE_ALLOWED). */
-function scopeToBehavior(scope: any): string {
-  if (!scope || typeof scope !== 'object') return 'FLEXIBLE_GROUPING'
-  if (scope.section === 'same') return 'NO_GROUPING'          // each section its own group
-  if (scope.grade === 'same' && scope.stream === 'same') return 'SAME_GRADE_STREAM'
-  if (scope.grade === 'same') return 'SAME_GRADE_ONLY'
-  if (scope.stream === 'same') return 'SAME_STREAM_ONLY'
-  return 'CROSS_GRADE_ALLOWED'
-}
-
-function andGroupsToOptionalBlocks(
-  andGroups: import('@/types').AndComboGroup[],
-  subjects: any[],
-  staff: any[],
-): OptionalBlock[] {
-  if (!andGroups?.length) return []
-  const blocks: OptionalBlock[] = []
-
-  for (const group of andGroups) {
-    if (!group.bundles?.length || !group.applicableSections?.length) continue
-
-    // Find a teacher for a subject from the staff list
-    const teacherFor = (subName: string, secNames: string[], taken: Set<string>): string => {
-      const found = staff.find((t: any) =>
-        !taken.has(t.name) &&
-        ((t.subjectMappings ?? []) as Array<{ subject: string; classes?: string[] }>)
-          .some(m => m.subject === subName && (m.classes ?? []).some(c => secNames.includes(c))))
-      if (found) return found.name
-      const any = staff.find((t: any) => !taken.has(t.name) &&
-        ((t.subjects ?? []) as string[]).some(s => s === subName))
-      return any?.name ?? ''
-    }
-
-    // If teaching groups have been generated, use them for precise room/section data
-    if (group.generatedGroups && group.generatedGroups.length > 0) {
-      // Group by bundleId — each bundle's groups run in the same slot type
-      const byBundle = new Map<string, typeof group.generatedGroups>()
-      for (const tg of group.generatedGroups) {
-        if (!byBundle.has(tg.bundleId)) byBundle.set(tg.bundleId, [])
-        byBundle.get(tg.bundleId)!.push(tg)
-      }
-
-      // One OptionalBlock covering all applicable sections, logic=AND
-      const taken = new Set<string>()
-      const options: OptionalOption[] = []
-      for (const bundle of group.bundles) {
-        const tgs = byBundle.get(bundle.id) ?? []
-        const allSecs = tgs.flatMap(tg => tg.sectionSlices.map(s => s.sectionName))
-        const repSubject = bundle.subjects[0] ?? bundle.name
-        const t = teacherFor(repSubject, allSecs, taken)
-        if (t) taken.add(t)
-        options.push({
-          subject: repSubject,
-          teacher: tg_teacher(tgs) || t,
-          room: tgs[0]?.room ?? '',
-          allocatedStrength: tgs.reduce((a, tg) => a + tg.totalStrength, 0),
-        })
-      }
-
-      if (options.length >= 2) {
-        blocks.push({
-          id: `and-group-${group.id}`,
-          name: group.name,
-          sectionNames: group.applicableSections,
-          day: '', periodId: '',
-          options,
-          logic: 'AND',
-          behavior: scopeToBehavior(group.groupingScope),
-        })
-      }
-    } else {
-      // Fallback: use the strengthMatrix directly
-      const taken = new Set<string>()
-      const options: OptionalOption[] = group.bundles.map(bundle => {
-        const repSubject = bundle.subjects[0] ?? bundle.name
-        const t = teacherFor(repSubject, group.applicableSections, taken)
-        if (t) taken.add(t)
-        const strength = group.applicableSections.reduce(
-          (a, sec) => a + (group.strengthMatrix?.[sec]?.[bundle.id] ?? 0), 0)
-        return { subject: repSubject, teacher: t, room: '', allocatedStrength: strength || undefined }
-      })
-
-      if (options.length >= 2) {
-        blocks.push({
-          id: `and-group-${group.id}`,
-          name: group.name,
-          sectionNames: group.applicableSections,
-          day: '', periodId: '',
-          options,
-          logic: 'AND',
-          behavior: scopeToBehavior(group.groupingScope),
-        })
-      }
-    }
-  }
-  return blocks
-}
-
-function tg_teacher(tgs: Array<{ teacher?: string }>): string {
-  return tgs.find(tg => tg.teacher)?.teacher ?? ''
-}
 
 type JobStatus = "idle" | "running" | "completed" | "failed"
 
@@ -353,158 +74,6 @@ function defaultEndDate(): string {
   return `${year}-03-31`
 }
 
-// ── Block-wise (per-shift) timetable generation helpers ───────────────────────
-const _toMins = (s: string) => { const [h, m] = (s || '08:00').split(':').map(Number); return h * 60 + m }
-
-/** Class key from a section name — mirrors the timetable view's getSectionClassKey. */
-function sectionKey(sectionName: string): string {
-  const norm = sectionName.toLowerCase().replace(/[\s-]/g, '')
-  if (norm.startsWith('nur')) return 'nur'
-  if (norm.startsWith('lkg')) return 'lkg'
-  if (norm.startsWith('ukg')) return 'ukg'
-  return sectionName.split(/[\s-]/)[0].toLowerCase()
-}
-
-/** Teaching periods a section actually has, per a set of bell rows (null = unknown).
- *
- * Returns a count ONLY when the bell explicitly excludes this class from some
- * teaching rows — i.e. the class genuinely disperses earlier than others.
- * If every teaching row either has no class filter or still includes this class,
- * the class has a full day and we return null so no slots are locked.
- */
-function teachCountFromRows(secName: string, rows: any[] | undefined): number | null {
-  if (!rows?.length) return null
-  const key = sectionKey(secName)
-  const teachRows = rows.filter((r: any) => r.type === 'teaching')
-  // Class must appear in at least one row to be relevant
-  if (!teachRows.some((r: any) => (r.classes ?? []).includes(key))) return null
-  // Only apply early-dispersal logic when some row EXPLICITLY excludes this class.
-  // Class-wise breaks that merely shift timing still include every class in each
-  // period row — those must NOT trigger locking.
-  const excludedBySomeRow = teachRows.some((r: any) => {
-    const cls: string[] = r.classes ?? []
-    return cls.length > 0 && !cls.includes(key)
-  })
-  if (!excludedBySomeRow) return null
-  return teachRows.filter((r: any) => {
-    const cls: string[] = r.classes ?? []
-    return cls.length === 0 || cls.includes(key)
-  }).length
-}
-
-/**
- * Bell-true adjacency for one section: ids of class periods whose SUCCESSOR
- * teaching period is back-to-back in the bell (no break row between the Nth
- * and N+1th teaching rows). Used to stop double periods straddling a break.
- * Returns null when the rows don't cover this section (caller skips the map
- * entry → solver falls back to plain array adjacency).
- */
-function adjacencyIdsFromRows(secName: string, rows: any[] | undefined, classPeriodIds: string[]): string[] | null {
-  if (!rows?.length) return null
-  const key = sectionKey(secName)
-  if (!rows.some((r: any) => r.type === 'teaching' && (r.classes ?? []).includes(key))) return null
-  const myRows = rows.filter((r: any) => !(r.classes ?? []).length || r.classes.includes(key))
-  const ids: string[] = []
-  let teachIdx = 0
-  for (let i = 0; i < myRows.length; i++) {
-    if (myRows[i].type !== 'teaching') continue
-    const next = myRows[i + 1]
-    if (next && next.type === 'teaching') {
-      const pid = classPeriodIds[teachIdx]
-      if (pid) ids.push(pid)
-    }
-    teachIdx++
-  }
-  return ids
-}
-
-/**
- * Early dispersal: clone sections with scope-locked slots for periods beyond
- * their bell-schedule period count, so the solver never places subjects after
- * a junior group has already dispersed.
- */
-function lockEarlyDispersal(
-  secs: any[], classPeriods: Period[], workDays: string[],
-  countFor: (name: string) => number | null,
-): any[] {
-  return secs.map(sec => {
-    const tc = countFor(sec.name)
-    // Apply early dispersal only for a GENUINE partial day. An implausibly low
-    // count (relative to the grid) means the bell isn't really configured for
-    // this section — locking on it would wrongly seal off most of the day and
-    // leave everything unplaced. Require the section to teach at least half the
-    // grid's periods before we lock the tail.
-    const minGenuine = Math.max(4, Math.ceil(classPeriods.length / 2))
-    if (tc == null || tc >= classPeriods.length || tc < minGenuine) return sec
-    const scope = JSON.parse(JSON.stringify(sec.scope ?? {}))
-    scope.cells ??= {}
-    // Remember WHICH locks are dispersal locks (day already over) so the gap
-    // report can say "this class's day has ended" instead of the misleading
-    // generic "unlock this section scope".
-    scope.dispersalIds = classPeriods.slice(tc).map(p => p.id)
-    for (const day of workDays) {
-      scope.cells[day] ??= {}
-      for (const p of classPeriods.slice(tc)) scope.cells[day][p.id] = 'locked'
-    }
-    return { ...sec, scope }
-  })
-}
-
-/**
- * Build a block's abstract period sequence (block-prefixed ids so merged
- * timetables never collide) plus a periodId → [startMins, endMins] clock map.
- *
- * Derived from the block's ACTUAL bell rows (real assembly length, capped
- * period durations, real break positions) — falls back to a synthetic uniform
- * grid only when the block has no generated rows yet.
- */
-function buildBlockPeriods(shift: any, rows: any[]): { periods: Period[]; clock: Record<string, [number, number]> } {
-  const periods: Period[] = []
-  const clock: Record<string, [number, number]> = {}
-  let cur = _toMins(shift.startTime)
-  const push = (suffix: string, name: string, dur: number, type: Period['type']) => {
-    const id = `${shift.id}__${suffix}`
-    periods.push({ id, name, duration: dur, type, shiftable: type === 'class' } as Period)
-    clock[id] = [cur, cur + dur]; cur += dur
-  }
-
-  // ── Ground-truth path: walk the generated rows in order ──
-  if (rows.some(r => r.type === 'teaching')) {
-    const seen = new Set<string>()
-    let pN = 0, brkN = 0
-    for (const r of rows) {
-      // Skip duplicate same-name rows (per-group variants merged by the bell grid)
-      const sig = `${r.type}|${r.name}`
-      if (seen.has(sig)) continue
-      seen.add(sig)
-      if (r.type === 'assembly')         push('asm', 'Assembly', r.duration, 'fixed-start')
-      else if (r.type === 'teaching')    push(`p${++pN}`, `Period ${pN}`, r.duration, 'class')
-      else if (r.type === 'lunch')       push(`brk${++brkN}`, r.name || 'Lunch', r.duration, 'lunch')
-      else if (r.type === 'short-break') push(`brk${++brkN}`, r.name || 'Break', r.duration, 'break')
-      // dispersal intentionally omitted — not a schedulable column
-    }
-    if (pN > 0) return { periods, clock }
-    // fall through to synthetic if rows had no usable teaching periods
-    periods.length = 0; cur = _toMins(shift.startTime)
-  }
-
-  // ── Synthetic fallback (no rows generated for this block yet) ──
-  const asm = rows.find(r => r.type === 'assembly')
-  if (asm) push('asm', 'Assembly', asm.duration, 'fixed-start')
-  const lunchDur = Math.max(0, ...rows.filter(r => r.type === 'lunch').map(r => r.duration))
-  const sbDur    = Math.max(0, ...rows.filter(r => r.type === 'short-break').map(r => r.duration))
-  const N  = Math.max(1, shift.maxPeriods || 8)
-  const pd = shift.periodDur || 40
-  const sbAfter    = Math.max(1, Math.ceil(N * 0.3))
-  const lunchAfter = Math.ceil(N / 2)
-  for (let n = 1; n <= N; n++) {
-    push(`p${n}`, `Period ${n}`, pd, 'class')
-    if (n === sbAfter && sbDur > 0)    push('sb', 'Short Break', sbDur, 'break')
-    if (n === lunchAfter && lunchDur > 0) push('ln', 'Lunch', lunchDur, 'lunch')
-  }
-  return { periods, clock }
-}
-
 export function Step6Generate() {
   const store = useTimetableStore()
   const { config, sections, participantPools, facilities, subjects, breaks,
@@ -512,7 +81,7 @@ export function Step6Generate() {
           setStep, setConfig, setTimetableStatus } = store
   const T = useTerminology()
   const [job, setJob] = useState<Job | null>(null)
-  const [solverOutput, setSolverOutput] = useState<ReturnType<typeof solveTimetable> | null>(null)
+  const [solverOutput, setSolverOutput] = useState<import("@/lib/schedulingEngine").SolverOutput | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // Whether to show the "already generated" banner (user came back after closing)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
@@ -626,249 +195,109 @@ export function Step6Generate() {
     setJob({ id: jobId, status: "running", progress: 3, currentStep: "Starting…", startedAt })
     setLiveFeed([])
 
-    let output: ReturnType<typeof solveTimetable>
-    let solveMs: number
-
-    try {
-      const workDays = config.workDays?.length ? config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
-
-      // Build period sequence:
-      //   • If class-wise breaks are configured use buildPeriodSequenceFromCw which
-      //     places each break at its EXACT afterPeriod position (correct distribution).
-      //   • Otherwise fall back to the legacy even-distribution builder.
-      const classwiseBreaks = (config as any).classwiseBreaks as Array<{id:string;name:string;type:string;afterPeriod:number;duration:number}> | undefined
-      const fixedStarts = breaks.filter((b: any) => b.type === 'fixed-start') as Period[]
-      const periods = classwiseBreaks?.length
-        ? buildPeriodSequenceFromCw(classwiseBreaks, config.periodsPerDay ?? 8, config.defaultSessionDuration ?? 40, fixedStarts)
-        : buildPeriodSequence(breaks, config.periodsPerDay ?? 8)
-
-      const resolvedSubjects = store.schedulingMode === 'duration-based'
-        ? subjects.map(sub => {
-            const rh = (sub as any).requiredHours
-            if (!rh) return sub
-            const weekly = durationToWeeklyPeriods({
-              subjectName: sub.name, className: 'all',
-              requiredHours: rh,
-              periodDurationMins: (sub as any).sessionDuration ?? 45,
-              workingDaysPerYear: store.workingDaysPerYear ?? 220,
-              workingDaysPerWeek: workDays.length,
-            })
-            return { ...sub, periodsPerWeek: weekly }
-          })
-        : subjects
-
-      const staff = store.staff
-      const manualOptionalBlocks = (store as any).optionalBlocks ?? []
-      const storeAndComboGroups  = (store as any).andComboGroups ?? []
-      const storeDLGs            = (store as any).dynamicLearningGroups ?? []
-      const subjectCombinations  = (store as any).subjectCombinations ?? []
-      const sectionStrengths     = (store as any).sectionStrengths ?? []
-      const subjectAllocations   = (store as any).subjectAllocations ?? {}
-      const rooms                = (store as any).rooms ?? []
-
-      // Prefer manually-authored optional blocks; if none exist but the user
-      // ran Step 4 (Student Groups), convert those DLGs into OptionalBlocks
-      // so the solver honours the user's period assignments.
-      const classPeriods = periods.filter((p: Period) => p.type === 'class')
-      const baseBlocks: OptionalBlock[] =
-        manualOptionalBlocks.length > 0
-          ? manualOptionalBlocks
-          : dlgsToOptionalBlocks(storeDLGs, classPeriods, workDays)
-
-      // OR/AND combos from Step 4 Tab 2 are an independent source — always
-      // merged in, deduped against blocks covering the same sections+subjects.
-      const comboBlocks = comboGroupsToOptionalBlocks(
-        (store as any).subjectGroups ?? [], resolvedSubjects, sections, staff)
-      // AND Combo Groups from Step 4 Tab 1 (bundle-based splits like PCM vs PCB)
-      const andComboBlocks = andGroupsToOptionalBlocks(storeAndComboGroups, resolvedSubjects, staff)
-      const blockSig = (b: OptionalBlock) =>
-        (b.slotId ?? '') + '::' +
-        [...b.sectionNames].sort().join('|') + '::' +
-        b.options.map(o => o.subject).filter(Boolean).sort().join('|')
-      const seenSigs = new Set(baseBlocks.map(blockSig))
-      const optionalBlocks: OptionalBlock[] = [
-        ...baseBlocks,
-        ...comboBlocks.filter(b => !seenSigs.has(blockSig(b))),
-        ...andComboBlocks.filter(b => !seenSigs.has(blockSig(b))),
-      ]
-
-      // ── Block-wise (Advanced multi-shift) generation ──────────────────────
-      // Each block (shift) is solved independently over its own classes + its own
-      // period grid (block-prefixed ids), in sequence. After each block solves, its
-      // teachers' busy CLOCK intervals are blocked in later blocks so a teacher is
-      // never double-booked across blocks at the same wall-clock time.
-      const scheduleMode = (config as any).scheduleMode
-      const shiftsCfg    = (config as any).shifts as any[] | undefined
-      const shiftRowsCfg = (config as any).shiftRows as Record<string, any[]> | undefined
-      const blockWise = scheduleMode === 'advanced' && Array.isArray(shiftsCfg) && shiftsCfg.length > 1 && !!shiftRowsCfg
-
-      if (blockWise) {
-        const mergedClassTT: any = {}
-        const mergedTeacherTT: any = {}
-        const mergedConflicts: any[] = []
-        const unionPeriods: Period[] = []
-        const blockMeta: any[] = []
-        // teacher → day → busy clock intervals [startMins, endMins]
-        const busy: Record<string, Record<string, Array<[number, number]>>> = {}
-        const overlaps = (a: [number, number], b: [number, number]) => a[0] < b[1] && b[0] < a[1]
-
-        for (const shift of shiftsCfg!) {
-          const rows = shiftRowsCfg![shift.id] ?? []
-          const { periods: bp, clock } = buildBlockPeriods(shift, rows)
-          const blockSections = sections.filter(sec => (shift.classes || []).includes(sectionKey(sec.name)))
-          if (!blockSections.length) continue
-
-          // Block teacher slots that clash (clock-overlap) with already-solved blocks.
-          const avail: any = JSON.parse(JSON.stringify((store as any).teacherAvailability ?? {}))
-          for (const [tName, dayMap] of Object.entries(busy)) {
-            for (const [day, ivals] of Object.entries(dayMap)) {
-              for (const p of bp) {
-                if (p.type !== 'class') continue
-                const c = clock[p.id]
-                if (c && ivals.some(iv => overlaps(iv, c))) {
-                  avail[tName] ??= {}; avail[tName][day] ??= {}; avail[tName][day][p.id] = 'blocked'
-                }
-              }
-            }
-          }
-
-          // Early dispersal within the block: lock periods a section doesn't have
-          const bpClass = bp.filter(p => p.type === 'class')
-          const lockedBlockSections = lockEarlyDispersal(
-            blockSections, bpClass, workDays, name => teachCountFromRows(name, rows))
-
-          // Bell-true adjacency: double periods must not straddle a break
-          const bpClassIds = bpClass.map(p => p.id)
-          const blockAdjacency: Record<string, string[]> = {}
-          for (const sec of blockSections) {
-            const adj = adjacencyIdsFromRows(sec.name, rows, bpClassIds)
-            if (adj) blockAdjacency[sec.name] = adj
-          }
-
-          const out = solveTimetable({
-            sections: lockedBlockSections, staff, subjects: resolvedSubjects, periods: bp, workDays,
-            requirements: [], optionalBlocks, subjectCombinations, sectionStrengths,
-            subjectAllocations, rooms, teacherAvailability: avail,
-            dayOffRules: (store as any).config?.dayOffRules ?? [],
-            sectionAdjacency: blockAdjacency,
-          })
-
-          Object.assign(mergedClassTT, out.classTT)
-          for (const [tn, ts] of Object.entries(out.teacherTT)) if (!mergedTeacherTT[tn]) mergedTeacherTT[tn] = ts
-          mergedConflicts.push(...out.conflicts)
-          unionPeriods.push(...bp)
-          blockMeta.push({ id: shift.id, name: shift.name, startTime: shift.startTime, sectionNames: blockSections.map(s => s.name), periods: bp })
-
-          // Record this block's teacher busy clock intervals for later blocks.
-          for (const [, days] of Object.entries(out.classTT)) {
-            for (const [day, slots] of Object.entries(days as any)) {
-              for (const [pid, cell] of Object.entries(slots as any)) {
-                const t = (cell as any).teacher
-                const c = clock[pid]
-                if (!t || !c) continue
-                busy[t] ??= {}; busy[t][day] ??= []; busy[t][day].push(c)
-              }
-            }
-          }
-        }
-
-        rebuildTeacherTT(mergedClassTT, mergedTeacherTT, workDays)
-        output = { classTT: mergedClassTT, teacherTT: mergedTeacherTT, conflicts: mergedConflicts, penalties: [], score: 0, iterations: 0 } as ReturnType<typeof solveTimetable>
-        solveMs = Date.now() - startedAt
-
-        setPeriods(unionPeriods)
-        setClassTT(mergedClassTT)
-        setTeacherTT(mergedTeacherTT)
-        setConflicts(mergedConflicts)
-        setSolverOutput(output)
-        setConfig({ blockMeta } as any)
-        setSuggestions([])
-      } else {
-
-      // Early dispersal: lock the periods each section doesn't have per the
-      // ground-truth bell schedule, so juniors never get subjects scheduled
-      // after their dispersal time.
-      const bellSchedules = (config as any).bellSchedules as Array<{ startTime: string; rows: any[] }> | undefined
-      const countFor = (name: string): number | null => {
-        for (const bs of bellSchedules ?? []) {
-          const c = teachCountFromRows(name, bs.rows)
-          if (c != null) return c
-        }
-        return null
-      }
-      const effSections = lockEarlyDispersal(sections, classPeriods, workDays, countFor)
-
-      // Bell-true adjacency: double periods must not straddle a break
-      const classPeriodIds = classPeriods.map((p: Period) => p.id)
-      const sectionAdjacency: Record<string, string[]> = {}
-      for (const sec of sections) {
-        for (const bs of bellSchedules ?? []) {
-          const adj = adjacencyIdsFromRows(sec.name, bs.rows, classPeriodIds)
-          if (adj) { sectionAdjacency[sec.name] = adj; break }
-        }
-      }
-
-      output  = solveTimetable({
-        sections: effSections, staff, subjects: resolvedSubjects, periods, workDays,
-        requirements: [],
-        optionalBlocks,
-        subjectCombinations,
-        sectionStrengths,
-        subjectAllocations,
-        rooms,
-        teacherAvailability: (store as any).teacherAvailability ?? {},
-        // Class-specific day-off rules from bell schedule step (e.g. Sat off for Nursery/LKG)
-        dayOffRules: (store as any).config?.dayOffRules ?? [],
-        sectionAdjacency,
-      })
-      solveMs = Date.now() - startedAt
-
-      const suggestions = generateSuggestions(output.classTT, output.teacherTT, staff, resolvedSubjects, workDays, periods)
-      setConfig({ blockMeta: undefined } as any)   // single schedule — clear any stale block metadata
-      setPeriods(periods)
-      setClassTT(output.classTT)
-      setTeacherTT(output.teacherTT)
-      setConflicts(output.conflicts)
-      setSolverOutput(output)
-      // Persist blocked-slot telemetry to the store so any view (timetable
-      // cells, dashboard, conflict panel) can surface "why is this empty?"
-      ;(store as any).setBlockedSlots?.(output.blockedSlots ?? [])
-      // Persist DLG metadata for the timetable-cell inspector
-      ;(store as any).setDynamicLearningGroups?.(output.dynamicLearningGroups ?? [])
-      setSuggestions(suggestions)
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setJob(j => j ? { ...j, status: "failed", progress: 0, currentStep: `Error: ${msg}` } : j)
-      return
+    // ── Plain-data snapshot for the pipeline. The solve runs in a Web
+    //    Worker so the page never freezes — the ring animates and every tab
+    //    stays responsive during generation. Falls back to inline compute if
+    //    workers are unavailable.
+    const payload: GenerationPayload = {
+      config, sections, staff: store.staff, subjects, breaks,
+      schedulingMode: store.schedulingMode,
+      workingDaysPerYear: store.workingDaysPerYear,
+      optionalBlocks: (store as any).optionalBlocks ?? [],
+      andComboGroups: (store as any).andComboGroups ?? [],
+      dynamicLearningGroups: (store as any).dynamicLearningGroups ?? [],
+      subjectCombinations: (store as any).subjectCombinations ?? [],
+      sectionStrengths: (store as any).sectionStrengths ?? [],
+      subjectAllocations: (store as any).subjectAllocations ?? {},
+      rooms: (store as any).rooms ?? [],
+      teacherAvailability: (store as any).teacherAvailability ?? {},
+      subjectGroups: (store as any).subjectGroups ?? [],
     }
 
-    // ── Animate progress through STEPS at 110ms each, revealing real
-    //    assignments from the just-computed schedule alongside it ──
-    const assignments = flattenAssignments(output.classTT)
-    const perTick = Math.max(1, Math.ceil(assignments.length / STEPS.length))
-    let step = 0
-    pollRef.current = setInterval(() => {
-      if (step >= STEPS.length) {
-        clearInterval(pollRef.current!)
-        setTimetableStatus('draft')   // saved as draft — user must publish
-        const conflicts = output.conflicts.length
-        setJob(j => j ? {
-          ...j, status: "completed", progress: 100,
-          currentStep: conflicts > 0
-            ? `Done — ${conflicts} conflict(s) found, review in timetable`
-            : `Done in ${solveMs}ms — zero conflicts ✅`,
-        } : j)
+    const runInWorker = (): Promise<GenerationResult> => new Promise((resolve, reject) => {
+      let worker: Worker
+      try {
+        worker = new Worker(new URL('../../lib/generation.worker.ts', import.meta.url), { type: 'module' })
+      } catch (e) { reject(e); return }
+      worker.onmessage = (e: MessageEvent<{ ok: boolean; result?: GenerationResult; error?: string }>) => {
+        worker.terminate()
+        if (e.data.ok && e.data.result) resolve(e.data.result)
+        else reject(new Error(e.data.error || 'generation failed'))
+      }
+      worker.onerror = (ev) => { worker.terminate(); reject(new Error(ev.message || 'worker error')) }
+      // Structured clone rejects functions/proxies — snapshot to plain JSON first.
+      worker.postMessage(JSON.parse(JSON.stringify(payload)))
+    })
+
+    void (async () => {
+      let res: GenerationResult
+      try {
+        try {
+          res = await runInWorker()
+        } catch {
+          // Worker unavailable (very old browser / dev quirk) — solve inline.
+          // The UI freezes for the duration, but generation still completes.
+          res = runGenerationPipeline(JSON.parse(JSON.stringify(payload)))
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setJob(j => j ? { ...j, status: 'failed', progress: 0, currentStep: `Error: ${msg}` } : j)
         return
       }
-      const idx = step
-      setJob(j => j ? { ...j, progress: STEPS[idx].pct, currentStep: STEPS[idx].label } : j)
-      if (assignments.length) {
-        const slice = assignments.slice(idx * perTick, idx * perTick + perTick)
-        if (slice.length) setLiveFeed(prev => [...slice.reverse(), ...prev].slice(0, 4))
+
+      // ── Apply the result to the store ──
+      const output = res.output
+      const solveMs = res.solveMs
+      if (res.blockWise) {
+        setPeriods(res.periods)
+        setClassTT(res.classTT)
+        setTeacherTT(res.teacherTT)
+        setConflicts(res.conflicts)
+        setSolverOutput(output)
+        setConfig({ blockMeta: res.blockMeta } as any)
+        setSuggestions([])
+      } else {
+        setConfig({ blockMeta: undefined } as any)   // single schedule — clear any stale block metadata
+        setPeriods(res.periods)
+        setClassTT(res.classTT)
+        setTeacherTT(res.teacherTT)
+        setConflicts(res.conflicts)
+        setSolverOutput(output)
+        // Persist blocked-slot telemetry to the store so any view (timetable
+        // cells, dashboard, conflict panel) can surface 'why is this empty?'
+        ;(store as any).setBlockedSlots?.(output.blockedSlots ?? [])
+        // Persist DLG metadata for the timetable-cell inspector
+        ;(store as any).setDynamicLearningGroups?.(output.dynamicLearningGroups ?? [])
+        setSuggestions(res.suggestions)
       }
-      step++
-    }, 110)
+
+      // ── Animate progress through STEPS at 110ms each, revealing real
+      //    assignments from the just-computed schedule alongside it ──
+      const assignments = flattenAssignments(res.classTT)
+      const perTick = Math.max(1, Math.ceil(assignments.length / STEPS.length))
+      let step = 0
+      pollRef.current = setInterval(() => {
+        if (step >= STEPS.length) {
+          clearInterval(pollRef.current!)
+          setTimetableStatus('draft')   // saved as draft — user must publish
+          const conflicts = res.conflicts.length
+          setJob(j => j ? {
+            ...j, status: 'completed', progress: 100,
+            currentStep: conflicts > 0
+              ? `Done — ${conflicts} conflict(s) found, review in timetable`
+              : `Done in ${solveMs}ms — zero conflicts ✅`,
+          } : j)
+          return
+        }
+        const idx = step
+        setJob(j => j ? { ...j, progress: STEPS[idx].pct, currentStep: STEPS[idx].label } : j)
+        if (assignments.length) {
+          const slice = assignments.slice(idx * perTick, idx * perTick + perTick)
+          if (slice.length) setLiveFeed(prev => [...slice.reverse(), ...prev].slice(0, 4))
+        }
+        step++
+      }, 110)
+    })()
   }
 
   // ── Circular SVG ring ─────────────────────────────────────────

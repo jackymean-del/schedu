@@ -970,6 +970,17 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   })
 
   // ── Pass 2: Fill remaining periods with constraint checking ──
+  // Every subject name that at least one staff member actually teaches
+  // (section-specific "Sec::Sub" entries contribute their subject part).
+  // Used to distinguish "specialists exist but are busy this slot" (→ try the
+  // next subject; NEVER hand the lesson to a random teacher) from "nobody
+  // teaches this subject at all" (incomplete data → any-teacher fallback is
+  // the only way to avoid a permanently blank subject).
+  const taughtSubjectNames = new Set<string>()
+  staff.forEach(st => (st.subjects ?? []).forEach(s => {
+    const ix = s.indexOf('::')
+    taughtSubjectNames.add(ix >= 0 ? s.slice(ix + 2) : s)
+  }))
   sections.forEach((sec, si) => {
     // Get subjects for this section.
     // Explicit assignments (sections[] from the Resources picker, plus
@@ -1053,21 +1064,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           const adjacentHeavyPenalty = (prevIsHeavy && isHeavySubject(sub.name)) ? -10 : 0
           return { sub, score: dayScore + rotScore + sameGroupPenalty + adjacentHeavyPenalty }
         }).sort((a, b) => b.score - a.score)
-        const chosenSub = scoredSubs[0]?.sub ?? availableSubs[0]
-
-        // ── Teacher eligibility ───────────────────────────────
-        // Priority 1: teacher explicitly assigned to this section+subject via matrix
-        // Priority 2: teacher with grade-level assignment
-        // Priority 3: teacher with global subject name
-        // In all cases: hard constraint — teacher must not be already busy this slot
-
-        const sectionKey = `${sec.name}::${chosenSub.name}`
-        const gradeKey   = sec.grade ? `${sec.grade}::${chosenSub.name}` : ''
-        const simpleKey  = chosenSub.name
-
         // ── schedU Scope System integration ──
-        // Skip placement entirely if SECTION scope LOCKS this slot.
-        // 'disabled' applies a soft penalty but allows placement.
+        // Skip placement entirely if SECTION scope LOCKS this slot (slot-level,
+        // independent of which subject we try).
         const sectionScopeState = sec.scope
           ? (sec.scope.cells?.[day]?.[period.id] ?? 'allowed')
           : 'allowed'
@@ -1087,17 +1086,6 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           return
         }
 
-        // Skip if SUBJECT scope LOCKS this slot.
-        const subScopeState = (chosenSub as any).scope
-          ? (((chosenSub as any).scope.cells?.[day]?.[period.id]) ?? 'allowed')
-          : 'allowed'
-        if (subScopeState === 'locked') {
-          penalties.push({ constraint: 'subject-scope-locked', penalty: 0, details: `${chosenSub.name} is scope-locked off ${day} ${period.id}` })
-          recordBlock(sec.name, day, period.id, 'subject-scope-locked',
-            `${chosenSub.name} is scope-locked at this slot — engine couldn't place another subject either`, chosenSub.name)
-          return
-        }
-
         const isAvailable = (st: any) => {
           if (teacherBusy[st.name]?.[day]?.has(period.id)) return false
           // TEACHER scope hard exclusion
@@ -1109,47 +1097,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           return true
         }
 
-        const matchesSub = (st: any): boolean => {
-          const subs: string[] = st.subjects ?? []
-          if (!subs.length) return false
-          // If this teacher has any section-specific assignments, use section/grade matching
-          if (subs.some(s => s.includes('::'))) {
-            return subs.some(s =>
-              s === sectionKey ||
-              (gradeKey !== '' && s === gradeKey)
-            )
-          }
-          // Global subject name
-          return subs.includes(simpleKey)
-        }
-
-        // Build candidate list: section-specific first, then global fallback
-        let eligibleTeachers = staff.filter(st => matchesSub(st) && isAvailable(st))
-
-        // Fallback: if no section-specific teacher available, use any teacher
-        // who knows this subject globally and isn't busy
-        if (!eligibleTeachers.length) {
-          eligibleTeachers = staff.filter(st =>
-            (st.subjects ?? []).includes(simpleKey) && isAvailable(st)
-          )
-        }
-        // Last resort: any non-busy teacher at all (prevents empty slots when
-        // teacher-subject links are incomplete)
-        if (!eligibleTeachers.length) {
-          eligibleTeachers = staff.filter(st => isAvailable(st))
-        }
-
-        // ── AI teacher selection — composite scoring ──
-        // Replaces simple "least-busy-today" with a weighted score:
-        //   + vertical continuity (already teaches this subject elsewhere)
-        //   + section familiarity (already seen in this section)
-        //   + load-balance bias (under target weekly load = preferred)
-        //   − overload penalty (near max weekly periods = avoid)
-        //   − today's load (avoid back-to-back exhaustion)
-        //   − scope-disabled soft penalty
-        //   − consecutive same-subject taught by same teacher
-
-        // Pre-compute today's load for each teacher (cheap O(staff))
+        // Pre-compute today's load for each teacher once per slot (subject-
+        // independent, so it must NOT be recomputed per candidate subject).
         const teacherLoadToday: Record<string, number> = {}
         Object.values(classTT).forEach(secData => {
           Object.values(secData[day] ?? {}).forEach((cell: any) => {
@@ -1157,130 +1106,210 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           })
         })
 
-        const scoreTeacher = (st: any): number => {
-          let score = 0
-          const name = st.name
-          const weeklyLoad = teacherWeeklyLoad[name] ?? 0
-          const todayLoad = teacherLoadToday[name] ?? 0
-          const maxWeek = (st as any).maxPeriodsPerWeek ?? 40
+        // ── Try each candidate subject in score order until one places with a
+        //    PROPER teacher. A subject whose specialists are all busy at this
+        //    slot is skipped (it will be placed later, where its specialist is
+        //    free) instead of being handed to a random unrelated teacher — a
+        //    school would never let the Art teacher cover Mathematics just to
+        //    fill a box. The any-teacher fallback survives ONLY for subjects
+        //    that no staff member teaches at all (incomplete data).
+        let placed = false
+        for (const cand of scoredSubs) {
+          const chosenSub = cand.sub
 
-          // Vertical continuity — already teaches this subject in another section
-          if (teacherSubjectSet[name]?.has(chosenSub.name)) score += 25
-          // Section familiarity — already teaches something in this section
-          if (teacherSectionSet[name]?.has(sec.name)) score += 8
+          // ── Teacher eligibility ───────────────────────────────
+          // Priority 1: teacher explicitly assigned to this section+subject via matrix
+          // Priority 2: teacher with grade-level assignment
+          // Priority 3: teacher with global subject name
+          // In all cases: hard constraint — teacher must not be already busy this slot
+          const sectionKey = `${sec.name}::${chosenSub.name}`
+          const gradeKey   = sec.grade ? `${sec.grade}::${chosenSub.name}` : ''
+          const simpleKey  = chosenSub.name
 
-          // Load-balance bias: prefer teachers under the global target
-          if (weeklyLoad < targetWeeklyLoadPerTeacher) {
-            score += Math.min(30, (targetWeeklyLoadPerTeacher - weeklyLoad) * 2)
-          } else {
-            // Over target — penalise proportionally
-            score -= Math.min(40, (weeklyLoad - targetWeeklyLoadPerTeacher) * 3)
-          }
-          // Strong avoid near max load (90%+)
-          if (maxWeek > 0 && weeklyLoad >= maxWeek * 0.9) score -= 60
-
-          // Avoid exhaustion today (each period taught today = -3)
-          score -= todayLoad * 3
-
-          // Scope-disabled soft penalty
-          const tScope = (st as any).scope
-          if (tScope) {
-            const s = tScope.cells?.[day]?.[period.id] ?? 'allowed'
-            if (s === 'disabled') score -= 10
+          // SUBJECT scope LOCKS this slot → this subject can't go here; try the
+          // next candidate subject rather than abandoning the whole slot.
+          const subScopeState = (chosenSub as any).scope
+            ? (((chosenSub as any).scope.cells?.[day]?.[period.id]) ?? 'allowed')
+            : 'allowed'
+          if (subScopeState === 'locked') {
+            penalties.push({ constraint: 'subject-scope-locked', penalty: 0, details: `${chosenSub.name} is scope-locked off ${day} ${period.id}` })
+            continue
           }
 
-          // Teacher availability preference bonus
-          if (teacherPreferredSlots.has(`${name}::${day}::${period.id}`)) score += 15
-
-          // Anti-back-to-back: penalise if this teacher taught the same subject
-          // in the previous period in this section
-          const prev = classPeriods[pi - 1]
-          if (prev) {
-            const prevCell: any = classTT[sec.name]?.[day]?.[prev.id]
-            if (prevCell?.teacher === name && prevCell?.subject === chosenSub.name) score -= 8
+          const matchesSub = (st: any): boolean => {
+            const subs: string[] = st.subjects ?? []
+            if (!subs.length) return false
+            // If this teacher has any section-specific assignments, use section/grade matching
+            if (subs.some(s => s.includes('::'))) {
+              return subs.some(s =>
+                s === sectionKey ||
+                (gradeKey !== '' && s === gradeKey)
+              )
+            }
+            // Global subject name
+            return subs.includes(simpleKey)
           }
 
-          return score
+          // Build candidate list: section-specific first, then global fallback
+          let eligibleTeachers = staff.filter(st => matchesSub(st) && isAvailable(st))
+
+          // Fallback: if no section-specific teacher available, use any teacher
+          // who knows this subject globally and isn't busy
+          if (!eligibleTeachers.length) {
+            eligibleTeachers = staff.filter(st =>
+              (st.subjects ?? []).includes(simpleKey) && isAvailable(st)
+            )
+          }
+          // Last resort — ONLY when nobody on staff teaches this subject at all
+          // (incomplete teacher-subject links): any non-busy teacher, so the
+          // subject isn't permanently blank. When specialists exist but are
+          // busy, we skip to the next subject instead.
+          if (!eligibleTeachers.length && !taughtSubjectNames.has(simpleKey)) {
+            eligibleTeachers = staff.filter(st => isAvailable(st))
+          }
+          if (!eligibleTeachers.length) continue
+
+          // ── AI teacher selection — composite scoring ──
+          // Replaces simple "least-busy-today" with a weighted score:
+          //   + vertical continuity (already teaches this subject elsewhere)
+          //   + section familiarity (already seen in this section)
+          //   + load-balance bias (under target weekly load = preferred)
+          //   − overload penalty (near max weekly periods = avoid)
+          //   − today's load (avoid back-to-back exhaustion)
+          //   − scope-disabled soft penalty
+          //   − consecutive same-subject taught by same teacher
+          const scoreTeacher = (st: any): number => {
+            let score = 0
+            const name = st.name
+            const weeklyLoad = teacherWeeklyLoad[name] ?? 0
+            const todayLoad = teacherLoadToday[name] ?? 0
+            const maxWeek = (st as any).maxPeriodsPerWeek ?? 40
+
+            // Vertical continuity — already teaches this subject in another section
+            if (teacherSubjectSet[name]?.has(chosenSub.name)) score += 25
+            // Section familiarity — already teaches something in this section
+            if (teacherSectionSet[name]?.has(sec.name)) score += 8
+
+            // Load-balance bias: prefer teachers under the global target
+            if (weeklyLoad < targetWeeklyLoadPerTeacher) {
+              score += Math.min(30, (targetWeeklyLoadPerTeacher - weeklyLoad) * 2)
+            } else {
+              // Over target — penalise proportionally
+              score -= Math.min(40, (weeklyLoad - targetWeeklyLoadPerTeacher) * 3)
+            }
+            // Strong avoid near max load (90%+)
+            if (maxWeek > 0 && weeklyLoad >= maxWeek * 0.9) score -= 60
+
+            // Avoid exhaustion today (each period taught today = -3)
+            score -= todayLoad * 3
+
+            // Scope-disabled soft penalty
+            const tScope = (st as any).scope
+            if (tScope) {
+              const s = tScope.cells?.[day]?.[period.id] ?? 'allowed'
+              if (s === 'disabled') score -= 10
+            }
+
+            // Teacher availability preference bonus
+            if (teacherPreferredSlots.has(`${name}::${day}::${period.id}`)) score += 15
+
+            // Anti-back-to-back: penalise if this teacher taught the same subject
+            // in the previous period in this section
+            const prev = classPeriods[pi - 1]
+            if (prev) {
+              const prevCell: any = classTT[sec.name]?.[day]?.[prev.id]
+              if (prevCell?.teacher === name && prevCell?.subject === chosenSub.name) score -= 8
+            }
+
+            return score
+          }
+
+          const sortedTeachers = eligibleTeachers
+            .map(t => ({ t, s: scoreTeacher(t) }))
+            .sort((a, b) => b.s - a.s)
+            .map(x => x.t)
+
+          const teacher = sortedTeachers[0]
+          if (!teacher) continue
+
+          // Soft constraint: avoid consecutive same subject
+          const prevPeriod = classPeriods[pi - 1]
+          if (prevPeriod && classTT[sec.name][day][prevPeriod.id]?.subject === chosenSub.name) {
+            penalties.push({ constraint: 'consecutive-heavy', penalty: 7, details: `${chosenSub.name} consecutive in ${sec.name}` })
+          }
+
+          // Scope 'disabled' state — soft penalty (placement allowed but discouraged)
+          if (sectionScopeState === 'disabled') {
+            penalties.push({ constraint: 'section-scope-disabled', penalty: 15, details: `${sec.name} marked disabled at ${day} ${period.id}` })
+          }
+          if (subScopeState === 'disabled') {
+            penalties.push({ constraint: 'subject-scope-disabled', penalty: 12, details: `${chosenSub.name} marked disabled at ${day} ${period.id}` })
+          }
+          const tScopeState = (teacher as any).scope
+            ? (((teacher as any).scope.cells?.[day]?.[period.id]) ?? 'allowed')
+            : 'allowed'
+          if (tScopeState === 'disabled') {
+            penalties.push({ constraint: 'teacher-scope-disabled', penalty: 10, details: `${teacher.name} marked disabled at ${day} ${period.id}` })
+          }
+
+          ensureBusy(teacher.name)
+
+          // ── Consecutive session placement (Xs=Yp / doublePeriods) ───────────
+          //   If this subject is configured as a multi-period session block,
+          //   try to fill `span` consecutive class periods at once.  Falls back
+          //   to single-period placement when not enough free consecutive slots.
+          const span = sessionSpan[sec.name]?.[chosenSub.name] ?? 1
+          if (span > 1) {
+            const spanPeriods = classPeriods.slice(pi, pi + span)
+            // Bell-true adjacency: every hop in the block must be back-to-back in
+            // THIS section's real bell (no lunch / short break in between).
+            // Sections absent from the map keep plain array adjacency (legacy).
+            const adjList = input.sectionAdjacency?.[sec.name]
+            const adjOk = !adjList ||
+              spanPeriods.slice(0, -1).every(cp => adjList.includes(cp.id))
+            const allFree = spanPeriods.length === span && adjOk &&
+              spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
+              spanPeriods.every(cp => !teacherBusy[teacher.name][day].has(cp.id))
+            if (allFree) {
+              spanPeriods.forEach(cp => {
+                classTT[sec.name][day][cp.id] = { subject: chosenSub.name, teacher: teacher.name, room: sec.room }
+                teacherBusy[teacher.name][day].add(cp.id)
+              })
+              subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + span
+              placed = true
+              break
+            }
+            // Consecutive not available — fall through to single placement as graceful degradation
+          }
+
+          classTT[sec.name][day][period.id] = {
+            subject: chosenSub.name,
+            teacher: teacher.name,
+            room: sec.room,
+          }
+          teacherBusy[teacher.name][day].add(period.id)
+          subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + 1
+          // ── AI trackers: bump load + record subject/section pairing ──
+          teacherWeeklyLoad[teacher.name] = (teacherWeeklyLoad[teacher.name] ?? 0) + 1
+          teacherSubjectSet[teacher.name]?.add(chosenSub.name)
+          teacherSectionSet[teacher.name]?.add(sec.name)
+          placed = true
+          break
         }
 
-        const sortedTeachers = eligibleTeachers
-          .map(t => ({ t, s: scoreTeacher(t) }))
-          .sort((a, b) => b.s - a.s)
-          .map(x => x.t)
-
-        const teacher = sortedTeachers[0]
-        if (!teacher) {
-          // Soft penalty: no teacher available
+        if (!placed) {
+          // Every candidate subject either had all its specialists busy here or
+          // was scope-locked — leave the slot free rather than fabricate a
+          // wrong-teacher lesson; the skipped subjects get placed in later slots.
+          const firstSub = scoredSubs[0]?.sub ?? availableSubs[0]
           penalties.push({
             constraint: 'teacher-availability',
             penalty: 5,
-            details: `No teacher for ${chosenSub.name} in ${sec.name} ${day} ${period.id}`,
+            details: `No teacher for ${firstSub.name} in ${sec.name} ${day} ${period.id}`,
           })
           recordBlock(sec.name, day, period.id, 'no-eligible-teachers',
-            `No eligible teacher available for ${chosenSub.name} — all subject-matched teachers are busy or scope-locked`, chosenSub.name)
-          return
+            `No candidate subject could be placed — each remaining subject's teachers are busy or scope-locked at this slot`, firstSub?.name)
         }
-
-        // Soft constraint: avoid consecutive same subject
-        const prevPeriod = classPeriods[pi - 1]
-        if (prevPeriod && classTT[sec.name][day][prevPeriod.id]?.subject === chosenSub.name) {
-          penalties.push({ constraint: 'consecutive-heavy', penalty: 7, details: `${chosenSub.name} consecutive in ${sec.name}` })
-        }
-
-        // Scope 'disabled' state — soft penalty (placement allowed but discouraged)
-        if (sectionScopeState === 'disabled') {
-          penalties.push({ constraint: 'section-scope-disabled', penalty: 15, details: `${sec.name} marked disabled at ${day} ${period.id}` })
-        }
-        if (subScopeState === 'disabled') {
-          penalties.push({ constraint: 'subject-scope-disabled', penalty: 12, details: `${chosenSub.name} marked disabled at ${day} ${period.id}` })
-        }
-        const tScopeState = (teacher as any).scope
-          ? (((teacher as any).scope.cells?.[day]?.[period.id]) ?? 'allowed')
-          : 'allowed'
-        if (tScopeState === 'disabled') {
-          penalties.push({ constraint: 'teacher-scope-disabled', penalty: 10, details: `${teacher.name} marked disabled at ${day} ${period.id}` })
-        }
-
-        ensureBusy(teacher.name)
-
-        // ── Consecutive session placement (Xs=Yp / doublePeriods) ───────────
-        //   If this subject is configured as a multi-period session block,
-        //   try to fill `span` consecutive class periods at once.  Falls back
-        //   to single-period placement when not enough free consecutive slots.
-        const span = sessionSpan[sec.name]?.[chosenSub.name] ?? 1
-        if (span > 1) {
-          const spanPeriods = classPeriods.slice(pi, pi + span)
-          // Bell-true adjacency: every hop in the block must be back-to-back in
-          // THIS section's real bell (no lunch / short break in between).
-          // Sections absent from the map keep plain array adjacency (legacy).
-          const adjList = input.sectionAdjacency?.[sec.name]
-          const adjOk = !adjList ||
-            spanPeriods.slice(0, -1).every(cp => adjList.includes(cp.id))
-          const allFree = spanPeriods.length === span && adjOk &&
-            spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
-            spanPeriods.every(cp => !teacherBusy[teacher.name][day].has(cp.id))
-          if (allFree) {
-            spanPeriods.forEach(cp => {
-              classTT[sec.name][day][cp.id] = { subject: chosenSub.name, teacher: teacher.name, room: sec.room }
-              teacherBusy[teacher.name][day].add(cp.id)
-            })
-            subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + span
-            return
-          }
-          // Consecutive not available — fall through to single placement as graceful degradation
-        }
-
-        classTT[sec.name][day][period.id] = {
-          subject: chosenSub.name,
-          teacher: teacher.name,
-          room: sec.room,
-        }
-        teacherBusy[teacher.name][day].add(period.id)
-        subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + 1
-        // ── AI trackers: bump load + record subject/section pairing ──
-        teacherWeeklyLoad[teacher.name] = (teacherWeeklyLoad[teacher.name] ?? 0) + 1
-        teacherSubjectSet[teacher.name]?.add(chosenSub.name)
-        teacherSectionSet[teacher.name]?.add(sec.name)
       })
     })
   })
