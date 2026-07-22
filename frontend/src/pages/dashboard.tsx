@@ -553,7 +553,7 @@ function CreateTimetableModal({
               Create new schedule
             </h2>
             <p style={{ fontSize: 13, color: '#6B7280' }}>
-              AI will generate all defaults — you only refine.
+              the engine will generate all defaults — you only refine.
             </p>
           </div>
           <button onClick={onClose} style={{

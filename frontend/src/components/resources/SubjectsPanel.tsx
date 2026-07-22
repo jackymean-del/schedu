@@ -899,7 +899,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
   function handleUpdateGradeSlots(classNames: string[], periodsPerWeek: number) {
     const classSet    = new Set(classNames)
     // CRITICAL: build from ALL currently assigned classes (sections OR classConfigs).
-    // When classes come from `sections` array (chip selector, AI assign), classConfigs may be [],
+    // When classes come from `sections` array (chip selector, auto-assign), classConfigs may be [],
     // so iterating only classConfigs would silently drop all other grades.
     const allAssigned = getAssignedClasses(sub)
     const existingMap = new Map((sub.classConfigs ?? []).map(c => [c.sectionName!, c]))
@@ -1371,7 +1371,7 @@ export function SubjectsPanel({
     setSeeding(false)
   }
 
-  // ── Local AI assign (subject-only fallback) ───────────────────────────────
+  // ── Local auto-assign (subject-only fallback) ───────────────────────────────
   // Re-evaluates ALL subjects every run — no "already assigned" guard.
   // buildClassConfigs() preserves any existing per-class slot overrides.
   function localAiAssignAll() {
@@ -1602,7 +1602,7 @@ export function SubjectsPanel({
           >⬆ Import</button>
 
           {showUndo && (
-            <button onClick={triggerUndo} title="Undo last AI assignment"
+            <button onClick={triggerUndo} title="Undo last auto-assignment"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#FFFBEB', color: '#92400E', border: '1.5px solid #FDE68A', borderRadius: 7, padding: '6px 14px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap', height: 34, boxSizing: 'border-box' as const }}
               onMouseEnter={e => { e.currentTarget.style.background = '#FEF3C7' }}
               onMouseLeave={e => { e.currentTarget.style.background = '#FFFBEB' }}
@@ -1613,7 +1613,7 @@ export function SubjectsPanel({
             onClick={isAiLoading ? undefined : triggerAIAssign}
             disabled={isAiLoading}
             title={hasGlobalAI
-              ? `AI-assign subjects to relevant classes — ${board} standards`
+              ? `Auto-assign subjects to relevant classes — ${board} standards`
               : `Auto-assign ${unassignedCount} unassigned subject${unassignedCount !== 1 ? 's' : ''} to relevant classes`
             }
             style={{
@@ -1652,7 +1652,7 @@ export function SubjectsPanel({
 
       {sections.length === 0 && (
         <div style={{ margin: '0 0 6px', padding: '5px 10px', background: '#FFFBF0', border: '1px solid #FFE8A0', borderRadius: 5, fontSize: 11, color: '#7A5800', flexShrink: 0 }}>
-          💡 Add classes first — AI will automatically assign subjects to the right grade levels based on {BOARD_LABELS[board]} curriculum.
+          💡 Add classes first — the engine will automatically assign subjects to the right grade levels based on {BOARD_LABELS[board]} curriculum.
         </div>
       )}
 

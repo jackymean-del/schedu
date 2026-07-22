@@ -15,7 +15,7 @@ const BOARDS = [
 ]
 
 const FEATURES = [
-  { icon: '🧠', title: 'AI period allocation', desc: 'AI suggests balanced period distributions per class and board — no manual tables needed.' },
+  { icon: '🧠', title: 'Smart period allocation', desc: 'the engine suggests balanced period distributions per class and board — no manual tables needed.' },
   { icon: '👨‍🏫', title: 'Smart teacher allocation', desc: 'Workload-balanced, expertise-matched teacher assignments with vertical continuity rules.' },
   { icon: '👥', title: 'OR slots & cross-class groups', desc: 'Flexible OR periods run one subject at a time; AND groups pool same-subject students across sections — built automatically.' },
 ]
@@ -29,8 +29,8 @@ const STATS = [
 
 const STEPS = [
   { n: 1, title: 'Enter basics', desc: 'Name, board, class range, teachers, rooms.' },
-  { n: 2, title: 'AI generates', desc: 'Allocations, groups, and constraints auto-built.' },
-  { n: 3, title: 'Review & refine', desc: 'AI inlines like a spreadsheet. AI explains every choice.' },
+  { n: 2, title: 'The engine builds', desc: 'Allocations, groups, and constraints auto-built.' },
+  { n: 3, title: 'Review & refine', desc: 'Edit inline like a spreadsheet — every choice is explained.' },
   { n: 4, title: 'Publish & share', desc: 'Share a public or private link, or export to PDF and Excel.' },
 ]
 
@@ -98,7 +98,7 @@ export function HomePage() {
     <MarketingChrome>
       <Seo
         title="schedU — Timetable Scheduling with Human Intelligence for Any Institution"
-        description="schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere."
+        description="schedU auto-generates conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere."
         path="/"
         jsonLd={[ORGANIZATION_SCHEMA, SOFTWARE_APPLICATION_SCHEMA]}
       />
@@ -143,7 +143,7 @@ export function HomePage() {
               <span className="size-[10px] rounded-full bg-[#34C749]" />
             </div>
             <span className="font-mono text-[11px] font-medium text-[#8B87AD]">
-              schedU — AI Period Allocation — Grade 8A
+              schedU — Period Allocation — Grade 8A
             </span>
           </div>
           <div className="px-[18px] py-4">

@@ -207,7 +207,7 @@ export function Step6Assign() {
                 {allocated ? "✅ Sections auto-allocated!" : "🤖 AI Auto-allocate Everything"}
               </div>
               <div style={{ fontSize:11, color: allocated?"#7C6FE0":"#7C6FE0", marginTop:2 }}>
-                {allocated ? "Classes, sections and subjects auto-assigned. Review and edit below." : "AI will assign all classes, sections and subjects to teachers optimally. You can edit after."}
+                {allocated ? "Classes, sections and subjects auto-assigned. Review and edit below." : "the engine will assign all classes, sections and subjects to teachers optimally. You can edit after."}
               </div>
             </div>
             <button onClick={handleAutoAllocate}

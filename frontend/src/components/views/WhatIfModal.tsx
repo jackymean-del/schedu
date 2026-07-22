@@ -333,9 +333,9 @@ export function WhatIfModal({
               </div>
             </div>
 
-            {/* AI Suggestions */}
+            {/* Smart suggestions */}
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8B87AD', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Lightbulb size={11} /> AI Suggestions
+              <Lightbulb size={11} /> Smart suggestions
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
               {sim.suggestions.map((s, i) => {

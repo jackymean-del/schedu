@@ -5842,7 +5842,7 @@ export function StepBell() {
                   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7,
                   border: '1px solid #C4B5FD', background: '#F5F3FF', fontSize: 12, fontWeight: 600, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
-                  <Sparkles size={12} /> AI suggest timings
+                  <Sparkles size={12} /> Smart suggest
                 </button>
                 <button onClick={() => {
                   const count = displayRows.filter(r => r.type === 'teaching').length
@@ -5927,7 +5927,7 @@ export function StepBell() {
           {/* AI Capacity */}
           <div style={{ background: '#FAF7F0', borderRadius: 10, border: '1px solid #E8E0CC', padding: '14px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#92400E', marginBottom: 12 }}>
-              <Sparkles size={13} color="#D97706" /> AI capacity engine
+              <Sparkles size={13} color="#D97706" /> Capacity check
             </div>
             {capacity.map(c => (
               <div key={c.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

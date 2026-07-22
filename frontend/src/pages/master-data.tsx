@@ -190,7 +190,7 @@ export function MasterDataPage() {
         {tab === 'classes' && (
           <StepGuide title="Classes & Sections" tips={[
             'Each row is one section (e.g., Class I-A). Add as many sections as your school has.',
-            'The Grade column helps the AI assign age-appropriate subjects automatically.',
+            'The Grade column helps the auto-assign age-appropriate subjects automatically.',
             'Use the Scope button (⊞) to restrict a class to certain days or periods.',
             'Paste directly from a spreadsheet using the Paste button in the toolbar.',
           ]} />
@@ -214,7 +214,7 @@ export function MasterDataPage() {
         {tab === 'rooms' && (
           <StepGuide title="Venues" tips={[
             'Any teaching place — classroom, lab, hall, playground or sports ground. Lab-type venues are auto-matched to lab subjects by the AI.',
-            'Capacity helps the AI avoid over-assigning a venue beyond what it can hold.',
+            'Capacity helps the engine avoid over-assigning a venue beyond what it can hold.',
             'Use the Scope button to restrict a venue to certain days or periods (e.g., a shared hall or ground).',
             'You don\'t need a venue per section — one venue can be shared across multiple classes.',
           ]} />

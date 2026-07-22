@@ -747,7 +747,7 @@ export function StepAllocation() {
         1p={periodMinutes}m
       </span>
 
-      {/* AI Suggest — invisible intelligence */}
+      {/* Smart Suggest — invisible intelligence */}
       <button onClick={handleAIPeriodSuggest} style={{
         display: 'inline-flex', alignItems: 'center', gap: 3,
         padding: '2px 7px', borderRadius: 4,
@@ -1192,7 +1192,7 @@ function AINotesPanel({
     if (under.length > 0 && under.length <= 3)
       out.push({ kind: 'warn', text: `${under.map(s => s.name).join(', ')} under capacity. Add elective or lab periods.` })
     if (empty.length > 0 && empty.length <= 5)
-      out.push({ kind: 'info', text: `${empty.length} section${empty.length > 1 ? 's' : ''} not yet allocated. Use "AI suggest all" to fill defaults.` })
+      out.push({ kind: 'info', text: `${empty.length} section${empty.length > 1 ? 's' : ''} not yet allocated. Use "Smart suggest all" to fill defaults.` })
     if (out.length === 0 && sections.length > 0)
       out.push({ kind: 'ok', text: 'All sections within board capacity range.' })
 

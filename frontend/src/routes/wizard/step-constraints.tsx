@@ -174,7 +174,7 @@ export function StepConstraints() {
       }}>
         <Info size={14} color="#7C6FE0" style={{ marginTop: 1, flexShrink: 0 }} />
         <div style={{ fontSize: 11.5, color: '#4B5275', lineHeight: 1.6 }}>
-          <strong style={{ color: '#13111E' }}>Hard constraint</strong> (locked) — the AI will never schedule that slot.
+          <strong style={{ color: '#13111E' }}>Hard constraint</strong> (locked) — the the engine will never schedule that slot.
           <strong style={{ color: '#13111E' }}> Soft constraint</strong> (disabled) — the AI avoids it but may break it if necessary.
           To author scope, open the entity in Resources or Master Data and click the <strong style={{ color: '#7C6FE0' }}>Scope</strong> button.
         </div>

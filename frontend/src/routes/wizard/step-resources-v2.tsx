@@ -323,12 +323,12 @@ export function StepResourcesV2() {
   const [activeTab, setActiveTab] = useState<TabKey>('classes')
   const [generating, setGenerating] = useState(false)
 
-  // ── Global AI assign state ────────────────────────────────────────────────
+  // ── Global auto-assign state ────────────────────────────────────────────────
   const [aiLoading,          setAiLoading]          = useState(false)
   const [aiStatus,           setAiStatus]           = useState('')
   const [aiSnapshot,         setAiSnapshot]         = useState<AISnapshot | null>(null)
   // Classes that couldn't get a teacher within a safe workload after the last
-  // AI assignment — e.g. "need ~2 more teachers for Drawing covering III-A,
+  // auto-assignment — e.g. "need ~2 more teachers for Drawing covering III-A,
   // III-B...". Empty means every class got a teacher within their cap.
   const [staffingGaps,       setStaffingGaps]       = useState<StaffingGap[]>([])
   const [facultyAiApplied,   setFacultyAiApplied]   = useState(false)
@@ -394,7 +394,7 @@ export function StepResourcesV2() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sections])
 
-  // ── Full AI assign (all resources) — used by empty-state & Regenerate All ──
+  // ── Full auto-assign (all resources) — used by empty-state & Regenerate All ──
   async function handleGlobalAIAssign(board: CurriculumBoard) {
     if (aiLoading) return
     aiAbortRef.current = false
@@ -425,7 +425,7 @@ export function StepResourcesV2() {
     setTimeout(() => setAiStatus(''), 3500)
   }
 
-  // ── Per-tab AI assign — only touches the relevant resource ───────────────
+  // ── Per-tab auto-assign — only touches the relevant resource ───────────────
   async function handleSubjectsAIAssign(board: CurriculumBoard) {
     if (aiLoading) return
     setAiLoading(true)

@@ -693,7 +693,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             <button
               onClick={aiLoading ? undefined : onAIFix}
               disabled={aiLoading}
-              title="AI-assign classes and subjects to all rooms"
+              title="Auto-assign classes and subjects to all rooms"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 background: aiApplied ? '#059669' : aiLoading ? '#9b8fef' : P,

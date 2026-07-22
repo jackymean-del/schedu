@@ -805,7 +805,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
               <button
                 onClick={aiLoading ? undefined : onAIFix}
                 disabled={aiLoading}
-                title="AI-assign subjects, classes and workloads to all educators"
+                title="Auto-assign subjects, classes and workloads to all educators"
                 className={hasGaps && !aiApplied && !aiLoading ? 'ai-fix-pulse' : ''}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,

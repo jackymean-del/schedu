@@ -764,7 +764,7 @@ export function SubjectGroupsSection({
               )}
             </div>
 
-            {/* ── AI Suggestions ── */}
+            {/* ── Smart suggestions ── */}
             {suggestions.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
