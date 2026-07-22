@@ -1524,7 +1524,7 @@ export function DashboardPage() {
         .sb-upgrade   { transition: background 0.14s; }
         .sb-upgrade:hover { background: #6655CC !important; }
         .db-new-btn   { transition: background 0.13s, box-shadow 0.13s; }
-        .db-new-btn:hover { background: #F9F8FF !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
+        .db-new-btn:hover { background: linear-gradient(135deg,#6E60DC,#4F41C4) !important; box-shadow: 0 8px 22px rgba(124,111,224,0.4) !important; }
       `}</style>
 
       
