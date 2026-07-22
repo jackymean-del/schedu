@@ -160,7 +160,7 @@ export function StepSectionStrengths() {
 
       <DataGrid<Row>
         title="Section Strengths"
-        description="How many students take each subject, per section. The AI figures out the rest."
+        description="How many students take each subject, per section. The engine figures out the rest."
         icon={<Grid3x3 size={16} />}
         columns={columns}
         rows={rows}
@@ -207,7 +207,7 @@ export function StepSectionStrengths() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <Sparkles size={13} color="#7C6FE0" />
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7C6FE0' }}>
-            What our AI infers from this matrix
+            What our Human Intelligence infers from this matrix
           </span>
         </div>
         <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: '#4B5275', lineHeight: 1.7 }}>
@@ -233,7 +233,7 @@ function Header() {
           Section Strengths
         </h2>
         <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-          How many students take each subject, per section. <em style={{ color: '#7C6FE0' }}>That's it.</em> The AI does the rest.
+          How many students take each subject, per section. <em style={{ color: '#7C6FE0' }}>That's it.</em> The engine does the rest.
         </div>
       </div>
     </div>

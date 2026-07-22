@@ -273,7 +273,7 @@ export function SharedTimetablePage() {
 
       <footer className="border-t border-[#F0EDFF] px-6 py-4 text-center text-[12px] text-[#8B87AD]">
         Shared via{' '}
-        <a href="/" className="font-semibold text-[#7C6FE0] no-underline">schedU</a> — AI timetable scheduling
+        <a href="/" className="font-semibold text-[#7C6FE0] no-underline">schedU</a> — human-intelligence timetable scheduling
       </footer>
     </div>
   )

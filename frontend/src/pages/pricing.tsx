@@ -9,9 +9,9 @@ import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 const TIERS = [
   {
     name: 'Starter', price: 'Free', period: '',
-    desc: 'Everything a small team needs to try AI scheduling.',
+    desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: '/wizard', popular: false,
-    features: ['Up to 2 classes', 'Up to 20 subjects', 'AI auto-schedule', 'Real-time conflict detection', 'PDF export'],
+    features: ['Up to 2 classes', 'Up to 20 subjects', 'Smart auto-schedule', 'Real-time conflict detection', 'PDF export'],
   },
   {
     name: 'Pro', price: '$29', period: '/mo',

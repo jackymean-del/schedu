@@ -673,7 +673,7 @@ function CreateTimetableModal({
           </div>
         </div>
 
-        {/* ── AI auto-generate tags ── */}
+        {/* ── smart auto-generate tags ── */}
         {tags.length > 0 && (
           <div style={{
             background: '#F0FDF9', border: '1px solid #A7F3D0',

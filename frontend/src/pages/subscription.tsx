@@ -31,7 +31,7 @@ interface BillingConfig {
 }
 
 const FREE_FEATURES = [
-  'AI auto-scheduling — conflict-free in minutes',
+  'Human-Intelligence auto-scheduling — conflict-free in minutes',
   '1 active schedule',
   'Up to 40 classes',
   'Class, Faculty, Venue & Subject views',
@@ -43,7 +43,7 @@ const PRO_FEATURES = [
   'Unlimited schedules & classes',
   'Live task assignment & substitutions',
   'Team collaboration — invite & manage users',
-  'Advanced AI & multi-shift / block scheduling',
+  'Advanced engine & multi-shift / block scheduling',
   'Workload analytics & optimisation',
   'Priority support',
 ]

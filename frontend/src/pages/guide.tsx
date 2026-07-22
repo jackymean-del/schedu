@@ -22,7 +22,7 @@ const STEPS = [
   {
     n: 3,
     title: 'Add resources',
-    body: 'In the wizard, add your subjects, teachers and rooms. The AI auto-generates sensible defaults for your grade range — you can edit anything.',
+    body: 'In the wizard, add your subjects, teachers and rooms. The engine auto-generates sensible defaults for your grade range — you can edit anything.',
     cta: { label: 'Open Master Data', href: '/master-data' },
   },
   {
@@ -34,7 +34,7 @@ const STEPS = [
   {
     n: 5,
     title: 'Set period allocations',
-    body: 'Review how many periods per week each subject gets per class. The AI pre-fills based on board norms — adjust as needed.',
+    body: 'Review how many periods per week each subject gets per class. The engine pre-fills based on board norms — adjust as needed.',
     cta: null,
   },
   {

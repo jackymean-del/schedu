@@ -395,7 +395,7 @@ export function detectConflicts(
   return conflicts
 }
 
-// ─── AI Auto-Assign ───────────────────────────────────────
+// ─── Smart Auto-Assign ───────────────────────────────────────
 export function autoAssign(
   sections: Section[],
   staff: Staff[],

@@ -206,7 +206,7 @@ export function MasterDataPage() {
         {tab === 'teachers' && (
           <StepGuide title="Teachers" tips={[
             'The Subjects column lists which subjects this teacher can teach — comma-separated.',
-            'Max Periods/Week is the safe workload cap. The AI will never assign more than this.',
+            'Max Periods/Week is the safe workload cap. The engine will never assign more than this.',
             'Use the Scope button to mark a teacher\'s unavailable slots (e.g., part-time schedules).',
             'If a subject has no available teacher within the cap, you\'ll see a staffing alert in the wizard.',
           ]} />

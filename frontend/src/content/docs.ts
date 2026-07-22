@@ -73,7 +73,7 @@ export const DOC_ARTICLES: DocArticle[] = [
   {
     slug: 'ai-scheduling',
     icon: '🧠',
-    title: 'How AI scheduling works',
+    title: 'How Human-Intelligence scheduling works',
     description: 'Understand how schedU allocates periods and balances workloads automatically.',
     readMins: 5,
     intro:

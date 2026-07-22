@@ -48,9 +48,9 @@ const DEMO_CELLS = [
 const TIERS = [
   {
     name: 'Starter', price: 'Free', period: '',
-    desc: 'Everything a small team needs to try AI scheduling.',
+    desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: '/wizard', popular: false,
-    features: ['Up to 2 classes', 'Up to 20 subjects', 'AI auto-schedule', 'Real-time conflict detection', 'PDF export'],
+    features: ['Up to 2 classes', 'Up to 20 subjects', 'Smart auto-schedule', 'Real-time conflict detection', 'PDF export'],
   },
   {
     name: 'Pro', price: '$29', period: '/mo',
@@ -84,7 +84,7 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   applicationCategory: 'EducationalApplication',
   operatingSystem: 'Web',
   url: 'https://schedu.bhusku.com',
-  description: 'AI-generated, conflict-free timetables for schools, colleges, and universities — any board, any curriculum.',
+  description: 'Conflict-free, expertly generated timetables for schools, colleges, and universities — any board, any curriculum.',
   offers: TIERS.map(t => ({
     '@type': 'Offer',
     name: t.name,
@@ -97,7 +97,7 @@ export function HomePage() {
   return (
     <MarketingChrome>
       <Seo
-        title="schedU — AI Timetable Scheduling for Any Institution"
+        title="schedU — Timetable Scheduling with Human Intelligence for Any Institution"
         description="schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere."
         path="/"
         jsonLd={[ORGANIZATION_SCHEMA, SOFTWARE_APPLICATION_SCHEMA]}
@@ -106,7 +106,7 @@ export function HomePage() {
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-[60px] pt-[72px] text-center">
         <div className="mb-7 inline-flex animate-[fadeUp_0.55s_ease_both] items-center gap-[7px] rounded-full border border-[#86EFAC] bg-[#F0FDF4] px-4 py-[5px] text-xs font-semibold text-[#15803D]">
           <span className="inline-block size-[7px] shrink-0 rounded-full bg-[#22C55E]" />
-          AI-native timetable engine
+          Human-Intelligence-driven timetable engine
         </div>
 
         <h1 className="mb-[18px] max-w-[720px] animate-[fadeUp_0.55s_ease_both] text-[clamp(34px,6.5vw,56px)] font-normal leading-[1.1] tracking-[-1.5px] text-[#13111E] [animation-delay:0.08s]">

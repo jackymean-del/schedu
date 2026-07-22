@@ -34,7 +34,7 @@ function GoogleMark() {
 }
 
 const FEATURES = [
-  { color: '#0EA5E9', bg: '#E0F2FE', title: 'AI-generated allocations', desc: 'No manual tables — AI suggests everything from scratch.',
+  { color: '#0EA5E9', bg: '#E0F2FE', title: 'engine-generated allocations', desc: 'No manual tables — AI suggests everything from scratch.',
     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>) },
   { color: '#3B82F6', bg: '#DBEAFE', title: 'Spreadsheet-native editing', desc: 'Inline editing, drag-fill, copy-paste from Excel.',
     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>) },

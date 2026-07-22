@@ -6,6 +6,9 @@ import {
   runGenerationPipeline, sectionKey, teachCountFromRows,
   type GenerationPayload, type GenerationResult,
 } from "@/lib/generationPipeline"
+import {
+  bandForSection, checkBellCompliance, computeTeacherRequirement, type GradeBand,
+} from "@/lib/educationNorms"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import { getCountry } from "@/lib/orgData"
 import type { OptionalBlock, OptionalOption, Period, ClassTimetable } from "@/types"
@@ -129,8 +132,12 @@ export function Step6Generate() {
     const unallocated: string[] = []
     let totalWeekly = 0, doubleSubjects = 0
 
+    // Per grade band: the LOWEST weekly teaching minutes seen (worst case for
+    // the national instructional-hours norm check).
+    const bandWeeklyMins = new Map<GradeBand, number>()
+
     for (const sec of sections as any[]) {
-      let count: number | null = null, endMin = 0
+      let count: number | null = null, endMin = 0, teachMins = 0
       for (const bs of bellSchedules) {
         const c = teachCountFromRows(sec.name, bs.rows)
         if (c == null) continue
@@ -139,9 +146,17 @@ export function Step6Generate() {
         endMin = toMin(bs.startTime) + bs.rows
           .filter((r: any) => r.type !== 'dispersal' && (!(r.classes ?? []).length || r.classes.includes(key)))
           .reduce((s: number, r: any) => s + r.duration, 0)
+        teachMins = bs.rows
+          .filter((r: any) => r.type === 'teaching' && (!(r.classes ?? []).length || r.classes.includes(key)))
+          .reduce((s: number, r: any) => s + r.duration, 0)
         break
       }
       if (count == null) continue
+      const band = bandForSection(sec.name)
+      const weekly = teachMins * workDayCount
+      if (weekly > 0 && (!bandWeeklyMins.has(band) || weekly < bandWeeklyMins.get(band)!)) {
+        bandWeeklyMins.set(band, weekly)
+      }
       const bk = `${count}@${endMin}`
       if (!buckets.has(bk)) buckets.set(bk, { count, endMin, secs: [] })
       buckets.get(bk)!.secs.push(sec.name)
@@ -180,9 +195,21 @@ export function Step6Generate() {
       ((store as any).optionalBlocks ?? []).length
     const dayOffRules = ((config as any).dayOffRules ?? []).length
 
-    return { shapes, totalWeekly, doubleSubjects, parallelGroups, dayOffRules, overCap, unallocated }
+    // ── National-norms brain: staffing requirement + bell compliance ──────
+    // Human-Intelligence check built from published policy (RTE/NCTE, STPCD,
+    // US state hours, AU face-to-face caps — see lib/educationNorms.ts).
+    const country = (config as any).countryCode || 'IN'
+    const board = (config as any).board || (config as any).boardName
+    const staffing = totalWeekly > 0
+      ? computeTeacherRequirement(totalWeekly, store.staff.length, country)
+      : null
+    const bellChecks = [...bandWeeklyMins.entries()]
+      .map(([band, mins]) => checkBellCompliance(country, board, band, mins))
+      .filter(c => c.status !== 'ok')
+
+    return { shapes, totalWeekly, doubleSubjects, parallelGroups, dayOffRules, overCap, unallocated, staffing, bellChecks }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, sections, (store as any).subjectAllocations])
+  }, [config, sections, (store as any).subjectAllocations, store.staff.length])
 
   // ── Start generation ─────────────────────────────────────────
   const startGenerate = () => {
@@ -355,7 +382,7 @@ export function Step6Generate() {
           hasExistingTT ? (published ? 4 : 2) : 1
         const STAGES = [
           { label: 'Set up',   sub: 'wizard steps 1–4' },
-          { label: 'Generate', sub: 'AI builds the draft' },
+          { label: 'Generate', sub: 'the HI engine builds the draft' },
           { label: 'Review',   sub: 'fine-tune any cell' },
           { label: 'Publish',  sub: 'share & export' },
           { label: 'Go live',  sub: 'calendar follows the clock' },
@@ -563,6 +590,38 @@ export function Step6Generate() {
                     <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
                   </div>
                 )}
+
+                {/* National-norms staffing check (Human Intelligence brain) */}
+                {preflight.staffing && (
+                  <div style={{
+                    display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, borderRadius:10, padding:"9px 12px",
+                    color: preflight.staffing.status === 'over' ? "#991B1B" : preflight.staffing.status === 'tight' ? "#92400E" : "#15803D",
+                    background: preflight.staffing.status === 'over' ? "#FEF2F2" : preflight.staffing.status === 'tight' ? "#FFFBEB" : "#F0FDF4",
+                    border: `1px solid ${preflight.staffing.status === 'over' ? "#FECACA" : preflight.staffing.status === 'tight' ? "#FDE68A" : "#BBF7D0"}`,
+                  }}>
+                    <span>{preflight.staffing.status === 'over' ? '🚨' : preflight.staffing.status === 'tight' ? '⚠' : '👥'}</span>
+                    <span>
+                      <strong>Faculty workload ({Math.round(preflight.staffing.utilization * 100)}%):</strong> {preflight.staffing.message}
+                      <span style={{ display:"block", marginTop:3, fontSize:10.5, opacity:0.75 }}>Norm: {preflight.staffing.source}</span>
+                    </span>
+                  </div>
+                )}
+
+                {/* Grade-band instructional-hours compliance vs national policy */}
+                {(preflight.bellChecks ?? []).map(c => (
+                  <div key={c.band} style={{
+                    display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, borderRadius:10, padding:"9px 12px",
+                    color: c.statutory && c.status === 'short' ? "#991B1B" : "#92400E",
+                    background: c.statutory && c.status === 'short' ? "#FEF2F2" : "#FFFBEB",
+                    border: `1px solid ${c.statutory && c.status === 'short' ? "#FECACA" : "#FDE68A"}`,
+                  }}>
+                    <span>{c.status === 'short' ? '📉' : '📈'}</span>
+                    <span>
+                      {c.message}
+                      <span style={{ display:"block", marginTop:3, fontSize:10.5, opacity:0.75 }}>Norm: {c.source}</span>
+                    </span>
+                  </div>
+                ))}
               </>
             )}
           </div>

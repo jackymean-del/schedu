@@ -633,7 +633,7 @@ export type ScopeState = 'allowed' | 'disabled' | 'locked'
  *  Shape: day -> periodId -> state. Missing entries default to 'allowed'.
  *  When ALL entries are missing/'allowed', the entity is unscoped.
  *
- *  AI Engine treats 'locked' as a HARD constraint; 'disabled' as a
+ *  Human Intelligence Engine treats 'locked' as a HARD constraint; 'disabled' as a
  *  strong soft penalty. */
 export interface ScopeMatrix {
   /** day key (DOW_KEY) -> periodId -> state */
