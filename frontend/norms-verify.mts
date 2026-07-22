@@ -4,8 +4,9 @@
  */
 import {
   bandForSection, studentNorms, teacherNorms, suggestAllocation,
-  checkBellCompliance, computeTeacherRequirement,
+  checkBellCompliance, computeTeacherRequirement, regionForCountry,
 } from './src/lib/educationNorms.ts'
+import { ALL_COUNTRIES } from './src/lib/allCountries.ts'
 
 let failures = 0
 const check = (ok: boolean, label: string, extra = '') => {
@@ -77,6 +78,32 @@ check(r3.status === 'tight', 'staffing TIGHT flagged above 90% utilisation', `${
 // Australia stricter: same demand needs more teachers (safe 20)
 const r4 = computeTeacherRequirement(1260, 48, 'AU')
 check(r4.teachersNeeded === 63 && r4.status === 'over', 'Australia norms need 63 teachers for same demand (safe load 20)')
+
+// ── Global coverage: EVERY supported country resolves to a real norm ───────
+const explicit = new Set(['IN', 'GB', 'US', 'AU'])
+let uncovered = 0
+const badBands: string[] = []
+for (const { code } of ALL_COUNTRIES) {
+  const sn = studentNorms(code)
+  const tn = teacherNorms(code)
+  // Every band must have positive hours + days, teacher caps must be sane
+  const bandsOk = (['prePrimary', 'lowerPrimary', 'upperPrimary', 'secondary', 'seniorSecondary'] as const)
+    .every(bd => sn.bands[bd].instructionalHoursYear > 0 && sn.bands[bd].schoolDaysYear > 0)
+  const teacherOk = tn.safeMaxPeriodsWeek > 0 && tn.hardMaxPeriodsWeek >= tn.safeMaxPeriodsWeek
+  if (!bandsOk || !teacherOk) badBands.push(code)
+  // Non-explicit countries should hit a region, not the flat international default
+  if (!explicit.has(code) && !regionForCountry(code)) uncovered++
+}
+check(badBands.length === 0, `every country returns valid student+teacher norms (${ALL_COUNTRIES.length} countries)`, badBands.length ? `bad: ${badBands.join(',')}` : 'all valid')
+check(uncovered === 0, `every non-explicit country maps to a REGION (not flat default)`, uncovered ? `${uncovered} fell through to INTL` : `${ALL_COUNTRIES.length - explicit.size} region-mapped`)
+// Spot-check a few regions resolve sensibly
+check(studentNorms('JP').label.includes('East Asia'), 'Japan → East Asia region norm')
+check(studentNorms('BD').label.includes('South Asia'), 'Bangladesh → South Asia region norm')
+check(studentNorms('SA').label.includes('Gulf'), 'Saudi Arabia → Gulf region norm')
+check(studentNorms('SE').label.includes('Nordic'), 'Sweden → Nordic region norm')
+check(studentNorms('NG').label.includes('Sub-Saharan'), 'Nigeria → Sub-Saharan region norm')
+check(studentNorms('BR').label.includes('Latin'), 'Brazil → Latin America region norm')
+check(teacherNorms('SA').safeMaxPeriodsWeek === 24, 'Saudi Arabia safe load = Gulf 24/wk')
 
 console.log(failures === 0 ? '\nALL NORMS CHECKS PASSED' : `\n${failures} FAILURES`)
 process.exit(failures === 0 ? 0 : 1)

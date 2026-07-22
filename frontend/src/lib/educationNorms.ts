@@ -153,12 +153,85 @@ const STUDENT_NORMS: Record<string, { label: string; bands: BandNorms }> = {
   },
 }
 
-/** Resolve student norms for a country (+ optional board, e.g. 'CBSE'/'ICSE'). */
+// ── Regional fallback — EVERY country the app supports maps to a region, so a
+//    country without an explicit statute entry still gets a sensible, region-
+//    appropriate norm (not a flat global default). Values are grounded regional
+//    approximations from OECD Education-at-a-Glance + Eurydice/regional patterns
+//    — NOT per-country statute, so all are flagged non-statutory. The explicit
+//    countries above (IN + boards, GB, US, AU) always win over the region.
+export type Region =
+  | 'EUROPE_WEST' | 'NORDIC' | 'EUROPE_EAST' | 'CIS' | 'MENA_GULF' | 'MENA'
+  | 'SOUTH_ASIA' | 'SEA' | 'EAST_ASIA' | 'AFRICA' | 'LATAM' | 'OCEANIA' | 'NORTH_AMERICA'
+
+/** Build a full BandNorms from compact per-band yearly hours + a shared day shape. */
+function mkBands(hours: [number, number, number, number, number], days: number, periods: number, mins: number, src: string): BandNorms {
+  const [pre, lower, upper, sec, senior] = hours
+  const b = (h: number, p: number): StudentNorm => ({
+    instructionalHoursYear: h, schoolDaysYear: days, periodsPerDayTypical: p,
+    periodMinutesTypical: mins, statutory: false, source: src,
+  })
+  return {
+    prePrimary: b(pre, Math.max(4, periods - 2)),
+    lowerPrimary: b(lower, periods - 1),
+    upperPrimary: b(upper, periods),
+    secondary: b(sec, periods),
+    seniorSecondary: b(senior, periods),
+  }
+}
+
+const REGION_STUDENT: Record<Region, { label: string; bands: BandNorms }> = {
+  EUROPE_WEST:   { label: 'Western Europe',              bands: mkBands([600, 850, 900, 950, 950], 185, 6, 50, 'OECD/Eurydice Western-Europe norms') },
+  NORDIC:        { label: 'Nordic',                      bands: mkBands([550, 700, 800, 850, 850], 190, 6, 45, 'Nordic norms — fewer contact hours, high teacher autonomy') },
+  EUROPE_EAST:   { label: 'Central & Eastern Europe',    bands: mkBands([560, 700, 800, 870, 900], 185, 6, 45, 'Eurydice Central/Eastern-Europe norms') },
+  CIS:           { label: 'CIS & Central Asia',          bands: mkBands([560, 720, 820, 880, 900], 185, 6, 45, 'Post-Soviet regional education norms') },
+  MENA_GULF:     { label: 'Gulf (GCC)',                  bands: mkBands([600, 800, 850, 900, 900], 180, 6, 45, 'Gulf MoE norms (UAE/KSA-style; Fri–Sat weekend)') },
+  MENA:          { label: 'Middle East / North Africa',  bands: mkBands([580, 780, 850, 900, 900], 180, 6, 45, 'MENA regional norms') },
+  SOUTH_ASIA:    { label: 'South Asia',                  bands: mkBands([600, 800, 1000, 1000, 1000], 210, 7, 40, 'South-Asia norms, RTE-aligned (BD/PK/LK/NP/BT)') },
+  SEA:           { label: 'Southeast Asia',              bands: mkBands([620, 880, 950, 1000, 1000], 200, 7, 40, 'ASEAN regional norms') },
+  EAST_ASIA:     { label: 'East Asia',                   bands: mkBands([650, 900, 1000, 1050, 1050], 200, 7, 45, 'East-Asia norms (CN/JP/KR/TW; long instructional year)') },
+  AFRICA:        { label: 'Sub-Saharan Africa',          bands: mkBands([600, 850, 950, 990, 990], 200, 7, 40, 'Sub-Saharan norms (WAEC/EAC-style 36-period weeks)') },
+  LATAM:         { label: 'Latin America',               bands: mkBands([600, 800, 900, 950, 950], 195, 6, 45, 'Latin-America regional norms') },
+  OCEANIA:       { label: 'Oceania',                     bands: mkBands([600, 1000, 1000, 1000, 960], 200, 5, 60, 'Oceania norms (AU/NZ-style ≈25 h/week instruction)') },
+  NORTH_AMERICA: { label: 'North America',               bands: mkBands([540, 900, 990, 990, 990], 180, 6, 50, 'North-America norms (US/CA state/province-set)') },
+}
+
+// Every ISO-2 code the app offers → its region. Explicit-norm countries
+// (IN/GB/US/AU) are intentionally omitted; they resolve before this map.
+const COUNTRY_REGION: Record<string, Region> = (() => {
+  const m: Record<string, Region> = {}
+  const add = (region: Region, codes: string) => codes.split(/\s+/).filter(Boolean).forEach(c => { m[c] = region })
+  add('EUROPE_WEST',   'AT BE FR DE IE IT LU MT NL PT ES CH LI CY GR IL')
+  add('NORDIC',        'DK FI IS NO SE')
+  add('EUROPE_EAST',   'AL BA BG HR CZ EE HU LV LT ME PL RO RS SK SI')
+  add('CIS',           'AM AZ BY GE KZ KG MD RU TJ TM UA UZ')
+  add('MENA_GULF',     'AE BH KW OM QA SA')
+  add('MENA',          'DZ EG IQ IR JO LB LY MA SY TN TR YE SD')
+  add('SOUTH_ASIA',    'AF BD BT LK MV NP PK')
+  add('SEA',           'BN KH ID LA MY MM PH SG TH TL VN')
+  add('EAST_ASIA',     'CN JP KR TW MN')
+  add('AFRICA',        'BJ BW BF BI CM CF TD KM CG DJ GQ ER SZ ET GA GM GH GN GW KE LS LR MG MW ML MR MU MZ NA NE NG RW SN SL SO ZA SS TZ TG UG ZM ZW')
+  add('LATAM',         'AR BZ BO BR CL CO CR CU DO EC SV GT GY HT HN JM MX NI PA PY PE SR TT UY VE')
+  add('OCEANIA',       'FJ NZ PG')
+  add('NORTH_AMERICA', 'CA')
+  return m
+})()
+
+export function regionForCountry(country: string): Region | null {
+  return COUNTRY_REGION[(country || '').toUpperCase()] ?? null
+}
+
+/**
+ * Resolve student norms for a country (+ optional board, e.g. 'CBSE'/'ICSE').
+ * Precedence: explicit board → explicit country → region → international.
+ */
 export function studentNorms(country: string, board?: string): { label: string; bands: BandNorms } {
   const c = (country || '').toUpperCase()
   const b = (board || '').toUpperCase().replace(/[^A-Z]/g, '')
   if (c === 'IN' && b && STUDENT_NORMS[`IN-${b}`]) return STUDENT_NORMS[`IN-${b}`]
-  return STUDENT_NORMS[c] ?? STUDENT_NORMS.INTL
+  if (STUDENT_NORMS[c]) return STUDENT_NORMS[c]
+  const region = COUNTRY_REGION[c]
+  if (region) return REGION_STUDENT[region]
+  return STUDENT_NORMS.INTL
 }
 
 // ── Teacher-side norms (safe load) ─────────────────────────────────────────
@@ -193,8 +266,30 @@ const TEACHER_NORMS: Record<string, TeacherNorm> = {
   },
 }
 
+// Safe teaching-load per region (same regional buckets as the student side).
+const REGION_TEACHER: Record<Region, TeacherNorm> = {
+  EUROPE_WEST:   { safeMaxPeriodsWeek: 23, hardMaxPeriodsWeek: 27, source: 'Western-Europe teaching load (with protected PPA time)' },
+  NORDIC:        { safeMaxPeriodsWeek: 20, hardMaxPeriodsWeek: 24, source: 'Nordic teaching load — lower contact, high prep time' },
+  EUROPE_EAST:   { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 26, source: 'Central/Eastern-Europe teaching norm (Pflichtstunden-style)' },
+  CIS:           { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 27, source: 'Post-Soviet teaching-load norm' },
+  MENA_GULF:     { safeMaxPeriodsWeek: 24, hardMaxPeriodsWeek: 30, source: 'Gulf MoE teaching load (≈24 periods/week)' },
+  MENA:          { safeMaxPeriodsWeek: 24, hardMaxPeriodsWeek: 30, source: 'MENA teaching-load norm' },
+  SOUTH_ASIA:    { safeMaxPeriodsWeek: 30, hardMaxPeriodsWeek: 36, source: 'South-Asia teaching load, RTE/NCTE-aligned' },
+  SEA:           { safeMaxPeriodsWeek: 24, hardMaxPeriodsWeek: 30, source: 'ASEAN teaching-load norm' },
+  EAST_ASIA:     { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 28, source: 'East-Asia teaching load — lower contact, long school day' },
+  AFRICA:        { safeMaxPeriodsWeek: 28, hardMaxPeriodsWeek: 36, source: 'Sub-Saharan teaching-load norm (~36-period ceiling)' },
+  LATAM:         { safeMaxPeriodsWeek: 25, hardMaxPeriodsWeek: 32, source: 'Latin-America teaching-load norm' },
+  OCEANIA:       { safeMaxPeriodsWeek: 20, hardMaxPeriodsWeek: 22, source: 'Oceania face-to-face caps (AU/NZ)' },
+  NORTH_AMERICA: { safeMaxPeriodsWeek: 25, hardMaxPeriodsWeek: 30, source: 'North-America typical secondary teaching load' },
+}
+
+/** Resolve safe teacher load: explicit country → region → international. */
 export function teacherNorms(country: string): TeacherNorm {
-  return TEACHER_NORMS[(country || '').toUpperCase()] ?? TEACHER_NORMS.INTL
+  const c = (country || '').toUpperCase()
+  if (TEACHER_NORMS[c]) return TEACHER_NORMS[c]
+  const region = COUNTRY_REGION[c]
+  if (region) return REGION_TEACHER[region]
+  return TEACHER_NORMS.INTL
 }
 
 // ── Curriculum subject weightings (auto-allocation) ────────────────────────
