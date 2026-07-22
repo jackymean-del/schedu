@@ -351,7 +351,7 @@ function TeacherRow({
         {assignments.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#B8B4D4', fontSize: 11 }}>
             <Sparkles size={11} />
-            <span>No assignments yet — use AI allocate to fill</span>
+            <span>No assignments yet — use HI allocate to fill</span>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5 }}>

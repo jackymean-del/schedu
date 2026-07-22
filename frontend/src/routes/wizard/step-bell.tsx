@@ -5842,7 +5842,7 @@ export function StepBell() {
                   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7,
                   border: '1px solid #C4B5FD', background: '#F5F3FF', fontSize: 12, fontWeight: 600, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
-                  <Sparkles size={12} /> Smart suggest
+                  <Sparkles size={12} /> HI suggest
                 </button>
                 <button onClick={() => {
                   const count = displayRows.filter(r => r.type === 'teaching').length

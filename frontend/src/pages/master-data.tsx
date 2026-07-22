@@ -199,7 +199,7 @@ export function MasterDataPage() {
           <StepGuide title="Subjects" tips={[
             'Periods/Week sets how many times per week this subject runs for each assigned section.',
             'Short Name is displayed in the timetable grid — keep it 2–4 characters (e.g., MATH, ENG).',
-            'Category groups subjects for reporting and AI balancing (Core, Activity, Language…).',
+            'Category groups subjects for reporting and HI balancing (Core, Activity, Language…).',
             'Use the Scope button to restrict a subject to specific days or time slots.',
           ]} />
         )}
@@ -213,7 +213,7 @@ export function MasterDataPage() {
         )}
         {tab === 'rooms' && (
           <StepGuide title="Venues" tips={[
-            'Any teaching place — classroom, lab, hall, playground or sports ground. Lab-type venues are auto-matched to lab subjects by the AI.',
+            'Any teaching place — classroom, lab, hall, playground or sports ground. Lab-type venues are auto-matched to lab subjects by the engine.',
             'Capacity helps the engine avoid over-assigning a venue beyond what it can hold.',
             'Use the Scope button to restrict a venue to certain days or periods (e.g., a shared hall or ground).',
             'You don\'t need a venue per section — one venue can be shared across multiple classes.',
@@ -223,7 +223,7 @@ export function MasterDataPage() {
           <StepGuide title="Section Strengths" tips={[
             'Enter student counts per subject per section — only needed when subjects are optional or streamed.',
             'Leave at 0 for subjects that are mandatory for all students in that section.',
-            'Non-zero values let the AI detect elective groups and size teacher pools accurately.',
+            'Non-zero values let the engine detect elective groups and size teacher pools accurately.',
             'The Total column is auto-summed but can be overridden if your section size differs.',
           ]} />
         )}
@@ -353,7 +353,7 @@ function StrengthsGrid({
   return (
     <DataGrid<SectionStrength>
       title="Section Strengths"
-      description="Per-section student counts per subject. AI derives optional blocks and pooling automatically."
+      description="Per-section student counts per subject. the engine derives optional blocks and pooling automatically."
       icon={<Grid3x3 size={16} />}
       columns={columns}
       rows={rows}

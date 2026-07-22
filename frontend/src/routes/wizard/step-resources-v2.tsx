@@ -26,6 +26,7 @@ import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
 import { SubjectsPanel, generateShortName, inferCategory } from '@/components/resources/SubjectsPanel'
 import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, subjectAppliesToSections, type CurriculumBoard } from '@/components/resources/curriculum'
+import { teacherNorms } from '@/lib/educationNorms'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
 import { linkOrRegisterStaff, linkOrRegisterVenues } from '@/store/directoryStore'
@@ -533,21 +534,22 @@ export function StepResourcesV2() {
     setAiStatus('')
   }
 
-  // ── Faculty AI Fix — set maxPeriodsPerWeek per board/country standard ────────
+  // ── Faculty HI Fix — set maxPeriodsPerWeek to the national SAFE teaching load ─
+  // Sourced from the education-norms brain (lib/educationNorms.ts) so the per-
+  // teacher cap matches the same policy the generate-step staffing alert uses:
+  //   India (NCTE/RTE) safe 30 · England (STPCD+PPA) 22 · US 25 · AU 20 · every
+  //   other country via its regional profile. Boards with lighter contact hours
+  //   (IB / Cambridge) cap below the national safe load.
   function handleTeacherAIFix() {
+    const country = config.countryCode || 'IN'
     const board = normalizeBoardType(config.board ?? 'CBSE')
-    // Standard max teaching periods/week per board:
-    //   CBSE / ICSE (India) : 32  (35-period day, teachers cover ~32)
-    //   IB / Cambridge       : 24  (lighter contact hours, more prep time)
-    //   Custom / default     : 28
-    const boardPeriods: Record<string, number> = {
-      CBSE: 32, ICSE: 32, IB: 24, Cambridge: 24, Custom: 28,
-    }
-    const maxPeriods = boardPeriods[board] ?? 28
+    const safe = teacherNorms(country).safeMaxPeriodsWeek
+    const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
+    const maxPeriods = Math.min(safe, boardCap[board] ?? safe)
     setStaff(staff.map((t: Staff) => ({ ...t, maxPeriodsPerWeek: maxPeriods })))
   }
 
-  // ── Rooms AI Fix — infer room type and subject mappings from room names ───────
+  // ── Rooms HI Fix — infer room type and subject mappings from room names ───────
   function handleRoomAIFix() {
     const subjectNames: string[] = subjects.map((s: Subject) => s.name)
 
@@ -780,7 +782,7 @@ export function StepResourcesV2() {
     })
 
     // If there are staffing gaps, switch to the Teachers tab so the alert
-    // and the pulsing AI Fix button are immediately visible to the user.
+    // and the pulsing HI Fix button are immediately visible to the user.
     if (assigned.staffingGaps.length > 0) setActiveTab('teachers')
 
     setGenerating(false)
@@ -921,7 +923,7 @@ export function StepResourcesV2() {
                   </div>
                   <div style={{ fontSize: 11.5, color: '#B91C1C', lineHeight: 1.5 }}>
                     Add teachers for these subjects manually using <strong>+ Add Teacher</strong>,
-                    or click the highlighted <strong>⚡ AI Fix</strong> button above to auto-generate all missing teachers with correct subject &amp; class assignments in one go.
+                    or click the highlighted <strong>⚡ HI Fix</strong> button above to auto-generate all missing teachers with correct subject &amp; class assignments in one go.
                   </div>
                 </div>
                 <button onClick={() => setStaffingGaps([])}
@@ -965,7 +967,7 @@ export function StepResourcesV2() {
               >
                 {generating
                   ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</>
-                  : <><Sparkles size={13} /> AI Generate All Resources</>
+                  : <><Sparkles size={13} /> HI Generate All Resources</>
                 }
               </button>
               <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 10 }}>

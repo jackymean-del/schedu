@@ -263,7 +263,7 @@ export function ScopeMatrixModal({
             <div style={{ fontSize: 11.5, color: '#4B5275', lineHeight: 1.6 }}>
               <strong style={{ color: '#13111E' }}>Click a cell</strong> to cycle: Allowed → Disabled → Locked.
               <strong style={{ color: '#13111E' }}> Click a row/column header</strong> to cycle the whole row/column.
-              <span style={{ color: '#DC2626' }}> Locked = AI never schedules here.</span>
+              <span style={{ color: '#DC2626' }}> Locked = the engine never schedules here.</span>
             </div>
           </div>
 

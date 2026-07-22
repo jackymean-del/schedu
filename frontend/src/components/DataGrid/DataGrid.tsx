@@ -2124,7 +2124,7 @@ function Toolbar({
             <Filter size={12} /> {activeFilterCount} filter{activeFilterCount! > 1 ? 's' : ''} · clear
           </button>
         )}
-        {onAI && tb.aiSuggestions && <button onClick={onAI} style={{ ...btnGhost, color: TOK.accent, borderColor: TOK.containerBorder }}><Sparkles size={12} /> Smart suggestions</button>}
+        {onAI && tb.aiSuggestions && <button onClick={onAI} style={{ ...btnGhost, color: TOK.accent, borderColor: TOK.containerBorder }}><Sparkles size={12} /> HI suggestions</button>}
 
         <div style={{ flex: 1, minWidth: 0 }} />
 

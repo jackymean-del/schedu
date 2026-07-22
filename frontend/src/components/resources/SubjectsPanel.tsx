@@ -15,7 +15,7 @@
  * - Board selector  (CBSE / ICSE / IB / Cambridge / Custom)
  * - Load Unit selector (Slots/Wk · Hours/Wk · etc.) — applies to expanded per-class view
  * - Global AI Assign — delegates to parent engine (all 4 resource types)
- * - Undo AI — snapshot-based rollback
+ * - Undo HI — snapshot-based rollback
  * - All chips shown (no truncation)
  */
 
@@ -127,7 +127,7 @@ function EditCell({ value, onSave, placeholder = '…', style: extra }: {
 /** Built-in category options — two canonical types; user can add more via the Category Manager */
 const BUILTIN_CATS = ['Scholastic', 'Co-scholastic']
 
-/** Heuristic category from a subject's name — used by the "AI Categorize" bulk button.
+/** Heuristic category from a subject's name — used by the "HI Categorize" bulk button.
  *  Co-scholastic = PE / arts / music / CCA / library / assembly / pre-school activities.
  *  Everything academic → Scholastic. */
 export function inferCategory(sub: Subject): string {
@@ -1078,7 +1078,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
             {isAiAssigned && (
               <span title={fullHint}
                 style={{ fontSize: 9, fontWeight: 800, color: P, background: P_L, border: `1px solid ${P_B}`, borderRadius: 3, padding: '0 4px 1px', lineHeight: '14px', whiteSpace: 'nowrap', cursor: 'help', flexShrink: 0 }}
-              >⚡ AI</span>
+              >⚡ HI</span>
             )}
           </div>
         </td>
@@ -1606,7 +1606,7 @@ export function SubjectsPanel({
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#FFFBEB', color: '#92400E', border: '1.5px solid #FDE68A', borderRadius: 7, padding: '6px 14px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap', height: 34, boxSizing: 'border-box' as const }}
               onMouseEnter={e => { e.currentTarget.style.background = '#FEF3C7' }}
               onMouseLeave={e => { e.currentTarget.style.background = '#FFFBEB' }}
-            >↩ Undo AI</button>
+            >↩ Undo HI</button>
           )}
 
           <button
@@ -1634,7 +1634,7 @@ export function SubjectsPanel({
               ? <><span style={{ display:'inline-block', width:10, height:10, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Applying…</>
               : globalAIApplied
                 ? <>✓ Applied</>
-                : <>⚡ AI Fix</>
+                : <>⚡ HI Fix</>
             }
           </button>
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>

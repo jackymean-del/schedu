@@ -1,5 +1,5 @@
 /**
- * ExplanationPopover — UI for the AI Explanation System.
+ * ExplanationPopover — UI for the engine Explanation System.
  *
  * Compact popover that surfaces every factor the explanation engine
  * derived for a (teacher, section, subject) assignment. Two surface

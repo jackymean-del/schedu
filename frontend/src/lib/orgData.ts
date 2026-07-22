@@ -1,5 +1,6 @@
 import type { Country, OrgType } from '@/types'
 import { generateId } from './utils'
+import { teacherNorms } from './educationNorms'
 
 // ─── Country Data ─────────────────────────────────────────
 export const COUNTRIES: Country[] = [
@@ -268,7 +269,12 @@ export function generateStaff(orgType: OrgType, countryCode: string, n: number) 
   const c = getCountry(countryCode)
   const cfg = ORG_CONFIGS[orgType]
   const maxPeriods: Record<OrgType, number> = {
-    school: c.maxPeriodsWeek, college: 16, corporate: 40, hospital: 42, ngo: 30, factory: 48,
+    // School teacher cap = the national SAFE teaching load from the norms brain
+    // (lib/educationNorms.ts), so auto-generated teachers match HI Fix and the
+    // generate-step staffing alert. India 30 · England 22 · US 25 · AU 20 · rest
+    // by region.
+    school: teacherNorms(countryCode).safeMaxPeriodsWeek,
+    college: 16, corporate: 40, hospital: 42, ngo: 30, factory: 48,
   }
   return Array.from({ length: n }, (_, i) => ({
     id: generateId(),

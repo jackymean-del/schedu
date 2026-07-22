@@ -204,7 +204,7 @@ export function Step6Assign() {
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14, padding:"12px 16px", background: allocated?"#f0fdf4":"#eaecf8", borderRadius:10, border:`1.5px solid ${allocated?"#D8D2FF":"#D8D2FF"}` }}>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:13, fontWeight:600, color: allocated?"#14532d":"#3730a3" }}>
-                {allocated ? "✅ Sections auto-allocated!" : "🤖 AI Auto-allocate Everything"}
+                {allocated ? "✅ Sections auto-allocated!" : "⚡ HI Auto-allocate Everything"}
               </div>
               <div style={{ fontSize:11, color: allocated?"#7C6FE0":"#7C6FE0", marginTop:2 }}>
                 {allocated ? "Classes, sections and subjects auto-assigned. Review and edit below." : "the engine will assign all classes, sections and subjects to teachers optimally. You can edit after."}

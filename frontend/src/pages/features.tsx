@@ -10,7 +10,7 @@ const FEATURES = [
   {
     icon: '🧠',
     title: 'Smart auto-schedule',
-    desc: 'Feed schedU your teachers, subjects, and sections, then let the AI build a complete, balanced timetable in seconds. Regenerate instantly when requirements change.',
+    desc: 'Feed schedU your teachers, subjects, and sections, then let the engine build a complete, balanced timetable in seconds. Regenerate instantly when requirements change.',
   },
   {
     icon: '⚠️',

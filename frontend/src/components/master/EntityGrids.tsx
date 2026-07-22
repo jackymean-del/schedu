@@ -283,7 +283,7 @@ export function SubjectsGrid({
     },
     {
       key: 'shortName', label: 'Short', type: 'text', width: 90, placeholder: 'e.g. MATH',
-      // When user manually edits the short form → train the AI
+      // When user manually edits the short form → train the engine
       setValue: (row, v) => {
         const name = (row as any).name ?? ''
         if (name && v) rememberSubjectShort(String(name), String(v))
@@ -305,7 +305,7 @@ export function SubjectsGrid({
   return (
     <DataGrid<Subject>
       title="Subjects"
-      description="Core, optional, lab — toggle as needed. AI uses these flags to plan."
+      description="Core, optional, lab — toggle as needed. The engine uses these flags to plan."
       icon={<BookOpen size={16} />}
       columns={columns}
       rows={subjects}

@@ -246,7 +246,7 @@ export function StepCombinations() {
 
       {/* Privacy callout */}
       <div style={{ marginTop: 18, padding: '14px 16px', background: 'linear-gradient(135deg, #F5F2FF 0%, #FAFAFE 100%)', border: '1px solid #E8E4FF', borderRadius: 10, fontSize: 11.5, color: '#4B5275', lineHeight: 1.7 }}>
-        <strong style={{ color: '#7C6FE0' }}>🔒 Privacy by design:</strong> schedU never stores student names, roll numbers, or personal info to generate timetables. We use combination-wise strength only — enough for AI to size sessions, pool sections, and balance teacher load. No data protection burden, no compliance risk.
+        <strong style={{ color: '#7C6FE0' }}>🔒 Privacy by design:</strong> schedU never stores student names, roll numbers, or personal info to generate timetables. We use combination-wise strength only — enough for the engine to size sessions, pool sections, and balance teacher load. No data protection burden, no compliance risk.
       </div>
     </div>
   )

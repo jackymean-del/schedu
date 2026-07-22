@@ -62,7 +62,7 @@ const STEP_META = [
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
   { label: 'Allocation',        sub: 'Period × subject + teacher assignment' },
   { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules' },
-  { label: 'Review & generate', sub: 'AI builds your schedule'              },
+  { label: 'Review & generate', sub: 'HI builds your schedule'              },
 ]
 
 // ── Error boundary ────────────────────────────────────────────

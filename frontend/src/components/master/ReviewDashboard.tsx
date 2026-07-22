@@ -408,7 +408,7 @@ export function ReviewDashboard({
           <button
             onClick={handleReoptimize}
             disabled={reoptimizing}
-            title="Re-run AI teacher assignment to rebalance workloads without a full re-solve"
+            title="Re-run HI teacher assignment to rebalance workloads without a full re-solve"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '5px 11px', borderRadius: 7,

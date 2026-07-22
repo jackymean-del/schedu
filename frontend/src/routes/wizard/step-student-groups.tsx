@@ -1084,7 +1084,7 @@ export function StepStudentGroups() {
               </div>
             </div>
             <button onClick={runAiSuggest} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Sparkles size={13} color="#D97706" /> Smart Suggest
+              <Sparkles size={13} color="#D97706" /> HI Suggest
             </button>
             <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
               <Plus size={13} /> New block
@@ -1159,7 +1159,7 @@ export function StepStudentGroups() {
               <Layers size={32} color="#C4B5FD" style={{ marginBottom: 12 }} />
               <div style={{ fontSize: 14, fontWeight: 700, color: '#8B87AD', marginBottom: 6 }}>No combinations yet</div>
               <div style={{ fontSize: 12, color: '#B8B4D4', marginBottom: 16, lineHeight: 1.6 }}>
-                Click <strong>Smart Suggest</strong> to auto-build blocks from your electives, or <strong>New block</strong> to start one.
+                Click <strong>HI Suggest</strong> to auto-build blocks from your electives, or <strong>New block</strong> to start one.
               </div>
               <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
                 <Plus size={14} /> New block

@@ -145,7 +145,7 @@ export function StepAllocation() {
     //
     // A teacher is considered "assigned" for a (section, subject) pair when
     // EITHER of these is true — checking both avoids false positives where the
-    // user has designated a teacher in Resources but hasn't yet run AI allocate:
+    // user has designated a teacher in Resources but hasn't yet run HI allocate:
     //
     //   Signal A — teacherAllocations has an explicit period number > 0
     //              (set via Teacher Allocation tab or AI allocate)
@@ -747,7 +747,7 @@ export function StepAllocation() {
         1p={periodMinutes}m
       </span>
 
-      {/* Smart Suggest — invisible intelligence */}
+      {/* HI Suggest — invisible intelligence */}
       <button onClick={handleAIPeriodSuggest} style={{
         display: 'inline-flex', alignItems: 'center', gap: 3,
         padding: '2px 7px', borderRadius: 4,
@@ -755,7 +755,7 @@ export function StepAllocation() {
         color: '#A99FF5', fontSize: 10, fontWeight: 600,
         cursor: 'pointer', fontFamily: 'inherit',
       }}
-        title="AI-fill all sections with conflict-free allocations">
+        title="Auto-fill all sections with conflict-free allocations">
         <Sparkles size={9} /> Suggest
       </button>
 
@@ -876,7 +876,7 @@ export function StepAllocation() {
           }}>
             {sub === 'teachers' && (
               <>
-                <AISuggestButton onClick={() => handleAITeacherAllocate()} label="AI allocate all" />
+                <AISuggestButton onClick={() => handleAITeacherAllocate()} label="HI allocate all" />
                 <button
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -1188,11 +1188,11 @@ function AINotesPanel({
     const empty = sections.filter(s => (sectionTotals[s.name] ?? 0) === 0)
 
     if (over.length > 0)
-      out.push({ kind: 'warn', text: `${over.map(s => s.name).join(', ')} over board minimum. AI can auto-fill elective and enrichment slots.` })
+      out.push({ kind: 'warn', text: `${over.map(s => s.name).join(', ')} over board minimum. the engine can auto-fill elective and enrichment slots.` })
     if (under.length > 0 && under.length <= 3)
       out.push({ kind: 'warn', text: `${under.map(s => s.name).join(', ')} under capacity. Add elective or lab periods.` })
     if (empty.length > 0 && empty.length <= 5)
-      out.push({ kind: 'info', text: `${empty.length} section${empty.length > 1 ? 's' : ''} not yet allocated. Use "Smart suggest all" to fill defaults.` })
+      out.push({ kind: 'info', text: `${empty.length} section${empty.length > 1 ? 's' : ''} not yet allocated. Use "HI suggest all" to fill defaults.` })
     if (out.length === 0 && sections.length > 0)
       out.push({ kind: 'ok', text: 'All sections within board capacity range.' })
 
@@ -1202,7 +1202,7 @@ function AINotesPanel({
   if (sections.length === 0) return null
 
   return (
-    <SideCard title="AI notes" icon={<Sparkles size={13} color="#7C6FE0" />}>
+    <SideCard title="HI notes" icon={<Sparkles size={13} color="#7C6FE0" />}>
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
         {notes.map((n, i) => (
           <NoteItem key={i} kind={n.kind} text={n.text} />
@@ -1279,7 +1279,7 @@ function AIAllocationNotesPanel({
   }, [staff, teacherAllocations])
 
   return (
-    <SideCard title="AI allocation notes" icon={<Sparkles size={13} color="#7C6FE0" />}>
+    <SideCard title="HI allocation notes" icon={<Sparkles size={13} color="#7C6FE0" />}>
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
         {notes.map((n, i) => <NoteItem key={i} kind={n.kind} text={n.text} />)}
       </div>

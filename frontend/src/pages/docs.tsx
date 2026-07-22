@@ -8,7 +8,7 @@ import { ORGANIZATION_SCHEMA } from '@/lib/structuredData'
 
 const STEPS = [
   { n: 1, title: 'Enter the basics', desc: 'Name your institution, pick a board (or define your own), and add class ranges, teachers, and rooms.' },
-  { n: 2, title: 'Let the AI generate', desc: 'schedU builds period allocations, cross-class groups, and constraints automatically — no manual tables.' },
+  { n: 2, title: 'Let the engine generate', desc: 'schedU builds period allocations, cross-class groups, and constraints automatically — no manual tables.' },
   { n: 3, title: 'Review & refine', desc: 'Edit inline like a spreadsheet. schedU re-validates on every change and explains each choice.' },
   { n: 4, title: 'Export & publish', desc: 'Download class-wise, teacher-wise, and room-wise timetables as PDF or Excel, or print them directly.' },
 ]

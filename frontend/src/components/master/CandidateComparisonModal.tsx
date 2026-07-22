@@ -2,7 +2,7 @@
  * CandidateComparisonModal — side-by-side teacher ranking for one slot.
  *
  * "Who should teach VI-A Maths?" — shows every staff member ranked by
- * the AI scorer, with their top factors, current/projected load, and
+ * the engine scorer, with their top factors, current/projected load, and
  * a one-click Assign button. Lets users override the engine's
  * automatic choice with full visibility into why.
  *
@@ -79,7 +79,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
               Who should teach <span style={{ color: '#7C6FE0' }}>{section.name} · {subject.name}</span>?
             </div>
             <div style={{ fontSize: 11, color: '#4B5275', marginTop: 3 }}>
-              {ranked.length} teacher{ranked.length !== 1 ? 's' : ''} ranked by AI score. Click <strong style={{ color: '#13111E' }}>Assign</strong> to override.
+              {ranked.length} teacher{ranked.length !== 1 ? 's' : ''} ranked by HI score. Click <strong style={{ color: '#13111E' }}>Assign</strong> to override.
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -205,7 +205,7 @@ function CandidateRow({
                 fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
                 background: tone, color: '#fff',
               }}>
-                AI PICK
+                HI PICK
               </span>
             )}
             <span style={{ flex: 1 }} />
