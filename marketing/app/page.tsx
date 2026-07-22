@@ -55,7 +55,7 @@ const cardHover =
 
 export const metadata: Metadata = {
   title: 'schedU — Free School Timetable Generator & Class Scheduling Software',
-  description: 'Auto-generate conflict-free school timetables, class routines & teacher schedules in minutes. Built with Human Intelligence (not black-box AI) from real school experience — a live board that follows the clock, one-click substitutions & workload balancing. Any board, any curriculum, anywhere.',
+  description: 'Auto-generate conflict-free school timetables, class routines & teacher schedules in minutes. Built with Human Intelligence (not black-box AI) from real experience — a live board that follows the clock, one-click substitutions & workload balancing. Any board, any curriculum, anywhere.',
   alternates: { canonical: '/' },
 }
 
@@ -136,7 +136,7 @@ export default function HomePage() {
           Built with <span className="italic text-[#7C6FE0]">Human Intelligence</span>, not black-box AI.
         </h2>
         <p className="mx-auto mb-10 max-w-[620px] text-center text-[14.5px] leading-[1.75] text-[#4B5275]">
-          A real timetable isn&rsquo;t a guess. schedU is the lived experience of building school
+          A real timetable isn&rsquo;t a guess. schedU is the lived experience of building real
           schedules — the rules, the edge cases, the fairness — planned, turned into transparent
           logic, and implemented so you can see exactly why every decision was made. Predictable,
           explainable, and yours to override.

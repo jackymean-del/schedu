@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s · schedU",
   },
   description:
-    "Free online timetable maker for schools, colleges & universities. Auto-generate conflict-free class schedules, teacher timetables & school routines in minutes — smarter than black-box AI, built with Human Intelligence from real school experience. CBSE, ICSE, IB, Cambridge, Common Core & every board.",
+    "Free online timetable maker for schools, colleges & universities. Auto-generate conflict-free class schedules, teacher timetables & school routines in minutes — smarter than black-box AI, built with Human Intelligence from real experience. CBSE, ICSE, IB, Cambridge, Common Core & every board.",
   // The phrases real users actually search — timetable maker, class scheduler,
   // school routine, period allocation — belong in titles/descriptions (Google
   // ignores the keywords meta tag, but other engines still read it).

@@ -95,7 +95,7 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
               sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans', Georgia, serif", fontStyle: 'italic' }}>U</span>
             </span>
           </a>
-          <p style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>Human-Intelligence scheduling — built from real school experience</p>
+          <p style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>Human-Intelligence scheduling — built from real experience</p>
         </div>
 
         {mock && (
