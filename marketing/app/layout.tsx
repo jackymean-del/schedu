@@ -18,11 +18,23 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "schedU — AI Timetable Scheduling for Any Institution",
+    default: "schedU — School Timetable Generator & Class Scheduling Software, Built with Human Intelligence",
     template: "%s · schedU",
   },
   description:
-    "schedU uses AI to auto-generate conflict-free timetables for any institution — schools, colleges, universities, and beyond. Works with any board, any curriculum, anywhere.",
+    "Free online timetable maker for schools, colleges & universities. Auto-generate conflict-free class schedules, teacher timetables & school routines in minutes — smarter than black-box AI, built with Human Intelligence from real school experience. CBSE, ICSE, IB, Cambridge, Common Core & every board.",
+  // The phrases real users actually search — timetable maker, class scheduler,
+  // school routine, period allocation — belong in titles/descriptions (Google
+  // ignores the keywords meta tag, but other engines still read it).
+  keywords: [
+    "timetable generator", "school timetable maker", "class scheduling software",
+    "timetable software", "school scheduling software", "class routine maker",
+    "teacher timetable generator", "automatic timetable generator",
+    "school timetable software free", "college timetable maker",
+    "period allocation", "substitute teacher management", "teacher workload",
+    "CBSE timetable", "ICSE timetable", "school master timetable",
+    "AI timetable generator alternative", "exam timetable maker",
+  ],
   openGraph: {
     type: "website",
     siteName: "schedU",

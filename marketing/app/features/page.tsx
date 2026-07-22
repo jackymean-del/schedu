@@ -8,7 +8,7 @@ import { appHref } from '@/lib/appUrl'
 const FEATURES = [
   {
     icon: '🧠',
-    title: 'AI auto-schedule',
+    title: 'Smart auto-schedule',
     desc: 'Feed schedU your teachers, subjects, and sections, then let the AI build a complete, balanced timetable in seconds. Regenerate instantly when requirements change.',
   },
   {
@@ -43,7 +43,7 @@ const cardHover =
 
 export const metadata: Metadata = {
   title: 'Features',
-  description: 'Explore every schedU feature — AI auto-scheduling, real-time conflict detection, elective OR/AND groups, multi-stream support, room planning, and PDF/Excel export.',
+  description: 'Explore every schedU feature — Human-Intelligence auto-scheduling, real-time conflict detection, elective OR/AND groups, multi-stream support, room planning, and PDF/Excel export.',
   alternates: { canonical: '/features' },
 }
 

@@ -9,10 +9,10 @@ import { appHref } from '@/lib/appUrl'
 const TIERS = [
   {
     name: 'Free', price: '₹0', period: '/mo', sub: '',
-    desc: 'Everything a small team needs to try AI scheduling.',
+    desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
     features: [
-      'AI auto-scheduling — conflict-free in minutes',
+      'Human-Intelligence auto-scheduling — conflict-free in minutes',
       '1 active schedule',
       'Up to 40 classes',
       'Class, Faculty, Venue & Subject views',
@@ -28,7 +28,7 @@ const TIERS = [
       'Unlimited schedules & classes',
       'Live task assignment & substitutions',
       'Team collaboration — invite & manage users',
-      'Advanced AI & multi-shift / block scheduling',
+      'Advanced engine & multi-shift / block scheduling',
       'Workload analytics & optimisation',
       'Priority support',
     ],
@@ -42,7 +42,7 @@ const TIERS = [
 ]
 
 const FAQ = [
-  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — 1 active schedule and up to 40 classes, with full AI auto-scheduling. No credit card required.' },
+  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — 1 active schedule and up to 40 classes, with full Human-Intelligence auto-scheduling. No credit card required.' },
   { q: 'How much is Pro, and what does it add?', a: 'Pro is ₹333/month or ₹3,333/year (save ~17%). It removes the Free limits — unlimited schedules and classes — and adds live task assignment, team collaboration, workload analytics, and priority support.' },
   { q: 'What payment methods do you accept?', a: 'Payments are processed securely via Razorpay in INR — UPI, cards, and netbanking. International cards are supported too. You can cancel anytime and keep access until the end of your billing period.' },
   { q: 'Do you support any curriculum?', a: 'schedU has no built-in board restrictions. Enter your own period counts, subject names, and grading labels — it adapts to you.' },
@@ -57,9 +57,25 @@ export const metadata: Metadata = {
   alternates: { canonical: '/pricing' },
 }
 
+// FAQPage structured data — mirrors the visible FAQ exactly (Google requires
+// the marked-up questions to be present on the page).
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+}
+
 export default function PricingPage() {
   return (
     <MarketingChrome>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_SCHEMA) }}
+      />
       {/* Hero */}
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-12 pt-[72px] text-center">
         <p className="mb-[18px] text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Pricing</p>

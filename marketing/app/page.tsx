@@ -26,15 +26,15 @@ const STATS = [
 const TIERS = [
   {
     name: 'Free', price: '₹0', period: '/mo', sub: '',
-    desc: 'Everything a small team needs to try AI scheduling.',
+    desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
-    features: ['AI auto-scheduling — conflict-free', '1 active schedule', 'Up to 40 classes', 'All timetable views', 'Excel & PDF export'],
+    features: ['Human-Intelligence auto-scheduling — conflict-free', '1 active schedule', 'Up to 40 classes', 'All timetable views', 'Excel & PDF export'],
   },
   {
     name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
     desc: 'For a single institution running multiple streams and electives.',
     cta: 'Get Pro', href: appHref('/login'), popular: true,
-    features: ['Unlimited schedules & classes', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced AI & multi-shift scheduling', 'Priority support'],
+    features: ['Unlimited schedules & classes', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced engine & multi-shift scheduling', 'Priority support'],
   },
   {
     name: 'Enterprise', price: 'Custom', period: '', sub: '',
@@ -54,8 +54,8 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'schedU — Add Life to Your Schedules, Smartly | AI Timetable Generator',
-  description: 'AI-generated, conflict-free timetables that keep living after publish day: a live board that follows the clock, fair one-click substitutions, and workload balancing. Any board, any curriculum, anywhere.',
+  title: 'schedU — Free School Timetable Generator & Class Scheduling Software',
+  description: 'Auto-generate conflict-free school timetables, class routines & teacher schedules in minutes. Built with Human Intelligence (not black-box AI) from real school experience — a live board that follows the clock, one-click substitutions & workload balancing. Any board, any curriculum, anywhere.',
   alternates: { canonical: '/' },
 }
 
@@ -66,7 +66,7 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   applicationCategory: 'EducationalApplication',
   operatingSystem: 'Web',
   url: 'https://schedu.bhusku.com',
-  description: 'AI-generated, conflict-free timetables for schools, colleges, and universities — any board, any curriculum.',
+  description: 'Conflict-free, expertly generated timetables for schools, colleges, and universities — any board, any curriculum.',
   // Only the numeric INR tiers become Offers; Enterprise ("Custom") is omitted
   // rather than advertised with a fake price.
   offers: TIERS.filter(t => t.price.startsWith('₹')).map(t => ({
@@ -129,8 +129,35 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Human Intelligence — the positioning story */}
+      <section id="human-intelligence" className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16">
+        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Why schedU is different</p>
+        <h2 className="mb-3 max-w-[720px] text-center text-[clamp(24px,4vw,34px)] font-normal leading-[1.18] tracking-[-0.6px] text-[#13111E]">
+          Built with <span className="italic text-[#7C6FE0]">Human Intelligence</span>, not black-box AI.
+        </h2>
+        <p className="mx-auto mb-10 max-w-[620px] text-center text-[14.5px] leading-[1.75] text-[#4B5275]">
+          A real timetable isn&rsquo;t a guess. schedU is the lived experience of building school
+          schedules — the rules, the edge cases, the fairness — planned, turned into transparent
+          logic, and implemented so you can see exactly why every decision was made. Predictable,
+          explainable, and yours to override.
+        </p>
+        <div className="grid w-full max-w-[920px] gap-4 sm:grid-cols-3">
+          {[
+            { icon: '🧠', title: 'Practically experienced', body: 'Modelled on how schedules are really made — dispersal times, double periods, electives, staggered lunches, day-offs.' },
+            { icon: '📐', title: 'Planned & algorithmed', body: 'Every constraint is deliberate logic with a national-policy brain behind it — not a statistical black box that hallucinates.' },
+            { icon: '🔍', title: 'Explainable & yours', body: 'See why each slot got its teacher and subject, and hand-edit any cell. The engine assists; you stay in control.' },
+          ].map(c => (
+            <div key={c.title} className="rounded-[14px] border border-[#EFEBFF] bg-[#FCFBFF] px-[22px] py-6">
+              <div className="mb-2.5 text-[22px]">{c.icon}</div>
+              <h3 className="mb-1.5 text-[15px] font-bold text-[#13111E]">{c.title}</h3>
+              <p className="text-[13px] leading-[1.65] text-[#4B5275]">{c.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Try it live — a genuinely interactive Live board, not a video */}
-      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16">
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#FAFAFE] px-6 py-16">
         <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">No signup needed — try it right here</p>
         <h2 className="mb-2 max-w-[640px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
           Drag through a school day, <span className="italic text-[#7C6FE0]">live.</span>
