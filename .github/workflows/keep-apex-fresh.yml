@@ -1,0 +1,63 @@
+name: Keep apex fresh (force-deploy marketing)
+
+# Why this exists
+# ---------------
+# Both Vercel projects auto-deploy on push. But a git-triggered marketing deploy
+# does NOT reliably bust the schedu.bhusku.com edge cache — after the app deploys,
+# the Mumbai (bom1) edge can resurface the stale Vite app shell (`<div id=root>`)
+# at the apex. The only thing that clears it is a FORCED CLI deploy of marketing
+# (a brand-new deployment ⇒ fresh edge), and it must run from the `marketing/`
+# directory (deploying from the repo root picks up the root vercel.json, which
+# builds the app instead).
+#
+# This job waits for the push's auto-deploys to settle, then force-deploys
+# marketing so the apex is always fresh — no more manual `vercel --prod --force`.
+#
+# Requires one repo secret: VERCEL_TOKEN (a Vercel access token with deploy rights
+# for the team). The org/project IDs below are identifiers, not secrets.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: apex-force-refresh
+  cancel-in-progress: true
+
+jobs:
+  force-refresh-marketing:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_tvQdPIk0v7HPYReWluLD1JbQ
+      VERCEL_PROJECT_ID: prj_2l6sW6AJYLXIdxB3cUtOsFNGZb83
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Let the push's own auto-deploys (app + marketing git integration) finish
+      # first, so our forced deploy is the LAST production deploy and wins the alias.
+      - name: Wait for push auto-deploys to settle
+        run: sleep 90
+
+      - name: Force-deploy marketing (fresh edge — busts the apex cache)
+        working-directory: marketing
+        run: npx vercel@latest --prod --force --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Verify apex serves marketing (not the app shell)
+        run: |
+          sleep 6
+          body="$(curl -s https://schedu.bhusku.com/)"
+          if printf '%s' "$body" | grep -qi 'Add life to your schedules'; then
+            echo "✅ apex serves the marketing hero"
+          elif printf '%s' "$body" | grep -qi 'id="root"'; then
+            echo "::error::apex is STILL serving the app shell after force-deploy"
+            exit 1
+          else
+            echo "::warning::could not positively identify apex content (marketing may have changed copy)"
+          fi
