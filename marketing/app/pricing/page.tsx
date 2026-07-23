@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { MarketingChrome } from '@/components/MarketingChrome'
+import { LocalPrice, LocalMoney, LocalBillingNote } from '@/components/LocalPrice'
 import { appHref } from '@/lib/appUrl'
 
 // Pricing here MUST match the in-app checkout (Razorpay, INR): Pro is ₹333/mo
@@ -86,6 +87,7 @@ export default function PricingPage() {
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
           Start free. Upgrade to Pro when you need unlimited classes, electives, live task assignment, and team collaboration.
         </p>
+        <LocalBillingNote className="mt-4 max-w-[520px] text-[12px] leading-[1.5] text-[#A5A1C0]" />
       </section>
 
       {/* Tiers */}
@@ -107,10 +109,10 @@ export default function PricingPage() {
               )}
               <h2 className="text-base font-bold text-[#13111E]">{t.name}</h2>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">{t.price}</span>
+                <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]"><LocalPrice>{t.price}</LocalPrice></span>
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
               </div>
-              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub}</p>
+              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub ? <LocalMoney>{t.sub}</LocalMoney> : ''}</p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href} className="no-underline">
                 <button

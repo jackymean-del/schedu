@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { CheckCircle2, Zap, Check, Loader2, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { billingApi, type BillingStatus } from '@/api/client'
+import { localizeINR } from '@/lib/localCurrency'
 
 declare global {
   interface Window {
@@ -93,6 +94,15 @@ export function SubscriptionPage() {
   const discountPct = cfg?.yearly.discountPct ?? Math.round((1 - yearly / (monthly * 12)) * 100)
   const yearlyPerMonth = Math.round(yearly / 12)
   const billingEnabled = cfg?.enabled ?? false
+
+  // Localised DISPLAY of the (INR) prices — the charge itself is always INR via
+  // Razorpay; these only show the visitor roughly what it costs in their money.
+  const locFree      = useMemo(() => localizeINR(0), [])
+  const locMonthly   = useMemo(() => localizeINR(monthly), [monthly])
+  const locYearly    = useMemo(() => localizeINR(yearly), [yearly])
+  const locYearlyPer = useMemo(() => localizeINR(yearlyPerMonth), [yearlyPerMonth])
+  const converted    = locMonthly.converted
+  const approx       = converted ? '≈ ' : ''
 
   useEffect(() => {
     // Public config (prices + whether billing is live) — plain fetch, no auth.
@@ -257,7 +267,7 @@ export function SubscriptionPage() {
               <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 4 }}>Free</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#7C6FE0', marginBottom: 16 }}>
-                  ₹0 <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>/ month</span>
+                  {locFree.amount} <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>/ month</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {FREE_FEATURES.map(f => (
@@ -277,15 +287,20 @@ export function SubscriptionPage() {
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Pro</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
                   <span style={{ fontSize: 24, fontWeight: 900, color: '#A78BFA' }}>
-                    {interval === 'monthly' ? inr(monthly) : inr(yearly)}
+                    {approx}{interval === 'monthly' ? locMonthly.amount : locYearly.amount}
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>
                     {interval === 'monthly' ? '/ month' : '/ year'}
                   </span>
                 </div>
-                <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: 16, minHeight: 16 }}>
-                  {interval === 'yearly' ? `≈ ${inr(yearlyPerMonth)}/mo · save ${discountPct}% vs monthly` : `or ${inr(yearly)}/yr — save ${discountPct}%`}
+                <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: converted ? 4 : 16, minHeight: 16 }}>
+                  {interval === 'yearly' ? `${approx}${locYearlyPer.amount}/mo · save ${discountPct}% vs monthly` : `or ${approx}${locYearly.amount}/yr — save ${discountPct}%`}
                 </div>
+                {converted && (
+                  <div style={{ fontSize: 10.5, color: '#8B87AD', marginBottom: 16, minHeight: 14 }}>
+                    Local price is approximate · billed in {inr(interval === 'monthly' ? monthly : yearly)} (INR)
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {PRO_FEATURES.map(f => (
                     <div key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>

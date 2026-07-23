@@ -4,6 +4,7 @@ import { HeroWalkthrough } from '@/components/animations/HeroWalkthrough'
 import { LiveDemo } from '@/components/animations/LiveDemo'
 import { CalendarShowcase } from '@/components/animations/CalendarShowcase'
 import { UniqueFeatures } from '@/components/UniqueFeatures'
+import { LocalPrice, LocalMoney, LocalBillingNote } from '@/components/LocalPrice'
 import { appHref } from '@/lib/appUrl'
 
 const BOARDS = [
@@ -215,6 +216,7 @@ export default function HomePage() {
         <p className="mb-[38px] max-w-[440px] text-center text-sm leading-[1.6] text-[#8B87AD]">
           Start free, upgrade when your institution grows. No hidden fees.
         </p>
+        <LocalBillingNote className="-mt-[22px] mb-[30px] max-w-[460px] text-center text-[11.5px] leading-[1.5] text-[#A5A1C0]" />
         <div className="grid w-full max-w-[920px] grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-stretch gap-[18px]">
           {TIERS.map(t => (
             <div
@@ -230,10 +232,10 @@ export default function HomePage() {
               )}
               <h3 className="text-base font-bold text-[#13111E]">{t.name}</h3>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">{t.price}</span>
+                <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]"><LocalPrice>{t.price}</LocalPrice></span>
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
               </div>
-              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub}</p>
+              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub ? <LocalMoney>{t.sub}</LocalMoney> : ''}</p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href} className="no-underline">
                 <button
