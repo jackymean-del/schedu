@@ -23,7 +23,7 @@ import { ScoreBreakdownPopover } from './ScoreBreakdownPopover'
 import {
   type BlockedSlot, type DynamicLearningGroup,
   blockedCategoryLabel, blockedRemedy,
-  reoptimizeTeachers, buildTeacherTT,
+  reoptimizeTeachers, buildTeacherTT, deriveTeacherAllocations,
 } from '@/lib/schedulingEngine'
 import { DLGInspector } from './DLGInspector'
 import { ConflictResolutionWizard } from './ConflictResolutionWizard'
@@ -219,6 +219,13 @@ export function ReviewDashboard({
       if (result.reassignedCount > 0) {
         liveStore.setClassTT?.(result.classTT)
         liveStore.setTeacherTT?.(buildTeacherTT(result.classTT, staff, workDays))
+        // BACKWARD SYNC: reflect the reassigned teachers in the allocation
+        // matrix so the Allocation view (and a future re-generate) match the
+        // optimised timetable instead of the pre-generation plan.
+        liveStore.setTeacherAllocations?.(deriveTeacherAllocations(result.classTT))
+        // Keep the dashboard's own view (solverOutput.classTT) in sync so a
+        // second re-optimise / swap starts from the optimised timetable.
+        onApplyConflictFixes?.(result.classTT)
       }
       setReoptimizedLoad(result.teacherWeeklyLoad)
       setReoptimizeResult({
@@ -236,6 +243,18 @@ export function ReviewDashboard({
       setScoreHistory(h => [...h, { score: newTotal, event: 'reoptimize', breakdown: reoptBd }])
       setReoptimizing(false)
     }, 16)
+  }
+
+  // Persist a post-generation timetable edit (manual swap / conflict fix) to the
+  // store, keeping the teacher timetable AND the allocation matrix in sync
+  // (BACKWARD SYNC) so the Timetable and Allocation views both reflect the edit
+  // — and a future re-generate starts from the edited reality, not the stale plan.
+  const persistTimetableEdit = (updated: ClassTimetable) => {
+    const s = useTimetableStore.getState() as any
+    s.setClassTT?.(updated)
+    s.setTeacherTT?.(buildTeacherTT(updated, staff, workDays))
+    s.setTeacherAllocations?.(deriveTeacherAllocations(updated))
+    onApplyConflictFixes?.(updated)
   }
 
   // ── Conflict resolution wizard state ──
@@ -717,7 +736,7 @@ export function ReviewDashboard({
           workDays={workDays}
           onClose={() => setWizardOpen(false)}
           onApplyFixes={updated => {
-            onApplyConflictFixes?.(updated)
+            persistTimetableEdit(updated)
             setWizardOpen(false)
           }}
         />
@@ -758,7 +777,7 @@ export function ReviewDashboard({
           workDays={workDays}
           onClose={() => setSwapOpen(false)}
           onApplyFixes={updated => {
-            onApplyConflictFixes?.(updated)
+            persistTimetableEdit(updated)
             setSwapOpen(false)
           }}
         />

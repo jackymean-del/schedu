@@ -732,6 +732,9 @@ export function Step6Generate() {
             score={solverOutput.score}
             blockedSlots={solverOutput.blockedSlots}
             dynamicLearningGroups={solverOutput.dynamicLearningGroups}
+            onApplyConflictFixes={updated =>
+              setSolverOutput(prev => (prev ? { ...prev, classTT: updated } : prev))
+            }
           />
         </div>
       )}

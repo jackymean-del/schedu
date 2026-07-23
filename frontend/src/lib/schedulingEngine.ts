@@ -1433,6 +1433,47 @@ export function buildTeacherTT(
   return teacherTT
 }
 
+/**
+ * deriveTeacherAllocations — the BACKWARD counterpart to generation.
+ *
+ * Rebuilds the teacher→section→subject→periods matrix by counting the actual
+ * lessons in a (possibly hand-edited / re-optimised) timetable. Call this after
+ * any post-generation change that reassigns WHO teaches (Re-optimize Teachers,
+ * a manual swap) and persist the result via `setTeacherAllocations`, so the
+ * Allocation view and workload analytics reflect the timetable instead of the
+ * pre-generation plan. `subjectAllocations` (the demand — how many periods a
+ * subject gets) is NOT affected by a teacher reassignment, so it is left as-is.
+ *
+ * Keys match the store: section NAME (classTT is keyed by `section.name`),
+ * subject name and teacher name — the same keys the Allocation page reads.
+ */
+export function deriveTeacherAllocations(
+  classTT: ClassTimetable,
+): Record<string, Record<string, Record<string, number>>> {
+  const matrix: Record<string, Record<string, Record<string, number>>> = {}
+  const add = (teacher?: string, section?: string, subject?: string) => {
+    if (!teacher || !section || !subject) return
+    ;(matrix[teacher] ??= {})
+    ;(matrix[teacher][section] ??= {})
+    matrix[teacher][section][subject] = (matrix[teacher][section][subject] ?? 0) + 1
+  }
+  Object.entries(classTT).forEach(([secName, secData]) => {
+    Object.values(secData ?? {}).forEach(dayData => {
+      Object.values(dayData ?? {}).forEach(cell => {
+        if (!cell) return
+        // OR/AND cells carry per-subject teachers in groupAssignments; count each.
+        const ga = cell.groupAssignments
+        if (ga && ga.length) {
+          ga.forEach(g => add(g.teacher ?? cell.teacher, secName, g.subject ?? cell.subject))
+        } else {
+          add(cell.teacher, secName, cell.subject)
+        }
+      })
+    })
+  })
+  return matrix
+}
+
 // ─── Teacher Re-optimisation Pass ────────────────────────
 /**
  * reoptimizeTeachers — re-run the AI teacher-assignment scoring on an
