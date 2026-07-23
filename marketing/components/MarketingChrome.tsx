@@ -65,7 +65,7 @@ export function MarketingChrome({ children }: { children: ReactNode }) {
       <div className="flex-1">{children}</div>
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F0EDFF] px-12 py-5">
-        <div className="flex gap-6">
+        <div className="flex flex-wrap items-center gap-6">
           {FOOTER_LINKS.map(l => (
             <a
               key={l}
@@ -75,8 +75,14 @@ export function MarketingChrome({ children }: { children: ReactNode }) {
               {l}
             </a>
           ))}
+          <a
+            href="mailto:hello@bhusku.com"
+            className="text-xs font-medium text-[#8B87AD] no-underline transition-colors hover:text-[#7C6FE0]"
+          >
+            hello@bhusku.com
+          </a>
         </div>
-        <span className="text-xs text-[#8B87AD]">© 2025 schedU</span>
+        <span className="text-xs text-[#8B87AD]">© 2026 schedU · by bhusku</span>
       </footer>
 
     </div>

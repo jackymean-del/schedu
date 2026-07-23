@@ -19,7 +19,7 @@ export function AppFooter({ style }: { style?: React.CSSProperties }) {
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>
         © {new Date().getFullYear()} schedU. All rights reserved.
       </span>
-      <div style={{ display: 'flex', gap: 20 }}>
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         {links.map(l => (
           <a key={l} href="#" style={{
             fontSize: 12, color: '#9CA3AF', textDecoration: 'none',
@@ -31,6 +31,15 @@ export function AppFooter({ style }: { style?: React.CSSProperties }) {
             {l}
           </a>
         ))}
+        <a href="mailto:hello@bhusku.com" style={{
+          fontSize: 12, color: '#9CA3AF', textDecoration: 'none',
+          transition: 'color 0.13s',
+        }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#6B7280')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#9CA3AF')}
+        >
+          hello@bhusku.com
+        </a>
       </div>
     </footer>
   )
