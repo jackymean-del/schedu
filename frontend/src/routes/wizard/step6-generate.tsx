@@ -10,6 +10,7 @@ import {
   bandForSection, checkBellCompliance, computeTeacherRequirement, type GradeBand,
 } from "@/lib/educationNorms"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
+import { deriveTeacherAllocations } from "@/lib/schedulingEngine"
 import { getCountry } from "@/lib/orgData"
 import type { OptionalBlock, OptionalOption, Period, ClassTimetable } from "@/types"
 import { GraduationCap, Users, BookOpen, Building2, CalendarDays, Clock } from "lucide-react"
@@ -279,6 +280,10 @@ export function Step6Generate() {
         setPeriods(res.periods)
         setClassTT(res.classTT)
         setTeacherTT(res.teacherTT)
+        // Reconcile the allocation matrix to the ACTUAL generated timetable so
+        // the Allocation view matches reality (the solver can place slightly
+        // more/fewer lessons for a teacher than the pre-gen plan recorded).
+        ;(store as any).setTeacherAllocations?.(deriveTeacherAllocations(res.classTT))
         setConflicts(res.conflicts)
         setSolverOutput(output)
         setConfig({ blockMeta: res.blockMeta } as any)
@@ -288,6 +293,10 @@ export function Step6Generate() {
         setPeriods(res.periods)
         setClassTT(res.classTT)
         setTeacherTT(res.teacherTT)
+        // Reconcile the allocation matrix to the ACTUAL generated timetable so
+        // the Allocation view matches reality (the solver can place slightly
+        // more/fewer lessons for a teacher than the pre-gen plan recorded).
+        ;(store as any).setTeacherAllocations?.(deriveTeacherAllocations(res.classTT))
         setConflicts(res.conflicts)
         setSolverOutput(output)
         // Persist blocked-slot telemetry to the store so any view (timetable
