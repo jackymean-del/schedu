@@ -15,7 +15,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { CheckCircle2, Zap, Check, Loader2, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { billingApi, type BillingStatus } from '@/api/client'
-import { localizeINR } from '@/lib/localCurrency'
+import { isIndia, getInrToUsd, roundedUSD, formatINR, FALLBACK_INR_USD } from '@/lib/localCurrency'
 
 declare global {
   interface Window {
@@ -33,15 +33,14 @@ interface BillingConfig {
 
 const FREE_FEATURES = [
   'Human-Intelligence auto-scheduling — conflict-free in minutes',
-  '1 active schedule',
-  'Up to 40 classes',
+  'Up to 10 sections',
   'Class, Faculty, Venue & Subject views',
   'Live calendar (view mode)',
   'Excel & print / PDF export',
 ]
 
 const PRO_FEATURES = [
-  'Unlimited schedules & classes',
+  'Up to 70 sections',
   'Live task assignment & substitutions',
   'Team collaboration — invite & manage users',
   'Advanced engine & multi-shift / block scheduling',
@@ -70,8 +69,6 @@ function loadRazorpay(): Promise<boolean> {
   })
 }
 
-const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
-
 export function SubscriptionPage() {
   const user = useAuthStore(s => s.user)
 
@@ -95,14 +92,15 @@ export function SubscriptionPage() {
   const yearlyPerMonth = Math.round(yearly / 12)
   const billingEnabled = cfg?.enabled ?? false
 
-  // Localised DISPLAY of the (INR) prices — the charge itself is always INR via
-  // Razorpay; these only show the visitor roughly what it costs in their money.
-  const locFree      = useMemo(() => localizeINR(0), [])
-  const locMonthly   = useMemo(() => localizeINR(monthly), [monthly])
-  const locYearly    = useMemo(() => localizeINR(yearly), [yearly])
-  const locYearlyPer = useMemo(() => localizeINR(yearlyPerMonth), [yearlyPerMonth])
-  const converted    = locMonthly.converted
-  const approx       = converted ? '≈ ' : ''
+  // Currency DISPLAY: India sees INR (the real charge); everyone else sees a
+  // rounded whole-dollar figure at the live INR→USD rate. Razorpay always
+  // charges INR regardless. `usdRate` loads async; until then non-India uses the
+  // static fallback so there's no flicker between currencies.
+  const india = useMemo(() => isIndia(), [])
+  const [usdRate, setUsdRate] = useState<number | null>(null)
+  useEffect(() => { if (!india) getInrToUsd().then(setUsdRate) }, [india])
+  const rate = usdRate ?? FALLBACK_INR_USD
+  const money = (inr: number) => india ? formatINR(inr) : roundedUSD(inr, rate)
 
   useEffect(() => {
     // Public config (prices + whether billing is live) — plain fetch, no auth.
@@ -267,7 +265,7 @@ export function SubscriptionPage() {
               <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 4 }}>Free</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#7C6FE0', marginBottom: 16 }}>
-                  {locFree.amount} <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>/ month</span>
+                  {money(0)} <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>/ month</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {FREE_FEATURES.map(f => (
@@ -287,18 +285,18 @@ export function SubscriptionPage() {
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Pro</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
                   <span style={{ fontSize: 24, fontWeight: 900, color: '#A78BFA' }}>
-                    {approx}{interval === 'monthly' ? locMonthly.amount : locYearly.amount}
+                    {interval === 'monthly' ? money(monthly) : money(yearly)}
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>
                     {interval === 'monthly' ? '/ month' : '/ year'}
                   </span>
                 </div>
-                <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: converted ? 4 : 16, minHeight: 16 }}>
-                  {interval === 'yearly' ? `${approx}${locYearlyPer.amount}/mo · save ${discountPct}% vs monthly` : `or ${approx}${locYearly.amount}/yr — save ${discountPct}%`}
+                <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: !india ? 4 : 16, minHeight: 16 }}>
+                  {interval === 'yearly' ? `${money(yearlyPerMonth)}/mo · save ${discountPct}% vs monthly` : `or ${money(yearly)}/yr — save ${discountPct}%`}
                 </div>
-                {converted && (
+                {!india && (
                   <div style={{ fontSize: 10.5, color: '#8B87AD', marginBottom: 16, minHeight: 14 }}>
-                    Local price is approximate · billed in {inr(interval === 'monthly' ? monthly : yearly)} (INR)
+                    Dollar price is rounded at the live exchange rate; billed securely in INR.
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -334,6 +332,13 @@ export function SubscriptionPage() {
               </div>
             </div>
           </>
+        )}
+
+        {!isPro && (
+          <p style={{ fontSize: 12, color: '#8B87AD', textAlign: 'center', margin: 0 }}>
+            Need <strong style={{ color: '#4B5275' }}>more than 70 sections</strong> or multiple campuses?{' '}
+            <a href="mailto:hello@bhusku.com" style={{ color: '#7C6FE0', fontWeight: 600 }}>Talk to us about a Custom plan</a>.
+          </p>
         )}
 
         <p style={{ fontSize: 12, color: '#8B87AD', textAlign: 'center', margin: 0 }}>

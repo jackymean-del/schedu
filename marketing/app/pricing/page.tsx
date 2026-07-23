@@ -14,8 +14,7 @@ const TIERS = [
     cta: 'Start free', href: appHref('/login'), popular: false,
     features: [
       'Human-Intelligence auto-scheduling — conflict-free in minutes',
-      '1 active schedule',
-      'Up to 40 classes',
+      'Up to 10 sections',
       'Class, Faculty, Venue & Subject views',
       'Live calendar (view mode)',
       'Excel & print / PDF export',
@@ -26,7 +25,7 @@ const TIERS = [
     desc: 'For a single institution running multiple streams and electives.',
     cta: 'Get Pro', href: appHref('/login'), popular: true,
     features: [
-      'Unlimited schedules & classes',
+      'Up to 70 sections',
       'Live task assignment & substitutions',
       'Team collaboration — invite & manage users',
       'Advanced engine & multi-shift / block scheduling',
@@ -36,15 +35,15 @@ const TIERS = [
   },
   {
     name: 'Enterprise', price: 'Custom', period: '', sub: '',
-    desc: 'For groups managing many campuses or institutions.',
+    desc: 'For groups beyond 70 sections or running multiple campuses.',
     cta: 'Talk to sales', href: 'mailto:hello@bhusku.com', popular: false,
-    features: ['Everything in Pro', 'Multi-campus management', 'API access', 'SSO / SAML', 'Dedicated success manager'],
+    features: ['Beyond 70 sections', 'Multi-campus management', 'Everything in Pro', 'API access', 'SSO / SAML'],
   },
 ]
 
 const FAQ = [
-  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — 1 active schedule and up to 40 classes, with full Human-Intelligence auto-scheduling. No credit card required.' },
-  { q: 'How much is Pro, and what does it add?', a: 'Pro is ₹333/month or ₹3,333/year (save ~17%). It removes the Free limits — unlimited schedules and classes — and adds live task assignment, team collaboration, workload analytics, and priority support.' },
+  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — up to 10 sections, with full Human-Intelligence auto-scheduling. No credit card required.' },
+  { q: 'How much is Pro, and what does it add?', a: 'Pro is ₹333/month or ₹3,333/year (save ~17%) — shown in USD outside India, billed in INR. It raises the limit to 70 sections and adds live task assignment, team collaboration, workload analytics, and priority support. Beyond 70 sections or multiple campuses is a Custom plan.' },
   { q: 'What payment methods do you accept?', a: 'Payments are processed securely via Razorpay in INR — UPI, cards, and netbanking. International cards are supported too. You can cancel anytime and keep access until the end of your billing period.' },
   { q: 'Do you support any curriculum?', a: 'schedU has no built-in board restrictions. Enter your own period counts, subject names, and grading labels — it adapts to you.' },
 ]
@@ -54,7 +53,7 @@ const cardHover =
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'Simple, transparent pricing for schedU. Start free, then upgrade to Pro (₹333/mo) for unlimited classes, multi-stream electives, and team collaboration. Free / Pro / Enterprise.',
+  description: 'Simple, transparent pricing for schedU. Free up to 10 sections, Pro (₹333/mo, shown in USD outside India) up to 70 sections with multi-stream electives and team collaboration, Custom beyond 70 or multi-campus.',
   alternates: { canonical: '/pricing' },
 }
 
@@ -85,7 +84,7 @@ export default function PricingPage() {
           <span className="italic text-[#7C6FE0]">institution.</span>
         </h1>
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
-          Start free. Upgrade to Pro when you need unlimited classes, electives, live task assignment, and team collaboration.
+          Start free up to 10 sections. Upgrade to Pro for up to 70 sections, electives, live task assignment, and team collaboration.
         </p>
         <LocalBillingNote className="mt-4 max-w-[520px] text-[12px] leading-[1.5] text-[#A5A1C0]" />
       </section>

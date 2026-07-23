@@ -29,19 +29,19 @@ const TIERS = [
     name: 'Free', price: '₹0', period: '/mo', sub: '',
     desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
-    features: ['Human-Intelligence auto-scheduling — conflict-free', '1 active schedule', 'Up to 40 classes', 'All timetable views', 'Excel & PDF export'],
+    features: ['Human-Intelligence auto-scheduling — conflict-free', 'Up to 10 sections', 'All timetable views', 'Excel & PDF export'],
   },
   {
     name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
     desc: 'For a single institution running multiple streams and electives.',
     cta: 'Get Pro', href: appHref('/login'), popular: true,
-    features: ['Unlimited schedules & classes', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced engine & multi-shift scheduling', 'Priority support'],
+    features: ['Up to 70 sections', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced engine & multi-shift scheduling', 'Priority support'],
   },
   {
     name: 'Enterprise', price: 'Custom', period: '', sub: '',
-    desc: 'For groups managing many campuses or institutions.',
+    desc: 'For groups beyond 70 sections or running multiple campuses.',
     cta: 'Talk to sales', href: 'mailto:hello@bhusku.com', popular: false,
-    features: ['Everything in Pro', 'Multi-campus management', 'API access', 'SSO / SAML', 'Dedicated success manager'],
+    features: ['Beyond 70 sections', 'Multi-campus management', 'Everything in Pro', 'API access', 'SSO / SAML'],
   },
 ]
 
