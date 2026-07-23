@@ -129,6 +129,39 @@ function buildSectionsForGrades(grades: string[]): Section[] {
 }
 
 /**
+ * Fit a set of freshly-built sections to an approximate target count WITHOUT
+ * dropping any grade in the configured range.
+ *
+ * The old logic did `built.slice(0, target)`, which — for a range like I–V with
+ * an approximate count of 5 — kept only the first 5 sections (I-A/B/C + II-A/B),
+ * silently collapsing a five-grade school into two grades. Instead we distribute
+ * the target evenly across the grades present, guaranteeing every grade keeps at
+ * least one section (the explicit range always wins over an approximate count).
+ */
+function fitSectionsToTarget(built: Section[], target?: number): Section[] {
+  if (!target || target <= 0 || built.length <= target) return built
+  // Group by grade, preserving first-seen (range) order.
+  const byGrade = new Map<string, Section[]>()
+  for (const s of built) {
+    const g = ((s as any).grade ?? s.name) as string
+    if (!byGrade.has(g)) byGrade.set(g, [])
+    byGrade.get(g)!.push(s)
+  }
+  const grades = [...byGrade.keys()]
+  const n = grades.length
+  const base  = Math.floor(target / n)   // 0 when target < n → every grade still keeps 1
+  const extra = target % n               // remainder goes to the TOP grades
+  const out: Section[] = []
+  grades.forEach((g, i) => {
+    // Matches the create-modal preview's distributeSections(): remainder on the
+    // highest grades, so the previewed section counts equal what gets built.
+    const want = Math.max(1, base + (i >= n - extra ? 1 : 0))
+    out.push(...byGrade.get(g)!.slice(0, want))
+  })
+  return out
+}
+
+/**
  * Build sections from the class list configured in Shift & Timing (Step 1).
  * Creates `sectionsPerClass` sections per class.
  * If a class has a stream assigned, section names include the stream code:
@@ -721,8 +754,9 @@ export function StepResourcesV2() {
     } else {
       const targetSections = (config as any).numSections ?? undefined
       const built = buildSections(3)
-      const raw   = targetSections && built.length > targetSections
-        ? built.slice(0, targetSections) : built
+      // Distribute the approximate count across ALL grades in the range — never
+      // truncate to the first grade or two (see fitSectionsToTarget).
+      const raw   = fitSectionsToTarget(built, targetSections)
       workingSections = raw.map((sec: any) => ({
         ...sec,
         strength: DEFAULT_STRENGTH[GRADE_GROUP[(sec as any).grade] ?? 'Primary'] ?? 35,

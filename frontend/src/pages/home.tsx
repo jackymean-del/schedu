@@ -45,21 +45,24 @@ const DEMO_CELLS = [
   { label: 'Capacity', value: '34', hi: true },
 ]
 
+// Prices MUST match /pricing on the marketing site and the in-app Razorpay
+// checkout (INR): Pro is ₹333/mo or ₹3,333/yr. Free caps match what the app
+// actually enforces. Enterprise is "Custom" (no advertised price).
 const TIERS = [
   {
-    name: 'Starter', price: 'Free', period: '',
+    name: 'Free', price: '₹0', period: '/mo', sub: '',
     desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: '/wizard', popular: false,
-    features: ['Up to 2 classes', 'Up to 20 subjects', 'Smart auto-schedule', 'Real-time conflict detection', 'PDF export'],
+    features: ['Human-Intelligence auto-scheduling — conflict-free', '1 active schedule', 'Up to 40 classes', 'All timetable views', 'Excel & PDF export'],
   },
   {
-    name: 'Pro', price: '$29', period: '/mo',
+    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
     desc: 'For a single institution running multiple streams and electives.',
-    cta: 'Start free', href: '/wizard', popular: true,
-    features: ['Unlimited classes', 'Unlimited subjects', 'Elective OR/AND groups', 'Multi-stream support', 'Room & resource planning', 'Priority support'],
+    cta: 'Get Pro', href: '/wizard', popular: true,
+    features: ['Unlimited schedules & classes', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced engine & multi-shift scheduling', 'Priority support'],
   },
   {
-    name: 'Enterprise', price: '$99', period: '/mo',
+    name: 'Enterprise', price: 'Custom', period: '', sub: '',
     desc: 'For groups managing many campuses or institutions.',
     cta: 'Talk to sales', href: 'mailto:hello@bhusku.com', popular: false,
     features: ['Everything in Pro', 'Multi-campus management', 'API access', 'SSO / SAML', 'Dedicated success manager'],
@@ -75,8 +78,9 @@ const TESTIMONIALS = [
 const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
-// Mirrors the prices actually shown in the Pricing section below — schema.org
-// Offer requires a numeric price, so 'Free'/'$29'/'$99' map to 0/29/99 USD.
+// Mirrors the prices shown in the Pricing section below and on the marketing
+// site. Only the numeric INR tiers become Offers; Enterprise ("Custom") is
+// omitted rather than advertised with a fake price.
 const SOFTWARE_APPLICATION_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -85,11 +89,11 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   operatingSystem: 'Web',
   url: 'https://schedu.bhusku.com',
   description: 'Conflict-free, expertly generated timetables for schools, colleges, and universities — any board, any curriculum.',
-  offers: TIERS.map(t => ({
+  offers: TIERS.filter(t => t.price.startsWith('₹')).map(t => ({
     '@type': 'Offer',
     name: t.name,
-    price: t.price === 'Free' ? '0' : t.price.replace('$', ''),
-    priceCurrency: 'USD',
+    price: t.price.replace(/[₹,]/g, ''),
+    priceCurrency: 'INR',
   })),
 }
 
@@ -250,6 +254,7 @@ export function HomePage() {
                 <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">{t.price}</span>
                 {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
               </div>
+              <p className="mb-1 min-h-[16px] text-[12px] font-medium text-[#7C6FE0]">{t.sub}</p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href === '/wizard' ? appStartHref() : t.href} className="no-underline">
                 <button

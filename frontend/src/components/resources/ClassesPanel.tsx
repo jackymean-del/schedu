@@ -7,6 +7,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import type { Section } from '@/types'
 import { useTimetableStore } from '@/store/timetableStore'
+import { parseGradeLevel } from '@/lib/gradeParse'
 import { Layers, X, CalendarRange, ChevronDown } from 'lucide-react'
 import {
   P, P_D, P_L, P_B,
@@ -31,8 +32,11 @@ const inp: React.CSSProperties = {
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
 function gradeKey(g: string) { const i = GRADE_ORDER.indexOf(g); return i >= 0 ? i : 100 + g.charCodeAt(0) }
 
-/** Normalise a grade label ("Class I" → "I") for matching against GRADE_ORDER. */
-function normalizeGrade(g?: string): string { return (g ?? '').trim().replace(/^class\s+/i, '') }
+/** Normalise a grade label ("Class I" / "Class-V" / "Grade-1" → "I"/"V"/"1")
+ *  for matching against GRADE_ORDER. Handles space OR hyphen after the prefix. */
+function normalizeGrade(g?: string): string {
+  return (g ?? '').trim().replace(/^(class|grade|std|standard)\s*[-\s]*/i, '')
+}
 
 /** The grades to seed when "Create smartly" is used — from the onboarding
  *  range (config.grades, else config.fromGrade/toGrade), with a sane fallback. */
@@ -49,9 +53,17 @@ function smartRangeGrades(): string[] {
   const cfg = useTimetableStore.getState().config as any
   const explicit = Array.isArray(cfg?.grades) ? cfg.grades.map(normalizeGrade).filter(Boolean) : []
   if (explicit.length) return explicit
-  const fi = GRADE_ORDER.indexOf(normalizeGrade(cfg?.fromGrade))
-  const ti = GRADE_ORDER.indexOf(normalizeGrade(cfg?.toGrade))
-  if (fi >= 0 && ti >= fi) return GRADE_ORDER.slice(fi, ti + 1)
+  // Adaptive: parse the typed from/to to numeric levels — this handles ANY
+  // naming convention ("Class-V", "Grade 5", "V", "Std 5") via the shared
+  // parser. The old GRADE_ORDER.indexOf() only matched "Class I" (space) and
+  // silently fell through to the I–X fallback for hyphenated input like
+  // "Class-V" — so a I–V school was seeded all the way to Class X.
+  const f = parseGradeLevel(cfg?.fromGrade)
+  const t = parseGradeLevel(cfg?.toGrade)
+  if (f !== null && t !== null && f <= t) {
+    const out = GRADE_ORDER.filter(g => { const l = parseGradeLevel(g); return l != null && l >= f && l <= t })
+    if (out.length) return out
+  }
   if (Array.isArray(cfg?.gradeGroups) && cfg.gradeGroups.length) {
     const grades = cfg.gradeGroups.flatMap((g: string) => gradesForGroup(g))
     if (grades.length) return grades
