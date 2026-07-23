@@ -8,6 +8,7 @@ import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { shiftPeriod, rebuildTeacherTT } from "@/lib/aiEngine"
+import { deriveTeacherAllocations } from "@/lib/schedulingEngine"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
 import type { Period } from "@/types"
@@ -1209,7 +1210,7 @@ export function TimetablePage() {
     showTeacher, showRoom, editMode,
     timetableStatus, setTimetableStatus,
     setShowTeacher, setShowRoom, setEditMode,
-    setPeriods, setClassTT, setTeacherTT, setSubstitutions,
+    setPeriods, setClassTT, setTeacherTT, setSubstitutions, setTeacherAllocations,
   } = store
 
   // Hydrate the active timetable's snapshot when opened directly (e.g. the
@@ -1708,6 +1709,10 @@ export function TimetablePage() {
     const ntt = { ...teacherTT }
     rebuildTeacherTT(newTT, ntt, config.workDays)
     setTeacherTT(ntt)
+    // BACKWARD SYNC: every manual grid edit (move / swap / delete) flows through
+    // commitTT, so recompute the allocation matrix from the edited timetable and
+    // keep the Allocation view consistent with what's actually scheduled.
+    setTeacherAllocations?.(deriveTeacherAllocations(newTT))
   }
 
   // ── Keyboard shortcuts (Esc, Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo) ──
@@ -1716,12 +1721,12 @@ export function TimetablePage() {
   const kbRef = useRef({ classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
-    setShowUndoRedo,
+    setTeacherAllocations, setShowUndoRedo,
   })
   kbRef.current = { classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
-    setShowUndoRedo,
+    setTeacherAllocations, setShowUndoRedo,
   }
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1745,6 +1750,7 @@ export function TimetablePage() {
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(prev, ntt, r.workDays)
         r.setTeacherTT(ntt)
+        r.setTeacherAllocations?.(deriveTeacherAllocations(prev))
         return
       }
       // Redo: Ctrl+Y or Ctrl+Shift+Z
@@ -1759,6 +1765,7 @@ export function TimetablePage() {
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(next, ntt, r.workDays)
         r.setTeacherTT(ntt)
+        r.setTeacherAllocations?.(deriveTeacherAllocations(next))
       }
     }
     window.addEventListener('keydown', handler)
