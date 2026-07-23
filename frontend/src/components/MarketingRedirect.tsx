@@ -19,7 +19,12 @@ const MARKETING_ORIGIN = 'https://schedu.bhusku.com'
 
 export function MarketingRedirect() {
   useEffect(() => {
-    const { pathname, search } = window.location
+    const { origin, pathname, search } = window.location
+    // Guard against a redirect loop: if the app shell is ever served ON the
+    // marketing origin itself (e.g. a stale apex edge cache serving app HTML),
+    // redirecting to the same origin would reload the shell forever. Only
+    // redirect when we're on a DIFFERENT origin (the app or localhost).
+    if (origin === MARKETING_ORIGIN) return
     window.location.replace(`${MARKETING_ORIGIN}${pathname}${search}`)
   }, [])
 
