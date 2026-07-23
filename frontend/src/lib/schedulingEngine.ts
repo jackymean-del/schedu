@@ -1474,6 +1474,41 @@ export function deriveTeacherAllocations(
   return matrix
 }
 
+/**
+ * deriveSubjectAllocations — the class/period side of backward sync. Counts, per
+ * section, how many periods each subject actually got in the timetable, returned
+ * as the store's `Record<section, Record<subject, string>>` shape (values are
+ * plain period counts). Pairs with deriveTeacherAllocations so a "Backward Sync"
+ * reconciles BOTH the faculty matrix and the class/period plan to the timetable.
+ */
+export function deriveSubjectAllocations(
+  classTT: ClassTimetable,
+): Record<string, Record<string, string>> {
+  const counts: Record<string, Record<string, number>> = {}
+  const add = (section: string, subject?: string) => {
+    if (!section || !subject) return
+    ;(counts[section] ??= {})
+    counts[section][subject] = (counts[section][subject] ?? 0) + 1
+  }
+  Object.entries(classTT).forEach(([secName, secData]) => {
+    Object.values(secData ?? {}).forEach(dayData => {
+      Object.values(dayData ?? {}).forEach(cell => {
+        if (!cell) return
+        const ga = cell.groupAssignments
+        if (ga && ga.length) ga.forEach(g => add(secName, g.subject ?? cell.subject))
+        else add(secName, cell.subject)
+      })
+    })
+  })
+  // stringify to match the store shape
+  const out: Record<string, Record<string, string>> = {}
+  for (const sec in counts) {
+    out[sec] = {}
+    for (const sub in counts[sec]) out[sec][sub] = String(counts[sec][sub])
+  }
+  return out
+}
+
 // ─── Teacher Re-optimisation Pass ────────────────────────
 /**
  * reoptimizeTeachers — re-run the AI teacher-assignment scoring on an

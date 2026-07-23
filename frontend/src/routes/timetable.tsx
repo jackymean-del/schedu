@@ -8,7 +8,7 @@ import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { shiftPeriod, rebuildTeacherTT } from "@/lib/aiEngine"
-import { deriveTeacherAllocations } from "@/lib/schedulingEngine"
+import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
 import type { Period } from "@/types"
@@ -1210,7 +1210,7 @@ export function TimetablePage() {
     showTeacher, showRoom, editMode,
     timetableStatus, setTimetableStatus,
     setShowTeacher, setShowRoom, setEditMode,
-    setPeriods, setClassTT, setTeacherTT, setSubstitutions, setTeacherAllocations,
+    setPeriods, setClassTT, setTeacherTT, setSubstitutions,
   } = store
 
   // Hydrate the active timetable's snapshot when opened directly (e.g. the
@@ -1247,6 +1247,7 @@ export function TimetablePage() {
   const [swappedPeriodIds, setSwappedPeriodIds] = useState<[string,string]|null>(null)
   const [mainMode, setMainMode] = useState<"traditional"|"calendar">("traditional")
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [backSyncOpen, setBackSyncOpen] = useState(false)
   const [showTime, setShowTime] = useState(false)
   const [shortNames, setShortNames] = useState(false)
   const [showInsights, setShowInsights] = useState(false)
@@ -1709,10 +1710,9 @@ export function TimetablePage() {
     const ntt = { ...teacherTT }
     rebuildTeacherTT(newTT, ntt, config.workDays)
     setTeacherTT(ntt)
-    // BACKWARD SYNC: every manual grid edit (move / swap / delete) flows through
-    // commitTT, so recompute the allocation matrix from the edited timetable and
-    // keep the Allocation view consistent with what's actually scheduled.
-    setTeacherAllocations?.(deriveTeacherAllocations(newTT))
+    // NOTE: the allocation matrix is deliberately NOT auto-synced here — grid
+    // edits only change the timetable. The user pushes changes back to the
+    // Allocation plan on demand via the "Backward Sync" button (handleBackwardSync).
   }
 
   // ── Keyboard shortcuts (Esc, Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo) ──
@@ -1721,12 +1721,12 @@ export function TimetablePage() {
   const kbRef = useRef({ classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
-    setTeacherAllocations, setShowUndoRedo,
+    setShowUndoRedo,
   })
   kbRef.current = { classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
-    setTeacherAllocations, setShowUndoRedo,
+    setShowUndoRedo,
   }
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1750,7 +1750,6 @@ export function TimetablePage() {
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(prev, ntt, r.workDays)
         r.setTeacherTT(ntt)
-        r.setTeacherAllocations?.(deriveTeacherAllocations(prev))
         return
       }
       // Redo: Ctrl+Y or Ctrl+Shift+Z
@@ -1765,7 +1764,6 @@ export function TimetablePage() {
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(next, ntt, r.workDays)
         r.setTeacherTT(ntt)
-        r.setTeacherAllocations?.(deriveTeacherAllocations(next))
       }
     }
     window.addEventListener('keydown', handler)
@@ -3791,6 +3789,15 @@ export function TimetablePage() {
             </button>
           </div>
 
+          {/* ── Backward Sync (opt-in: push timetable → allocation, print reports) ── */}
+          <div style={{ display:"flex", alignItems:"center", padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
+            <button onClick={() => setBackSyncOpen(true)}
+              title="Push the current timetable back to your Allocation plan, and print/download the Class & Faculty allocation"
+              style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", border:"1px solid #E4E0FF", borderRadius:6, background:"#F8F7FF", color:"#7C6FE0", fontSize:11.5, fontWeight:600, cursor:"pointer" }}>
+              ⇄ Backward Sync
+            </button>
+          </div>
+
           {/* ── Export dropdown ── */}
           <div style={{ display:"flex", alignItems:"center", padding:"0 8px", borderRight:"1px solid #E5EBF5", position:"relative" as const }}>
             <button onClick={() => setShowExportMenu(m=>!m)}
@@ -4383,6 +4390,17 @@ export function TimetablePage() {
           target={editTarget}
           initialSubject={poolSuggestSubject || undefined}
           onClose={() => { setEditTarget(null); setPoolSuggestSubject("") }}
+        />
+      )}
+
+      {backSyncOpen && (
+        <BackwardSyncReport
+          classTT={classTT}
+          sections={sections}
+          staff={store.staff ?? []}
+          periodMinutes={(config as any).periodMinutes ?? 40}
+          countryCode={config.countryCode ?? "IN"}
+          onClose={() => setBackSyncOpen(false)}
         />
       )}
 

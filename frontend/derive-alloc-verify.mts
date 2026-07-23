@@ -1,5 +1,5 @@
 /* Verifies deriveTeacherAllocations — the backward-sync helper. Run: npx tsx derive-alloc-verify.mts */
-import { deriveTeacherAllocations } from './src/lib/schedulingEngine'
+import { deriveTeacherAllocations, deriveSubjectAllocations } from './src/lib/schedulingEngine'
 import type { ClassTimetable } from './src/types'
 
 let fail = 0
@@ -45,6 +45,14 @@ const ttG: ClassTimetable = {
 }
 const mG = deriveTeacherAllocations(ttG)
 ok(mG['A']?.['XI-A']?.['Physics'] === 1 && mG['B']?.['XI-A']?.['Biology'] === 1, 'group cell credits each subject teacher')
+
+// Class/subject allocation derive: per-section subject → periods.
+const sa = deriveSubjectAllocations(tt)
+ok(sa['VI-A']?.['Mathematics'] === '3', 'subjectAlloc: VI-A Mathematics = "3"')
+ok(sa['VI-A']?.['Science'] === '2', 'subjectAlloc: VI-A Science = "2"')
+ok(sa['VI-B']?.['English'] === '1' && sa['VI-B']?.['Mathematics'] === '1', 'subjectAlloc: VI-B English & Maths = "1"')
+const saG = deriveSubjectAllocations(ttG)
+ok(saG['XI-A']?.['Physics'] === '1' && saG['XI-A']?.['Biology'] === '1', 'subjectAlloc: group cell counts each subject')
 
 console.log(fail === 0 ? '\nALL DERIVE-ALLOC CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

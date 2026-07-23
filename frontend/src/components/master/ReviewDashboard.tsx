@@ -23,7 +23,7 @@ import { ScoreBreakdownPopover } from './ScoreBreakdownPopover'
 import {
   type BlockedSlot, type DynamicLearningGroup,
   blockedCategoryLabel, blockedRemedy,
-  reoptimizeTeachers, buildTeacherTT, deriveTeacherAllocations,
+  reoptimizeTeachers, buildTeacherTT,
 } from '@/lib/schedulingEngine'
 import { DLGInspector } from './DLGInspector'
 import { ConflictResolutionWizard } from './ConflictResolutionWizard'
@@ -219,12 +219,11 @@ export function ReviewDashboard({
       if (result.reassignedCount > 0) {
         liveStore.setClassTT?.(result.classTT)
         liveStore.setTeacherTT?.(buildTeacherTT(result.classTT, staff, workDays))
-        // BACKWARD SYNC: reflect the reassigned teachers in the allocation
-        // matrix so the Allocation view (and a future re-generate) match the
-        // optimised timetable instead of the pre-generation plan.
-        liveStore.setTeacherAllocations?.(deriveTeacherAllocations(result.classTT))
         // Keep the dashboard's own view (solverOutput.classTT) in sync so a
         // second re-optimise / swap starts from the optimised timetable.
+        // NOTE: the allocation matrix is NOT auto-updated — the user reconciles
+        // it deliberately via "Backward Sync" (see the /timetable editor), so an
+        // intentional custom load is never silently overwritten.
         onApplyConflictFixes?.(result.classTT)
       }
       setReoptimizedLoad(result.teacherWeeklyLoad)
@@ -253,7 +252,8 @@ export function ReviewDashboard({
     const s = useTimetableStore.getState() as any
     s.setClassTT?.(updated)
     s.setTeacherTT?.(buildTeacherTT(updated, staff, workDays))
-    s.setTeacherAllocations?.(deriveTeacherAllocations(updated))
+    // Allocation is NOT auto-synced — the user reconciles it on demand via
+    // "Backward Sync" so a deliberate custom allocation isn't silently replaced.
     onApplyConflictFixes?.(updated)
   }
 
