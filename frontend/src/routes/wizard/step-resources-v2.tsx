@@ -26,7 +26,8 @@ import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
 import { SubjectsPanel, generateShortName, inferCategory } from '@/components/resources/SubjectsPanel'
 import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, subjectAppliesToSections, type CurriculumBoard } from '@/components/resources/curriculum'
-import { teacherNorms } from '@/lib/educationNorms'
+import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
+import { useWorkloadLimits } from '@/store/workloadLimits'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
 import { linkOrRegisterStaff, linkOrRegisterVenues } from '@/store/directoryStore'
@@ -481,11 +482,13 @@ export function StepResourcesV2() {
     setFacultyAiApplied(false)
     setAiSnapshot({ subjects, sections, staff, rooms })
     const board = normalizeBoardType(config.board ?? 'CBSE') as CurriculumBoard
-    // National SAFE teaching load from the norms brain — same source as the
-    // Faculty HI Fix and the staffing alert (India 30 · GB 22 · US 25 · …), with
-    // IB/Cambridge capped lower for their lighter contact time. Previously this
-    // used a hardcoded board table (CBSE 32) that disagreed with the norm.
-    const safe = teacherNorms(config.countryCode || 'IN').safeMaxPeriodsWeek
+    // The user's global teacher cap (Settings → Workload limits) if set, else the
+    // national SAFE teaching load from the norms brain (India 30 · GB 22 · …).
+    // IB/Cambridge stay capped lower for their lighter contact time.
+    const safe = effectiveTeacherMaxPeriods(
+      config.countryCode || 'IN', (config as any).periodMinutes ?? 40,
+      useWorkloadLimits.getState().teacherMaxHoursWeek,
+    )
     const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
     const maxPeriods = Math.min(safe, boardCap[board] ?? safe)
     setAiStatus('Assigning teacher workloads & subjects…')
@@ -581,7 +584,11 @@ export function StepResourcesV2() {
   function handleTeacherAIFix() {
     const country = config.countryCode || 'IN'
     const board = normalizeBoardType(config.board ?? 'CBSE')
-    const safe = teacherNorms(country).safeMaxPeriodsWeek
+    // Global custom cap (Settings) if set, else the national safe teaching load.
+    const safe = effectiveTeacherMaxPeriods(
+      country, (config as any).periodMinutes ?? 40,
+      useWorkloadLimits.getState().teacherMaxHoursWeek,
+    )
     const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
     const maxPeriods = Math.min(safe, boardCap[board] ?? safe)
     setStaff(staff.map((t: Staff) => ({ ...t, maxPeriodsPerWeek: maxPeriods })))
@@ -770,7 +777,13 @@ export function StepResourcesV2() {
     }
 
     // ── 2. Staff: always regenerate to the target count ──────────────────────
-    const newStaff = buildDefaultStaff(targetStaff)
+    // Apply the effective per-teacher cap: the user's global custom max (Settings
+    // → Workload limits) if set, else the national safe teaching-period norm.
+    const teacherCap = effectiveTeacherMaxPeriods(
+      config.countryCode || 'IN', (config as any).periodMinutes ?? 40,
+      useWorkloadLimits.getState().teacherMaxHoursWeek,
+    )
+    const newStaff = buildDefaultStaff(targetStaff).map((t: any) => ({ ...t, maxPeriodsPerWeek: teacherCap }))
 
     // Assign class-teachers only to sections that don't already have one
     const updatedSections = workingSections.map((sec: any, i: number) => ({

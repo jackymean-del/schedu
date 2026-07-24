@@ -292,6 +292,38 @@ export function teacherNorms(country: string): TeacherNorm {
   return TEACHER_NORMS.INTL
 }
 
+// ── Workload-limit helpers (custom global overrides ↔ national norms) ────────
+
+/**
+ * Effective teacher cap in PERIODS/week. If the user set a custom max teaching
+ * HOURS/week (global workload limit), convert it to periods with the period
+ * length; otherwise fall back to the national safe teaching-period norm.
+ */
+export function effectiveTeacherMaxPeriods(
+  country: string, periodMinutes: number, teacherMaxHoursWeek?: number,
+): number {
+  if (teacherMaxHoursWeek && teacherMaxHoursWeek > 0) {
+    return Math.max(1, Math.round((teacherMaxHoursWeek * 60) / Math.max(1, periodMinutes)))
+  }
+  return teacherNorms(country).safeMaxPeriodsWeek
+}
+
+/** The national safe teaching load expressed in HOURS/week — the default shown
+ *  next to the custom teacher-hours field. */
+export function normTeacherHoursWeek(country: string, periodMinutes: number): number {
+  return Math.round(teacherNorms(country).safeMaxPeriodsWeek * periodMinutes / 60 * 10) / 10
+}
+
+/** National typical instructional HOURS/week for a band — the default shown next
+ *  to each custom student-hours field (typical periods/day × length × days). */
+export function normStudentHoursWeek(
+  country: string, board: string | undefined, band: GradeBand, workDaysPerWeek: number,
+): number {
+  const n = studentNorms(country, board).bands[band]
+  const perDayHours = (n.periodsPerDayTypical * n.periodMinutesTypical) / 60
+  return Math.round(perDayHours * Math.max(1, workDaysPerWeek) * 10) / 10
+}
+
 // ── Curriculum subject weightings (auto-allocation) ────────────────────────
 // Fraction of the weekly grid each subject family should get, per band.
 // India weights follow CBSE/NCF guidance (languages-heavy early, streams late);

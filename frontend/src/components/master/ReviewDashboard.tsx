@@ -26,6 +26,14 @@ import {
   reoptimizeTeachers, buildTeacherTT, deriveTeacherAllocations,
 } from '@/lib/schedulingEngine'
 import { BackwardSyncReport } from './BackwardSyncReport'
+import { useWorkloadLimits } from '@/store/workloadLimits'
+import type { GradeBand } from '@/lib/educationNorms'
+
+// capacityEngine band code → norms-brain grade band (for the student-hours cap).
+const BAND_TO_GRADE: Record<string, GradeBand> = {
+  pre: 'prePrimary', primary: 'lowerPrimary', middle: 'upperPrimary',
+  secondary: 'secondary', senior: 'seniorSecondary',
+}
 import { DLGInspector } from './DLGInspector'
 import { ConflictResolutionWizard } from './ConflictResolutionWizard'
 import { PublishExportPanel } from './PublishExportPanel'
@@ -160,6 +168,8 @@ export function ReviewDashboard({
   // Conflicts card stays fresh after Apply Fix / Auto-fix safe actions
   // without requiring a full solver re-run.
   const liveStore = useTimetableStore() as any
+  const { studentMaxHoursWeek } = useWorkloadLimits()
+  const periodMinutes = (liveStore.config?.periodMinutes) ?? 40
   const liveWorkloadPenalties = useMemo(
     () => recomputeWorkloadPenalties({
       staff: liveStore.staff ?? staff,
@@ -387,6 +397,11 @@ export function ReviewDashboard({
           {bandSummary.map(b => {
             const pct = Math.min(100, Math.round((b.avgAllocated / cap.weeklyCapacity) * 100))
             const status = utilisationStatus(b.avgAllocated, cap.weeklyCapacity)
+            // Custom student weekly-hours cap (Settings → Workload limits), if set.
+            const gb = BAND_TO_GRADE[b.band]
+            const capH = gb ? studentMaxHoursWeek[gb] : undefined
+            const weeklyH = Math.round(b.avgAllocated * periodMinutes / 60 * 10) / 10
+            const overStudent = capH != null && weeklyH > capH
             return (
               <div key={b.band} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ width: 90, fontSize: 11, fontWeight: 700, color: '#13111E', textTransform: 'capitalize' as const }}>
@@ -395,13 +410,19 @@ export function ReviewDashboard({
                 <div style={{ flex: 1, height: 14, background: '#F5F2FF', borderRadius: 4, overflow: 'hidden', position: 'relative' as const }}>
                   <div style={{
                     height: '100%', width: `${pct}%`,
-                    background: status === 'over' ? '#DC2626' : status === 'tight' ? '#D4920E' : status === 'ok' ? '#16A34A' : '#7C6FE0',
+                    background: overStudent ? '#DC2626' : status === 'over' ? '#DC2626' : status === 'tight' ? '#D4920E' : status === 'ok' ? '#16A34A' : '#7C6FE0',
                     transition: 'width 0.25s',
                   }} />
                 </div>
                 <span style={{ minWidth: 84, fontSize: 11, fontFamily: "'DM Mono', monospace", color: '#13111E', textAlign: 'right' as const }}>
                   {b.avgAllocated} / {cap.weeklyCapacity}
                 </span>
+                {capH != null && (
+                  <span style={{ minWidth: 96, fontSize: 10, fontWeight: 700, textAlign: 'right' as const, color: overStudent ? '#DC2626' : '#16A34A' }}
+                    title={`Your limit: ${capH} h/wk for this grade`}>
+                    {weeklyH}h / {capH}h{overStudent ? ' ⚠' : ' ✓'}
+                  </span>
+                )}
               </div>
             )
           })}

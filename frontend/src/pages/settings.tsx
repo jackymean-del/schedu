@@ -8,6 +8,12 @@ import { useOrgProfile } from '@/store/orgProfile'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { meApi } from '@/api/client'
 import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKey } from '@/lib/terms'
+import { useTimetableStore } from '@/store/timetableStore'
+import { useWorkloadLimits } from '@/store/workloadLimits'
+import {
+  BAND_LABELS, normTeacherHoursWeek, normStudentHoursWeek, effectiveTeacherMaxPeriods,
+  type GradeBand,
+} from '@/lib/educationNorms'
 
 const KINDS = ['School', 'College', 'University', 'Coaching / Training Center', 'Company', 'Hospital', 'NGO', 'Government', 'Other']
 const ACCENT = '#7C6FE0'
@@ -56,6 +62,9 @@ export function SettingsPage() {
 
         {/* Institution naming */}
         <NamingCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
+
+        {/* Workload limits */}
+        <WorkloadCard />
 
         {/* Account */}
         <Card title="Account" subtitle="Your personal sign-in and profile.">
@@ -133,6 +142,71 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
           Save naming
         </button>
       </div>
+    </Card>
+  )
+}
+
+// ── Workload limits ─────────────────────────────────────────────
+// Global override for the max weekly hours the planner schedules — for all
+// teachers and for children per grade band. Blank = use the national norm.
+const BAND_ORDER: GradeBand[] = ['prePrimary', 'lowerPrimary', 'upperPrimary', 'secondary', 'seniorSecondary']
+
+function WorkloadCard() {
+  const config = useTimetableStore(s => s.config) as any
+  const country = config?.countryCode || 'IN'
+  const board = config?.board
+  const periodMinutes = config?.periodMinutes ?? 40
+  const daysPerWeek = (config?.workDays?.length) || 6
+  const {
+    teacherMaxHoursWeek, studentMaxHoursWeek,
+    setTeacherMaxHoursWeek, setStudentMaxHoursWeek,
+  } = useWorkloadLimits()
+
+  const teacherDefault = normTeacherHoursWeek(country, periodMinutes)
+  const teacherPeriods = effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek)
+  const rowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 120px 140px', gap: 12, alignItems: 'center' }
+
+  return (
+    <Card
+      title="Workload limits"
+      subtitle={`Cap the max weekly hours the planner schedules. Leave a field blank to use the national norm (${country}). 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
+    >
+      {/* Teachers */}
+      <div style={rowStyle}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>All teachers — max teaching hours / week</div>
+          <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>Applies to every auto-generated teacher. Norm ≈ {teacherDefault} h/wk.</div>
+        </div>
+        <input
+          type="number" min={1} step="0.5" value={teacherMaxHoursWeek ?? ''} placeholder={String(teacherDefault)}
+          onChange={e => setTeacherMaxHoursWeek(e.target.value === '' ? undefined : Number(e.target.value))}
+          style={inputStyle}
+        />
+        <div style={{ fontSize: 12, color: '#8B87AD' }}>≈ <strong style={{ color: '#4B5275' }}>{teacherPeriods}</strong> periods/wk</div>
+      </div>
+
+      <div style={{ height: 1, background: '#F0EDFB', margin: '2px 0' }} />
+
+      {/* Children per band */}
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: '#4B41C4' }}>Children — max instructional hours / week, by grade</div>
+      {BAND_ORDER.map(band => {
+        const def = normStudentHoursWeek(country, board, band, daysPerWeek)
+        return (
+          <div key={band} style={rowStyle}>
+            <div style={{ fontSize: 12.5, color: '#13111E' }}>{BAND_LABELS[band]}</div>
+            <input
+              type="number" min={1} step="0.5" value={studentMaxHoursWeek[band] ?? ''} placeholder={String(def)}
+              onChange={e => setStudentMaxHoursWeek(band, e.target.value === '' ? undefined : Number(e.target.value))}
+              style={inputStyle}
+            />
+            <div style={{ fontSize: 12, color: '#8B87AD' }}>norm ≈ {def} h/wk</div>
+          </div>
+        )
+      })}
+
+      <p style={{ fontSize: 11.5, color: '#9A95BC', margin: '4px 0 0' }}>
+        Saved automatically and applied to every schedule. Teacher hours convert to periods with your period length; the generator keeps loads within this cap.
+      </p>
     </Card>
   )
 }

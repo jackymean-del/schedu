@@ -16,7 +16,8 @@
 import { useMemo, useState } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { deriveTeacherAllocations, deriveSubjectAllocations } from '@/lib/schedulingEngine'
-import { teacherNorms } from '@/lib/educationNorms'
+import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
+import { useWorkloadLimits } from '@/store/workloadLimits'
 import type { ClassTimetable, Section, Staff } from '@/types'
 import { X, ArrowLeftRight, Printer, Download, Check } from 'lucide-react'
 
@@ -37,7 +38,10 @@ export function BackwardSyncReport({
   onClose: () => void
 }) {
   const [synced, setSynced] = useState(false)
-  const norm = teacherNorms(countryCode)
+  // Respect the global custom teacher cap (Settings → Workload limits) if set.
+  const teacherCap = effectiveTeacherMaxPeriods(
+    countryCode, periodMinutes, useWorkloadLimits.getState().teacherMaxHoursWeek,
+  )
 
   // Faculty allocation: teacher → total periods (+ the sections/subjects taught).
   const faculty = useMemo(() => {
@@ -76,8 +80,8 @@ export function BackwardSyncReport({
   const buildReportHTML = () => {
     const esc = (x: string) => String(x).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } as any)[c])
     const facultyRows = faculty.map(f => {
-      const over = f.total > norm.safeMaxPeriodsWeek
-      return `<tr><td>${esc(f.teacher)}</td><td class="num">${f.total}</td><td class="num">${asHours(f.total, periodMinutes)}</td><td class="num">${norm.safeMaxPeriodsWeek}</td><td class="${over ? 'over' : 'ok'}">${over ? 'Over safe load' : 'Within norm'}</td><td>${esc(f.items.join('; '))}</td></tr>`
+      const over = f.total > teacherCap
+      return `<tr><td>${esc(f.teacher)}</td><td class="num">${f.total}</td><td class="num">${asHours(f.total, periodMinutes)}</td><td class="num">${teacherCap}</td><td class="${over ? 'over' : 'ok'}">${over ? 'Over safe load' : 'Within norm'}</td><td>${esc(f.items.join('; '))}</td></tr>`
     }).join('')
     const classRows = classes.map(c =>
       `<tr><td>${esc(c.section)}</td><td>${esc(c.subs.map(s => `${s.subject} (${s.periods})`).join(', '))}</td><td class="num">${c.total}</td><td class="num">${asHours(c.total, periodMinutes)}</td></tr>`
@@ -94,7 +98,7 @@ export function BackwardSyncReport({
         @media print{body{margin:10mm}}
       </style></head><body>
       <h1>Allocation Report</h1>
-      <div class="sub">1 period = ${periodMinutes} min · hours = periods × ${periodMinutes}/60 · safe teaching load ≈ ${norm.safeMaxPeriodsWeek} periods/wk (${countryCode})</div>
+      <div class="sub">1 period = ${periodMinutes} min · hours = periods × ${periodMinutes}/60 · safe teaching load ≈ ${teacherCap} periods/wk (${countryCode})</div>
       <h2>Faculty allocation</h2>
       <table><thead><tr><th>Teacher</th><th class="num">Periods/wk</th><th class="num">Hours/wk</th><th class="num">Safe max</th><th>Status</th><th>Sections · subjects (periods)</th></tr></thead><tbody>${facultyRows}</tbody></table>
       <h2>Class allocation</h2>
@@ -115,8 +119,8 @@ export function BackwardSyncReport({
     const q = (x: string) => `"${String(x).replace(/"/g, '""')}"`
     let csv = 'FACULTY ALLOCATION\nTeacher,Periods/wk,Hours/wk,Safe max,Status,Sections & subjects\n'
     faculty.forEach(f => {
-      csv += [q(f.teacher), f.total, q(asHours(f.total, periodMinutes)), norm.safeMaxPeriodsWeek,
-        q(f.total > norm.safeMaxPeriodsWeek ? 'Over safe load' : 'Within norm'), q(f.items.join('; '))].join(',') + '\n'
+      csv += [q(f.teacher), f.total, q(asHours(f.total, periodMinutes)), teacherCap,
+        q(f.total > teacherCap ? 'Over safe load' : 'Within norm'), q(f.items.join('; '))].join(',') + '\n'
     })
     csv += '\nCLASS ALLOCATION\nClass,Subjects (periods),Periods/wk,Hours/wk\n'
     classes.forEach(c => {
@@ -153,7 +157,7 @@ export function BackwardSyncReport({
         <div style={{ padding: '16px 20px' }}>
           {/* Units + sync banner */}
           <div style={{ background: '#F5F2FF', border: '1px solid #E4E0FF', borderRadius: 10, padding: '10px 13px', fontSize: 11.5, color: '#4B5275', marginBottom: 14 }}>
-            <strong>1 period = {periodMinutes} min.</strong> Hours = periods × {periodMinutes}/60 (e.g. 30 periods = {asHours(30, periodMinutes)}). Safe teaching load ≈ <strong>{norm.safeMaxPeriodsWeek} periods/wk</strong> for {countryCode} — a teaching-period count, separate from total working hours (which include prep).
+            <strong>1 period = {periodMinutes} min.</strong> Hours = periods × {periodMinutes}/60 (e.g. 30 periods = {asHours(30, periodMinutes)}). Safe teaching load ≈ <strong>{teacherCap} periods/wk</strong> for {countryCode} — a teaching-period count, separate from total working hours (which include prep).
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
@@ -179,12 +183,12 @@ export function BackwardSyncReport({
                 ))}
               </tr></thead>
               <tbody>{faculty.map(f => {
-                const over = f.total > norm.safeMaxPeriodsWeek
+                const over = f.total > teacherCap
                 return (<tr key={f.teacher}>
                   <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px' }}>{f.teacher}</td>
                   <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{f.total}</td>
                   <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px', textAlign: 'right' }}>{asHours(f.total, periodMinutes)}</td>
-                  <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px', textAlign: 'right' }}>{norm.safeMaxPeriodsWeek}</td>
+                  <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px', textAlign: 'right' }}>{teacherCap}</td>
                   <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px', color: over ? '#B42318' : '#067647', fontWeight: over ? 700 : 500 }}>{over ? 'Over safe load' : 'Within norm'}</td>
                   <td style={{ border: '1px solid #E3E0F0', padding: '5px 8px', color: '#6b6786' }}>{f.items.join('; ')}</td>
                 </tr>)
