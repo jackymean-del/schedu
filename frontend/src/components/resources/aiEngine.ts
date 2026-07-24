@@ -114,14 +114,16 @@ function pickTeacher(
     // this as an unmet staffing need instead of overloading someone.
     if (load + batchLoad > cap) continue
 
-    // Score: lower is better
-    // Reward: already teaching this subject (continuity), lower load
-    // Penalize: many distinct subjects
+    // Score: lower is better. LOAD dominates so the least-loaded teacher wins
+    // (even balance / low makespan) — previously subCount×4 could make a
+    // heavier-but-fewer-subjects teacher win, piling heavy subjects onto one
+    // person. Continuity (already teaches it) is a gentle nudge to keep a
+    // subject's sections together without overriding load balance; distinct
+    // subject count is only a minor tiebreaker, with a hard push past the max.
     const score =
       load
-      + (subCount * 4)
-      - (hasSub ? 12 : 0)
-      + (subCount >= MAX_SUBJECTS_PER_TEACHER ? 20 : 0)
+      - (hasSub ? 8 : 0)
+      + (subCount >= MAX_SUBJECTS_PER_TEACHER ? 100 : subCount)
 
     if (score < bestScore) { bestScore = score; bestId = t.id }
   }
@@ -280,9 +282,15 @@ export function runAIAssignment(
   }
 
   if (staff.length > 0) {
-    // Sort subjects by priority: core first, activities last
+    // Assign the HEAVIEST subjects first (Longest-Processing-Time bin-packing),
+    // each to the least-loaded eligible teacher. This minimises the spread in
+    // total teacher load far better than the old core-first order, which could
+    // pile several heavy subjects onto one teacher (e.g. one at 30 while others
+    // sat at 12). Subject priority is only a tie-breaker now.
+    const totalLoadOf = (s: Subject) =>
+      (s.periodsPerWeek || 1) * (subjectClassMap.get(s.id)?.length ?? 0)
     const sorted = [...updatedSubjects].sort(
-      (a, b) => subjectPriority(a.name) - subjectPriority(b.name)
+      (a, b) => totalLoadOf(b) - totalLoadOf(a) || subjectPriority(a.name) - subjectPriority(b.name)
     )
 
     for (const sub of sorted) {
