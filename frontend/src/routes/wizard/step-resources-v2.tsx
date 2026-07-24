@@ -481,8 +481,13 @@ export function StepResourcesV2() {
     setFacultyAiApplied(false)
     setAiSnapshot({ subjects, sections, staff, rooms })
     const board = normalizeBoardType(config.board ?? 'CBSE') as CurriculumBoard
-    const boardPeriods: Record<string, number> = { CBSE: 32, ICSE: 32, IB: 24, Cambridge: 24, Custom: 28 }
-    const maxPeriods = boardPeriods[board] ?? 28
+    // National SAFE teaching load from the norms brain — same source as the
+    // Faculty HI Fix and the staffing alert (India 30 · GB 22 · US 25 · …), with
+    // IB/Cambridge capped lower for their lighter contact time. Previously this
+    // used a hardcoded board table (CBSE 32) that disagreed with the norm.
+    const safe = teacherNorms(config.countryCode || 'IN').safeMaxPeriodsWeek
+    const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
+    const maxPeriods = Math.min(safe, boardCap[board] ?? safe)
     setAiStatus('Assigning teacher workloads & subjects…')
     await sleep(480)
 

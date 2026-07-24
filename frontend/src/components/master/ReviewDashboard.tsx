@@ -23,8 +23,9 @@ import { ScoreBreakdownPopover } from './ScoreBreakdownPopover'
 import {
   type BlockedSlot, type DynamicLearningGroup,
   blockedCategoryLabel, blockedRemedy,
-  reoptimizeTeachers, buildTeacherTT,
+  reoptimizeTeachers, buildTeacherTT, deriveTeacherAllocations,
 } from '@/lib/schedulingEngine'
+import { BackwardSyncReport } from './BackwardSyncReport'
 import { DLGInspector } from './DLGInspector'
 import { ConflictResolutionWizard } from './ConflictResolutionWizard'
 import { PublishExportPanel } from './PublishExportPanel'
@@ -60,7 +61,7 @@ interface Props {
 
 export function ReviewDashboard({
   classTT, sections, staff, subjects, periods, workDays,
-  optionalBlocks = [], teacherWeeklyLoad, teacherLoadStddev,
+  optionalBlocks = [],
   conflicts, penalties, rooms = [], score, blockedSlots = [],
   dynamicLearningGroups = [], onApplyConflictFixes,
 }: Props) {
@@ -93,33 +94,42 @@ export function ReviewDashboard({
     reassignedCount: number; stddevBefore: number; stddevAfter: number
   } | null>(null)
   // Local override for the bar-chart loads after a re-optimise run
-  const [reoptimizedLoad, setReoptimizedLoad] = useState<Record<string, number> | null>(null)
 
   // ── Teacher load chart ──
-  // Uses reoptimizedLoad override when available, falls back to solver-emitted load
+  // Count load DIRECTLY from the current timetable (the source of truth) so the
+  // bars always match what's actually scheduled. This fixes two issues:
+  //  (1) the solver-emitted teacherWeeklyLoad undercounted (e.g. it missed some
+  //      cells), so bars showed a lower load than the schedule really had;
+  //  (2) re-optimise used to swap in a different `reoptimizedLoad` override even
+  //      on a no-op run, making every load appear to jump up for no reason.
+  // Re-optimise now updates classTT (via onApplyConflictFixes → the classTT
+  // prop), so a real reassignment recomputes here; a no-op changes nothing.
   const teacherLoads = useMemo(() => {
-    const src = reoptimizedLoad ?? teacherWeeklyLoad
+    const derived = deriveTeacherAllocations(classTT)
+    const loadOf = (name: string) => {
+      const secs = derived[name]; if (!secs) return 0
+      let s = 0; for (const sec in secs) for (const sub in secs[sec]) s += secs[sec][sub]
+      return s
+    }
     const list = staff.map(t => ({
       name: t.name,
-      load: src?.[t.name] ?? 0,
+      load: loadOf(t.name),
       max: (t as any).maxPeriodsPerWeek ?? 40,
     }))
     return list.sort((a, b) => b.load - a.load)
-  }, [staff, teacherWeeklyLoad, reoptimizedLoad])
+  }, [staff, classTT])
   const loadStats = useMemo(() => {
     const loads = teacherLoads.map(t => t.load).filter(l => l > 0)
     if (loads.length === 0) return { mean: 0, min: 0, max: 0, stddev: 0 }
     const mean = loads.reduce((a, b) => a + b, 0) / loads.length
     const min  = Math.min(...loads)
     const max  = Math.max(...loads)
-    // After re-optimise, use fresh stddev; otherwise use solver-emitted value
-    const stddev = reoptimizeResult
-      ? reoptimizeResult.stddevAfter
-      : (teacherLoadStddev ?? Math.sqrt(
-          loads.reduce((a, l) => a + (l - mean) ** 2, 0) / loads.length
-        ))
+    // Compute stddev from the SAME actual-timetable loads shown in the bars, so
+    // Mean/Min/Max/Stddev are always internally consistent (no mixing a solver-
+    // emitted or re-optimise-reported stddev with a differently-counted load).
+    const stddev = Math.sqrt(loads.reduce((a, l) => a + (l - mean) ** 2, 0) / loads.length)
     return { mean, min, max, stddev }
-  }, [teacherLoads, teacherLoadStddev, reoptimizeResult])
+  }, [teacherLoads])
   const maxLoadInChart = Math.max(1, ...teacherLoads.map(t => t.load))
 
   // ── Room utilisation ──
@@ -226,7 +236,6 @@ export function ReviewDashboard({
         // intentional custom load is never silently overwritten.
         onApplyConflictFixes?.(result.classTT)
       }
-      setReoptimizedLoad(result.teacherWeeklyLoad)
       setReoptimizeResult({
         reassignedCount: result.reassignedCount,
         stddevBefore,
@@ -256,6 +265,9 @@ export function ReviewDashboard({
     // "Backward Sync" so a deliberate custom allocation isn't silently replaced.
     onApplyConflictFixes?.(updated)
   }
+
+  // ── Backward Sync report state ──
+  const [backSyncOpen, setBackSyncOpen] = useState(false)
 
   // ── Conflict resolution wizard state ──
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -440,6 +452,18 @@ export function ReviewDashboard({
             <RefreshCw size={11} style={{ animation: reoptimizing ? 'spin 0.8s linear infinite' : 'none' }} />
             {reoptimizing ? 'Optimising…' : 'Re-optimize Teachers'}
           </button>
+          <button
+            onClick={() => setBackSyncOpen(true)}
+            title="Push the current timetable back to your Allocation plan, and print/download the Class & Faculty allocation"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '5px 11px', borderRadius: 7,
+              background: '#F8F7FF', color: '#7C6FE0', border: '1px solid #E4E0FF',
+              fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            ⇄ Backward Sync
+          </button>
         </div>
 
         {/* Re-optimise result banner */}
@@ -469,7 +493,7 @@ export function ReviewDashboard({
               </span>
             )}
             <button
-              onClick={() => { setReoptimizeResult(null); setReoptimizedLoad(null) }}
+              onClick={() => { setReoptimizeResult(null) }}
               style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#8B87AD', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: '0 2px' }}
               title="Dismiss"
             >×</button>
@@ -782,6 +806,20 @@ export function ReviewDashboard({
           }}
         />
       )}
+
+      {backSyncOpen && (() => {
+        const cfg = (useTimetableStore.getState() as any).config ?? {}
+        return (
+          <BackwardSyncReport
+            classTT={classTT}
+            sections={sections}
+            staff={staff}
+            periodMinutes={cfg.periodMinutes ?? 40}
+            countryCode={cfg.countryCode ?? 'IN'}
+            onClose={() => setBackSyncOpen(false)}
+          />
+        )
+      })()}
     </div>
   )
 }
