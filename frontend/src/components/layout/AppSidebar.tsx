@@ -32,6 +32,7 @@ const NAV_PRIMARY: NavItem[] = [
   { icon: <span />, label: 'Schedule',    href: '/timetable' },
   { icon: <span />, label: 'Calendar',    href: '/calendar' },
   { icon: <span />, label: 'Master Data', href: '/master-data' },
+  { icon: <span />, label: 'Syllabus',    href: '/syllabus' },
   { icon: <span />, label: 'Insights',    href: '/insights' },
 ]
 

@@ -27,7 +27,7 @@ export function RootLayout() {
   // Pages requiring a signed-in user (real auth via Clerk; open in mock mode).
   const PROTECTED = ['/dashboard', '/wizard', '/timetable', '/master-data',
     '/settings', '/insights', '/users', '/calendar', '/support',
-    '/guide', '/profile', '/subscription', '/configure']
+    '/guide', '/profile', '/subscription', '/configure', '/syllabus']
   const isProtected = PROTECTED.some(p => path === p || path.startsWith(p + '/'))
 
   // Signed-in app pages (everything protected except the wizard, which runs its

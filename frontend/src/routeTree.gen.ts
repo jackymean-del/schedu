@@ -17,6 +17,7 @@ import { GuidePage }        from "./pages/guide"
 import { ProfilePage }      from "./pages/profile"
 import { SubscriptionPage } from "./pages/subscription"
 import { ConfigurePage }    from "./pages/configure"
+import { SyllabusPage }     from "./pages/syllabus"
 import { RouteLoadingFallback } from "./components/RouteLoadingFallback"
 
 // Heavier app-console pages are route-split: none of their code (including
@@ -56,6 +57,7 @@ const guideRoute         = createRoute({ getParentRoute: () => rootRoute, path: 
 const profileRoute       = createRoute({ getParentRoute: () => rootRoute, path: "/profile",       component: ProfilePage })
 const subscriptionRoute  = createRoute({ getParentRoute: () => rootRoute, path: "/subscription",  component: SubscriptionPage })
 const configureRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/configure",     component: ConfigurePage })
+const syllabusRoute      = createRoute({ getParentRoute: () => rootRoute, path: "/syllabus",      component: SyllabusPage })
 
 export const routeTree = rootRoute.addChildren([
   indexRoute, loginRoute, registerRoute, dashboardRoute,
@@ -63,7 +65,7 @@ export const routeTree = rootRoute.addChildren([
   featuresRoute, pricingRoute, docsRoute, docArticleRoute, contactRoute,
   sharedRoute, ssoCallbackRoute,
   settingsRoute, insightsRoute, usersRoute, calendarRoute, supportRoute,
-  guideRoute, profileRoute, subscriptionRoute, configureRoute,
+  guideRoute, profileRoute, subscriptionRoute, configureRoute, syllabusRoute,
 ])
 export const router = createRouter({ routeTree })
 
