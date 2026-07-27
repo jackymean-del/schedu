@@ -27,6 +27,7 @@ import { ClassesPanel }  from '@/components/resources/ClassesPanel'
 import { SubjectsPanel, generateShortName, inferCategory } from '@/components/resources/SubjectsPanel'
 import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, subjectAppliesToSections, type CurriculumBoard } from '@/components/resources/curriculum'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
+import { distributeSections } from '@/lib/sectionDistribution'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
@@ -149,14 +150,12 @@ function fitSectionsToTarget(built: Section[], target?: number): Section[] {
     byGrade.get(g)!.push(s)
   }
   const grades = [...byGrade.keys()]
-  const n = grades.length
-  const base  = Math.floor(target / n)   // 0 when target < n → every grade still keeps 1
-  const extra = target % n               // remainder goes to the TOP grades
+  // Blueprint v3, Step 1: allocate from the LOWEST class upward. Uses the shared
+  // distributeSections() so this and the create-modal preview can't diverge.
+  const per = distributeSections(grades.length, target)
   const out: Section[] = []
   grades.forEach((g, i) => {
-    // Matches the create-modal preview's distributeSections(): remainder on the
-    // highest grades, so the previewed section counts equal what gets built.
-    const want = Math.max(1, base + (i >= n - extra ? 1 : 0))
+    const want = Math.max(1, per[i] ?? 1)   // never drop a grade in the range
     out.push(...byGrade.get(g)!.slice(0, want))
   })
   return out

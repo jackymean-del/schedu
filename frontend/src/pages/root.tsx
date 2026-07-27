@@ -7,7 +7,7 @@ import { AppShell } from "@/components/layout/AppShell"
 const STEP_LABELS = [
   'Resources',
   'Shifts & Timing',
-  'Allocation',
+  'Mapping',
   'Student Groups',
   'Generate',
 ]

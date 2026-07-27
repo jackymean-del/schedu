@@ -40,9 +40,10 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
     'Define your daily periods and breaks — start/end times, period length and lunch.',
     'Set the working days and any shifts; this becomes the grid every class is scheduled into.',
   ] },
-  { title: 'Step 3 · Allocation', tips: [
-    'Decide how many periods each subject gets per class, and which teacher takes it.',
-    'Period and teacher allocations stay in sync — edit either side and the other reflows.',
+  { title: 'Step 3 · Mapping', tips: [
+    'Map each subject to its class-sections, then map those to teachers.',
+    'Subject and teacher mappings stay in sync — edit either side and the other reflows.',
+    'Overloaded faculty or venues are flagged here, with one-click load optimisation.',
   ] },
   { title: 'Step 4 · Groups & Combos', tips: [
     'Set up electives and combined groups (students pick one option, or classes merge for a subject).',
@@ -60,7 +61,7 @@ const STEPS = [StepResourcesV2, StepBell, StepAllocation, StepStudentGroups, Ste
 const STEP_META = [
   { label: 'Resources',         sub: 'Classes, subjects, teachers & rooms'  },
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
-  { label: 'Allocation',        sub: 'Period × subject + teacher assignment' },
+  { label: 'Mapping',           sub: 'Subject → class-section → teacher mapping' },
   { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules' },
   { label: 'Review & generate', sub: 'HI builds your schedule'              },
 ]

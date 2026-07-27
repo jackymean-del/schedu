@@ -17,6 +17,7 @@ import * as ttRepo from '@/api/timetables'
 import { BrandedLoader } from '@/components/BrandedLoader'
 import { useOrgProfile } from '@/store/orgProfile'
 import { parseGradeLevel, toRoman, tidyGradeLabel } from '@/lib/gradeParse'
+import { distributeSections } from '@/lib/sectionDistribution'
 import { GradeInput } from '@/components/GradeInput'
 import { AppFooter } from '@/components/AppFooter'
 import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
@@ -71,17 +72,9 @@ function levelLabel(n: number): string {
   if (n === 0) return 'UKG'
   return toRoman(n)
 }
-/** Distribute `total` sections across `count` levels as evenly as possible;
- *  any remainder goes to the highest (top) levels. */
-function distributeSections(count: number, total: number): number[] {
-  if (count <= 0) return []
-  if (total <= 0) return Array(count).fill(0)
-  const base = Math.floor(total / count)
-  let rem = total - base * count
-  const arr = Array(count).fill(base)
-  for (let i = count - 1; rem > 0; i--, rem--) arr[i] += 1
-  return arr
-}
+// Section auto-distribution lives in lib/sectionDistribution (Blueprint v3,
+// Step 1: allocate from the LOWEST class upward). Imported so the create-modal
+// preview and the actual generation can never diverge.
 /** Band index by numeric level: pre-primary 0 · primary(1–5) 1 · middle(6–10) 2 · senior(11+) 3. */
 function bandOf(level: number): number {
   if (level <= 0) return 0

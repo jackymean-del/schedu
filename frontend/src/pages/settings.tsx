@@ -171,11 +171,14 @@ function WorkloadCard() {
       title="Workload limits"
       subtitle={`Cap the max weekly hours the planner schedules. Leave a field blank to use the national norm (${country}). 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
     >
-      {/* Teachers */}
+      {/* Teachers — per week AND per day, each auto-updating the other
+          (Blueprint v3, Step 0: "Editing one field auto-updates the other"). */}
       <div style={rowStyle}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>All teachers — max teaching hours / week</div>
-          <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>Applies to every auto-generated teacher. Norm ≈ {teacherDefault} h/wk.</div>
+          <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>
+            Applies to every auto-generated teacher. <strong style={{ color: '#4B5275' }}>National norm ≈ {teacherDefault} h/wk</strong> ({country}) — blank uses the norm.
+          </div>
         </div>
         <input
           type="number" min={1} step="0.5" value={teacherMaxHoursWeek ?? ''} placeholder={String(teacherDefault)}
@@ -183,6 +186,19 @@ function WorkloadCard() {
           style={inputStyle}
         />
         <div style={{ fontSize: 12, color: '#8B87AD' }}>≈ <strong style={{ color: '#4B5275' }}>{teacherPeriods}</strong> periods/wk</div>
+      </div>
+      <div style={rowStyle}>
+        <div style={{ fontSize: 12.5, color: '#4B5275', paddingLeft: 2 }}>
+          …or enter it <strong>per day</strong> ({daysPerWeek}-day week)
+        </div>
+        <input
+          type="number" min={0.5} step="0.25"
+          value={teacherMaxHoursWeek != null ? Math.round((teacherMaxHoursWeek / daysPerWeek) * 100) / 100 : ''}
+          placeholder={String(Math.round((teacherDefault / daysPerWeek) * 100) / 100)}
+          onChange={e => setTeacherMaxHoursWeek(e.target.value === '' ? undefined : Number(e.target.value) * daysPerWeek)}
+          style={inputStyle}
+        />
+        <div style={{ fontSize: 12, color: '#8B87AD' }}>× {daysPerWeek} days = week</div>
       </div>
 
       <div style={{ height: 1, background: '#F0EDFB', margin: '2px 0' }} />
