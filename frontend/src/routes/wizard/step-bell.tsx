@@ -35,6 +35,8 @@ import {
   type CSSProperties,
 } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
+import { useWorkloadLimits } from '@/store/workloadLimits'
+import type { GradeBand } from '@/lib/educationNorms'
 import { parseGradeLevel } from '@/lib/gradeParse'
 import {
   Plus, Sparkles, ChevronLeft, ChevronRight,
@@ -275,6 +277,16 @@ const SCHOOL_HOUR_STANDARDS = {
   },
 } as const
 type SchoolGroupKey = keyof typeof SCHOOL_HOUR_STANDARDS
+
+/** Bell-step group key → norms-brain grade band, so the user's global custom
+ *  weekly student-hours cap (Settings → Workload limits) can be enforced here. */
+const GROUP_TO_BAND: Record<SchoolGroupKey, GradeBand> = {
+  'Pre-Primary': 'prePrimary',
+  'Primary': 'lowerPrimary',
+  'Middle': 'upperPrimary',
+  'Senior': 'secondary',
+  'Senior Secondary': 'seniorSecondary',
+}
 
 /**
  * Returns the standard for the most academically demanding active group,
@@ -2965,6 +2977,8 @@ export function StepBell() {
   // for an age group or outside the configured P.Min/P.Max. Each item may offer a
   // one-click fix. Empty list ⇒ everything is within healthy bounds.
   type Advisory = { id: string; severity: 'warn' | 'info'; emoji: string; title: string; detail: string; fix?: { label: string; run: () => void } }
+  // Global custom weekly student-hours caps (Settings → Workload limits).
+  const { studentMaxHoursWeek } = useWorkloadLimits()
   const scheduleAdvisories = useMemo<Advisory[]>(() => {
     const out: Advisory[] = []
     if (!displayRows.length) return out
@@ -3003,6 +3017,39 @@ export function StepBell() {
           detail: `${hrs.toFixed(1)} h — below the recommended ${std.minHours} h min for instructional time.`,
         })
       }
+      // 2b) The user's GLOBAL custom weekly cap for this age group
+      //     (Settings → Workload limits). Enforced here so children's hours are
+      //     constrained at the source — the bell schedule — not just flagged
+      //     after generation.
+      const band = GROUP_TO_BAND[gm.group as SchoolGroupKey]
+      const capH = band ? studentMaxHoursWeek[band] : undefined
+      if (capH != null && capH > 0) {
+        const teaching = data.filter(d => d.row.type === 'teaching')
+        const teachMins = teaching.reduce((a, d) => a + d.row.duration, 0)
+        const weeklyH = (teachMins * Math.max(1, workDays.length)) / 60
+        if (weeklyH > capH + 0.01) {
+          // Fewer periods/day is the effective lever here: handleMaxPeriodsChange
+          // rebuilds the rows (re-absorbing time from the last period backward,
+          // clamped by P.Min/P.Max), which genuinely lowers weekly teaching time.
+          // Trimming only the end time bottoms out at the minimum period length.
+          const days = Math.max(1, workDays.length)
+          const avgDur = teaching.length ? teachMins / teaching.length : (periodDurMin || 40)
+          // Target shape that would satisfy the cap — stated as guidance rather
+          // than a one-click fix: no single lever gets there reliably (cutting
+          // periods preserves the end time, so the rest just stretch; trimming
+          // the end time bottoms out at the minimum period length), so the user
+          // adjusts Max/day, period length or the day length themselves and the
+          // figure below updates live until it's within the limit.
+          const targetMinsPerDay = Math.round((capH * 60) / days)
+          const allowedPerDay = Math.max(1, Math.floor(targetMinsPerDay / Math.max(1, avgDur)))
+          out.push({
+            id: `grp-weekcap-${gm.group}`, severity: 'warn', emoji: '📵',
+            title: `${std.label} exceeds your weekly limit`,
+            detail: `${weeklyH.toFixed(1)} h/week of teaching — above your custom ${capH} h limit for this age group (currently ${days} days × ${teaching.length} periods × ${Math.round(avgDur)} min). To fit, aim for about ${targetMinsPerDay} min of teaching per day — e.g. ${allowedPerDay} period${allowedPerDay > 1 ? 's' : ''}/day at ${Math.round(avgDur)} min, or keep the periods and shorten them.`,
+          })
+        }
+      }
+
       const longPeriods = data.filter(d => d.row.type === 'teaching' && d.row.duration > std.periodDurRange[1])
       if (longPeriods.length) {
         out.push({
@@ -3032,7 +3079,7 @@ export function StepBell() {
       })
     }
     return out
-  }, [displayRows, groupTimelineData, activeStartTime, endTime, periodDurMin, activePeriodDur, use12h]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayRows, groupTimelineData, activeStartTime, endTime, periodDurMin, activePeriodDur, use12h, studentMaxHoursWeek, workDays]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMaxPeriodsChange = (n: number) => {
     const v = Math.max(1, Math.min(16, n))
