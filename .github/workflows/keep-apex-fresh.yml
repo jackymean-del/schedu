@@ -32,11 +32,11 @@ jobs:
       VERCEL_ORG_ID: team_tvQdPIk0v7HPYReWluLD1JbQ
       VERCEL_PROJECT_ID: prj_2l6sW6AJYLXIdxB3cUtOsFNGZb83
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
 
       # Let the push's own auto-deploys (app + marketing git integration) finish
       # first, so our forced deploy is the LAST production deploy and wins the alias.
