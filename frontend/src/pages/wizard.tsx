@@ -26,8 +26,9 @@ import { StepResourcesV2 }   from '@/routes/wizard/step-resources-v2'
 import { StepAllocation }    from '@/routes/wizard/step-allocation'
 import { StepStudentGroups } from '@/routes/wizard/step-student-groups'
 import { Step6Generate }     from '@/routes/wizard/step6-generate'
-import { CheckCircle2 }      from 'lucide-react'
+import { CheckCircle2, Lock }  from 'lucide-react'
 import { StepGuide }         from '@/components/StepGuide'
+import { markActiveTimetableUnpublished } from '@/lib/ttRegistry'
 
 // Inline guide content per step (index = step - 1). Matches the STEPS order.
 const STEP_GUIDES: { title: string; tips: string[] }[] = [
@@ -137,11 +138,21 @@ function WizardSetupGate() {
 
 // ── Main ──────────────────────────────────────────────────────
 export function WizardPage() {
-  const { step, setStep, config } = useTimetableStore()
+  const { step, setStep, config, timetableStatus, setTimetableStatus } = useTimetableStore()
   const { isAuthenticated, user } = useAuthStore()
 
   const CurrentStep = STEPS[step - 1] ?? StepBell
   const total = STEPS.length
+
+  // Blueprint v3, Step 7: "Publishing locks the wizard steps — Steps 1–6 become
+  // read-only until a new schedule cycle is started." The steps stay visible and
+  // browsable (so the published setup can be inspected), but nothing is editable
+  // until the admin explicitly unpublishes.
+  const locked = timetableStatus === 'published'
+  const unlock = () => {
+    setTimetableStatus('draft')
+    markActiveTimetableUnpublished()
+  }
 
   const ttName = (config as any).timetableName
     || (user?.schoolName ? `${user.schoolName} · Schedule` : 'Untitled schedule')
@@ -209,10 +220,12 @@ export function WizardPage() {
               <Fragment key={n}>
                 {/* Step item */}
                 <div
-                  onClick={() => done && setStep(n)}
+                  // When published the wizard is read-only, but every step stays
+                  // browsable so the locked setup can still be inspected.
+                  onClick={() => (locked || done) && setStep(n)}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: 5, cursor: done ? 'pointer' : 'default', flexShrink: 0,
+                    gap: 5, cursor: (locked || done) ? 'pointer' : 'default', flexShrink: 0,
                   }}
                 >
                   {/* Circle */}
@@ -260,6 +273,31 @@ export function WizardPage() {
         </div>
       </div>
 
+      {/* ══ Published lock banner (Blueprint Step 7) ══ */}
+      {locked && (
+        <div style={{
+          flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10,
+          padding: '9px 28px', background: '#FFFBEB', borderBottom: '1px solid #FDE68A',
+        }}>
+          <Lock size={14} color="#B45309" />
+          <span style={{ fontSize: 12.5, color: '#92400E' }}>
+            <strong>Published — steps are locked.</strong> This schedule is live, so the setup is read-only.
+            Browse any step to review it; unpublish to make changes.
+          </span>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={unlock}
+            style={{
+              padding: '5px 13px', borderRadius: 7, border: '1px solid #FBBF24',
+              background: '#fff', color: '#92400E', fontSize: 11.5, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}
+          >
+            Unpublish to edit
+          </button>
+        </div>
+      )}
+
       {/* ══ Content area ══════════════════════════════ */}
       <div style={{
         flex: 1, overflowY: 'auto',
@@ -270,9 +308,16 @@ export function WizardPage() {
             <StepGuide title={STEP_GUIDES[step - 1].title} tips={STEP_GUIDES[step - 1].tips} />
           </div>
         )}
-        <StepErrorBoundary step={step}>
-          <CurrentStep />
-        </StepErrorBoundary>
+        {/* Read-only while published: the step still renders (so it can be
+            reviewed) but no control inside it can be operated. */}
+        <div
+          style={locked ? { pointerEvents: 'none', opacity: 0.72, userSelect: 'text' } : undefined}
+          aria-disabled={locked || undefined}
+        >
+          <StepErrorBoundary step={step}>
+            <CurrentStep />
+          </StepErrorBoundary>
+        </div>
       </div>
 
     </div>
