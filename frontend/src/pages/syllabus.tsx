@@ -16,9 +16,17 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
-  coverageRows, type SyllabusPlan,
+  coverageRows, summariseBy, type SyllabusPlan,
 } from '@/lib/syllabusTracking'
 import { BookOpen, Plus, Trash2, Check } from 'lucide-react'
+
+type Dim = 'subject' | 'class' | 'section' | 'teacher'
+const DIMS: Array<{ k: Dim; label: string }> = [
+  { k: 'subject', label: 'Subject-wise' },
+  { k: 'class',   label: 'Class-wise' },
+  { k: 'section', label: 'Section-wise' },
+  { k: 'teacher', label: 'Teacher-wise' },
+]
 
 const ACCENT = '#7C6FE0'
 
@@ -32,6 +40,8 @@ export function SyllabusPage() {
     removeChapter, markChapterCovered, logHours,
   } = useSyllabus()
 
+  const [tab, setTab] = useState<'capture' | 'coverage'>('capture')
+  const [dim, setDim] = useState<Dim>('subject')
   const [section, setSection] = useState<string>(sections[0]?.name ?? '')
   const [subject, setSubject] = useState<string>(subjects[0]?.name ?? '')
   const [chName, setChName] = useState('')
@@ -52,15 +62,38 @@ export function SyllabusPage() {
       <PageHeader icon="📗" title="Syllabus" description="Track what each subject needs to cover — and what's actually been taught." />
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {!canPick && (
+        {!canPick && tab === 'capture' && (
           <Card title="No subjects yet">
             <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
               Add classes and subjects in the wizard (or Master Data) first — then come back to record how many hours each subject needs.
+              {rows.length > 0 && <> Coverage already recorded is still visible on the <strong>Coverage dashboard</strong> tab.</>}
             </p>
           </Card>
         )}
 
-        {canPick && (
+        {/* Tabs — faculty capture vs admin coverage (Part C §8).
+            Coverage stays reachable even when the *current* schedule has no
+            subjects loaded, since syllabus data is global and outlives one cycle. */}
+        {(canPick || rows.length > 0) && (
+          <div style={{ display: 'inline-flex', background: '#fff', border: '1px solid #ECE9FB', borderRadius: 10, padding: 4, alignSelf: 'flex-start' }}>
+            {([['capture', 'Track syllabus'], ['coverage', 'Coverage dashboard']] as const).map(([k, label]) => (
+              <button key={k} onClick={() => setTab(k)}
+                style={{
+                  padding: '7px 15px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                  fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
+                  background: tab === k ? ACCENT : 'transparent', color: tab === k ? '#fff' : '#4B5275',
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === 'coverage' && (
+          <CoverageDashboard rows={rows} dim={dim} setDim={setDim} onPick={(sub, sec) => { setSubject(sub); setSection(sec); setTab('capture') }} />
+        )}
+
+        {canPick && tab === 'capture' && (
           <>
             {/* Picker */}
             <Card title="Choose a subject" subtitle="Syllabus is tracked per subject, per class-section — the same subject can need different hours in different sections.">
@@ -217,6 +250,114 @@ export function SyllabusPage() {
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Admin coverage dashboard — Part C §3 · §8.
+ * "Dashboard shows remaining hours" and "admin can track syllabus coverage
+ * status: subject-wise, per section, per class, teacher-wise."
+ * All figures come from the shared service's summariseBy/coverageRows.
+ */
+function CoverageDashboard({
+  rows, dim, setDim, onPick,
+}: {
+  rows: ReturnType<typeof coverageRows>
+  dim: Dim; setDim: (d: Dim) => void
+  onPick: (subject: string, section: string) => void
+}) {
+  const grouped = useMemo(() => summariseBy(rows, dim), [rows, dim])
+  const totals = useMemo(() => {
+    const required = rows.reduce((a, r) => a + r.required, 0)
+    const covered = rows.reduce((a, r) => a + r.covered, 0)
+    return {
+      required: Math.round(required * 10) / 10,
+      covered: Math.round(covered * 10) / 10,
+      remaining: Math.round(Math.max(0, required - covered) * 10) / 10,
+      pct: required > 0 ? Math.min(100, Math.round((covered / required) * 100)) : 0,
+    }
+  }, [rows])
+
+  // Anything under 50% done with hours still outstanding is worth flagging.
+  const atRisk = rows.filter(r => r.required > 0 && r.pct < 50 && r.remaining > 0)
+
+  if (rows.length === 0) return (
+    <Card title="Nothing tracked yet">
+      <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
+        Record a subject's required hours or chapters on the <strong>Track syllabus</strong> tab — coverage appears here as faculty tick chapters off.
+      </p>
+    </Card>
+  )
+
+  return (
+    <>
+      <Card title="Overall coverage" subtitle="Across every tracked subject and section.">
+        <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Stat label="Required" value={`${totals.required} h`} color="#4B41C4" />
+          <Stat label="Covered" value={`${totals.covered} h`} color="#067647" />
+          <Stat label="Remaining" value={`${totals.remaining} h`} color={totals.remaining > 0 ? '#B45309' : '#067647'} />
+          <Stat label="Tracked" value={`${rows.length}`} color="#8B87AD" />
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ height: 14, background: '#EDE9FF', borderRadius: 7, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${totals.pct}%`, background: totals.pct >= 100 ? '#16A34A' : ACCENT, transition: 'width .25s' }} />
+            </div>
+            <div style={{ fontSize: 11, color: '#8B87AD', marginTop: 3 }}>{totals.pct}% of the syllabus taught</div>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Breakdown" subtitle="Most hours remaining first — switch the lens to see where the gap really sits.">
+        <div style={{ display: 'inline-flex', gap: 5, flexWrap: 'wrap' }}>
+          {DIMS.map(d => (
+            <button key={d.k} onClick={() => setDim(d.k)}
+              style={{
+                padding: '5px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 11.5, fontWeight: 700,
+                border: `1px solid ${dim === d.k ? ACCENT : '#E4E0FF'}`,
+                background: dim === d.k ? '#EDE9FF' : '#fff',
+                color: dim === d.k ? '#4B41C4' : '#8B87AD',
+              }}>
+              {d.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {grouped.map(g => (
+            <div key={g.label} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', gap: 12, alignItems: 'center' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.label}</span>
+              <div style={{ height: 12, background: '#F5F2FF', borderRadius: 6, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct >= 100 ? '#16A34A' : g.pct < 50 ? '#D4920E' : ACCENT }} />
+              </div>
+              <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: '#4B5275' }}>
+                {g.covered}/{g.required} h · <strong style={{ color: g.remaining > 0 ? '#B45309' : '#067647' }}>{g.remaining} h left</strong>
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {atRisk.length > 0 && (
+        <Card title={`Behind schedule (${atRisk.length})`} subtitle="Under half taught with hours still outstanding — click one to open its chapters.">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {atRisk.map(r => (
+              <div key={r.key} onClick={() => onPick(r.subject, r.section)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                  padding: '7px 11px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB',
+                }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#92400E' }}>{r.subject}</span>
+                <span style={{ fontSize: 11.5, color: '#B45309' }}>{r.section}</span>
+                {r.teacher && <span style={{ fontSize: 11, color: '#A16207' }}>· {r.teacher}</span>}
+                <div style={{ flex: 1 }} />
+                <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#92400E', fontWeight: 700 }}>
+                  {r.pct}% · {r.remaining} h left
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </>
   )
 }
 

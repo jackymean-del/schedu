@@ -141,6 +141,20 @@ export interface CoverageRow {
   required: number; covered: number; remaining: number; pct: number
 }
 
+/**
+ * The CLASS a section belongs to — "VI-A" → "VI", "Grade 3-B" → "Grade 3".
+ * Part C §8 reports coverage "subject-wise, per section, per class", so class is
+ * its own reporting dimension: the section name minus its trailing section
+ * suffix (a short A–Z / numeric tail, optionally after a stream code).
+ */
+export function classOfSection(section: string): string {
+  const s = (section ?? '').trim()
+  if (!s) return '—'
+  const idx = s.lastIndexOf('-')
+  if (idx > 0 && s.length - idx - 1 <= 3) return s.slice(0, idx).trim()
+  return s
+}
+
 /** Flatten plans into report rows — the basis for every coverage dashboard. */
 export function coverageRows(plans: Record<string, SyllabusPlan>): CoverageRow[] {
   return Object.entries(plans).map(([key, p]) => ({
@@ -150,13 +164,15 @@ export function coverageRows(plans: Record<string, SyllabusPlan>): CoverageRow[]
   })).sort((a, b) => b.remaining - a.remaining || a.subject.localeCompare(b.subject))
 }
 
-/** Group coverage rows by any dimension — subject-, section- or teacher-wise. */
+/** Group coverage rows by any dimension — subject-, class-, section- or teacher-wise. */
 export function summariseBy(
-  rows: CoverageRow[], dim: 'subject' | 'section' | 'teacher',
+  rows: CoverageRow[], dim: 'subject' | 'class' | 'section' | 'teacher',
 ): Array<{ label: string; required: number; covered: number; remaining: number; pct: number }> {
   const m = new Map<string, { required: number; covered: number }>()
   rows.forEach(r => {
-    const label = (dim === 'teacher' ? r.teacher : r[dim]) || '—'
+    const label = (dim === 'teacher' ? r.teacher
+      : dim === 'class' ? classOfSection(r.section)
+      : r[dim]) || '—'
     const cur = m.get(label) ?? { required: 0, covered: 0 }
     cur.required += r.required; cur.covered += r.covered
     m.set(label, cur)

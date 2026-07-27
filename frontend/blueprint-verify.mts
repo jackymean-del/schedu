@@ -74,7 +74,7 @@ ok(rankVenuesByProximity('A', withUnknown, D).map(v => v.name).pop() === 'r-z',
 // ── Part C — Syllabus Tracking (shared service) ──
 import {
   planKey, requiredHours, coveredHours, remainingHours, coveragePct, isCovered,
-  rankOrGroupBySessionNeed, suggestSlotDonor, coverageRows, summariseBy,
+  rankOrGroupBySessionNeed, suggestSlotDonor, coverageRows, summariseBy, classOfSection,
   type SyllabusPlan,
 } from './src/lib/syllabusTracking'
 
@@ -142,6 +142,14 @@ ok(bySubject.find(r => r.label === 'Maths')?.remaining === 15, 'subject-wise: Ma
 const byTeacher = summariseBy(rows, 'teacher')
 ok(byTeacher.find(r => r.label === 'T1')?.pct === 63, 'teacher-wise: T1 is 63% covered (25/40 = 62.5, rounded)')
 ok(summariseBy(rows, 'section').find(r => r.label === 'VI-A')?.remaining === 25, 'section-wise: VI-A has 25 h remaining')
+
+// §8 class-wise is its own dimension (sections VI-A + VI-B roll up into class VI)
+ok(classOfSection('VI-A') === 'VI' && classOfSection('Grade 3-B') === 'Grade 3', 'class derived from section name')
+ok(classOfSection('XI-Sci-A') === 'XI-Sci', 'stream sections keep their stream in the class label')
+ok(classOfSection('Nursery') === 'Nursery' && classOfSection('') === '—', 'unsuffixed / empty section names handled')
+const byClass = summariseBy(rows, 'class')
+ok(byClass.length === 1 && byClass[0].label === 'VI', 'class-wise: VI-A and VI-B roll up into one class VI')
+ok(byClass[0].required === 50 && byClass[0].remaining === 25, 'class-wise: VI totals 50 h required, 25 h remaining')
 
 console.log(fail === 0 ? '\nALL BLUEPRINT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)
