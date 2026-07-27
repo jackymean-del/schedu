@@ -16,7 +16,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
-  coverageRows, summariseBy, type SyllabusPlan,
+  coverageRows, summariseBy, classOfSection, type SyllabusPlan,
 } from '@/lib/syllabusTracking'
 import { BookOpen, Plus, Trash2, Check } from 'lucide-react'
 
@@ -25,7 +25,7 @@ const DIMS: Array<{ k: Dim; label: string }> = [
   { k: 'subject', label: 'Subject-wise' },
   { k: 'class',   label: 'Class-wise' },
   { k: 'section', label: 'Section-wise' },
-  { k: 'teacher', label: 'Teacher-wise' },
+  { k: 'teacher', label: 'Faculty-wise' },
 ]
 
 const ACCENT = '#7C6FE0'
@@ -254,6 +254,32 @@ export function SyllabusPage() {
 }
 
 /**
+ * The (subject × section) rows that belong to one group of the current lens —
+ * i.e. what you see when a group is expanded. Grouping must mirror summariseBy's
+ * so a group's detail rows always add up to its header figure.
+ *
+ * Ordered subject-then-section (so a subject's sections read as one block), with
+ * the most-behind subject first.
+ */
+function detailRowsFor(
+  rows: ReturnType<typeof coverageRows>, dim: Dim, label: string,
+): ReturnType<typeof coverageRows> {
+  const labelOf = (r: (typeof rows)[number]) =>
+    (dim === 'teacher' ? r.teacher
+      : dim === 'class' ? classOfSection(r.section)
+      : r[dim]) || '—'
+  const mine = rows.filter(r => labelOf(r) === label)
+  // Rank subjects by how far behind they are, then list each subject's sections.
+  const worstBySubject = new Map<string, number>()
+  mine.forEach(r => worstBySubject.set(r.subject, Math.max(worstBySubject.get(r.subject) ?? 0, r.remaining)))
+  return [...mine].sort((a, b) =>
+    (worstBySubject.get(b.subject)! - worstBySubject.get(a.subject)!) ||
+    a.subject.localeCompare(b.subject) ||
+    b.remaining - a.remaining ||
+    a.section.localeCompare(b.section))
+}
+
+/**
  * Admin coverage dashboard — Part C §3 · §8.
  * "Dashboard shows remaining hours" and "admin can track syllabus coverage
  * status: subject-wise, per section, per class, teacher-wise."
@@ -321,18 +347,70 @@ function CoverageDashboard({
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {grouped.map(g => (
-            <div key={g.label} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', gap: 12, alignItems: 'center' }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.label}</span>
-              <div style={{ height: 12, background: '#F5F2FF', borderRadius: 6, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct >= 100 ? '#16A34A' : g.pct < 50 ? '#D4920E' : ACCENT }} />
+        {/* Each group expands into its detail rows, so you always land on the
+            actual (subject × section) coverage rather than only a rolled-up bar:
+              Subject-wise → the sections that subject runs in
+              Section-wise → every subject taught in that section
+              Class-wise / Faculty-wise → subject, then its sections beneath it
+            (the subject name is printed once per run, sections listed under it). */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {grouped.map(g => {
+            const detail = detailRowsFor(rows, dim, g.label)
+            const showSubject = dim !== 'subject'
+            const showSection = dim !== 'section'
+            return (
+              <div key={g.label} style={{ border: '1px solid #ECE9FB', borderRadius: 10, overflow: 'hidden' }}>
+                {/* Group header — the rolled-up figure */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 160px', gap: 10, alignItems: 'center', padding: '8px 12px', background: '#F8F7FF', borderBottom: '1px solid #ECE9FB' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#13111E' }}>{g.label}</span>
+                  <div style={{ height: 10, background: '#EDE9FF', borderRadius: 5, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct >= 100 ? '#16A34A' : g.pct < 50 ? '#D4920E' : ACCENT }} />
+                  </div>
+                  <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: '#4B5275' }}>
+                    {g.covered}/{g.required} h · <strong style={{ color: g.remaining > 0 ? '#B45309' : '#067647' }}>{g.remaining} h left</strong>
+                  </span>
+                </div>
+                {/* Detail rows */}
+                <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11.5 }}>
+                  <thead>
+                    <tr style={{ color: '#8B87AD' }}>
+                      {showSubject && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Subject</th>}
+                      {showSection && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Section</th>}
+                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Required</th>
+                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Covered</th>
+                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Left</th>
+                      <th style={{ ...cellS, width: 80 }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.map((r, i) => {
+                      // Print the subject once per run so its sections read as a block.
+                      const firstOfSubject = i === 0 || detail[i - 1].subject !== r.subject
+                      return (
+                        <tr key={r.key} onClick={() => onPick(r.subject, r.section)} style={{ cursor: 'pointer' }}
+                          title={`Open ${r.subject} · ${r.section}`}>
+                          {showSubject && (
+                            <td style={{ ...cellS, fontWeight: 700, color: '#13111E' }}>
+                              {firstOfSubject ? r.subject : ''}
+                            </td>
+                          )}
+                          {showSection && <td style={{ ...cellS, color: '#4B5275' }}>{r.section}</td>}
+                          <td style={{ ...cellS, textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{r.required} h</td>
+                          <td style={{ ...cellS, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: '#067647' }}>{r.covered} h</td>
+                          <td style={{ ...cellS, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: r.remaining > 0 ? '#B45309' : '#067647', fontWeight: 700 }}>{r.remaining} h</td>
+                          <td style={cellS}>
+                            <div style={{ height: 6, background: '#EDE9FF', borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${r.pct}%`, background: r.pct >= 100 ? '#16A34A' : r.pct < 50 ? '#D4920E' : ACCENT }} />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: '#4B5275' }}>
-                {g.covered}/{g.required} h · <strong style={{ color: g.remaining > 0 ? '#B45309' : '#067647' }}>{g.remaining} h left</strong>
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </Card>
 
