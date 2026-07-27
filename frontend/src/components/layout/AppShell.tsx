@@ -28,6 +28,7 @@ const SECTIONS: NavSection[] = [
       { icon: Home,         label: 'Dashboard', href: '/dashboard' },
       { icon: CalendarDays, label: 'Schedules', href: '/wizard' },
       { icon: Calendar,     label: 'Calendar',  href: '/calendar' },
+      { icon: BookOpen,     label: 'Syllabus',  href: '/syllabus' },
       { icon: BarChart2,    label: 'Insights',  href: '/insights' },
     ],
   },
