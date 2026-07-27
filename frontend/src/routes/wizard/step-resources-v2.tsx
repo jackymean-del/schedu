@@ -30,6 +30,7 @@ import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
 import { distributeSections } from '@/lib/sectionDistribution'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
+import { BlockDistanceMatrix } from '@/components/resources/BlockDistanceMatrix'
 import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
 import { linkOrRegisterStaff, linkOrRegisterVenues } from '@/store/directoryStore'
 import {
@@ -1099,7 +1100,7 @@ export function StepResourcesV2() {
                   hasGaps={staffingGaps.length > 0}
                 />
               </div>
-              <div style={{ flex: 1, minHeight: 0, display: activeTab === 'rooms' ? 'flex' : 'none', flexDirection: 'column' }}>
+              <div style={{ flex: 1, minHeight: 0, display: activeTab === 'rooms' ? 'flex' : 'none', flexDirection: 'column', overflowY: 'auto' }}>
                 <RoomsPanel
                   rooms={rooms} setRooms={setRooms}
                   sections={sections} setSections={setSections} subjects={subjects}
@@ -1112,6 +1113,9 @@ export function StepResourcesV2() {
                   aiLoading={aiLoading && activeTab === 'rooms'}
                   aiApplied={roomsAiApplied}
                 />
+                {/* Blueprint v3, Step 2 — multi-block schools record relative
+                    block distances here; Step 4's AND logic prefers nearer blocks. */}
+                <BlockDistanceMatrix venueBuildings={(rooms as any[]).map(r => r?.building ?? '')} />
               </div>
             </div>
           )}

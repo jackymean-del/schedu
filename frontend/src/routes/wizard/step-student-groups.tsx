@@ -14,6 +14,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useTimetableStore } from '@/store/timetableStore'
+import { useBlockDistance, rankVenuesByProximity } from '@/lib/blockDistance'
 import type { AndComboGroup, AndTeachingGroup, AndGroupScope, SubjectBundle } from '@/types'
 import {
   Layers, Shuffle, ChevronRight, ChevronLeft, ChevronDown, Plus, Trash2,
@@ -530,6 +531,28 @@ function BlockCard({
   const [groupsCollapsed, setGroupsCollapsed] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  // Blueprint v3, Step 4: when a parallel group spans blocks/buildings, prefer
+  // NEARER blocks (per the Step 2 distance matrix) so students walk less. Each
+  // group's room list is ordered by distance from that group's own block — the
+  // dominant block of its sections' home rooms. Falls back to the plain list when
+  // no distances are recorded (single-block schools are unaffected).
+  const blockDistances = useBlockDistance(s => s.distances)
+  const roomNamesNearest = (tg: AndTeachingGroup): string[] => {
+    if (Object.keys(blockDistances).length === 0) return allRoomNames
+    const byName = new Map<string, any>()
+    ;(rooms as any[]).forEach(r => { if (r?.name) byName.set(r.name, r) })
+    const counts = new Map<string, number>()
+    tg.sectionSlices.forEach(sl => {
+      const sec: any = (sectionsStore as any[]).find((s: any) => s?.name === sl.sectionName)
+      const b = sec?.room ? String(byName.get(sec.room)?.building ?? '').trim() : ''
+      if (b) counts.set(b, (counts.get(b) ?? 0) + 1)
+    })
+    let from: string | undefined, n = 0
+    counts.forEach((c, b) => { if (c > n) { n = c; from = b } })
+    if (!from) return allRoomNames
+    return rankVenuesByProximity(from, rooms as any[], blockDistances).map((r: any) => r.name)
+  }
+
   const combos = block.combos
   const sections = block.sections
   const scope = combos.length ? getScope(combos[0]) : DEFAULT_SCOPE
@@ -885,7 +908,7 @@ function BlockCard({
           {!groupsCollapsed && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 8 }}>
               {combos.flatMap(c => (c.generatedGroups ?? []).map(g => (
-                <ParallelGroupCard key={g.id} tg={g} shade={shadeOf(g)} allRoomNames={allRoomNames} allTeacherNames={allTeacherNames}
+                <ParallelGroupCard key={g.id} tg={g} shade={shadeOf(g)} allRoomNames={roomNamesNearest(g)} allTeacherNames={allTeacherNames}
                   onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
                   onTeacher={teacher => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, teacher } : x) }))}
                   onDelete={() => deleteGroup(c.id, g.id)} />
@@ -980,6 +1003,7 @@ export function StepStudentGroups() {
   const allSubjectNames = useMemo(() => (subjects as any[]).map((s: any) => s.name), [subjects])
   const allSectionNames = useMemo(() => (sections as any[]).map((s: any) => s.name), [sections])
   const allRoomNames    = useMemo(() => rooms.map((r: any) => r.name), [rooms])
+
   const allTeacherNames = useMemo(() => [...new Set((staff as any[]).map((t: any) => t.name).filter(Boolean))], [staff])
 
   // Write-back link: reflect combo subject↔section assignments into Resources → Subjects.
