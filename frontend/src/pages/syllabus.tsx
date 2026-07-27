@@ -286,12 +286,38 @@ function detailRowsFor(
  * All figures come from the shared service's summariseBy/coverageRows.
  */
 function CoverageDashboard({
-  rows, dim, setDim, onPick,
+  rows: allRows, dim, setDim, onPick,
 }: {
   rows: ReturnType<typeof coverageRows>
   dim: Dim; setDim: (d: Dim) => void
   onPick: (subject: string, section: string) => void
 }) {
+  // Narrow to a particular class, section, subject and/or faculty. Filters
+  // compose, and everything below (totals, breakdown, behind-schedule) reflects
+  // them — so "class VI, Maths only" is a first-class view, not a manual scan.
+  const [fClass, setFClass] = useState('')
+  const [fSection, setFSection] = useState('')
+  const [fSubject, setFSubject] = useState('')
+  const [fTeacher, setFTeacher] = useState('')
+
+  const match = (r: (typeof allRows)[number], skip?: 'class' | 'section' | 'subject' | 'teacher') =>
+    (skip === 'class'   || !fClass   || classOfSection(r.section) === fClass) &&
+    (skip === 'section' || !fSection || r.section === fSection) &&
+    (skip === 'subject' || !fSubject || r.subject === fSubject) &&
+    (skip === 'teacher' || !fTeacher || (r.teacher || '—') === fTeacher)
+
+  const rows = useMemo(() => allRows.filter(r => match(r)), [allRows, fClass, fSection, fSubject, fTeacher])
+
+  // Each dropdown's options come from the rows the OTHER filters allow, so a
+  // choice never leads to an empty view.
+  const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const classOpts   = useMemo(() => uniq(allRows.filter(r => match(r, 'class')).map(r => classOfSection(r.section))), [allRows, fSection, fSubject, fTeacher])
+  const sectionOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'section')).map(r => r.section)), [allRows, fClass, fSubject, fTeacher])
+  const subjectOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'subject')).map(r => r.subject)), [allRows, fClass, fSection, fTeacher])
+  const teacherOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'teacher')).map(r => r.teacher || '—')), [allRows, fClass, fSection, fSubject])
+  const anyFilter = !!(fClass || fSection || fSubject || fTeacher)
+  const clearAll = () => { setFClass(''); setFSection(''); setFSubject(''); setFTeacher('') }
+
   const grouped = useMemo(() => summariseBy(rows, dim), [rows, dim])
   const totals = useMemo(() => {
     const required = rows.reduce((a, r) => a + r.required, 0)
@@ -307,7 +333,7 @@ function CoverageDashboard({
   // Anything under 50% done with hours still outstanding is worth flagging.
   const atRisk = rows.filter(r => r.required > 0 && r.pct < 50 && r.remaining > 0)
 
-  if (rows.length === 0) return (
+  if (allRows.length === 0) return (
     <Card title="Nothing tracked yet">
       <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
         Record a subject's required hours or chapters on the <strong>Track syllabus</strong> tab — coverage appears here as faculty tick chapters off.
@@ -315,9 +341,58 @@ function CoverageDashboard({
     </Card>
   )
 
+  const filterBar = (
+    <Card title="Filter" subtitle="Narrow to a class, section, subject or faculty — everything below follows.">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr)) auto', gap: 10, alignItems: 'end' }}>
+        <Field label="Class">
+          <select value={fClass} onChange={e => setFClass(e.target.value)} style={inputStyle}>
+            <option value="">All classes</option>
+            {classOpts.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
+        <Field label="Section">
+          <select value={fSection} onChange={e => setFSection(e.target.value)} style={inputStyle}>
+            <option value="">All sections</option>
+            {sectionOpts.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
+        <Field label="Subject">
+          <select value={fSubject} onChange={e => setFSubject(e.target.value)} style={inputStyle}>
+            <option value="">All subjects</option>
+            {subjectOpts.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
+        <Field label="Faculty">
+          <select value={fTeacher} onChange={e => setFTeacher(e.target.value)} style={inputStyle}>
+            <option value="">All faculty</option>
+            {teacherOpts.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
+        {anyFilter && (
+          <button onClick={clearAll} style={{ ...btnSoft, height: 38 }}>Clear</button>
+        )}
+      </div>
+    </Card>
+  )
+
+  if (rows.length === 0) return (
+    <>
+      {filterBar}
+      <Card title="No match">
+        <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
+          Nothing tracked matches these filters. <button onClick={clearAll} style={{ background: 'none', border: 'none', color: ACCENT, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, padding: 0 }}>Clear filters</button>
+        </p>
+      </Card>
+    </>
+  )
+
   return (
     <>
-      <Card title="Overall coverage" subtitle="Across every tracked subject and section.">
+      {filterBar}
+      <Card
+        title="Overall coverage"
+        subtitle={anyFilter ? 'Across the filtered selection.' : 'Across every tracked subject and section.'}
+      >
         <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
           <Stat label="Required" value={`${totals.required} h`} color="#4B41C4" />
           <Stat label="Covered" value={`${totals.covered} h`} color="#067647" />
