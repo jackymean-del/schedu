@@ -67,7 +67,7 @@ export function SettingsPage() {
         <NamingCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
 
         {/* Workload limits */}
-        <WorkloadCard />
+        <WorkloadCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
 
         {/* Account */}
         <Card title="Account" subtitle="Your personal sign-in and profile.">
@@ -154,7 +154,7 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
 // teachers and for children per grade band. Blank = use the national norm.
 const BAND_ORDER: GradeBand[] = ['prePrimary', 'lowerPrimary', 'upperPrimary', 'secondary', 'seniorSecondary']
 
-function WorkloadCard() {
+function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   const config = useTimetableStore(s => s.config) as any
   const country = config?.countryCode || 'IN'
   const board = config?.board
@@ -164,6 +164,21 @@ function WorkloadCard() {
     teacherMaxHoursWeek, studentMaxHoursWeek,
     setTeacherMaxHoursWeek, setStudentMaxHoursWeek,
   } = useWorkloadLimits()
+
+  // Draft state — edits are held locally until Save, so the custom norms are a
+  // deliberate commit rather than something that changes underfoot as you type.
+  const [dTeacher, setDTeacher] = useState<number | undefined>(teacherMaxHoursWeek)
+  const [dStudents, setDStudents] = useState<Partial<Record<GradeBand, number>>>(studentMaxHoursWeek)
+  const dirty =
+    dTeacher !== teacherMaxHoursWeek ||
+    BAND_ORDER.some(b => (dStudents[b] ?? undefined) !== (studentMaxHoursWeek[b] ?? undefined))
+
+  const saveWorkload = () => {
+    setTeacherMaxHoursWeek(dTeacher)
+    BAND_ORDER.forEach(b => setStudentMaxHoursWeek(b, dStudents[b]))
+    onSaved()
+  }
+  const clearCustom = () => { setDTeacher(undefined); setDStudents({}) }
 
   // Blueprint v5 — country-wise allocation automation. The school's own country
   // seeds the defaults; where the published figure is net teaching time we use
@@ -213,64 +228,139 @@ function WorkloadCard() {
         </div>
       )}
 
-      {/* Teachers — per week AND per day, each auto-updating the other
-          (Blueprint v3, Step 0: "Editing one field auto-updates the other"). */}
-      <div style={rowStyle}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>All teachers — max teaching hours / week</div>
-          <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>
-            Applies to every auto-generated teacher. <strong style={{ color: '#4B5275' }}>National norm ≈ {teacherDefault} h/wk</strong> ({country}) — blank uses the norm.
-          </div>
+      {/* ── Table 1 · National norm (read-only) ─────────────────── */}
+      <div>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4', marginBottom: 6 }}>
+          National norm — {ref?.name ?? country}
         </div>
-        <input
-          type="number" min={1} step="0.5" value={teacherMaxHoursWeek ?? ''} placeholder={String(teacherDefault)}
-          onChange={e => setTeacherMaxHoursWeek(e.target.value === '' ? undefined : Number(e.target.value))}
-          style={inputStyle}
-        />
-        <div style={{ fontSize: 12, color: '#8B87AD' }}>≈ <strong style={{ color: '#4B5275' }}>{teacherPeriods}</strong> periods/wk</div>
-      </div>
-      <div style={rowStyle}>
-        <div style={{ fontSize: 12.5, color: '#4B5275', paddingLeft: 2 }}>
-          …or enter it <strong>per day</strong> ({daysPerWeek}-day week)
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: '#F3F1FC' }}>
+                <th style={{ ...th, textAlign: 'left' }}>Level</th>
+                <th style={th}>Students h/wk</th>
+                <th style={th}>Teachers h/wk</th>
+                <th style={{ ...th, textAlign: 'left' }}>Basis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BAND_ORDER.map(band => {
+                const s = studentHoursWeekFor(country, band)
+                const t = teacherHoursWeekFor(country, band)
+                const sHrs = s ? s.hours : normStudentHoursWeek(country, board, band, daysPerWeek)
+                return (
+                  <tr key={band}>
+                    <td style={{ ...td, textAlign: 'left' }}>{BAND_LABELS[band]}</td>
+                    <td style={td}>{sHrs}</td>
+                    <td style={{ ...td, color: t?.usable ? '#13111E' : '#9A95BC' }}>
+                      {t ? t.hours : '—'}
+                    </td>
+                    <td style={{ ...td, textAlign: 'left', fontSize: 11, color: '#8B87AD' }}>
+                      {t?.usable ? 'Net teaching time' : 'Total incl. prep — not a teaching cap'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
-        <input
-          type="number" min={0.5} step="0.25"
-          value={teacherMaxHoursWeek != null ? Math.round((teacherMaxHoursWeek / daysPerWeek) * 100) / 100 : ''}
-          placeholder={String(Math.round((teacherDefault / daysPerWeek) * 100) / 100)}
-          onChange={e => setTeacherMaxHoursWeek(e.target.value === '' ? undefined : Number(e.target.value) * daysPerWeek)}
-          style={inputStyle}
-        />
-        <div style={{ fontSize: 12, color: '#8B87AD' }}>× {daysPerWeek} days = week</div>
+        <p style={{ fontSize: 11, color: '#9A95BC', margin: '6px 0 0' }}>
+          Term-time averages (annual hours ÷ {ref?.weeksPerYear ?? 38} teaching weeks). Source: {ref?.sourceNote ?? 'OECD Education at a Glance'}.
+          {' '}These are the policy defaults — the planner uses them unless you set a custom norm below.
+        </p>
       </div>
 
-      <div style={{ height: 1, background: '#F0EDFB', margin: '2px 0' }} />
+      <div style={{ height: 1, background: '#F0EDFB' }} />
 
-      {/* Children per band — seeded from THIS country's reference figures */}
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: '#4B41C4' }}>Children — max instructional hours / week, by grade</div>
-      {BAND_ORDER.map(band => {
-        const r = studentHoursWeekFor(country, band)
-        const def = r ? r.hours : normStudentHoursWeek(country, board, band, daysPerWeek)
-        return (
-          <div key={band} style={rowStyle}>
-            <div style={{ fontSize: 12.5, color: '#13111E' }}>{BAND_LABELS[band]}</div>
-            <input
-              type="number" min={1} step="0.5" value={studentMaxHoursWeek[band] ?? ''} placeholder={String(def)}
-              onChange={e => setStudentMaxHoursWeek(band, e.target.value === '' ? undefined : Number(e.target.value))}
-              style={inputStyle}
-            />
-            <div style={{ fontSize: 12, color: '#8B87AD' }}>
-              {r?.covered ? `${ref?.name ?? country} ≈ ${def} h/wk` : `OECD avg ≈ ${def} h/wk`}
-            </div>
-          </div>
-        )
-      })}
+      {/* ── Table 2 · Custom norm (editable) ────────────────────── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4' }}>Custom norm — your school</div>
+          <span style={{ fontSize: 11, color: '#8B87AD' }}>Leave a cell blank to keep the national value. A custom value always wins.</span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: '#F3F1FC' }}>
+                <th style={{ ...th, textAlign: 'left' }}>Level</th>
+                <th style={th}>Students h/wk</th>
+                <th style={{ ...th, textAlign: 'left' }}>In effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BAND_ORDER.map(band => {
+                const s = studentHoursWeekFor(country, band)
+                const def = s ? s.hours : normStudentHoursWeek(country, board, band, daysPerWeek)
+                const eff = dStudents[band] ?? def
+                const custom = dStudents[band] != null
+                return (
+                  <tr key={band}>
+                    <td style={{ ...td, textAlign: 'left' }}>{BAND_LABELS[band]}</td>
+                    <td style={{ ...td, padding: 4 }}>
+                      <input type="number" min={1} step="0.5" placeholder={String(def)}
+                        value={dStudents[band] ?? ''}
+                        onChange={e => setDStudents(p => {
+                          const n = { ...p }
+                          if (e.target.value === '') delete n[band]
+                          else n[band] = Number(e.target.value)
+                          return n
+                        })}
+                        style={{ ...inputStyle, padding: '6px 8px', textAlign: 'right' }} />
+                    </td>
+                    <td style={{ ...td, textAlign: 'left', fontWeight: custom ? 700 : 400, color: custom ? '#4B41C4' : '#8B87AD' }}>
+                      {eff} h/wk {custom ? '(custom)' : '(national)'}
+                    </td>
+                  </tr>
+                )
+              })}
+              {/* Teachers — one global cap, enterable per week or per day */}
+              <tr>
+                <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>All teachers — teaching h/wk</td>
+                <td style={{ ...td, padding: 4 }}>
+                  <input type="number" min={1} step="0.5" placeholder={String(teacherDefault)}
+                    value={dTeacher ?? ''}
+                    onChange={e => setDTeacher(e.target.value === '' ? undefined : Number(e.target.value))}
+                    style={{ ...inputStyle, padding: '6px 8px', textAlign: 'right' }} />
+                </td>
+                <td style={{ ...td, textAlign: 'left', fontWeight: dTeacher != null ? 700 : 400, color: dTeacher != null ? '#4B41C4' : '#8B87AD' }}>
+                  {dTeacher ?? teacherDefault} h/wk ≈ {effectiveTeacherMaxPeriods(country, periodMinutes, dTeacher)} periods
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...td, textAlign: 'left', color: '#4B5275' }}>…or per day ({daysPerWeek}-day week)</td>
+                <td style={{ ...td, padding: 4 }}>
+                  <input type="number" min={0.5} step="0.25"
+                    placeholder={String(Math.round((teacherDefault / daysPerWeek) * 100) / 100)}
+                    value={dTeacher != null ? Math.round((dTeacher / daysPerWeek) * 100) / 100 : ''}
+                    onChange={e => setDTeacher(e.target.value === '' ? undefined : Number(e.target.value) * daysPerWeek)}
+                    style={{ ...inputStyle, padding: '6px 8px', textAlign: 'right' }} />
+                </td>
+                <td style={{ ...td, textAlign: 'left', fontSize: 11, color: '#8B87AD' }}>× {daysPerWeek} days = the weekly figure above</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      <p style={{ fontSize: 11.5, color: '#9A95BC', margin: '4px 0 0' }}>
-        Saved automatically and applied to every schedule. Teacher hours convert to periods with your period length; the generator keeps loads within this cap.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
+        <span style={{ fontSize: 11.5, color: '#9A95BC', marginRight: 'auto' }}>
+          Applied to every schedule. Teacher hours convert to periods using your {periodMinutes}-min period length.
+        </span>
+        <button onClick={clearCustom} disabled={!dTeacher && Object.keys(dStudents).length === 0}
+          style={{ ...btnSecondary, opacity: (!dTeacher && Object.keys(dStudents).length === 0) ? 0.5 : 1 }}>
+          Reset to national
+        </button>
+        <button onClick={saveWorkload} disabled={!dirty}
+          style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: dirty ? ACCENT : '#C9C3EC', color: '#fff', fontWeight: 700, fontSize: 13, cursor: dirty ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+          Save workload
+        </button>
+      </div>
     </Card>
   )
 }
+
+const th: React.CSSProperties = { border: '1px solid #E3E0F0', padding: '6px 9px', textAlign: 'right', fontWeight: 700, color: '#4B5275' }
+const td: React.CSSProperties = { border: '1px solid #F0EDFB', padding: '6px 9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
