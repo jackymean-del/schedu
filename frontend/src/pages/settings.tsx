@@ -14,6 +14,9 @@ import {
   BAND_LABELS, normTeacherHoursWeek, normStudentHoursWeek, effectiveTeacherMaxPeriods,
   type GradeBand,
 } from '@/lib/educationNorms'
+import {
+  countryHours, studentHoursWeekFor, teacherHoursWeekFor, shouldPromptCustom,
+} from '@/lib/countryHours'
 
 const KINDS = ['School', 'College', 'University', 'Coaching / Training Center', 'Company', 'Hospital', 'NGO', 'Government', 'Other']
 const ACCENT = '#7C6FE0'
@@ -162,15 +165,54 @@ function WorkloadCard() {
     setTeacherMaxHoursWeek, setStudentMaxHoursWeek,
   } = useWorkloadLimits()
 
-  const teacherDefault = normTeacherHoursWeek(country, periodMinutes)
+  // Blueprint v5 — country-wise allocation automation. The school's own country
+  // seeds the defaults; where the published figure is net teaching time we use
+  // it, and where it isn't (India publishes total working hours incl. prep) we
+  // keep the teaching norm and nudge for a custom value instead.
+  const ref = countryHours(country)
+  const refTeacher = teacherHoursWeekFor(country, 'lowerPrimary')
+  const nudge = shouldPromptCustom(country)
+  const teacherDefault = refTeacher?.usable
+    ? refTeacher.hours
+    : normTeacherHoursWeek(country, periodMinutes)
   const teacherPeriods = effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek)
   const rowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 120px 140px', gap: 12, alignItems: 'center' }
+
+  const nudgeText =
+    nudge.reason === 'uncovered' ? `We don’t hold verified figures for this country, so the OECD average is shown. Enter your own values below.`
+    : nudge.reason === 'basis'   ? `${ref?.name}'s published teacher figure (~${ref?.teacherHoursYear.primary} h/yr) is TOTAL working time including preparation, not classroom teaching — so it isn’t used as a teaching cap. Enter your own if your school sets one.`
+    : nudge.reason === 'approximate' ? `These figures follow established OECD patterns for ${ref?.name} but weren’t individually re-verified — treat them as indicative and override if you know better.`
+    : null
 
   return (
     <Card
       title="Workload limits"
-      subtitle={`Cap the max weekly hours the planner schedules. Leave a field blank to use the national norm (${country}). 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
+      subtitle={`Cap the max weekly hours the planner schedules. Leave a field blank to use your country’s reference value. 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
     >
+      {/* Country reference — what this school's own system actually says */}
+      {ref && (
+        <div style={{
+          background: nudge.prompt ? '#FFFBEB' : '#F0FDF4',
+          border: `1px solid ${nudge.prompt ? '#FDE68A' : '#BBF7D0'}`,
+          borderRadius: 10, padding: '10px 13px', fontSize: 11.5, color: '#4B5275',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: nudgeText ? 5 : 0 }}>
+            <strong style={{ color: '#13111E', fontSize: 12.5 }}>{ref.name}</strong>
+            <span style={{
+              fontSize: 10, fontWeight: 800, borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase',
+              background: ref.confidence === 'verified' ? '#DCFCE7' : '#FEF3C7',
+              color: ref.confidence === 'verified' ? '#067647' : '#92400E',
+            }}>
+              {ref.confidence}
+            </span>
+            <span>
+              {ref.daysPerWeek}-day week · {ref.weeksPerYear} teaching weeks/yr · reference hours are term-time averages
+            </span>
+          </div>
+          {nudgeText && <div style={{ color: '#92400E' }}>{nudgeText}</div>}
+        </div>
+      )}
+
       {/* Teachers — per week AND per day, each auto-updating the other
           (Blueprint v3, Step 0: "Editing one field auto-updates the other"). */}
       <div style={rowStyle}>
@@ -203,10 +245,11 @@ function WorkloadCard() {
 
       <div style={{ height: 1, background: '#F0EDFB', margin: '2px 0' }} />
 
-      {/* Children per band */}
+      {/* Children per band — seeded from THIS country's reference figures */}
       <div style={{ fontSize: 12.5, fontWeight: 700, color: '#4B41C4' }}>Children — max instructional hours / week, by grade</div>
       {BAND_ORDER.map(band => {
-        const def = normStudentHoursWeek(country, board, band, daysPerWeek)
+        const r = studentHoursWeekFor(country, band)
+        const def = r ? r.hours : normStudentHoursWeek(country, board, band, daysPerWeek)
         return (
           <div key={band} style={rowStyle}>
             <div style={{ fontSize: 12.5, color: '#13111E' }}>{BAND_LABELS[band]}</div>
@@ -215,7 +258,9 @@ function WorkloadCard() {
               onChange={e => setStudentMaxHoursWeek(band, e.target.value === '' ? undefined : Number(e.target.value))}
               style={inputStyle}
             />
-            <div style={{ fontSize: 12, color: '#8B87AD' }}>norm ≈ {def} h/wk</div>
+            <div style={{ fontSize: 12, color: '#8B87AD' }}>
+              {r?.covered ? `${ref?.name ?? country} ≈ ${def} h/wk` : `OECD avg ≈ ${def} h/wk`}
+            </div>
           </div>
         )
       })}

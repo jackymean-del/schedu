@@ -189,5 +189,66 @@ ok(alerts[1].subject === 'Geo' && alerts[1].risk === 'behind', 'behind row follo
 ok(lagging(alertPlans, 1).length === 1, 'alert feed can be capped for a compact dashboard widget')
 ok(coverageRows(alertPlans).find(r => r.section === 'IX-B')?.lost === 5, 'coverage rows expose lost hours + risk')
 
+// ── v5 Step 0: country-wise allocation automation ──
+import {
+  COUNTRY_HOURS, countryHours, isCovered as ctryCovered, countryOptions,
+  studentHoursWeekFor, teacherHoursWeekFor, shouldPromptCustom, refLevelForBand, OECD_AVERAGE,
+} from './src/lib/countryHours'
+
+ok(COUNTRY_HOURS.length === 42, `reference dataset loaded (${COUNTRY_HOURS.length} rows: 41 systems + OECD average)`)
+
+// The blueprint's worked example table
+ok(OECD_AVERAGE.daysPerWeek === 5 && OECD_AVERAGE.studentHoursWeek.primary === 21.2 && OECD_AVERAGE.teacherHoursYear.primary === 780 && OECD_AVERAGE.confidence === 'verified',
+  'worked example — OECD average: 5 days, 21.2 primary student hrs/wk, 780 teacher hrs/yr, Verified')
+const ind = countryHours('IN')!
+ok(ind.daysPerWeek === 6 && ind.studentHoursWeek.primary === 22.5 && ind.teacherHoursYear.primary === 1600 && ind.confidence === 'verified',
+  'worked example — India (CBSE): 6 days, 22.5 primary student hrs/wk, ~1600 teacher hrs/yr, Verified')
+const aus = countryHours('AU')!
+ok(aus.daysPerWeek === 5 && aus.studentHoursWeek.primary === 25 && aus.teacherHoursYear.primary === 870 && aus.confidence === 'approximate',
+  'worked example — Australia: 5 days, 25.0 primary student hrs/wk, 870 teacher hrs/yr, Approximate')
+
+// A country sees ITS OWN figures, not a global default
+ok(studentHoursWeekFor('IN', 'lowerPrimary')!.hours === 22.5, 'India primary student hours = 22.5 h/wk')
+ok(studentHoursWeekFor('FI', 'lowerPrimary')!.hours === 18.2, 'Finland primary student hours = 18.2 h/wk (its own figure)')
+ok(studentHoursWeekFor('US', 'lowerPrimary')!.hours === 27.2, 'United States primary = 27.2 h/wk')
+ok(studentHoursWeekFor('JP', 'seniorSecondary')!.hours === 21.8, 'Japan upper-secondary = 21.8 h/wk')
+
+// Term-time weekly = annual ÷ weeks IN SESSION (never ÷ 52)
+const fi = countryHours('FI')!
+ok(Math.abs(fi.studentHoursWeek.primary - fi.weeksPerYear * 0 - 693 / 38) < 0.1,
+  'weekly hours derive from weeks in session (Finland 693 h ÷ 38 wks ≈ 18.2), not ÷ 52')
+
+// Pre-primary is published annually — converted with that country's weeks
+ok(studentHoursWeekFor('IN', 'prePrimary')!.hours === 12.5, 'India pre-primary 500 h/yr ÷ 40 wks = 12.5 h/wk')
+
+// Band → reference level mapping
+ok(refLevelForBand('lowerPrimary') === 'primary' && refLevelForBand('upperPrimary') === 'lowerSec'
+  && refLevelForBand('secondary') === 'lowerSec' && refLevelForBand('seniorSecondary') === 'upperSec',
+  'grade bands map onto the dataset levels')
+
+// THE TRAP: India's teacher figure is total working hours incl. prep
+const indT = teacherHoursWeekFor('IN', 'lowerPrimary')!
+ok(indT.basis === 'total' && indT.usable === false,
+  "India's teacher figure is flagged 'total' (incl. prep) and NOT usable as a teaching cap")
+ok(Math.abs(indT.hours - 40) < 0.1, 'India 1600 h/yr ÷ 40 wks = 40 h/wk — which as a teaching cap would be ~60 periods, hence the guard')
+const oecdT = teacherHoursWeekFor('OECD', 'lowerPrimary')!
+ok(oecdT.basis === 'teaching' && oecdT.usable === true && Math.abs(oecdT.hours - 20.5) < 0.2,
+  'OECD teacher figure is net teaching time and usable (780 ÷ 38 ≈ 20.5 h/wk)')
+
+// Custom-entry nudge (v5: uncovered / approximate / wrong basis)
+ok(shouldPromptCustom('ZZ').reason === 'uncovered', 'uncovered country → nudge custom entry')
+ok(shouldPromptCustom('AU').reason === 'approximate', 'Approximate-tier country → nudge custom entry')
+ok(shouldPromptCustom('IN').reason === 'basis', "India → nudge custom (published figure isn't a teaching measure)")
+ok(shouldPromptCustom('FR').prompt === false, 'Verified teaching-basis country → no nudge needed')
+
+// Coverage + options
+ok(ctryCovered('IN') && ctryCovered('FI') && !ctryCovered('ZZ') && !ctryCovered('OECD'),
+  'coverage check distinguishes real systems from the average fallback')
+ok(studentHoursWeekFor('ZZ', 'lowerPrimary')!.covered === false && studentHoursWeekFor('ZZ', 'lowerPrimary')!.hours === 21.2,
+  'uncovered country falls back to the OECD average row, flagged as not covered')
+const opts = countryOptions()
+ok(opts[0].code === 'OECD' && opts.length === 42 && opts[1].name.localeCompare(opts[2].name) <= 0,
+  'country picker lists the OECD average first, then countries alphabetically')
+
 console.log(fail === 0 ? '\nALL BLUEPRINT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)
