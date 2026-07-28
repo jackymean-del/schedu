@@ -250,6 +250,42 @@ const opts = countryOptions()
 ok(opts[0].code === 'OECD' && opts.length === 42 && opts[1].name.localeCompare(opts[2].name) <= 0,
   'country picker lists the OECD average first, then countries alphabetically')
 
+// ── v5 "borrow & replace" — same teacher, same section, only from a covered subject ──
+import { suggestBorrowSwaps } from './src/lib/syllabusTracking'
+
+const swapPlans: Record<string, SyllabusPlan> = {
+  // Anita teaches both in VI-A: Maths is behind, Art is finished → valid swap
+  [planKey('Maths', 'VI-A')]: mkPlan('Maths', 'VI-A', { requiredHours: 40, loggedHours: 10, teacher: 'Anita' }),
+  [planKey('Art',   'VI-A')]: mkPlan('Art',   'VI-A', { requiredHours: 20, loggedHours: 20, teacher: 'Anita' }),
+  // Covered but a DIFFERENT teacher in the same section → must not be offered
+  [planKey('Music', 'VI-A')]: mkPlan('Music', 'VI-A', { requiredHours: 20, loggedHours: 20, teacher: 'Bimal' }),
+  // Same teacher, covered, but a DIFFERENT section → different students, not offered
+  [planKey('Art',   'VI-B')]: mkPlan('Art',   'VI-B', { requiredHours: 20, loggedHours: 20, teacher: 'Anita' }),
+  // Same teacher/section but itself behind → can't donate what it doesn't have
+  [planKey('EVS',   'VI-A')]: mkPlan('EVS',   'VI-A', { requiredHours: 30, loggedHours: 5,  teacher: 'Anita' }),
+}
+const swaps = suggestBorrowSwaps(swapPlans)
+// Art (Anita, VI-A, covered) can feed BOTH lagging subjects Anita teaches in
+// that section — Maths and EVS. Anything else in the fixture is excluded.
+ok(swaps.length === 2, `only the same-teacher/same-section pairs qualify (got ${swaps.length})`)
+ok(swaps.every(s => s.donor === 'Art' && s.section === 'VI-A' && s.teacher === 'Anita'),
+  'every suggestion borrows from Art, same teacher (Anita) and same section (VI-A)')
+ok(swaps[0].lagging === 'Maths' && swaps[1].lagging === 'EVS',
+  'worst-first ordering — Maths (30 h left) offered before EVS (25 h left)')
+ok(!swaps.some(s => s.donor === 'Music'), 'never borrows from a different teacher, even in the same section')
+ok(!swaps.some(s => s.section === 'VI-B'), 'never borrows across sections — different students in the room')
+ok(!swaps.some(s => s.donor === 'EVS'), 'never borrows from a subject that is itself behind')
+ok(swaps[0].hours <= swaps[0].laggingRemaining, 'never moves more hours than the lagging subject actually needs')
+// Maths needs 30 h but Art only ever had 20 h of slots — it cannot lend 30.
+ok(swaps[0].hours === 20, `never lends more than the donor was allocated (Art has 20 h, offered ${swaps[0].hours} h)`)
+ok(suggestBorrowSwaps({}).length === 0, 'no plans → no suggestions')
+// A school where nothing is ahead gets no false hope
+const noDonor: Record<string, SyllabusPlan> = {
+  [planKey('A', 'X')]: mkPlan('A', 'X', { requiredHours: 40, loggedHours: 5, teacher: 'T' }),
+  [planKey('B', 'X')]: mkPlan('B', 'X', { requiredHours: 40, loggedHours: 6, teacher: 'T' }),
+}
+ok(suggestBorrowSwaps(noDonor).length === 0, 'nothing ahead → no swap offered (rather than a bad one)')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

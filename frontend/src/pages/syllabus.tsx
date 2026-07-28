@@ -16,7 +16,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
-  coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS,
+  coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS, suggestBorrowSwaps,
   LOST_REASON_LABELS, type SyllabusPlan, type LostSession,
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
@@ -289,6 +289,89 @@ function detailRowsFor(
     a.subject.localeCompare(b.subject) ||
     b.remaining - a.remaining ||
     a.section.localeCompare(b.section))
+}
+
+/**
+ * Borrow & replace — Blueprint v5, Syllabus Cover Dashboard.
+ *
+ * Offers to move a slot from a finished subject to one that's behind, but ONLY
+ * where the same teacher takes both in the same class-section — so the swap
+ * needs no teacher re-mapping and no room change. Applying it logs the hours
+ * against both plans (the lagging subject gains time, the donor gives it up),
+ * which is what makes the coverage figures move.
+ */
+function BorrowReplaceCard({ onPick }: { onPick: (subject: string, section: string) => void }) {
+  const plans = useSyllabus(s => s.plans)
+  const { logHours, logLostSession } = useSyllabus()
+  const swaps = useMemo(() => suggestBorrowSwaps(plans), [plans])
+  const [done, setDone] = useState<string[]>([])
+
+  if (swaps.length === 0) return null
+
+  const apply = (s: ReturnType<typeof suggestBorrowSwaps>[number]) => {
+    // The donor gives the time up (recorded as a deliberate reallocation, not a
+    // loss to circumstance) and the lagging subject receives it.
+    logLostSession(s.donor, s.section, {
+      date: new Date().toISOString().slice(0, 10),
+      hours: s.hours, reason: 'other',
+      note: `Slot lent to ${s.lagging}`,
+    })
+    logHours(s.lagging, s.section, s.hours)
+    setDone(d => [...d, `${s.section}|${s.lagging}|${s.donor}`])
+  }
+
+  return (
+    <Card
+      title={`Borrow & replace (${swaps.length})`}
+      subtitle="Move a slot from a finished subject to one that's behind. Only offered where the same teacher takes both in the same section, so nothing else in the timetable has to move."
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {swaps.map(s => {
+          const key = `${s.section}|${s.lagging}|${s.donor}`
+          const applied = done.includes(key)
+          return (
+            <div key={key} style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '9px 11px', borderRadius: 9,
+              background: applied ? '#F0FDF4' : '#F8F7FF',
+              border: `1px solid ${applied ? '#BBF7D0' : '#E4E0FF'}`,
+            }}>
+              <span style={{ fontSize: 12, color: '#4B5275' }}>
+                <strong style={{ color: '#B45309' }}>{s.lagging}</strong>
+                <span style={{ color: '#9A95BC' }}> ({s.laggingPct}%, {s.laggingRemaining} h left)</span>
+                {' ← '}
+                <strong style={{ color: '#067647' }}>{s.donor}</strong>
+                <span style={{ color: '#9A95BC' }}> (covered)</span>
+              </span>
+              <span style={{ fontSize: 11, color: '#8B87AD' }}>· {s.section} · {s.teacher}</span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#4B41C4', background: '#EDE9FF', borderRadius: 999, padding: '2px 9px' }}>
+                {s.hours} h
+              </span>
+              {applied ? (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: '#067647', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Check size={12} /> Applied
+                </span>
+              ) : (
+                <>
+                  <button onClick={() => onPick(s.lagging, s.section)} style={{ ...btnSoft, padding: '5px 10px', fontSize: 11.5 }}>
+                    Review
+                  </button>
+                  <button onClick={() => apply(s)}
+                    style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: ACCENT, color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Borrow {s.hours} h
+                  </button>
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p style={{ fontSize: 11, color: '#9A95BC', margin: '2px 0 0' }}>
+        Applying records the hours against both subjects so coverage updates immediately. Adjust the timetable itself on the Schedule page.
+      </p>
+    </Card>
+  )
 }
 
 /**
@@ -596,6 +679,9 @@ function CoverageDashboard({
           })}
         </div>
       </Card>
+
+      {/* v5 — borrow & replace, constrained to one teacher's own slots */}
+      <BorrowReplaceCard onPick={onPick} />
 
       {atRisk.length > 0 && (
         <Card title={`Behind schedule (${atRisk.length})`} subtitle="Under half taught with hours still outstanding — click one to open its chapters.">

@@ -193,6 +193,69 @@ export function suggestSlotDonor(
   return { donor: best.s, donorRemaining: remainingHours(best.p) }
 }
 
+/**
+ * A "borrow & replace" opportunity — Blueprint v5, Syllabus Cover Dashboard.
+ *
+ * Take a slot from a subject that is already ahead/covered and give it to one
+ * that is lagging. The blueprint constrains this hard: it is only offered when
+ * THE SAME TEACHER teaches both, in the SAME class-section. That keeps the swap
+ * logistically free — no teacher to re-map, no room to move, the same students
+ * in the room — at the cost of not always finding a match. Anything looser would
+ * be a timetable re-plan pretending to be a one-click fix.
+ */
+export interface BorrowSwap {
+  section: string
+  teacher: string
+  /** Subject that needs the time. */
+  lagging: string
+  laggingRemaining: number
+  laggingPct: number
+  /** Subject that can spare it. */
+  donor: string
+  donorRemaining: number
+  donorPct: number
+  /** Hours that can safely move (never more than the lagging subject needs). */
+  hours: number
+}
+
+/**
+ * Find every same-teacher, same-section swap that would help. Sorted worst-first
+ * so the most urgent gap is offered before marginal ones.
+ */
+export function suggestBorrowSwaps(plans: Record<string, SyllabusPlan>): BorrowSwap[] {
+  const all = Object.values(plans)
+  const out: BorrowSwap[] = []
+  for (const lag of all) {
+    const risk = riskOf(lag)
+    if (risk !== 'behind' && risk !== 'critical') continue
+    const need = remainingHours(lag)
+    if (need <= 0 || !lag.teacher) continue
+    for (const don of all) {
+      if (don === lag) continue
+      // The blueprint's constraint: same teacher, same section.
+      if (don.teacher !== lag.teacher || don.section !== lag.section) continue
+      // Only borrow from a subject that has genuinely finished its syllabus.
+      if (!isCovered(don)) continue
+      // How much may move: never more than the lagging subject needs, and never
+      // more than the donor was ever allocated — a 20 h subject cannot lend 30 h.
+      // (We can't see how many of the donor's slots remain in the timetable, so
+      // its total requirement is the honest upper bound.)
+      const hours = round1(Math.min(need, requiredHours(don)))
+      if (hours <= 0) continue
+      out.push({
+        section: lag.section, teacher: lag.teacher,
+        lagging: lag.subject, laggingRemaining: need, laggingPct: coveragePct(lag),
+        donor: don.subject, donorRemaining: remainingHours(don), donorPct: coveragePct(don),
+        hours,
+      })
+    }
+  }
+  return out.sort((a, b) =>
+    b.laggingRemaining - a.laggingRemaining ||
+    a.lagging.localeCompare(b.lagging) ||
+    a.donor.localeCompare(b.donor))
+}
+
 export interface CoverageRow {
   key: string; subject: string; section: string; teacher?: string
   required: number; covered: number; remaining: number; pct: number

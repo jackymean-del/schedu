@@ -15,6 +15,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useBlockDistance, rankVenuesByProximity } from '@/lib/blockDistance'
+import { OrPrioritySuggestion } from '@/components/OrPrioritySuggestion'
 import type { AndComboGroup, AndTeachingGroup, AndGroupScope, SubjectBundle } from '@/types'
 import {
   Layers, Shuffle, ChevronRight, ChevronLeft, ChevronDown, Plus, Trash2,
@@ -1246,6 +1247,13 @@ export function StepStudentGroups() {
             subjectSectionsMap={subjectSectionsMap}
             defaultOpen
             orOnly
+          />
+
+          {/* Part C closing the blueprint's OR-logic gap: which subject in each
+              slot is furthest from finishing its syllabus. Silent without data. */}
+          <OrPrioritySuggestion
+            groups={(store.subjectGroups ?? []) as any}
+            allSectionNames={allSectionNames}
           />
 
           <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
