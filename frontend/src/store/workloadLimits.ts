@@ -11,6 +11,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { GradeBand } from '@/lib/educationNorms'
+import { resolveCountryInput, detectCountry } from '@/lib/countryHours'
 
 interface WorkloadLimitsState {
   /**
@@ -60,4 +61,28 @@ export const useWorkloadLimits = create<WorkloadLimitsState>()(
  */
 export function schoolCountry(configCountryCode?: string | null): string {
   return useWorkloadLimits.getState().country || configCountryCode || 'IN'
+}
+
+/**
+ * Record the country typed at sign-up as the school's education system, so the
+ * national norms are correct from the very first login instead of defaulting to
+ * India and quietly being wrong. Free text is resolved to a reference code;
+ * anything unrecognised is left unset rather than guessed at.
+ */
+export function rememberSignupCountry(input: string | null | undefined): void {
+  const code = resolveCountryInput(input)
+  if (code) useWorkloadLimits.getState().setCountry(code)
+}
+
+/**
+ * Seed the school country from the browser when nothing has been chosen yet —
+ * timezone first, then locale. Never overwrites an explicit choice, and returns
+ * the code it settled on (or undefined if it couldn't tell).
+ */
+export function ensureSchoolCountry(): string | undefined {
+  const s = useWorkloadLimits.getState()
+  if (s.country) return s.country
+  const guess = detectCountry()
+  if (guess) s.setCountry(guess)
+  return guess
 }

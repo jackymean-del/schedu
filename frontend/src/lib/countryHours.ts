@@ -353,3 +353,91 @@ export function shouldPromptCustom(code: string | null | undefined): {
 }
 
 function round1(n: number): number { return Math.round(n * 10) / 10 }
+
+// ── Country resolution & detection ────────────────────────────────────────
+
+/** Common aliases people actually type, mapped to the dataset's codes. */
+const ALIASES: Record<string, string> = {
+  'USA': 'US', 'U.S.A.': 'US', 'U.S.': 'US', 'AMERICA': 'US', 'UNITED STATES OF AMERICA': 'US',
+  'UK': 'GB', 'U.K.': 'GB', 'GREAT BRITAIN': 'GB', 'ENGLAND': 'GB', 'SCOTLAND': 'GB',
+  'WALES': 'GB', 'NORTHERN IRELAND': 'GB', 'BRITAIN': 'GB',
+  'BHARAT': 'IN', 'REPUBLIC OF INDIA': 'IN',
+  'SOUTH KOREA': 'KR', 'REPUBLIC OF KOREA': 'KR',
+  'TURKEY': 'TR', 'TURKIYE': 'TR',
+  'CZECH REPUBLIC': 'CZ', 'CZECHIA': 'CZ',
+  'SLOVAKIA': 'SK', 'HOLLAND': 'NL', 'THE NETHERLANDS': 'NL',
+  'PRC': 'CN', "PEOPLE'S REPUBLIC OF CHINA": 'CN',
+  'NZ': 'NZ', 'AOTEAROA': 'NZ',
+}
+
+/**
+ * Resolve free-typed country text (as captured at sign-up) to a dataset code.
+ * Accepts the country name, ISO2, ISO3 or a common alias; returns undefined
+ * when it isn't a system we hold figures for, so callers can fall back rather
+ * than silently mis-assigning norms.
+ */
+export function resolveCountryInput(input: string | null | undefined): string | undefined {
+  const raw = String(input ?? '').trim()
+  if (!raw) return undefined
+  const up = raw.toUpperCase()
+  if (ALIASES[up]) return ALIASES[up]
+  if (BY_CODE.has(up)) return up                                    // ISO2 / 'OECD'
+  const byIso3 = COUNTRY_HOURS.find(c => c.iso3.toUpperCase() === up)
+  if (byIso3) return byIso3.code
+  // Name match — exact first, then a contained match ("India (CBSE norms)").
+  const norm = (s: string) => s.toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim()
+  const target = norm(raw)
+  const exact = COUNTRY_HOURS.find(c => norm(c.name) === target)
+  if (exact) return exact.code
+  const partial = COUNTRY_HOURS.find(c => norm(c.name).startsWith(target) || target.startsWith(norm(c.name)))
+  return partial?.code
+}
+
+/**
+ * Timezone → country, for the systems the dataset covers. Timezone is used
+ * BEFORE browser language because it is the stronger geographic signal: a
+ * browser set to en-US sitting in Asia/Kolkata is an Indian school, not a US one.
+ */
+const TZ_COUNTRY: Record<string, string> = {
+  'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN',
+  'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'CN',
+  'Asia/Singapore': 'SG', 'Asia/Jakarta': 'ID', 'Asia/Makassar': 'ID', 'Asia/Jayapura': 'ID',
+  'Asia/Jerusalem': 'IL', 'Europe/Istanbul': 'TR', 'Asia/Istanbul': 'TR',
+  'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE',
+  'Europe/Madrid': 'ES', 'Europe/Rome': 'IT', 'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE',
+  'Europe/Vienna': 'AT', 'Europe/Zurich': 'CH', 'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO',
+  'Europe/Copenhagen': 'DK', 'Europe/Helsinki': 'FI', 'Europe/Lisbon': 'PT', 'Europe/Prague': 'CZ',
+  'Europe/Warsaw': 'PL', 'Europe/Budapest': 'HU', 'Europe/Athens': 'GR', 'Europe/Bratislava': 'SK',
+  'Europe/Ljubljana': 'SI', 'Europe/Riga': 'LV', 'Europe/Vilnius': 'LT', 'Europe/Tallinn': 'EE',
+  'Europe/Luxembourg': 'LU', 'Atlantic/Reykjavik': 'IS',
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Phoenix': 'US',
+  'America/Los_Angeles': 'US', 'America/Anchorage': 'US', 'Pacific/Honolulu': 'US',
+  'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA',
+  'America/Mexico_City': 'MX', 'America/Santiago': 'CL', 'America/Costa_Rica': 'CR',
+  'Pacific/Auckland': 'NZ',
+}
+
+/**
+ * Best-effort country for a new school, WITHOUT any network call or IP lookup:
+ * the browser's timezone first, then its locale region. Returns undefined when
+ * the result isn't a system we hold figures for.
+ *
+ * Deliberately local-only — this needs no third-party geo service, sends no
+ * address anywhere, and works offline. It is a *suggestion*: the admin always
+ * confirms it in Settings.
+ */
+export function detectCountry(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+    const byTz = TZ_COUNTRY[tz]
+    if (byTz && BY_CODE.has(byTz)) return byTz
+    if (tz.startsWith('Australia/')) return 'AU'
+  } catch { /* fall through to locale */ }
+  try {
+    const loc = new Intl.Locale(navigator.language)
+    const region = ((loc as any).maximize?.() ?? loc).region
+    if (region && BY_CODE.has(String(region).toUpperCase())) return String(region).toUpperCase()
+  } catch { /* give up */ }
+  return undefined
+}

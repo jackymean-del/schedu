@@ -250,5 +250,18 @@ const opts = countryOptions()
 ok(opts[0].code === 'OECD' && opts.length === 42 && opts[1].name.localeCompare(opts[2].name) <= 0,
   'country picker lists the OECD average first, then countries alphabetically')
 
+// ── Free-typed country (as captured at sign-up) → dataset code ──
+import { resolveCountryInput } from './src/lib/countryHours'
+ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
+ok(resolveCountryInput('  united states  ') === 'US', 'case- and whitespace-insensitive')
+ok(resolveCountryInput('USA') === 'US' && resolveCountryInput('U.S.A.') === 'US', 'resolves USA aliases')
+ok(resolveCountryInput('UK') === 'GB' && resolveCountryInput('England') === 'GB', 'UK / England → GB')
+ok(resolveCountryInput('IN') === 'IN' && resolveCountryInput('IND') === 'IN', 'accepts ISO2 and ISO3')
+ok(resolveCountryInput('Czech Republic') === 'CZ', 'alias for a renamed country')
+ok(resolveCountryInput('South Korea') === 'KR' && resolveCountryInput('Turkey') === 'TR', 'common English names')
+ok(resolveCountryInput('India (CBSE norms)') === 'IN', 'matches the dataset label a user might paste back')
+ok(resolveCountryInput('Freedonia') === undefined, 'unknown country → undefined, never a wrong guess')
+ok(resolveCountryInput('') === undefined && resolveCountryInput(null) === undefined, 'empty input → undefined')
+
 console.log(fail === 0 ? '\nALL BLUEPRINT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

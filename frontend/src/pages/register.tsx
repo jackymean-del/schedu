@@ -11,6 +11,8 @@
 import { useState, useEffect } from 'react'
 import { useSignUp, useAuth } from '@clerk/clerk-react'
 import { useAuthStore } from '@/store/authStore'
+import { rememberSignupCountry } from '@/store/workloadLimits'
+import { detectCountry, countryHours } from '@/lib/countryHours'
 import { CLERK_ENABLED, authErrorMessage } from '@/lib/clerk'
 import { Loader2 } from 'lucide-react'
 import { AppFooter } from '@/components/AppFooter'
@@ -67,7 +69,9 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
   const [email, setEmail] = useState('')
   const [organization, setOrganization] = useState('')
   const [state, setState] = useState('')
-  const [country, setCountry] = useState('')
+  // Pre-filled from the browser's timezone/locale — no IP lookup, no third-party
+  // geo service, works offline. Purely a suggestion the user can overwrite.
+  const [country, setCountry] = useState(() => countryHours(detectCountry())?.name ?? '')
   const [phone, setPhone] = useState('')
   const [board, setBoard] = useState('')
   const [institutionType, setInstitutionType] = useState('')
@@ -297,6 +301,10 @@ function ClerkRegister() {
 
   const onSubmit = async (f: RegFields) => {
     if (!isLoaded || !signUp) throw new Error('Authentication is still loading — please try again.')
+    // The country typed at sign-up is the school's education system — resolve it
+    // to a reference code so the national norms are right from the first login.
+    // Unrecognised input is left unset rather than guessed at.
+    rememberSignupCountry(f.country)
     await signUp.create({
       emailAddress: f.email,
       password: f.password,

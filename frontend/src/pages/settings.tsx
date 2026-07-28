@@ -2,7 +2,7 @@
  * Settings — organization profile + account. This is the permanent home for
  * editing the organization details first captured by the onboarding guide.
  */
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
@@ -15,7 +15,7 @@ import {
   type GradeBand,
 } from '@/lib/educationNorms'
 import {
-  countryHours, studentHoursWeekFor, teacherHoursWeekFor, shouldPromptCustom, countryOptions,
+  countryHours, studentHoursWeekFor, teacherHoursWeekFor, shouldPromptCustom, countryOptions, detectCountry,
 } from '@/lib/countryHours'
 
 const KINDS = ['School', 'College', 'University', 'Coaching / Training Center', 'Company', 'Hospital', 'NGO', 'Government', 'Other']
@@ -165,8 +165,10 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   } = useWorkloadLimits()
 
   // School-level choice wins; fall back to whatever the active schedule was set
-  // up with, then India (the historical default).
-  const country = schoolCountryCode || config?.countryCode || 'IN'
+  // up with, then a browser-detected guess, then India (the historical default).
+  const detected = useMemo(() => detectCountry(), [])
+  const country = schoolCountryCode || config?.countryCode || detected || 'IN'
+  const autoDetected = !schoolCountryCode && !config?.countryCode && !!detected
 
   /** Picking a country also updates the active schedule, so generation, the
    *  bell-timing guidance and the Backward Sync report all follow immediately. */
@@ -223,6 +225,11 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
             </option>
           ))}
         </select>
+        <div style={{ fontSize: 11, color: '#9A95BC', marginTop: 4 }}>
+          {autoDetected
+            ? `Detected from your device’s timezone — confirm or change it. Nothing is sent anywhere to work this out.`
+            : `Taken from your sign-up details. Change it here if your school follows a different system.`}
+        </div>
       </Field>
 
       {/* Country reference — what this school's own system actually says */}
