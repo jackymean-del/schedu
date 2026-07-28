@@ -18,6 +18,7 @@ import { BrandedLoader } from '@/components/BrandedLoader'
 import { useOrgProfile } from '@/store/orgProfile'
 import { parseGradeLevel, toRoman, tidyGradeLabel } from '@/lib/gradeParse'
 import { distributeSections } from '@/lib/sectionDistribution'
+import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { GradeInput } from '@/components/GradeInput'
 import { AppFooter } from '@/components/AppFooter'
 import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
@@ -1573,6 +1574,10 @@ export function DashboardPage() {
             liveNow={liveNow}
             onNewSchedule={() => setShowCreate(true)}
           />
+
+          {/* Syllabus alert — always-on visibility for whatever is slipping, so
+              nobody has to go hunting. Renders nothing when everything is fine. */}
+          <SyllabusAlert />
 
           {/* Timetables */}
           <div style={{ marginBottom: 24 }}>

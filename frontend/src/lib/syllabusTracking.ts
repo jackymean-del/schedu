@@ -31,6 +31,25 @@ export interface Chapter {
   coveredAt?: string
 }
 
+/**
+ * A teaching session that did NOT happen — holiday, school event, faculty
+ * absence, strike, whatever. These are hours the plan was counting on, so they
+ * directly threaten whether the syllabus can still be finished.
+ */
+export interface LostSession {
+  id: string
+  /** ISO date of the lost session. */
+  date: string
+  /** Teaching hours lost. */
+  hours: number
+  reason: 'holiday' | 'event' | 'absence' | 'other'
+  note?: string
+}
+
+export const LOST_REASON_LABELS: Record<LostSession['reason'], string> = {
+  holiday: 'Holiday', event: 'School event', absence: 'Faculty absent', other: 'Other',
+}
+
 export interface SyllabusPlan {
   subject: string
   section: string
@@ -41,6 +60,8 @@ export interface SyllabusPlan {
   loggedHours: number
   /** Optional owner, so coverage can be reported teacher-wise. */
   teacher?: string
+  /** Sessions lost to holidays / events / absences. Optional for older data. */
+  lostSessions?: LostSession[]
 }
 
 /** Stable key for a (subject, section) pair. */
@@ -80,6 +101,42 @@ export function coveragePct(p: SyllabusPlan | undefined): number {
 export function isCovered(p: SyllabusPlan | undefined): boolean {
   return requiredHours(p) > 0 && remainingHours(p) <= 0
 }
+
+/** Teaching hours lost to holidays / events / absences. */
+export function lostHours(p: SyllabusPlan | undefined): number {
+  return round1((p?.lostSessions ?? []).reduce((a, s) => a + (s.hours || 0), 0))
+}
+
+/**
+ * How worried should we be about this plan finishing?
+ *
+ * Coverage % alone hides the real danger: a subject can look fine while the
+ * sessions it needed have been eaten by holidays and events. So lost time is
+ * part of the verdict, not a footnote.
+ *
+ *   covered   — syllabus complete, nothing outstanding
+ *   critical  — hours still to teach AND sessions were lost (that time has to be
+ *               found again, so the plan will not land without rescheduling)
+ *   behind    — under half taught with hours outstanding
+ *   on-track  — outstanding hours but progressing, no lost time
+ *   untracked — nothing planned yet, so no opinion
+ */
+export type Risk = 'covered' | 'on-track' | 'behind' | 'critical' | 'untracked'
+
+export function riskOf(p: SyllabusPlan | undefined): Risk {
+  if (requiredHours(p) <= 0) return 'untracked'
+  if (remainingHours(p) <= 0) return 'covered'
+  if (lostHours(p) > 0) return 'critical'
+  if (coveragePct(p) < 50) return 'behind'
+  return 'on-track'
+}
+
+export const RISK_LABELS: Record<Risk, string> = {
+  covered: 'Covered', 'on-track': 'On track', behind: 'Behind',
+  critical: 'Needs rescheduling', untracked: 'Not planned',
+}
+/** Sort weight — worst first. */
+const RISK_ORDER: Record<Risk, number> = { critical: 0, behind: 1, 'on-track': 2, covered: 3, untracked: 4 }
 
 /**
  * THE STEP 4 OR-LOGIC ANSWER.
@@ -139,6 +196,9 @@ export function suggestSlotDonor(
 export interface CoverageRow {
   key: string; subject: string; section: string; teacher?: string
   required: number; covered: number; remaining: number; pct: number
+  /** Hours lost to holidays / events / absences. */
+  lost: number
+  risk: Risk
 }
 
 /**
@@ -161,7 +221,25 @@ export function coverageRows(plans: Record<string, SyllabusPlan>): CoverageRow[]
     key, subject: p.subject, section: p.section, teacher: p.teacher,
     required: requiredHours(p), covered: coveredHours(p),
     remaining: remainingHours(p), pct: coveragePct(p),
+    lost: lostHours(p), risk: riskOf(p),
   })).sort((a, b) => b.remaining - a.remaining || a.subject.localeCompare(b.subject))
+}
+
+/**
+ * The rows a human should be told about, worst first — what powers the dashboard
+ * alert so nobody has to go hunting for which subject/class/teacher is slipping.
+ * Only genuinely actionable states qualify (critical / behind); covered,
+ * on-track and unplanned rows are deliberately silent.
+ */
+export function lagging(plans: Record<string, SyllabusPlan>, limit?: number): CoverageRow[] {
+  const out = coverageRows(plans)
+    .filter(r => r.risk === 'critical' || r.risk === 'behind')
+    .sort((a, b) =>
+      RISK_ORDER[a.risk] - RISK_ORDER[b.risk] ||
+      b.lost - a.lost ||
+      b.remaining - a.remaining ||
+      a.subject.localeCompare(b.subject))
+  return limit ? out.slice(0, limit) : out
 }
 
 /** Group coverage rows by any dimension — subject-, class-, section- or teacher-wise. */
@@ -203,6 +281,9 @@ interface SyllabusState {
   markChapterCovered: (subject: string, section: string, chapterId: string, covered: boolean) => void
   /** Log delivered hours directly, for schools not tracking chapters. */
   logHours: (subject: string, section: string, hours: number) => void
+  /** Record a session lost to a holiday / event / absence. */
+  logLostSession: (subject: string, section: string, s: Omit<LostSession, 'id'>) => void
+  removeLostSession: (subject: string, section: string, id: string) => void
   removePlan: (subject: string, section: string) => void
   reset: () => void
 }
@@ -245,6 +326,13 @@ export const useSyllabus = create<SyllabusState>()(
           })),
         logHours: (subject, section, hours) =>
           edit(subject, section, p => ({ ...p, loggedHours: Math.max(0, (p.loggedHours || 0) + hours) })),
+        logLostSession: (subject, section, s) =>
+          edit(subject, section, p => ({
+            ...p,
+            lostSessions: [...(p.lostSessions ?? []), { ...s, hours: Math.max(0, s.hours), id: Math.random().toString(36).slice(2, 9) }],
+          })),
+        removeLostSession: (subject, section, id) =>
+          edit(subject, section, p => ({ ...p, lostSessions: (p.lostSessions ?? []).filter(s => s.id !== id) })),
         removePlan: (subject, section) =>
           set(s => { const n = { ...s.plans }; delete n[planKey(subject, section)]; return { plans: n } }),
         reset: () => set({ plans: {} }),

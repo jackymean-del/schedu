@@ -16,8 +16,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
-  coverageRows, summariseBy, classOfSection, type SyllabusPlan,
+  coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS,
+  LOST_REASON_LABELS, type SyllabusPlan, type LostSession,
 } from '@/lib/syllabusTracking'
+import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { BookOpen, Plus, Trash2, Check } from 'lucide-react'
 
 type Dim = 'subject' | 'class' | 'section' | 'teacher'
@@ -37,7 +39,7 @@ export function SyllabusPage() {
   const staff: any[] = store.staff ?? []
   const {
     plans, setRequiredHours, setTeacher, addChapter, updateChapter,
-    removeChapter, markChapterCovered, logHours,
+    removeChapter, markChapterCovered, logHours, logLostSession, removeLostSession,
   } = useSyllabus()
 
   const [tab, setTab] = useState<'capture' | 'coverage'>('capture')
@@ -62,6 +64,9 @@ export function SyllabusPage() {
       <PageHeader icon="📗" title="Syllabus" description="Track what each subject needs to cover — and what's actually been taught." />
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Same always-on alert as the dashboard — silent when nothing is slipping. */}
+        <SyllabusAlert />
+
         {!canPick && tab === 'capture' && (
           <Card title="No subjects yet">
             <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
@@ -213,6 +218,13 @@ export function SyllabusPage() {
               </div>
             </Card>
 
+            {/* Lost sessions — holidays, events, absences */}
+            <LostSessionsCard
+              subject={subject} section={section} plan={plan}
+              onAdd={(s) => logLostSession(subject, section, s)}
+              onRemove={(id) => removeLostSession(subject, section, id)}
+            />
+
             {/* All tracked plans */}
             {rows.length > 0 && (
               <Card title="All tracked syllabi" subtitle="Most behind first.">
@@ -277,6 +289,102 @@ function detailRowsFor(
     a.subject.localeCompare(b.subject) ||
     b.remaining - a.remaining ||
     a.section.localeCompare(b.section))
+}
+
+/**
+ * Lost sessions — holidays, school events, faculty absence, anything that ate a
+ * class. These hours were counted on by the plan, so recording them is what
+ * turns "75% covered, looks fine" into "this can't land without rescheduling".
+ */
+function LostSessionsCard({
+  subject, section, plan, onAdd, onRemove,
+}: {
+  subject: string; section: string; plan: SyllabusPlan | undefined
+  onAdd: (s: Omit<LostSession, 'id'>) => void
+  onRemove: (id: string) => void
+}) {
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [hours, setHours] = useState<number | ''>('')
+  const [reason, setReason] = useState<LostSession['reason']>('holiday')
+  const [note, setNote] = useState('')
+
+  const sessions = plan?.lostSessions ?? []
+  const lost = lostHours(plan)
+  const risk = riskOf(plan)
+
+  const add = () => {
+    if (!Number(hours)) return
+    onAdd({ date, hours: Number(hours), reason, note: note.trim() || undefined })
+    setHours(''); setNote('')
+  }
+
+  return (
+    <Card
+      title="Lost classes"
+      subtitle="Record any session that didn't happen — holiday, school event, faculty absence. Lost time counts against the plan, so the coverage view stops looking healthier than reality."
+    >
+      {lost > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          padding: '8px 11px', borderRadius: 9,
+          background: risk === 'critical' ? '#FFFBEB' : '#F8F7FF',
+          border: `1px solid ${risk === 'critical' ? '#FDE68A' : '#ECE9FB'}`,
+        }}>
+          <strong style={{ fontSize: 12.5, color: risk === 'critical' ? '#92400E' : '#4B41C4' }}>
+            {lost} h lost for {subject} · {section}
+          </strong>
+          <span style={{ fontSize: 11.5, color: '#8B87AD' }}>
+            {risk === 'critical'
+              ? '— these hours have to be found again, or the syllabus won’t finish.'
+              : '— already accounted for; nothing outstanding.'}
+          </span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: '2px 9px', background: risk === 'critical' ? '#FDE68A' : '#EDE9FF', color: risk === 'critical' ? '#92400E' : '#4B41C4' }}>
+            {RISK_LABELS[risk]}
+          </span>
+        </div>
+      )}
+
+      {sessions.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {[...sessions].sort((a, b) => b.date.localeCompare(a.date)).map(s => (
+            <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '110px 110px 60px 1fr 30px', gap: 8, alignItems: 'center', padding: '6px 9px', borderRadius: 8, border: '1px solid #ECE9FB' }}>
+              <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{s.date}</span>
+              <span style={{ fontSize: 11.5, color: '#13111E', fontWeight: 600 }}>{LOST_REASON_LABELS[s.reason]}</span>
+              <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: '#B45309', fontWeight: 700 }}>{s.hours} h</span>
+              <span style={{ fontSize: 11.5, color: '#8B87AD', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.note ?? ''}</span>
+              <button onClick={() => onRemove(s.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C3EC', display: 'flex', justifyContent: 'center' }}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '130px 140px 80px 1fr 110px', gap: 8, alignItems: 'end' }}>
+        <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} /></Field>
+        <Field label="Reason">
+          <select value={reason} onChange={e => setReason(e.target.value as LostSession['reason'])} style={inputStyle}>
+            {(Object.keys(LOST_REASON_LABELS) as LostSession['reason'][]).map(k => (
+              <option key={k} value={k}>{LOST_REASON_LABELS[k]}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Hours">
+          <input type="number" min={0} step="0.5" value={hours} placeholder="1"
+            onChange={e => setHours(e.target.value === '' ? '' : Number(e.target.value))}
+            onKeyDown={e => { if (e.key === 'Enter') add() }} style={{ ...inputStyle, textAlign: 'right' }} />
+        </Field>
+        <Field label="Note (optional)">
+          <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Independence Day" style={inputStyle} />
+        </Field>
+        <button onClick={add} disabled={!Number(hours)}
+          style={{ ...btnSoft, opacity: Number(hours) ? 1 : 0.5, cursor: Number(hours) ? 'pointer' : 'not-allowed' }}>
+          <Plus size={13} /> Log loss
+        </button>
+      </div>
+    </Card>
+  )
 }
 
 /**

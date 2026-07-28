@@ -151,5 +151,43 @@ const byClass = summariseBy(rows, 'class')
 ok(byClass.length === 1 && byClass[0].label === 'VI', 'class-wise: VI-A and VI-B roll up into one class VI')
 ok(byClass[0].required === 50 && byClass[0].remaining === 25, 'class-wise: VI totals 50 h required, 25 h remaining')
 
+// ── Lost sessions (holiday / event / absence) change the verdict ──
+import { lostHours, riskOf, lagging } from './src/lib/syllabusTracking'
+
+const noLoss = mkPlan('Hist', 'IX-A', { requiredHours: 40, loggedHours: 30 })      // 75%, 10 left
+ok(lostHours(noLoss) === 0, 'no lost sessions → 0 lost hours')
+ok(riskOf(noLoss) === 'on-track', 'progressing with no lost time → on-track')
+
+const withLoss = mkPlan('Hist', 'IX-B', {
+  requiredHours: 40, loggedHours: 30,
+  lostSessions: [
+    { id: 'l1', date: '2026-08-15', hours: 2, reason: 'holiday' },
+    { id: 'l2', date: '2026-09-05', hours: 3, reason: 'event' },
+  ],
+})
+ok(lostHours(withLoss) === 5, 'lost hours sum across sessions (2 + 3)')
+ok(riskOf(withLoss) === 'critical',
+  'SAME 75% coverage becomes critical once sessions were lost — the hours must be found again')
+ok(riskOf(mkPlan('Done', 'X-A', { requiredHours: 10, loggedHours: 10, lostSessions: [{ id: 'l', date: 'd', hours: 4, reason: 'holiday' }] })) === 'covered',
+  'a finished syllabus is not "critical" even if time was lost along the way')
+ok(riskOf(mkPlan('Slow', 'X-A', { requiredHours: 40, loggedHours: 5 })) === 'behind', 'under half taught → behind')
+ok(riskOf(mkPlan('Empty', 'X-A')) === 'untracked', 'no requirement → untracked (no opinion)')
+
+// The alert feed: worst first, and silent about things that are fine
+const alertPlans: Record<string, SyllabusPlan> = {
+  [planKey('Hist', 'IX-A')]: noLoss,                                                   // on-track → silent
+  [planKey('Hist', 'IX-B')]: withLoss,                                                 // critical
+  [planKey('Geo', 'IX-A')]:  mkPlan('Geo', 'IX-A', { requiredHours: 40, loggedHours: 4 }),   // behind
+  [planKey('Art', 'IX-A')]:  mkPlan('Art', 'IX-A', { requiredHours: 10, loggedHours: 10 }),  // covered → silent
+  [planKey('Mus', 'IX-A')]:  mkPlan('Mus', 'IX-A'),                                          // untracked → silent
+}
+const alerts = lagging(alertPlans)
+ok(alerts.length === 2, 'alerts only include actionable rows (critical + behind), not covered/on-track/untracked')
+ok(alerts[0].subject === 'Hist' && alerts[0].risk === 'critical', 'critical rows sort above behind ones')
+ok(alerts[0].lost === 5, 'alert carries the lost-hours figure')
+ok(alerts[1].subject === 'Geo' && alerts[1].risk === 'behind', 'behind row follows')
+ok(lagging(alertPlans, 1).length === 1, 'alert feed can be capped for a compact dashboard widget')
+ok(coverageRows(alertPlans).find(r => r.section === 'IX-B')?.lost === 5, 'coverage rows expose lost hours + risk')
+
 console.log(fail === 0 ? '\nALL BLUEPRINT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)
