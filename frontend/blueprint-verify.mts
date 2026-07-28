@@ -286,6 +286,53 @@ const noDonor: Record<string, SyllabusPlan> = {
 }
 ok(suggestBorrowSwaps(noDonor).length === 0, 'nothing ahead → no swap offered (rather than a bad one)')
 
+// ── v5 Holiday handling — declared once, hours DERIVED from the timetable ──
+import { holidayImpact, totalHolidayHours, weekdayOf, type Holiday } from './src/lib/holidays'
+import { withHolidayImpact } from './src/lib/syllabusTracking'
+
+ok(weekdayOf('2026-08-17') === 'MONDAY', 'weekday derived from an ISO date')
+ok(weekdayOf('not-a-date') === '', 'unparseable date yields no weekday')
+
+// VI-A has 2 Maths + 1 Science on Monday; VI-B has 1 Maths on Monday.
+const holTT: any = {
+  'VI-A': {
+    MONDAY:  { p1: { subject: 'Maths', teacher: 'A' }, p2: { subject: 'Science', teacher: 'B' }, p3: { subject: 'Maths', teacher: 'A' } },
+    TUESDAY: { p1: { subject: 'Maths', teacher: 'A' } },
+  },
+  'VI-B': { MONDAY: { p1: { subject: 'Maths', teacher: 'A' } } },
+}
+const mondayHoliday: Holiday[] = [{ id: 'h1', date: '2026-08-17', name: 'Independence Day' }]  // a Monday
+const imp = holidayImpact(holTT, mondayHoliday, 60)   // 60-min periods → 1 h each
+ok(imp[planKey('Maths', 'VI-A')]?.hours === 2, 'Maths VI-A loses its 2 Monday periods (2 h at 60-min periods)')
+ok(imp[planKey('Science', 'VI-A')]?.hours === 1, 'Science VI-A loses its 1 Monday period')
+ok(imp[planKey('Maths', 'VI-B')]?.hours === 1, 'the holiday hits every section, not just one')
+ok(!imp[planKey('Maths', 'VI-A')]?.dates.includes('2026-08-18'), 'Tuesday lessons are untouched by a Monday holiday')
+ok(totalHolidayHours(imp) === 4, 'school-wide total is 4 h lost for that one holiday')
+
+// Period length feeds through
+ok(holidayImpact(holTT, mondayHoliday, 40)[planKey('Maths', 'VI-A')]?.hours === 1.3,
+  '40-min periods → 2 periods = 1.3 h, not 2 h')
+
+// Scoped holiday (e.g. exam leave for one section only)
+const scoped: Holiday[] = [{ id: 'h2', date: '2026-08-17', name: 'Section trip', sections: ['VI-B'] }]
+const impScoped = holidayImpact(holTT, scoped, 60)
+ok(!impScoped[planKey('Maths', 'VI-A')] && impScoped[planKey('Maths', 'VI-B')]?.hours === 1,
+  'a section-scoped holiday only costs that section')
+
+// Merging into plans makes every existing helper holiday-aware, unchanged
+const holPlans: Record<string, SyllabusPlan> = {
+  [planKey('Maths', 'VI-A')]: mkPlan('Maths', 'VI-A', { requiredHours: 40, loggedHours: 30, teacher: 'A' }),
+}
+ok(riskOf(holPlans[planKey('Maths', 'VI-A')]) === 'on-track', 'before holidays: on-track at 75%')
+const merged = withHolidayImpact(holPlans, imp)
+ok(lostHours(merged[planKey('Maths', 'VI-A')]) === 2, 'merged plan carries the 2 holiday hours')
+ok(riskOf(merged[planKey('Maths', 'VI-A')]) === 'critical',
+  'after holidays: the SAME 75% becomes critical — lost time must be found again')
+ok(withHolidayImpact(holPlans, {})[planKey('Maths', 'VI-A')] === holPlans[planKey('Maths', 'VI-A')],
+  'no holidays → plans returned untouched (no needless copying)')
+ok(Object.keys(withHolidayImpact({}, imp)).length === 0,
+  'holiday hours for a subject with no syllabus plan are ignored, not invented')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

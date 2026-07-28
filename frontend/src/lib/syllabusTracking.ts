@@ -194,6 +194,45 @@ export function suggestSlotDonor(
 }
 
 /**
+ * Fold declared-holiday losses into the plans as synthetic lost sessions.
+ *
+ * Deliberately a merge rather than a change to every helper: riskOf,
+ * coverageRows, lagging and suggestBorrowSwaps then all account for holidays
+ * with no modification, and a deleted holiday simply stops appearing — there is
+ * no materialised copy to reconcile.
+ *
+ * Takes a plain {planKey → hours} map so this module stays free of any holiday
+ * dependency (holidays.ts imports planKey from here).
+ */
+export function withHolidayImpact(
+  plans: Record<string, SyllabusPlan>,
+  impact: Record<string, { hours: number; dates: string[] }>,
+): Record<string, SyllabusPlan> {
+  if (!impact || Object.keys(impact).length === 0) return plans
+  const out: Record<string, SyllabusPlan> = { ...plans }
+  for (const key in impact) {
+    const loss = impact[key]
+    if (!loss || loss.hours <= 0) continue
+    const base = out[key]
+    if (!base) continue   // no syllabus plan for that subject/section — nothing to adjust
+    out[key] = {
+      ...base,
+      lostSessions: [
+        ...(base.lostSessions ?? []),
+        {
+          id: `holiday:${key}`,
+          date: loss.dates[0] ?? '',
+          hours: loss.hours,
+          reason: 'holiday',
+          note: loss.dates.length > 1 ? `${loss.dates.length} school holidays` : 'School holiday',
+        },
+      ],
+    }
+  }
+  return out
+}
+
+/**
  * A "borrow & replace" opportunity — Blueprint v5, Syllabus Cover Dashboard.
  *
  * Take a slot from a subject that is already ahead/covered and give it to one

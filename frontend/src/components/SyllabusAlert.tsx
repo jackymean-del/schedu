@@ -7,12 +7,22 @@
  * lost teaching time (holiday / event / absence) that has to be rescheduled.
  */
 import { useMemo } from 'react'
-import { useSyllabus, lagging, RISK_LABELS } from '@/lib/syllabusTracking'
+import { useSyllabus, lagging, withHolidayImpact, RISK_LABELS } from '@/lib/syllabusTracking'
+import { useHolidays, holidayImpact } from '@/lib/holidays'
+import { useTimetableStore } from '@/store/timetableStore'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 
 export function SyllabusAlert({ limit = 4, compact = false }: { limit?: number; compact?: boolean }) {
   const plans = useSyllabus(s => s.plans)
-  const rows = useMemo(() => lagging(plans), [plans])
+  // Declared holidays count against coverage here too, so the alert reflects the
+  // same reality as the Syllabus page rather than a rosier version of it.
+  const holidays = useHolidays(s => s.holidays)
+  const classTT = useTimetableStore(s => (s as any).classTT)
+  const periodMinutes = useTimetableStore(s => (s as any).config?.periodMinutes) ?? 40
+  const rows = useMemo(() => {
+    const impact = holidayImpact(classTT ?? {}, holidays, periodMinutes)
+    return lagging(withHolidayImpact(plans, impact))
+  }, [plans, holidays, classTT, periodMinutes])
   if (rows.length === 0) return null
 
   const critical = rows.filter(r => r.risk === 'critical').length
