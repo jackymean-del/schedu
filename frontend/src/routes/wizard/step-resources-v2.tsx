@@ -28,7 +28,7 @@ import { SubjectsPanel, generateShortName, inferCategory } from '@/components/re
 import { suggestSlotsPerWeek, normalizeBoardType, getGrade, getGradeGroup, standardSubjectsForSection, subjectAppliesToSections, type CurriculumBoard } from '@/components/resources/curriculum'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
 import { distributeSections } from '@/lib/sectionDistribution'
-import { useWorkloadLimits } from '@/store/workloadLimits'
+import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 import { RoomsPanel, type RoomExt } from '@/components/resources/RoomsPanel'
 import { BlockDistanceMatrix } from '@/components/resources/BlockDistanceMatrix'
 import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap } from '@/components/resources/aiEngine'
@@ -486,7 +486,7 @@ export function StepResourcesV2() {
     // national SAFE teaching load from the norms brain (India 30 · GB 22 · …).
     // IB/Cambridge stay capped lower for their lighter contact time.
     const safe = effectiveTeacherMaxPeriods(
-      config.countryCode || 'IN', (config as any).periodMinutes ?? 40,
+      schoolCountry(config.countryCode), (config as any).periodMinutes ?? 40,
       useWorkloadLimits.getState().teacherMaxHoursWeek,
     )
     const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
@@ -582,7 +582,7 @@ export function StepResourcesV2() {
   //   other country via its regional profile. Boards with lighter contact hours
   //   (IB / Cambridge) cap below the national safe load.
   function handleTeacherAIFix() {
-    const country = config.countryCode || 'IN'
+    const country = schoolCountry(config.countryCode)
     const board = normalizeBoardType(config.board ?? 'CBSE')
     // Global custom cap (Settings) if set, else the national safe teaching load.
     const safe = effectiveTeacherMaxPeriods(
@@ -780,7 +780,7 @@ export function StepResourcesV2() {
     // Apply the effective per-teacher cap: the user's global custom max (Settings
     // → Workload limits) if set, else the national safe teaching-period norm.
     const teacherCap = effectiveTeacherMaxPeriods(
-      config.countryCode || 'IN', (config as any).periodMinutes ?? 40,
+      schoolCountry(config.countryCode), (config as any).periodMinutes ?? 40,
       useWorkloadLimits.getState().teacherMaxHoursWeek,
     )
     const newStaff = buildDefaultStaff(targetStaff).map((t: any) => ({ ...t, maxPeriodsPerWeek: teacherCap }))

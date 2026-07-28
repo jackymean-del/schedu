@@ -26,7 +26,7 @@ import {
   reoptimizeTeachers, buildTeacherTT, deriveTeacherAllocations,
 } from '@/lib/schedulingEngine'
 import { BackwardSyncReport } from './BackwardSyncReport'
-import { useWorkloadLimits } from '@/store/workloadLimits'
+import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 import type { GradeBand } from '@/lib/educationNorms'
 
 // capacityEngine band code → norms-brain grade band (for the student-hours cap).
@@ -836,7 +836,7 @@ export function ReviewDashboard({
             sections={sections}
             staff={staff}
             periodMinutes={cfg.periodMinutes ?? 40}
-            countryCode={cfg.countryCode ?? 'IN'}
+            countryCode={schoolCountry(cfg.countryCode)}
             onClose={() => setBackSyncOpen(false)}
           />
         )

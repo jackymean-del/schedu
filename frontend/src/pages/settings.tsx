@@ -15,7 +15,7 @@ import {
   type GradeBand,
 } from '@/lib/educationNorms'
 import {
-  countryHours, studentHoursWeekFor, teacherHoursWeekFor, shouldPromptCustom,
+  countryHours, studentHoursWeekFor, teacherHoursWeekFor, shouldPromptCustom, countryOptions,
 } from '@/lib/countryHours'
 
 const KINDS = ['School', 'College', 'University', 'Coaching / Training Center', 'Company', 'Hospital', 'NGO', 'Government', 'Other']
@@ -156,14 +156,24 @@ const BAND_ORDER: GradeBand[] = ['prePrimary', 'lowerPrimary', 'upperPrimary', '
 
 function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   const config = useTimetableStore(s => s.config) as any
-  const country = config?.countryCode || 'IN'
   const board = config?.board
   const periodMinutes = config?.periodMinutes ?? 40
   const daysPerWeek = (config?.workDays?.length) || 6
   const {
-    teacherMaxHoursWeek, studentMaxHoursWeek,
-    setTeacherMaxHoursWeek, setStudentMaxHoursWeek,
+    country: schoolCountryCode, teacherMaxHoursWeek, studentMaxHoursWeek,
+    setCountry, setTeacherMaxHoursWeek, setStudentMaxHoursWeek,
   } = useWorkloadLimits()
+
+  // School-level choice wins; fall back to whatever the active schedule was set
+  // up with, then India (the historical default).
+  const country = schoolCountryCode || config?.countryCode || 'IN'
+
+  /** Picking a country also updates the active schedule, so generation, the
+   *  bell-timing guidance and the Backward Sync report all follow immediately. */
+  const pickCountry = (code: string) => {
+    setCountry(code)
+    useTimetableStore.getState().setConfig?.({ ...(config ?? {}), countryCode: code } as any)
+  }
 
   // Draft state — edits are held locally until Save, so the custom norms are a
   // deliberate commit rather than something that changes underfoot as you type.
@@ -204,6 +214,17 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
       title="Workload limits"
       subtitle={`Cap the max weekly hours the planner schedules. Leave a field blank to use your country’s reference value. 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
     >
+      {/* Country picker — captured once for the school (Blueprint v5) */}
+      <Field label="Education system / country">
+        <select value={country} onChange={e => pickCountry(e.target.value)} style={inputStyle}>
+          {countryOptions().map(o => (
+            <option key={o.code} value={o.code}>
+              {o.name}{o.code === 'OECD' ? '' : ` — ${o.confidence === 'verified' ? 'Verified' : 'Approximate'}`}
+            </option>
+          ))}
+        </select>
+      </Field>
+
       {/* Country reference — what this school's own system actually says */}
       {ref && (
         <div style={{
