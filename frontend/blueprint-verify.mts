@@ -333,6 +333,78 @@ ok(withHolidayImpact(holPlans, {})[planKey('Maths', 'VI-A')] === holPlans[planKe
 ok(Object.keys(withHolidayImpact({}, imp)).length === 0,
   'holiday hours for a subject with no syllabus plan are ignored, not invented')
 
+// ── PACE: content covered vs time spent ("taught long but covered little") ──
+import { paceFor, scheduledHoursBetween, contentCoveredHours, willNotFinish } from './src/lib/syllabusPace'
+
+// VI-A has Maths twice on Mondays, 60-min periods → 2 h per teaching week.
+const paceTT: any = {
+  'VI-A': { MONDAY: { p1: { subject: 'Maths', teacher: 'A' }, p2: { subject: 'Maths', teacher: 'A' } } },
+}
+const TERM = { termStart: '2026-01-05', termEnd: '2026-03-30', today: '2026-02-02', periodMinutes: 60 }
+// Jan 5→Feb 2 inclusive = 5 Mondays = 10 h spent; Feb 3→Mar 30 = 8 Mondays = 16 h left.
+ok(scheduledHoursBetween(paceTT, 'Maths', 'VI-A', '2026-01-05', '2026-02-02', 60) === 10,
+  'time spent is DERIVED from the timetable (5 Mondays × 2 periods = 10 h) — nobody types it')
+ok(scheduledHoursBetween(paceTT, 'Maths', 'VI-A', '2026-02-03', '2026-03-30', 60) === 16,
+  'time remaining likewise derived (8 Mondays = 16 h)')
+ok(scheduledHoursBetween(paceTT, 'Science', 'VI-A', '2026-01-05', '2026-02-02', 60) === 0,
+  'only the subject actually on the timetable counts')
+
+const ch = (id: string, hours: number, done?: boolean) => ({ id, name: id, hours, coveredAt: done ? 'x' : undefined })
+
+// SAME 10 h taught. Different amounts of syllabus actually covered.
+const slow = mkPlan('Maths', 'VI-A', { teacher: 'A', chapters: [ch('c1', 5, true), ch('c2', 15), ch('c3', 20)] })   // 5 of 40 h covered
+const fast = mkPlan('Maths', 'VI-A', { teacher: 'A', chapters: [ch('c1', 20, true), ch('c2', 10), ch('c3', 10)] })  // 20 of 40 h covered
+
+const slowR = paceFor(slow, paceTT, TERM)
+const fastR = paceFor(fast, paceTT, TERM)
+ok(slowR.timeSpent === 10 && fastR.timeSpent === 10, 'both teachers spent the SAME 10 h of class time')
+ok(contentCoveredHours(slow) === 5 && contentCoveredHours(fast) === 20, 'but covered very different amounts of syllabus')
+ok(slowR.pace === 0.5, 'taught long, covered little → pace 0.5 (half the planned rate)')
+ok(fastR.pace === 2, 'taught little, covered much → pace 2.0 (double the planned rate)')
+ok(slowR.projectedHoursNeeded === 70 && !slowR.willFinish && slowR.shortfallHours === 54,
+  'slow pace projects 70 h needed vs 16 h left → will NOT finish, 54 h short')
+ok(fastR.projectedHoursNeeded === 10 && fastR.willFinish && fastR.shortfallHours === 0,
+  'fast pace projects 10 h needed vs 16 h left → finishes comfortably')
+
+// The point of the whole exercise: hours alone would have called these identical.
+ok(slowR.timeSpent === fastR.timeSpent && slowR.willFinish !== fastR.willFinish,
+  'identical hours taught, opposite verdicts — which is exactly what hours-only tracking missed')
+
+// Holidays: a lost day adds no content and no time spent, but permanently
+// removes time that was remaining — so the projection gets worse by itself.
+const holidayOnAMonday: Holiday[] = [{ id: 'h', date: '2026-02-09', name: 'Holiday' }]
+const afterHoliday = paceFor(fast, paceTT, { ...TERM, holidays: holidayOnAMonday })
+ok(afterHoliday.timeSpent === 10, 'a FUTURE holiday does not change time already spent')
+ok(afterHoliday.timeRemaining === 14, 'the holiday permanently removes that Monday’s 2 h from the time left (16 → 14)')
+ok(afterHoliday.contentCovered === fastR.contentCovered, 'a holiday covers no syllabus — content is unchanged')
+// Even at a perfect pace of 1.0, a subject can simply not have enough slots left:
+// 1 period/week → 5 h spent, 8 h remaining, but 12 h of syllabus still to cover.
+const paceTTtight: any = { 'VI-A': { MONDAY: { p1: { subject: 'Maths', teacher: 'A' } } } }
+const tight = paceFor(mkPlan('Maths', 'VI-A', { teacher: 'A', chapters: [ch('c1', 5, true), ch('c2', 12)] }), paceTTtight, TERM)
+ok(tight.pace === 1 && !tight.willFinish && tight.shortfallHours === 4,
+  'on-pace but under-scheduled: 12 h of syllabus vs 8 h of slots left → 4 h short, caught before the term ends')
+
+// Past the term end, the term is over: spent stops at the last teaching day and
+// nothing remains — it must not keep accruing for months afterwards.
+const afterTerm = paceFor(fast, paceTT, { ...TERM, today: '2026-12-31' })
+ok(afterTerm.timeSpent === 26 && afterTerm.timeRemaining === 0,
+  'after the term ends, time spent stops at the final teaching day (26 h) and 0 h remain')
+const beforeTerm = paceFor(fast, paceTT, { ...TERM, today: '2025-12-01' })
+ok(beforeTerm.timeSpent === 0, 'before the term starts, no time has been spent')
+
+// No chapters → no content signal; we say so rather than invent a pace.
+const bulk = mkPlan('Maths', 'VI-A', { requiredHours: 40, loggedHours: 10, teacher: 'A' })
+ok(paceFor(bulk, paceTT, TERM).hasContentSignal === false,
+  'a school logging only bulk hours has no content signal — flagged, not faked')
+
+// The at-risk feed
+const pacePlans: Record<string, SyllabusPlan> = {
+  [planKey('Maths', 'VI-A')]: slow,
+}
+ok(willNotFinish(pacePlans, paceTT, TERM).length === 1, 'projection feed lists the subject that will miss the term')
+ok(willNotFinish({ [planKey('Maths', 'VI-A')]: fast }, paceTT, TERM).length === 0,
+  'a subject on track to finish is not reported')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

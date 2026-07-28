@@ -21,6 +21,7 @@ import {
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useHolidays, holidayImpact, totalHolidayHours, weekdayOf } from '@/lib/holidays'
+import { paceFor } from '@/lib/syllabusPace'
 import { BookOpen, Plus, Trash2, Check } from 'lucide-react'
 
 type Dim = 'subject' | 'class' | 'section' | 'teacher'
@@ -228,6 +229,14 @@ export function SyllabusPage() {
               </div>
             </Card>
 
+            {/* Pace — content covered vs time actually spent */}
+            <PaceCard
+              plan={plan} classTT={store.classTT ?? {}} periodMinutes={periodMinutes}
+              holidays={holidays}
+              termStart={store.config?.timetableStartDate}
+              termEnd={store.config?.timetableEndDate}
+            />
+
             {/* School holidays — declared once, applied everywhere */}
             <HolidayCard sections={sections} impact={impact} periodMinutes={periodMinutes} />
 
@@ -302,6 +311,75 @@ function detailRowsFor(
     a.subject.localeCompare(b.subject) ||
     b.remaining - a.remaining ||
     a.section.localeCompare(b.section))
+}
+
+/**
+ * Pace — how fast the syllabus is actually being covered, versus the class time
+ * being consumed. Both numbers come from data we already have (chapters the
+ * faculty tick; periods the timetable schedules), so this adds no new task.
+ */
+function PaceCard({
+  plan, classTT, periodMinutes, holidays, termStart, termEnd,
+}: {
+  plan: SyllabusPlan | undefined
+  classTT: any; periodMinutes: number; holidays: any[]
+  termStart?: string; termEnd?: string
+}) {
+  const report = useMemo(
+    () => (plan && termStart && termEnd)
+      ? paceFor(plan, classTT, { termStart, termEnd, periodMinutes, holidays })
+      : null,
+    [plan, classTT, periodMinutes, holidays, termStart, termEnd],
+  )
+  if (!plan || !report) return null
+
+  if (!report.hasContentSignal) return (
+    <Card title="Pace" subtitle="How fast the syllabus is actually being covered.">
+      <p style={{ fontSize: 12.5, color: '#8B87AD', margin: 0 }}>
+        Add <strong>chapters</strong> above to unlock this. Bulk hours tell us how long a subject was taught,
+        but not how much of the syllabus that time actually covered — chapters are what separate the two,
+        and ticking them off is the only input needed.
+      </p>
+    </Card>
+  )
+
+  const { pace, contentCovered, timeSpent, contentRemaining, timeRemaining, projectedHoursNeeded, willFinish, shortfallHours } = report
+  const tone = willFinish ? '#067647' : '#B45309'
+  const paceLabel = pace >= 1.15 ? 'Ahead of plan' : pace <= 0.85 ? 'Slower than planned' : 'On plan'
+
+  return (
+    <Card
+      title="Pace — will this syllabus finish?"
+      subtitle="Compares syllabus actually covered against class time actually used. Both are already known: chapters you tick, and periods the timetable ran."
+    >
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Stat label="Syllabus covered" value={`${contentCovered} h`} color="#4B41C4" />
+        <Stat label="Class time used" value={`${timeSpent} h`} color="#8B87AD" />
+        <Stat label="Pace" value={`${pace}×`} color={pace >= 0.85 ? '#067647' : '#B45309'} />
+        <div style={{ fontSize: 11.5, color: '#8B87AD', maxWidth: 210 }}>
+          <strong style={{ color: pace >= 0.85 ? '#067647' : '#B45309' }}>{paceLabel}</strong> —
+          {pace < 1
+            ? ` ${contentCovered} h of syllabus took ${timeSpent} h of class.`
+            : ` ${contentCovered} h of syllabus in only ${timeSpent} h of class.`}
+        </div>
+      </div>
+
+      <div style={{
+        padding: '10px 13px', borderRadius: 10,
+        background: willFinish ? '#F0FDF4' : '#FFFBEB',
+        border: `1px solid ${willFinish ? '#BBF7D0' : '#FDE68A'}`,
+      }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: tone, marginBottom: 3 }}>
+          {willFinish ? '✓ On track to finish the syllabus' : `⚠ Will not finish — about ${shortfallHours} h short`}
+        </div>
+        <div style={{ fontSize: 11.5, color: '#4B5275' }}>
+          {contentRemaining} h of syllabus left. At this pace that needs <strong>{projectedHoursNeeded} h</strong> of class time,
+          and <strong>{timeRemaining} h</strong> remain scheduled before the term ends
+          {holidays.length > 0 ? ' (declared holidays already removed)' : ''}.
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 /**
