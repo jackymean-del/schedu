@@ -1,9 +1,21 @@
 /**
  * Substitution-aware syllabus coverage — Blueprint v6.
  *
- * A covered period is NOT automatically a taught syllabus. Three different
- * things can happen when a substitute walks into someone else's slot, and they
- * have three different effects on the syllabus:
+ * A covered period is NOT automatically a taught syllabus. But the person
+ * arranging cover, at the moment they arrange it, usually has no idea what the
+ * substitute will actually do — so we don't ask them. Assigning a substitute
+ * stays one click, and each covered period is simply LOGGED, with no effect on
+ * any number, until the subject's own teacher says what happened.
+ *
+ * That teacher is already on the Syllabus page ticking chapters, and their
+ * ticks are the real content signal regardless. So the decision costs them
+ * nothing extra, and an undecided record is harmless by construction: it moves
+ * nothing.
+ *
+ * Four things can have happened, and they have four different effects:
+ *
+ *   'skip'          nobody has said yet (the default).
+ *                   → no effect at all. Chapter ticks remain the only truth.
  *
  *   'continue'      the substitute carries on the absent teacher's syllabus.
  *                   → content advances, and the hour counts as spent.
@@ -36,17 +48,19 @@ import type { ClassTimetable } from '@/types'
 import { planKey } from './syllabusTracking'
 import { leaveCoversDate, type CalLeave } from './leaveUtils'
 
-export type SubIntent = 'continue' | 'occupy' | 'other-subject'
+export type SubIntent = 'skip' | 'continue' | 'occupy' | 'other-subject'
 
 export const INTENT_LABELS: Record<SubIntent, string> = {
-  continue: 'Continues the syllabus',
-  occupy: 'Takes the class only',
-  'other-subject': 'Teaches another subject',
+  skip: 'Not recorded yet',
+  continue: 'Continued the syllabus',
+  occupy: 'Took the class only',
+  'other-subject': 'Taught another subject',
 }
 export const INTENT_HINTS: Record<SubIntent, string> = {
-  continue: 'Carries on where the absent teacher left off — content advances, hour counts as taught.',
-  occupy: 'Supervision, revision, anything. The hour is spent but the syllabus does not move.',
-  'other-subject': 'Their own subject instead. That subject gains a free session; this one loses the period.',
+  skip: 'Nothing is assumed either way — your chapter ticks stay the only measure of coverage.',
+  continue: 'Carried on where you left off — content advanced, and the hour counts as taught.',
+  occupy: 'Supervision, revision, anything. The hour was spent but the syllabus did not move.',
+  'other-subject': 'A different subject instead. That subject gains a free session; this one loses the period.',
 }
 
 export interface SubCoverageRecord {
@@ -151,7 +165,9 @@ const round1 = (n: number) => Math.round(n * 10) / 10
 export function coverageLoss(records: SubCoverageRecord[]): Record<string, HoursByPlan> {
   const out: Record<string, HoursByPlan> = {}
   for (const r of records) {
-    if (r.intent === 'continue') continue
+    // 'skip' is the default and must never cost anything: an unanswered
+    // question is not evidence that the lesson was wasted.
+    if (r.intent === 'skip' || r.intent === 'continue') continue
     if (!(r.hours > 0)) continue
     add(out, planKey(r.subject, r.section), r.hours, r.date)
   }
@@ -290,15 +306,16 @@ export function absentOn(leaves: CalLeave[], date: string): string[] {
 }
 
 /**
- * Claimed-but-unconfirmed covers, for the teacher who was away — v6's guard
- * against a substitute's claim silently counting as syllabus progress.
+ * Covers still waiting on the subject teacher — either nobody has said what
+ * happened ('skip'), or a continuation was claimed and they haven't confirmed
+ * it. Both are prompts, never assumptions: neither state moves a number.
  */
 export function awaitingConfirmation(
   records: SubCoverageRecord[],
   opts?: { subject?: string; section?: string; teacher?: string },
 ): SubCoverageRecord[] {
   return records
-    .filter(r => r.intent === 'continue' && !r.confirmedAt)
+    .filter(r => r.intent === 'skip' || (r.intent === 'continue' && !r.confirmedAt))
     .filter(r => !opts?.subject || r.subject === opts.subject)
     .filter(r => !opts?.section || r.section === opts.section)
     .filter(r => !opts?.teacher || r.absent === opts.teacher)

@@ -40,10 +40,7 @@ import {
 import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
 import { bootstrapDirectoryFromSchedules } from '@/lib/directoryBootstrap'
 import { useHolidays, holidayImpact, totalHolidayHours, type Holiday } from '@/lib/holidays'
-import {
-  useSubCoverage, slotKey, INTENT_LABELS, INTENT_HINTS,
-  type SubIntent, type SubCoverageRecord,
-} from '@/lib/substitutionCoverage'
+import { useSubCoverage, slotKey } from '@/lib/substitutionCoverage'
 import { ScopePicker, describeScope, scopePhrase } from '@/components/ScopePicker'
 import { useCan } from '@/lib/permissions'
 
@@ -636,14 +633,13 @@ export function CalendarPage() {
     if (sid === openId) { store.setSubstitutions(next); saveActiveTimetableSnapshot() }
     else { patchBundleSubstitutions(uid, sid, next); setSubNonce(n => n + 1) }
   }
-  // ── What the cover actually does to the syllabus (Blueprint v6) ───────────
-  // A covered period is not automatically a taught syllabus, so every assignment
-  // records an INTENT alongside it: continue the absent teacher's syllabus, just
-  // take the class, or teach a different subject. lib/substitutionCoverage turns
-  // that into coverage, lost time or a free session for another subject.
-  const { records: subRecords, record: recordCoverage, setIntent: setSubIntent, clearSlot: clearCoverage } = useSubCoverage()
-  const coverageAt = (sid: string, section: string, periodId: string) =>
-    subRecords.find(r => slotKey(r) === slotKey({ date: isoDate, sid, section, periodId }))
+  // ── The syllabus side of a cover (Blueprint v6) ───────────────────────────
+  // Arranging cover stays one click. Whoever is doing it — often in a hurry,
+  // often before the day has even happened — can't know what the substitute
+  // will actually teach, so we don't ask. The period is logged with no effect
+  // on any figure, and the subject's own teacher says what happened on the
+  // Syllabus page, where they're already ticking chapters.
+  const { record: recordCoverage, clearSlot: clearCoverage } = useSubCoverage()
 
   /** Length of one period in hours, from the owning schedule's own bell. */
   const periodHours = (sid: string, periodId: string): number => {
@@ -658,9 +654,9 @@ export function CalendarPage() {
     recordCoverage({
       date: isoDate, sid, section, periodId,
       subject: cell?.subject ?? '', absent: cell?.teacher ?? '', substitute: subName,
-      // Default to the common case; the admin can change it right there, and the
-      // absent teacher confirms it on return before it counts as covered.
-      intent: 'continue',
+      // Logged, not judged — 'skip' has no effect on any figure until the
+      // subject teacher says what actually happened.
+      intent: 'skip',
       hours: periodHours(sid, periodId),
     })
   }
@@ -744,7 +740,7 @@ export function CalendarPage() {
         recordCoverage({
           date: isoDate, sid: slot.sid, section: slot.section, periodId: slot.periodId,
           subject: slot.subject, absent: teacher, substitute: best.name,
-          intent: 'continue', hours: periodHours(slot.sid, slot.periodId),
+          intent: 'skip', hours: periodHours(slot.sid, slot.periodId),
         })
       }
     }
@@ -1356,9 +1352,6 @@ export function CalendarPage() {
           slots={slotsOf(subFor)}
           multiActive={multiActive}
           subAt={(sid, section, periodId) => bundleById(sid).substitutions[`${section}|${dayKey}|${periodId}`]}
-          coverageAt={coverageAt}
-          subjectOptions={subjects.map((s: any) => s.name).filter(Boolean)}
-          onSetIntent={setSubIntent}
           candidatesFor={candidatesFor}
           onAssign={assignSub}
           onClear={clearSub}
@@ -2564,16 +2557,11 @@ const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: str
 }
 
 // ── Substitute panel ───────────────────────────────────────────
-function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, coverageAt, subjectOptions, onSetIntent, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
+function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
   teacher: string; dayLabel: string
   slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
   multiActive: boolean
   subAt: (sid: string, section: string, periodId: string) => string | undefined
-  /** What this covered slot is recorded as doing to the syllabus, if anything. */
-  coverageAt: (sid: string, section: string, periodId: string) => SubCoverageRecord | undefined
-  /** Subjects a substitute could teach instead of the absent teacher's. */
-  subjectOptions: string[]
-  onSetIntent: (id: string, intent: SubIntent, taughtSubject?: string) => void
   candidatesFor: (sid: string, section: string, periodId: string, subject: string, absent: string) => SubCandidate[]
   onAssign: (sid: string, section: string, periodId: string, name: string) => void
   onClear: (sid: string, section: string, periodId: string) => void
@@ -2621,7 +2609,6 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, coverag
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {slots.map(slot => {
                 const current = subAt(slot.sid, slot.section, slot.periodId)
-                const cov = coverageAt(slot.sid, slot.section, slot.periodId)
                 const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
                 return (
                   <div key={`${slot.sid}|${slot.section}|${slot.periodId}`} style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 13 }}>
@@ -2685,15 +2672,15 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, coverag
                     </div>
                     </div>
 
-                    {/* What will the substitute actually DO with this period?
-                        Blueprint v6 — a covered slot is not a taught syllabus,
-                        and the three answers have three different effects. */}
-                    {current && cov && (
-                      <IntentPicker
-                        record={cov} subject={slot.subject}
-                        subjectOptions={subjectOptions.filter(s => s !== slot.subject)}
-                        onSetIntent={onSetIntent}
-                      />
+                    {/* Deliberately NOT a question about the syllabus. Whoever
+                        arranges cover can't know what the substitute will end
+                        up teaching; the subject's own teacher settles that on
+                        the Syllabus page, and until they do nothing moves. */}
+                    {current && (
+                      <div style={{ borderTop: '1px solid #F2F0FB', paddingTop: 10, fontSize: 11.5, color: '#9A95BC' }}>
+                        Logged for the syllabus record. {slot.subject}'s teacher confirms what was
+                        actually covered on the Syllabus page — coverage doesn't move until they do.
+                      </div>
                     )}
                   </div>
                 )
@@ -2701,63 +2688,6 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, coverag
             </div>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
-
-/**
- * The syllabus question, asked once, at the only moment anyone actually knows
- * the answer: while cover is being arranged. Defaults to "continues the
- * syllabus" — the common case — and the absent teacher confirms it on return
- * (Syllabus page), so a default can never quietly inflate coverage.
- */
-function IntentPicker({ record, subject, subjectOptions, onSetIntent }: {
-  record: SubCoverageRecord; subject: string; subjectOptions: string[]
-  onSetIntent: (id: string, intent: SubIntent, taughtSubject?: string) => void
-}) {
-  const INTENTS: SubIntent[] = ['continue', 'occupy', 'other-subject']
-  const TONE: Record<SubIntent, string> = { continue: '#16A34A', occupy: '#B45309', 'other-subject': '#7C6FE0' }
-  return (
-    <div style={{ borderTop: '1px solid #F2F0FB', paddingTop: 12 }}>
-      <div style={{ fontSize: 12, fontWeight: 800, color: '#13111E', marginBottom: 7 }}>
-        Will they continue the {subject} syllabus?
-      </div>
-      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-        {INTENTS.map(i => {
-          const active = record.intent === i
-          return (
-            <button key={i} title={INTENT_HINTS[i]}
-              onClick={() => onSetIntent(record.id, i, i === 'other-subject' ? (record.taughtSubject ?? subjectOptions[0]) : undefined)}
-              style={{
-                padding: '6px 13px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 12, fontWeight: 700,
-                border: `1.5px solid ${active ? TONE[i] : '#ECE9FB'}`,
-                background: active ? `${TONE[i]}14` : '#fff',
-                color: active ? TONE[i] : '#8B87AD',
-              }}>
-              {i === 'continue' ? 'Yes — continues it' : i === 'occupy' ? 'No — just takes the class' : 'Teaches another subject'}
-            </button>
-          )
-        })}
-        {record.intent === 'other-subject' && (
-          <select
-            value={record.taughtSubject ?? ''}
-            onChange={e => onSetIntent(record.id, 'other-subject', e.target.value)}
-            style={{ padding: '6px 10px', borderRadius: 9, border: '1.5px solid #E4E0FF', fontSize: 12, fontWeight: 700, color: '#4B41C4', background: '#fff', fontFamily: 'inherit' }}>
-            <option value="">— which subject? —</option>
-            {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
-      </div>
-      <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 6 }}>
-        {record.intent === 'continue'
-          ? `${INTENT_HINTS.continue} ${record.absent || 'The absent teacher'} confirms it on return.`
-          : record.intent === 'occupy'
-            ? `${record.hours} h of ${subject} time spent with no syllabus covered — flagged for rescheduling.`
-            : record.taughtSubject
-              ? `${record.taughtSubject} gains ${record.hours} h of free coverage; ${subject} loses the period.`
-              : INTENT_HINTS['other-subject']}
       </div>
     </div>
   )

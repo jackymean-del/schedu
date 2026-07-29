@@ -24,7 +24,7 @@ import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
 import { paceFor } from '@/lib/syllabusPace'
 import {
   useSubCoverage, bonusSessions, recordsFor,
-  INTENT_LABELS, type SubCoverageRecord,
+  INTENT_LABELS, INTENT_HINTS, type SubCoverageRecord,
 } from '@/lib/substitutionCoverage'
 import { BookOpen, Plus, Trash2, Check, Repeat } from 'lucide-react'
 
@@ -344,6 +344,7 @@ export function SyllabusPage() {
               subject={subject} section={section}
               records={recordsFor(subRecords, subject, section)}
               bonus={bonus[key]}
+              subjectOptions={subjects.map((s: any) => s.name).filter(Boolean)}
               onConfirm={confirmSub}
               onSetIntent={setSubIntent}
             />
@@ -453,11 +454,13 @@ function detailRowsFor(
  * The card is silent when this subject has had no cover at all.
  */
 function SubstituteCoverageCard({
-  subject, section, records, bonus, onConfirm, onSetIntent,
+  subject, section, records, bonus, subjectOptions, onConfirm, onSetIntent,
 }: {
   subject: string; section: string
   records: SubCoverageRecord[]
   bonus?: { hours: number; dates: string[]; from: string[] }
+  /** Subjects a substitute could have taught instead of this one. */
+  subjectOptions: string[]
   onConfirm: (id: string, confirmed: boolean) => void
   onSetIntent: (id: string, intent: SubCoverageRecord['intent'], taughtSubject?: string) => void
 }) {
@@ -470,7 +473,7 @@ function SubstituteCoverageCard({
   return (
     <Card
       title="Covered by a substitute"
-      subtitle="What actually happened when someone else took these periods — and your confirmation that the syllabus really moved."
+      subtitle="Periods someone else took for you. Nothing here changes a figure until you say what happened — and if you'd rather just tick chapters and ignore it, that works too."
     >
       {bonus && bonus.hours > 0 && (
         <div style={{
@@ -488,10 +491,12 @@ function SubstituteCoverageCard({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {mine.map(r => {
-          const pending = r.intent === 'continue' && !r.confirmedAt
-          const tone = r.intent === 'continue'
-            ? (r.confirmedAt ? { bg: '#F0FDF4', bd: '#BBF7D0', fg: '#067647' } : { bg: '#FFFBEB', bd: '#FDE68A', fg: '#92400E' })
-            : { bg: '#FEF2F2', bd: '#FECACA', fg: '#B42318' }
+          const undecided = r.intent === 'skip'
+          const tone = undecided
+            ? { bg: '#FBFAFF', bd: '#ECE9FB', fg: '#4B5275' }
+            : r.intent === 'continue'
+              ? { bg: '#F0FDF4', bd: '#BBF7D0', fg: '#067647' }
+              : { bg: '#FEF2F2', bd: '#FECACA', fg: '#B42318' }
           return (
             <div key={r.id} style={{
               display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
@@ -506,25 +511,35 @@ function SubstituteCoverageCard({
                 {r.intent === 'other-subject' && r.taughtSubject ? ` — ${r.taughtSubject}` : ''}
               </span>
               <span style={{ color: '#8B87AD' }}>
-                {r.intent === 'continue'
-                  ? (r.confirmedAt ? '· confirmed by you' : '· awaiting your confirmation')
-                  : `· ${r.hours} h did not advance this syllabus`}
+                {undecided
+                  ? `· ${r.hours} h — nothing assumed either way`
+                  : r.intent === 'continue'
+                    ? '· counted as taught'
+                    : `· ${r.hours} h did not advance this syllabus`}
               </span>
               <div style={{ flex: 1 }} />
-              {pending && (
+              {/* Three plain answers, or leave it alone. Whatever is chosen can
+                  be changed later — none of it is a commitment. */}
+              {undecided ? (
                 <>
-                  <button onClick={() => onConfirm(r.id, true)} style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5 }}>
-                    <Check size={12} /> Yes, it moved
+                  <button onClick={() => { onSetIntent(r.id, 'continue'); onConfirm(r.id, true) }}
+                    title={INTENT_HINTS.continue}
+                    style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5 }}>
+                    <Check size={12} /> Carried on
                   </button>
-                  <button onClick={() => onSetIntent(r.id, 'occupy')}
-                    title="The class ran but the syllabus did not move — the hour still has to be found again."
+                  <button onClick={() => onSetIntent(r.id, 'occupy')} title={INTENT_HINTS.occupy}
                     style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5, color: '#B42318', borderColor: '#FECACA', background: '#fff' }}>
-                    No, it didn't
+                    Didn't move
                   </button>
+                  <select value="" title={INTENT_HINTS['other-subject']}
+                    onChange={e => { if (e.target.value) onSetIntent(r.id, 'other-subject', e.target.value) }}
+                    style={{ ...btnSoft, padding: '5px 9px', fontSize: 11.5, cursor: 'pointer' }}>
+                    <option value="">Taught another subject…</option>
+                    {subjectOptions.filter(s => s !== subject).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </>
-              )}
-              {r.confirmedAt && (
-                <button onClick={() => onConfirm(r.id, false)} title="Undo confirmation"
+              ) : (
+                <button onClick={() => onSetIntent(r.id, 'skip')} title="Clear this and leave it unrecorded"
                   style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5 }}>Undo</button>
               )}
             </div>

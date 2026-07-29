@@ -511,8 +511,19 @@ import { withLostImpact, lostHours, riskOf } from './src/lib/syllabusTracking'
 const sub = (o: Partial<SubCoverageRecord>): SubCoverageRecord => ({
   id: o.id ?? Math.random().toString(36).slice(2, 8),
   date: '2026-01-12', sid: 's1', section: 'VI-A', periodId: 'p1',
-  subject: 'Maths', absent: 'A', substitute: 'B', intent: 'continue', hours: 1, ...o,
+  subject: 'Maths', absent: 'A', substitute: 'B', intent: 'skip', hours: 1, ...o,
 })
+
+// 0. THE DEFAULT. Arranging cover asks nobody anything, so a fresh record is
+//    'skip': logged, but with no effect on any figure whatsoever. The subject
+//    teacher's chapter ticks remain the only measure of coverage.
+const undecided = [sub({ intent: 'skip', hours: 2 })]
+ok(Object.keys(coverageLoss(undecided)).length === 0,
+  'an unanswered cover costs nothing — silence is not evidence the lesson was wasted')
+ok(Object.keys(hoursNotSpent(undecided)).length === 0, 'nor is any time credited back')
+ok(Object.keys(bonusSessions(undecided)).length === 0, 'nor gifted to another subject')
+ok(awaitingConfirmation(undecided).length === 1,
+  'it simply waits for the subject teacher, who may also ignore it entirely')
 
 // 1. Continues the syllabus → nothing is lost, nothing is deducted.
 const contd = [sub({ intent: 'continue' })]
