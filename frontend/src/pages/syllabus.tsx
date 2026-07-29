@@ -16,14 +16,14 @@ import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
   coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS, suggestBorrowSwaps,
-  LOST_REASON_LABELS, withHolidayImpact, withLostImpact, effectiveMethod, METHOD_LABELS, METHOD_HINTS,
+  LOST_REASON_LABELS, effectiveMethod, METHOD_LABELS, METHOD_HINTS,
   type SyllabusPlan, type LostSession, type CoverageMethod,
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
-import { useHolidays, holidayImpact } from '@/lib/holidays'
+import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
 import { paceFor } from '@/lib/syllabusPace'
 import {
-  useSubCoverage, coverageLoss, hoursNotSpent, bonusSessions, recordsFor,
+  useSubCoverage, bonusSessions, recordsFor,
   INTENT_LABELS, type SubCoverageRecord,
 } from '@/lib/substitutionCoverage'
 import { BookOpen, Plus, Trash2, Check, Repeat } from 'lucide-react'
@@ -61,28 +61,12 @@ export function SyllabusPage() {
   const rem = remainingHours(plan), pct = coveragePct(plan)
   const method = effectiveMethod(plan)
 
-  // Declared school holidays cost each subject whatever the timetable had on
-  // that weekday — folded in here so every coverage figure below is holiday-aware.
-  const holidays = useHolidays(s => s.holidays)
-  const periodMinutes = (store.config?.periodMinutes) ?? 40
-  const impact = useMemo(
-    () => holidayImpact(store.classTT ?? {}, holidays, periodMinutes),
-    [store.classTT, holidays, periodMinutes],
-  )
-  // Substitutions that did NOT carry the syllabus forward cost the subject just
-  // as surely as a holiday does — same machinery, different reason.
+  // Holidays, cover that didn't carry the syllabus forward, and absences nobody
+  // covered all eat into a subject's time. All four sources are composed in one
+  // shared place so this page and the dashboard alert can never disagree.
+  const { plans: effectivePlans, holidays, periodMinutes, notSpent } = useEffectiveCoverage()
   const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
-  const subLoss = useMemo(() => coverageLoss(subRecords), [subRecords])
-  const notSpent = useMemo(() => hoursNotSpent(subRecords), [subRecords])
   const bonus = useMemo(() => bonusSessions(subRecords), [subRecords])
-
-  const effectivePlans = useMemo(
-    () => withLostImpact(withHolidayImpact(plans, impact), subLoss, {
-      reason: 'absence', idPrefix: 'substitution',
-      note: n => n > 1 ? `${n} covered periods that didn't advance the syllabus` : `A covered period that didn't advance the syllabus`,
-    }),
-    [plans, impact, subLoss],
-  )
   const rows = useMemo(() => coverageRows(effectivePlans), [effectivePlans])
 
   const canPick = sections.length > 0 && subjects.length > 0
@@ -165,6 +149,26 @@ export function SyllabusPage() {
                   <div style={{ fontSize: 11, color: '#8B87AD', marginTop: 3 }}>{pct}% covered</div>
                 </div>
               </div>
+
+              {/* Why the remaining figure isn't shrinking. Every one of these is
+                  derived — a declared holiday, a cover that didn't carry the
+                  syllabus, an absence nobody stood in for — so this is the first
+                  place a teacher can see where their time actually went. */}
+              {lostHours(effectivePlans[key]) > 0 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                  padding: '8px 11px', borderRadius: 9, background: '#FFFBEB',
+                  border: '1px solid #FDE68A', fontSize: 12, color: '#92400E',
+                }}>
+                  <strong>{lostHours(effectivePlans[key])} h of teaching time lost</strong>
+                  <span style={{ color: '#B45309' }}>
+                    — {(effectivePlans[key]?.lostSessions ?? [])
+                      .filter(s => s.hours > 0)
+                      .map(s => `${s.note || LOST_REASON_LABELS[s.reason]} (${s.hours} h)`)
+                      .join(' · ')}. That time has to be found again.
+                  </span>
+                </div>
+              )}
 
               {/* Required hours — the denominator, whichever method is used.
                   Always the subject's own figure now: chapters say WHAT to

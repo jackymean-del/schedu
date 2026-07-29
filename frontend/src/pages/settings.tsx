@@ -11,6 +11,7 @@ import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKe
 import { useTimetableStore } from '@/store/timetableStore'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import { HolidayManager } from '@/components/HolidayManager'
+import { useCan } from '@/lib/permissions'
 import {
   BAND_LABELS, normTeacherHoursWeek, normStudentHoursWeek, effectiveTeacherMaxPeriods,
   type GradeBand,
@@ -24,6 +25,7 @@ const ACCENT = '#7C6FE0'
 
 export function SettingsPage() {
   const { user, logout } = useAuthStore()
+  const canManageHolidays = useCan('holiday.manage')
   const { name, kind, period, setProfile } = useOrgProfile()
   const [fName, setFName] = useState(name)
   const [fKind, setFKind] = useState(kind)
@@ -67,8 +69,11 @@ export function SettingsPage() {
         {/* Institution naming */}
         <NamingCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
 
-        {/* School holidays — admin-only (Blueprint v6 permissions) */}
-        <HolidayManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
+        {/* School holidays — admin-only (Blueprint v6): declaring one removes
+            teaching time from every subject in the school. */}
+        {canManageHolidays && (
+          <HolidayManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
+        )}
 
         {/* Workload limits */}
         <WorkloadCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />

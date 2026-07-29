@@ -7,30 +7,16 @@
  * lost teaching time (holiday / event / absence) that has to be rescheduled.
  */
 import { useMemo } from 'react'
-import { useSyllabus, lagging, withHolidayImpact, withLostImpact, RISK_LABELS } from '@/lib/syllabusTracking'
-import { useHolidays, holidayImpact } from '@/lib/holidays'
-import { useSubCoverage, coverageLoss } from '@/lib/substitutionCoverage'
-import { useTimetableStore } from '@/store/timetableStore'
+import { lagging, RISK_LABELS } from '@/lib/syllabusTracking'
+import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 
 export function SyllabusAlert({ limit = 4, compact = false }: { limit?: number; compact?: boolean }) {
-  const plans = useSyllabus(s => s.plans)
-  // Declared holidays count against coverage here too, so the alert reflects the
-  // same reality as the Syllabus page rather than a rosier version of it.
-  const holidays = useHolidays(s => s.holidays)
-  const classTT = useTimetableStore(s => (s as any).classTT)
-  const periodMinutes = useTimetableStore(s => (s as any).config?.periodMinutes) ?? 40
-  // Cover that didn't carry the syllabus forward costs the subject just as a
-  // holiday does — the alert has to see it, or the one surface meant to save
-  // people from hunting would be the one showing the rosier picture.
-  const subRecords = useSubCoverage(s => s.records)
-  const rows = useMemo(() => {
-    const impact = holidayImpact(classTT ?? {}, holidays, periodMinutes)
-    return lagging(withLostImpact(withHolidayImpact(plans, impact), coverageLoss(subRecords), {
-      reason: 'absence', idPrefix: 'substitution',
-      note: n => n > 1 ? `${n} covered periods that didn't advance the syllabus` : `A covered period that didn't advance the syllabus`,
-    }))
-  }, [plans, holidays, classTT, periodMinutes, subRecords])
+  // Holidays, uncarried cover and uncovered absences all count against coverage
+  // here, via the same composition the Syllabus page uses — the one surface
+  // meant to save people from hunting must never be the rosier one.
+  const { plans } = useEffectiveCoverage()
+  const rows = useMemo(() => lagging(plans), [plans])
   if (rows.length === 0) return null
 
   const critical = rows.filter(r => r.risk === 'critical').length

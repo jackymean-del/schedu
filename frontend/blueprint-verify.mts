@@ -569,6 +569,61 @@ ok(riskOf(afterSub[planKey('Maths', 'VI-A')]) === 'critical',
   'and the subject is flagged for rescheduling — that time has to be found again')
 ok(lostHours(subPlans[planKey('Maths', 'VI-A')]) === 0, 'the original plan is untouched — effects are derived, not written')
 
+// ── THE ABSENCE NOBODY COVERED ──
+// The case the old model missed: a teacher is out, no substitute is found, and
+// the timetable goes on claiming the lesson ran.
+import { uncoveredAbsenceLoss, absentOn } from './src/lib/substitutionCoverage'
+import type { CalLeave } from './src/lib/leaveUtils'
+
+// VI-A: Maths twice on Monday (teacher A) + Science once (teacher B).
+const absTT: any = {
+  'VI-A': {
+    MONDAY: {
+      p1: { subject: 'Maths', teacher: 'A' },
+      p2: { subject: 'Maths', teacher: 'A' },
+      p3: { subject: 'Science', teacher: 'B' },
+    },
+  },
+}
+const leaveA: CalLeave[] = [{ id: 'l1', teacher: 'A', date: '2026-01-12', duration: 'full', type: 'Sick Leave' }]
+const absLoss = uncoveredAbsenceLoss(leaveA, absTT, [], 60)
+ok(absLoss[planKey('Maths', 'VI-A')]?.hours === 2,
+  'an uncovered absence loses every period that teacher was due to teach (2 h)')
+ok(!absLoss[planKey('Science', 'VI-A')],
+  'the colleague who turned up is untouched — absence is per teacher, not per day')
+
+// Cover one of the two periods: only the uncovered one is still lost.
+const oneCovered = [sub({ date: '2026-01-12', section: 'VI-A', periodId: 'p1', subject: 'Maths', absent: 'A' })]
+ok(uncoveredAbsenceLoss(leaveA, absTT, oneCovered, 60)[planKey('Maths', 'VI-A')]?.hours === 1,
+  'a period that got a substitute is not counted again here — its record already says what happened')
+// …and it must be that DATE's cover, not the same weekday a week earlier.
+const wrongWeek = [sub({ date: '2026-01-05', section: 'VI-A', periodId: 'p1', subject: 'Maths', absent: 'A' })]
+ok(uncoveredAbsenceLoss(leaveA, absTT, wrongWeek, 60)[planKey('Maths', 'VI-A')]?.hours === 2,
+  'cover arranged on a different date does not excuse this one')
+
+// A long absence spans every date in the range — two Mondays here.
+const longLeave: CalLeave[] = [{ id: 'l2', teacher: 'A', date: '2026-01-12', endDate: '2026-01-23', duration: 'long', type: 'Training' }]
+const longLoss = uncoveredAbsenceLoss(longLeave, absTT, [], 60)
+ok(longLoss[planKey('Maths', 'VI-A')]?.hours === 4 && longLoss[planKey('Maths', 'VI-A')].dates.length === 2,
+  'a two-week absence costs both Mondays (4 h), dated individually')
+
+// Half-day leave is NOT guessed at: we know half the day was missed, not which half.
+const halfLeave: CalLeave[] = [{ id: 'l3', teacher: 'A', date: '2026-01-12', duration: 'half', type: 'Personal' }]
+ok(Object.keys(uncoveredAbsenceLoss(halfLeave, absTT, [], 60)).length === 0,
+  'half-day leave charges nothing automatically — inventing which periods were missed would be fabrication')
+
+// A day the school was closed anyway must not be charged twice.
+const onHoliday = uncoveredAbsenceLoss(leaveA, absTT, [], 60, (d) => d === '2026-01-12')
+ok(Object.keys(onHoliday).length === 0,
+  'an absence on a declared holiday costs nothing extra — the holiday already took that time')
+
+// Period length feeds through the same way it does for holidays.
+ok(uncoveredAbsenceLoss(leaveA, absTT, [], 40)[planKey('Maths', 'VI-A')]?.hours === 1.3,
+  '40-min periods → 2 uncovered periods = 1.3 h, accumulated then converted once')
+
+ok(absentOn(longLeave, '2026-01-15')[0] === 'A' && absentOn(longLeave, '2026-02-15').length === 0,
+  'who was out on a date respects the whole leave range')
+
 // One record per slot per date, so re-assigning cover can never double-count.
 ok(slotKey(sub({})) === slotKey(sub({ substitute: 'C' })), 'the slot key ignores who covered it')
 ok(slotKey(sub({})) !== slotKey(sub({ date: '2026-01-19' })), 'but the same weekly slot on another date is its own record')

@@ -45,6 +45,7 @@ import {
   type SubIntent, type SubCoverageRecord,
 } from '@/lib/substitutionCoverage'
 import { ScopePicker, describeScope, scopePhrase } from '@/components/ScopePicker'
+import { useCan } from '@/lib/permissions'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -282,7 +283,13 @@ export function CalendarPage() {
   // remaining-hours everywhere without anyone logging anything per subject.
   const { holidays, addHoliday, removeHoliday } = useHolidays()
   const periodMinutes = config.periodMinutes ?? 40
-  const isAdmin = (useAuthStore.getState().user?.role ?? 'admin') === 'admin'
+  // Blueprint v6 splits these rights (see lib/permissions): declaring a holiday
+  // removes teaching time from the whole school, so it is an admin action —
+  // unlike a teacher logging one missed period of their own.
+  const canManageHolidays = useCan('holiday.manage')
+  const canMarkAbsence = useCan('absence.mark')
+  const canArrangeCover = useCan('cover.arrange')
+  const canManageEvents = useCan('event.manage')
   /** Every class-section name — the vocabulary of every "applies to" picker. */
   const sectionNames: string[] = sections.map((s: any) => s.name).filter(Boolean)
 
@@ -964,20 +971,24 @@ export function CalendarPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <button
-              className="cal-primary"
-              onClick={() => setAddOpen(toISODate(date))}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '11px 20px', borderRadius: 11, border: 'none',
-                background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', color: '#fff',
-                fontSize: 14.5, fontWeight: 700, cursor: 'pointer',
-                boxShadow: '0 6px 16px rgba(124,111,224,0.32)',
-              }}
-            >
-              <Plus size={18} strokeWidth={2.6} /> Add Event
-            </button>
-            <button title="Substitution Settings" onClick={() => setSettingsOpen(true)} style={iconBtn}><Settings size={17} /></button>
+            {canManageEvents && (
+              <button
+                className="cal-primary"
+                onClick={() => setAddOpen(toISODate(date))}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '11px 20px', borderRadius: 11, border: 'none',
+                  background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', color: '#fff',
+                  fontSize: 14.5, fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 6px 16px rgba(124,111,224,0.32)',
+                }}
+              >
+                <Plus size={18} strokeWidth={2.6} /> Add Event
+              </button>
+            )}
+            {canArrangeCover && (
+              <button title="Substitution Settings" onClick={() => setSettingsOpen(true)} style={iconBtn}><Settings size={17} /></button>
+            )}
             <button title="Share" style={iconBtn}><Share2 size={17} /></button>
           </div>
         </div>
@@ -1189,7 +1200,7 @@ export function CalendarPage() {
         {view === 'month'
           ? <MonthGrid
               date={date} setDate={setDate} events={events} onAdd={(iso: string) => setAddOpen(iso)}
-              statsByDay={statsByDay} holidays={holidays} isAdmin={isAdmin}
+              statsByDay={statsByDay} holidays={holidays} isAdmin={canManageHolidays}
               sections={sectionNames}
               hoursLostOn={holidayHoursOn}
               onDeclareHoliday={declareHoliday}
@@ -1273,16 +1284,20 @@ export function CalendarPage() {
                             </div>
                             <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 2 }}>{lessons} {(lessons === 1 ? terms.period : plural(terms.period)).toLowerCase()}</div>
                           </div>
-                          {mode === 'teacher' ? (
+                          {mode === 'teacher' && (canMarkAbsence || canArrangeCover) ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                              <button onClick={() => setLeaveFor(ent.id)} title="Mark leave"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#FFF1E6', color: '#EA580C' }}>
-                                <UserMinus size={11} /> Leave
-                              </button>
-                              <button onClick={() => setSubFor(ent.id)} title="Find substitute"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#E8F0FF', color: '#2563EB' }}>
-                                <Repeat size={11} /> Sub
-                              </button>
+                              {canMarkAbsence && (
+                                <button onClick={() => setLeaveFor(ent.id)} title="Mark leave"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#FFF1E6', color: '#EA580C' }}>
+                                  <UserMinus size={11} /> Leave
+                                </button>
+                              )}
+                              {canArrangeCover && (
+                                <button onClick={() => setSubFor(ent.id)} title="Find substitute"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#E8F0FF', color: '#2563EB' }}>
+                                  <Repeat size={11} /> Sub
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <Caret size={15} color="#CFC9EC" />

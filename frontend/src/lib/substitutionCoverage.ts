@@ -21,14 +21,20 @@
  *                     improves). The subject that owned the slot lost the period
  *                     outright, and must not be charged for time it never got.
  *
+ * And the fourth case, which needs no record at all: an absence NOBODY covered.
+ * See uncoveredAbsenceLoss below — that is the one the old model missed
+ * entirely, and the one where the syllabus is most at risk.
+ *
  * Like holidays, effects are DERIVED at read time from these records rather than
  * written into any plan: delete a record and its effect simply disappears, with
- * nothing to reconcile. The two feed the same machinery — see
+ * nothing to reconcile. They all feed the same machinery — see
  * syllabusTracking.withLostImpact.
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { ClassTimetable } from '@/types'
 import { planKey } from './syllabusTracking'
+import { leaveCoversDate, type CalLeave } from './leaveUtils'
 
 export type SubIntent = 'continue' | 'occupy' | 'other-subject'
 
@@ -190,6 +196,97 @@ export function bonusSessions(records: SubCoverageRecord[]): Record<string, Bonu
   }
   for (const k in out) out[k].hours = round1(out[k].hours)
   return out
+}
+
+const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+const sameDay = (a: string, b: string) =>
+  (a ?? '').slice(0, 3).toUpperCase() === (b ?? '').slice(0, 3).toUpperCase()
+const isoOf = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/**
+ * The absence nobody covered.
+ *
+ * Marking a teacher absent used to cost the syllabus nothing: if cover was
+ * arranged we recorded what the substitute did, but if NO substitute was found
+ * the lesson simply vanished — the timetable still claimed it ran, and the
+ * subject's remaining hours never moved. That is the one case where the numbers
+ * flatter the school most, because an uncovered absence is exactly when the
+ * syllabus is most at risk.
+ *
+ * So: for every date a teacher is on leave, every period they were scheduled to
+ * teach that WASN'T given a cover record is lost syllabus time for that subject.
+ * Coverage records are dated, so "was it covered?" is answered per occurrence
+ * rather than per weekday — a Monday covered on the 6th says nothing about the
+ * 13th.
+ *
+ * Honest limitation: HALF-day leave is deliberately excluded. We know half the
+ * day was missed but not which half, and guessing which periods to charge would
+ * be inventing data. Those show as uncovered periods on the Calendar, where a
+ * human can see which they were, and can be logged explicitly.
+ */
+export function uncoveredAbsenceLoss(
+  leaves: CalLeave[],
+  classTT: ClassTimetable,
+  records: SubCoverageRecord[],
+  periodMinutes: number,
+  /** Dates a section wasn't in school anyway — already counted as holidays. */
+  isHoliday?: (date: string, section: string) => boolean,
+): Record<string, HoursByPlan> {
+  const hoursPerPeriod = Math.max(0, periodMinutes) / 60
+  // Accumulate whole periods and convert once — rounding each one drifts.
+  const periods: Record<string, { count: number; dates: string[] }> = {}
+  const covered = new Set(records.map(r => `${r.date}|${r.section}|${r.periodId}`))
+
+  for (const leave of leaves) {
+    if (leave.duration === 'half') continue          // see the note above
+    for (const date of datesOf(leave)) {
+      const wd = DAY_NAMES[new Date(`${date}T00:00:00`).getDay()]
+      if (!wd) continue
+      for (const section of Object.keys(classTT ?? {})) {
+        if (isHoliday?.(date, section)) continue
+        const days = (classTT as any)[section] ?? {}
+        for (const dayKey of Object.keys(days)) {
+          if (!sameDay(dayKey, wd)) continue
+          const slots = days[dayKey] ?? {}
+          for (const periodId of Object.keys(slots)) {
+            const cell: any = slots[periodId]
+            if (!cell?.subject || cell.teacher !== leave.teacher) continue
+            if (covered.has(`${date}|${section}|${periodId}`)) continue   // someone stood in
+            const k = planKey(cell.subject, section)
+            const cur = periods[k] ?? { count: 0, dates: [] }
+            cur.count += 1
+            if (!cur.dates.includes(date)) cur.dates.push(date)
+            periods[k] = cur
+          }
+        }
+      }
+    }
+  }
+
+  const out: Record<string, HoursByPlan> = {}
+  for (const k in periods) {
+    out[k] = { hours: round1(periods[k].count * hoursPerPeriod), dates: periods[k].dates }
+  }
+  return out
+}
+
+/** Every date one leave record covers — one day, or the whole long range. */
+function datesOf(leave: CalLeave): string[] {
+  const start = (leave.date ?? '').slice(0, 10)
+  if (!start) return []
+  if (leave.duration !== 'long' || !leave.endDate) return [start]
+  const out: string[] = []
+  const from = new Date(`${start}T00:00:00`), to = new Date(`${leave.endDate.slice(0, 10)}T00:00:00`)
+  if (isNaN(from.getTime()) || isNaN(to.getTime()) || from > to) return [start]
+  // A mistyped range shouldn't spin forever — a school year is the sane cap.
+  for (const d = new Date(from); d <= to && out.length < 400; d.setDate(d.getDate() + 1)) out.push(isoOf(d))
+  return out
+}
+
+/** Teachers absent on a date, for the "who was out" side of a report. */
+export function absentOn(leaves: CalLeave[], date: string): string[] {
+  return Array.from(new Set(leaves.filter(l => leaveCoversDate(l, date)).map(l => l.teacher)))
 }
 
 /**
