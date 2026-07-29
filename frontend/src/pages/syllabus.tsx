@@ -137,7 +137,9 @@ export function SyllabusPage() {
             <Card title={`${subject} · ${section}`} subtitle="Live coverage — updates the moment a chapter is ticked.">
               <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Stat label="Required" value={`${req} h`} color="#4B41C4" />
-                <Stat label="Covered" value={`${cov} h`} color="#067647" />
+                {/* These hours are time TAUGHT, not syllabus covered — the two
+                    are different, and only the Pace card can tell them apart. */}
+                <Stat label="Spent" value={`${cov} h`} color="#067647" />
                 <Stat label="Remaining" value={`${rem} h`} color={rem > 0 ? '#B45309' : '#067647'} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ height: 12, background: '#EDE9FF', borderRadius: 6, overflow: 'hidden' }}>
@@ -254,7 +256,7 @@ export function SyllabusPage() {
                   <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
                     <thead>
                       <tr style={{ background: '#F3F1FC' }}>
-                        {['Subject', 'Section', 'Faculty', 'Required', 'Covered', 'Remaining', ''].map((h, i) => (
+                        {['Subject', 'Section', 'Faculty', 'Required', 'Spent', 'Remaining', ''].map((h, i) => (
                           <th key={h + i} style={{ ...cellS, textAlign: i >= 3 ? 'right' : 'left', fontWeight: 700 }}>{h}</th>
                         ))}
                       </tr>
@@ -776,7 +778,7 @@ function CoverageDashboard({
       >
         <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
           <Stat label="Required" value={`${totals.required} h`} color="#4B41C4" />
-          <Stat label="Covered" value={`${totals.covered} h`} color="#067647" />
+          <Stat label="Spent" value={`${totals.covered} h`} color="#067647" />
           <Stat label="Remaining" value={`${totals.remaining} h`} color={totals.remaining > 0 ? '#B45309' : '#067647'} />
           <Stat label="Tracked" value={`${rows.length}`} color="#8B87AD" />
           <div style={{ flex: 1, minWidth: 180 }}>
@@ -833,7 +835,7 @@ function CoverageDashboard({
                       {showSubject && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Subject</th>}
                       {showSection && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Section</th>}
                       <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Required</th>
-                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Covered</th>
+                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Spent</th>
                       <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Left</th>
                       <th style={{ ...cellS, width: 80 }} />
                     </tr>
