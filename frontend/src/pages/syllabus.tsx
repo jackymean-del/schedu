@@ -2,8 +2,7 @@
  * Syllabus — Blueprint v3, Part C (faculty capture).
  *
  * Part C §1 · §6 · §7:
- *   - enter the hours a subject needs to cover its syllabus (directly, or as a
- *     chapter list with hours per chapter),
+ *   - enter the hours a subject needs to cover its syllabus,
  *   - tick a chapter off after the session that taught it,
  *   - see coverage (required / covered / remaining) update live.
  *
@@ -17,13 +16,17 @@ import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
   coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS, suggestBorrowSwaps,
-  LOST_REASON_LABELS, withHolidayImpact, effectiveMethod, METHOD_LABELS, METHOD_HINTS,
+  LOST_REASON_LABELS, withHolidayImpact, withLostImpact, effectiveMethod, METHOD_LABELS, METHOD_HINTS,
   type SyllabusPlan, type LostSession, type CoverageMethod,
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useHolidays, holidayImpact } from '@/lib/holidays'
 import { paceFor } from '@/lib/syllabusPace'
-import { BookOpen, Plus, Trash2, Check } from 'lucide-react'
+import {
+  useSubCoverage, coverageLoss, hoursNotSpent, bonusSessions, recordsFor,
+  INTENT_LABELS, type SubCoverageRecord,
+} from '@/lib/substitutionCoverage'
+import { BookOpen, Plus, Trash2, Check, Repeat } from 'lucide-react'
 
 type Dim = 'subject' | 'class' | 'section' | 'teacher'
 const DIMS: Array<{ k: Dim; label: string }> = [
@@ -51,13 +54,11 @@ export function SyllabusPage() {
   const [section, setSection] = useState<string>(sections[0]?.name ?? '')
   const [subject, setSubject] = useState<string>(subjects[0]?.name ?? '')
   const [chName, setChName] = useState('')
-  const [chHours, setChHours] = useState<number | ''>('')
 
   const key = planKey(subject, section)
   const plan: SyllabusPlan | undefined = plans[key]
   const req = requiredHours(plan), cov = coveredHours(plan)
   const rem = remainingHours(plan), pct = coveragePct(plan)
-  const usingChapters = (plan?.chapters?.length ?? 0) > 0
   const method = effectiveMethod(plan)
 
   // Declared school holidays cost each subject whatever the timetable had on
@@ -68,7 +69,20 @@ export function SyllabusPage() {
     () => holidayImpact(store.classTT ?? {}, holidays, periodMinutes),
     [store.classTT, holidays, periodMinutes],
   )
-  const effectivePlans = useMemo(() => withHolidayImpact(plans, impact), [plans, impact])
+  // Substitutions that did NOT carry the syllabus forward cost the subject just
+  // as surely as a holiday does — same machinery, different reason.
+  const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
+  const subLoss = useMemo(() => coverageLoss(subRecords), [subRecords])
+  const notSpent = useMemo(() => hoursNotSpent(subRecords), [subRecords])
+  const bonus = useMemo(() => bonusSessions(subRecords), [subRecords])
+
+  const effectivePlans = useMemo(
+    () => withLostImpact(withHolidayImpact(plans, impact), subLoss, {
+      reason: 'absence', idPrefix: 'substitution',
+      note: n => n > 1 ? `${n} covered periods that didn't advance the syllabus` : `A covered period that didn't advance the syllabus`,
+    }),
+    [plans, impact, subLoss],
+  )
   const rows = useMemo(() => coverageRows(effectivePlans), [effectivePlans])
 
   const canPick = sections.length > 0 && subjects.length > 0
@@ -152,14 +166,14 @@ export function SyllabusPage() {
                 </div>
               </div>
 
-              {/* Required hours — the denominator, whichever method is used */}
-              {!usingChapters && (
-                <Field label="Hours needed to cover the syllabus">
-                  <input type="number" min={0} step="0.5" value={plan?.requiredHours ?? ''} placeholder="e.g. 40"
-                    onChange={e => setRequiredHours(subject, section, e.target.value === '' ? undefined : Number(e.target.value))}
-                    style={{ ...inputStyle, maxWidth: 200 }} />
-                </Field>
-              )}
+              {/* Required hours — the denominator, whichever method is used.
+                  Always the subject's own figure now: chapters say WHAT to
+                  cover, never how long it takes. */}
+              <Field label="Hours needed to cover the syllabus">
+                <input type="number" min={0} step="0.5" value={plan?.requiredHours ?? ''} placeholder="e.g. 40"
+                  onChange={e => setRequiredHours(subject, section, e.target.value === '' ? undefined : Number(e.target.value))}
+                  style={{ ...inputStyle, maxWidth: 200 }} />
+              </Field>
 
               {/* Blueprint v6 — how this faculty wants to record content, per subject */}
               <div>
@@ -226,7 +240,7 @@ export function SyllabusPage() {
             {method === 'named' && (
             <Card
               title="Chapters"
-              subtitle="Enter each chapter and the hours it needs; tick it off after the session that taught it, or give a % if it's only part-done. Chapter hours replace the direct figure above."
+              subtitle="List the chapters and tick each one off after the session that taught it. Only part-done? Give it a %. No hours to estimate — every chapter counts equally towards the subject's total."
             >
               {(plan?.chapters ?? []).length === 0 && (
                 <p style={{ fontSize: 12.5, color: '#9A95BC', margin: 0 }}>No chapters yet — add the first one below.</p>
@@ -234,13 +248,12 @@ export function SyllabusPage() {
               {/* Column headers so the bare numbers in each row can't be misread */}
               {(plan?.chapters ?? []).length > 0 && (
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '28px 1fr 92px 62px 34px', gap: 10,
+                  display: 'grid', gridTemplateColumns: '28px 1fr 62px 34px', gap: 10,
                   padding: '0 10px', fontSize: 10.5, fontWeight: 700, color: '#9A95BC',
                   textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}>
                   <span>Done</span>
                   <span>Chapter</span>
-                  <span style={{ textAlign: 'right' }}>Hours</span>
                   <span style={{ textAlign: 'right' }}>% done</span>
                   <span />
                 </div>
@@ -248,7 +261,7 @@ export function SyllabusPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {(plan?.chapters ?? []).map((c, i) => (
                   <div key={c.id} style={{
-                    display: 'grid', gridTemplateColumns: '28px 1fr 92px 62px 34px', gap: 10, alignItems: 'center',
+                    display: 'grid', gridTemplateColumns: '28px 1fr 62px 34px', gap: 10, alignItems: 'center',
                     padding: '7px 10px', borderRadius: 9,
                     background: c.coveredAt ? '#F0FDF4' : '#fff',
                     border: `1px solid ${c.coveredAt ? '#BBF7D0' : '#ECE9FB'}`,
@@ -270,13 +283,6 @@ export function SyllabusPage() {
                       onChange={e => updateChapter(subject, section, c.id, { name: e.target.value })}
                       placeholder={`Chapter ${i + 1}`}
                       style={{ ...inputStyle, padding: '6px 9px', textDecoration: c.coveredAt ? 'line-through' : 'none', color: c.coveredAt ? '#6b6786' : '#13111E' }}
-                    />
-                    <input
-                      type="number" min={0} step="0.5" value={c.hours} placeholder="hrs"
-                      onChange={e => updateChapter(subject, section, c.id, { hours: Number(e.target.value) })}
-                      style={{ ...inputStyle, padding: '6px 9px', textAlign: 'right' }}
-                      title={`${c.hours || 0} teaching hours needed for "${c.name || 'this chapter'}"`}
-                      aria-label="Teaching hours for this chapter"
                     />
                     {/* v6 — a chapter only part-taught can carry its own % */}
                     <input
@@ -306,14 +312,12 @@ export function SyllabusPage() {
               </div>
 
               {/* Add chapter */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 92px 110px', gap: 10, alignItems: 'center', marginTop: 4 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10, alignItems: 'center', marginTop: 4 }}>
                 <input value={chName} onChange={e => setChName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && chName.trim()) { addChapter(subject, section, chName, Number(chHours) || 1); setChName(''); setChHours('') } }}
+                  onKeyDown={e => { if (e.key === 'Enter' && chName.trim()) { addChapter(subject, section, chName); setChName('') } }}
                   placeholder="New chapter name" style={inputStyle} />
-                <input type="number" min={0} step="0.5" value={chHours} onChange={e => setChHours(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="hrs" style={{ ...inputStyle, textAlign: 'right' }} />
                 <button
-                  onClick={() => { if (chName.trim()) { addChapter(subject, section, chName, Number(chHours) || 1); setChName(''); setChHours('') } }}
+                  onClick={() => { if (chName.trim()) { addChapter(subject, section, chName); setChName('') } }}
                   disabled={!chName.trim()}
                   style={{ ...btnSoft, opacity: chName.trim() ? 1 : 0.5, cursor: chName.trim() ? 'pointer' : 'not-allowed' }}>
                   <Plus size={13} /> Add chapter
@@ -326,8 +330,18 @@ export function SyllabusPage() {
             <PaceCard
               plan={plan} classTT={store.classTT ?? {}} periodMinutes={periodMinutes}
               holidays={holidays}
+              hoursNotSpent={notSpent[key] ?? 0}
               termStart={store.config?.timetableStartDate}
               termEnd={store.config?.timetableEndDate}
+            />
+
+            {/* What substitutes actually did with this subject's periods */}
+            <SubstituteCoverageCard
+              subject={subject} section={section}
+              records={recordsFor(subRecords, subject, section)}
+              bonus={bonus[key]}
+              onConfirm={confirmSub}
+              onSetIntent={setSubIntent}
             />
 
             {/* Holidays are an ADMIN action (Blueprint v6) and now live in
@@ -424,22 +438,138 @@ function detailRowsFor(
 }
 
 /**
+ * What substitutes did with this subject's periods — Blueprint v6.
+ *
+ * The admin records the intent when arranging cover (Calendar → Arrange cover);
+ * this is where the teacher who was AWAY sees the claim and confirms it. That
+ * confirmation is the whole point: a substitute saying "I carried on the
+ * syllabus" must not silently count as coverage until the person who owns the
+ * syllabus agrees. Unconfirmed claims are shown as such, never hidden.
+ *
+ * The card is silent when this subject has had no cover at all.
+ */
+function SubstituteCoverageCard({
+  subject, section, records, bonus, onConfirm, onSetIntent,
+}: {
+  subject: string; section: string
+  records: SubCoverageRecord[]
+  bonus?: { hours: number; dates: string[]; from: string[] }
+  onConfirm: (id: string, confirmed: boolean) => void
+  onSetIntent: (id: string, intent: SubCoverageRecord['intent'], taughtSubject?: string) => void
+}) {
+  if (records.length === 0 && !bonus) return null
+
+  // Periods this subject OWNED that someone else covered, vs periods it GAINED.
+  const mine = records.filter(r => r.subject === subject)
+  const gained = records.filter(r => r.taughtSubject === subject && r.subject !== subject)
+
+  return (
+    <Card
+      title="Covered by a substitute"
+      subtitle="What actually happened when someone else took these periods — and your confirmation that the syllabus really moved."
+    >
+      {bonus && bonus.hours > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          padding: '9px 12px', borderRadius: 10, background: '#F0FDF4',
+          border: '1px solid #BBF7D0', fontSize: 12, color: '#067647', marginBottom: 12,
+        }}>
+          <strong>+{bonus.hours} h taught free</strong>
+          <span style={{ color: '#3F7D5C' }}>
+            — a substitute taught {subject} in {bonus.from.join(', ')}'s period{bonus.dates.length > 1 ? 's' : ''}.
+            Tick off whatever it covered: the syllabus advances without spending any of this subject's own hours.
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {mine.map(r => {
+          const pending = r.intent === 'continue' && !r.confirmedAt
+          const tone = r.intent === 'continue'
+            ? (r.confirmedAt ? { bg: '#F0FDF4', bd: '#BBF7D0', fg: '#067647' } : { bg: '#FFFBEB', bd: '#FDE68A', fg: '#92400E' })
+            : { bg: '#FEF2F2', bd: '#FECACA', fg: '#B42318' }
+          return (
+            <div key={r.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '9px 12px', borderRadius: 10,
+              background: tone.bg, border: `1px solid ${tone.bd}`, fontSize: 12,
+            }}>
+              <Repeat size={13} color={tone.fg} />
+              <span style={{ fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{r.date}</span>
+              <strong style={{ color: '#13111E' }}>{r.substitute}</strong>
+              <span style={{ color: tone.fg, fontWeight: 700 }}>
+                {INTENT_LABELS[r.intent]}
+                {r.intent === 'other-subject' && r.taughtSubject ? ` — ${r.taughtSubject}` : ''}
+              </span>
+              <span style={{ color: '#8B87AD' }}>
+                {r.intent === 'continue'
+                  ? (r.confirmedAt ? '· confirmed by you' : '· awaiting your confirmation')
+                  : `· ${r.hours} h did not advance this syllabus`}
+              </span>
+              <div style={{ flex: 1 }} />
+              {pending && (
+                <>
+                  <button onClick={() => onConfirm(r.id, true)} style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5 }}>
+                    <Check size={12} /> Yes, it moved
+                  </button>
+                  <button onClick={() => onSetIntent(r.id, 'occupy')}
+                    title="The class ran but the syllabus did not move — the hour still has to be found again."
+                    style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5, color: '#B42318', borderColor: '#FECACA', background: '#fff' }}>
+                    No, it didn't
+                  </button>
+                </>
+              )}
+              {r.confirmedAt && (
+                <button onClick={() => onConfirm(r.id, false)} title="Undo confirmation"
+                  style={{ ...btnSoft, padding: '5px 11px', fontSize: 11.5 }}>Undo</button>
+              )}
+            </div>
+          )
+        })}
+
+        {gained.map(r => (
+          <div key={r.id} style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '9px 12px', borderRadius: 10, background: '#F8F7FF',
+            border: '1px solid #ECE9FB', fontSize: 12,
+          }}>
+            <Repeat size={13} color={ACCENT} />
+            <span style={{ fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{r.date}</span>
+            <strong style={{ color: '#13111E' }}>{r.substitute}</strong>
+            <span style={{ color: '#4B41C4', fontWeight: 700 }}>taught {subject} in {r.subject}'s period</span>
+            <span style={{ color: '#8B87AD' }}>· {r.hours} h gained, none spent</span>
+          </div>
+        ))}
+      </div>
+
+      {mine.length === 0 && gained.length === 0 && (
+        <p style={{ fontSize: 12.5, color: '#9A95BC', margin: 0 }}>
+          No cover recorded for {subject} · {section}.
+        </p>
+      )}
+    </Card>
+  )
+}
+
+/**
  * Pace — how fast the syllabus is actually being covered, versus the class time
  * being consumed. Both numbers come from data we already have (chapters the
  * faculty tick; periods the timetable schedules), so this adds no new task.
  */
 function PaceCard({
-  plan, classTT, periodMinutes, holidays, termStart, termEnd,
+  plan, classTT, periodMinutes, holidays, hoursNotSpent, termStart, termEnd,
 }: {
   plan: SyllabusPlan | undefined
   classTT: any; periodMinutes: number; holidays: any[]
+  /** Periods that ran but went to another subject — not this one's time. */
+  hoursNotSpent?: number
   termStart?: string; termEnd?: string
 }) {
   const report = useMemo(
     () => (plan && termStart && termEnd)
-      ? paceFor(plan, classTT, { termStart, termEnd, periodMinutes, holidays })
+      ? paceFor(plan, classTT, { termStart, termEnd, periodMinutes, holidays, hoursNotSpent })
       : null,
-    [plan, classTT, periodMinutes, holidays, termStart, termEnd],
+    [plan, classTT, periodMinutes, holidays, hoursNotSpent, termStart, termEnd],
   )
   if (!plan || !report) return null
 

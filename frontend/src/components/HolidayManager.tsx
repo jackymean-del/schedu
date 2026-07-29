@@ -17,6 +17,7 @@
 import { useMemo, useState } from 'react'
 import { useHolidays, holidayImpact, totalHolidayHours, weekdayOf } from '@/lib/holidays'
 import { useTimetableStore } from '@/store/timetableStore'
+import { ScopePicker, describeScope } from '@/components/ScopePicker'
 import { Trash2, Plus, Upload, CalendarDays } from 'lucide-react'
 
 const ACCENT = '#7C6FE0'
@@ -27,9 +28,12 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
   const sections: any[] = store.sections ?? []
   const periodMinutes = store.config?.periodMinutes ?? 40
 
+  const sectionNames: string[] = sections.map((s: any) => s.name).filter(Boolean)
+
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [name, setName] = useState('')
-  const [scope, setScope] = useState('')
+  // Empty = whole school. Most holidays are; a class trip or board exam is not.
+  const [scope, setScope] = useState<string[]>([])
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulk, setBulk] = useState('')
   const [bulkMsg, setBulkMsg] = useState('')
@@ -42,31 +46,47 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
 
   const add = () => {
     if (!date) return
-    addHoliday({ date, name: name.trim() || 'Holiday', sections: scope ? [scope] : undefined })
+    addHoliday({ date, name: name.trim() || 'Holiday', sections: scope.length ? scope : undefined })
     setName('')
     onSaved?.()
   }
 
   /**
-   * Bulk paste — one holiday per line, "date, name" (name optional). Accepts
-   * YYYY-MM-DD or DD/MM/YYYY, tolerates a header row and blank lines, and
-   * reports exactly what it skipped rather than failing silently.
+   * Bulk paste — one holiday per line, "date, name, classes" (all but the date
+   * optional). Accepts YYYY-MM-DD or DD/MM/YYYY, tolerates a header row and
+   * blank lines, and reports exactly what it skipped rather than failing
+   * silently. The third field narrows the holiday to particular classes: a
+   * space- or slash-separated list of section names, matched case-insensitively
+   * against the school's own; anything unrecognised is reported, never guessed.
    */
   const importBulk = () => {
     const lines = bulk.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
     let added = 0
     const skipped: string[] = []
+    const unknownScopes = new Set<string>()
     for (const line of lines) {
-      const [rawDate, ...rest] = line.split(/[,\t;]/)
+      const [rawDate, rawName, rawScope] = line.split(/[,\t;]/)
       const d = normaliseDate((rawDate ?? '').trim())
       if (!d) { skipped.push(line); continue }
-      addHoliday({ date: d, name: rest.join(',').trim() || 'Holiday' })
+      const scoped: string[] = []
+      for (const token of (rawScope ?? '').split(/[/|+]|\s+/).map(t => t.trim()).filter(Boolean)) {
+        const match = sectionNames.find(s => s.toLowerCase() === token.toLowerCase())
+        if (match) scoped.push(match)
+        else unknownScopes.add(token)
+      }
+      addHoliday({
+        date: d, name: (rawName ?? '').trim() || 'Holiday',
+        sections: scoped.length ? scoped : undefined,
+      })
       added++
     }
+    const unknownNote = unknownScopes.size
+      ? ` · ignored unknown class${unknownScopes.size > 1 ? 'es' : ''} ${[...unknownScopes].join(', ')} (those entries apply school-wide)`
+      : ''
     setBulkMsg(
       added === 0
         ? `Nothing imported — no usable dates found${skipped.length ? ` (${skipped.length} line${skipped.length > 1 ? 's' : ''} unreadable)` : ''}.`
-        : `Added ${added} holiday${added > 1 ? 's' : ''}${skipped.length ? ` · skipped ${skipped.length} unreadable line${skipped.length > 1 ? 's' : ''}` : ''}.`,
+        : `Added ${added} holiday${added > 1 ? 's' : ''}${skipped.length ? ` · skipped ${skipped.length} unreadable line${skipped.length > 1 ? 's' : ''}` : ''}${unknownNote}.`,
     )
     if (added > 0) { setBulk(''); onSaved?.() }
   }
@@ -120,7 +140,9 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
                   <span style={{ fontSize: 11, color: '#8B87AD' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '—'}</span>
                   <span style={{ fontSize: 12, color: '#13111E', fontWeight: 600 }}>
                     {h.name}
-                    {h.sections?.length ? <span style={{ color: '#8B87AD', fontWeight: 400 }}> · {h.sections.join(', ')}</span> : null}
+                    <span style={{ color: h.sections?.length ? '#4B41C4' : '#8B87AD', fontWeight: h.sections?.length ? 600 : 400 }}>
+                      {' · '}{describeScope(h.sections, sectionNames)}
+                    </span>
                   </span>
                   <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: hrs > 0 ? '#B45309' : '#C9C3EC', fontWeight: 700 }}>
                     {hrs > 0 ? `${Math.round(hrs * 10) / 10} h lost` : '—'}
@@ -136,26 +158,23 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
         )}
 
         {/* Add one */}
-        <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 170px 120px', gap: 8, alignItems: 'end' }}>
-          <label style={{ display: 'block' }}>
-            <div style={lbl}>Date</div>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
-          </label>
-          <label style={{ display: 'block' }}>
-            <div style={lbl}>Name</div>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Independence Day"
-              onKeyDown={e => { if (e.key === 'Enter') add() }} style={inputStyle} />
-          </label>
-          <label style={{ display: 'block' }}>
-            <div style={lbl}>Applies to</div>
-            <select value={scope} onChange={e => setScope(e.target.value)} style={inputStyle}>
-              <option value="">Whole school</option>
-              {sections.map((s: any) => <option key={s.name} value={s.name}>{s.name} only</option>)}
-            </select>
-          </label>
-          <button onClick={add} disabled={!date} style={{ ...btnPrimary, opacity: date ? 1 : 0.5 }}>
-            <Plus size={13} /> Add holiday
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 130px', gap: 8, alignItems: 'end' }}>
+            <label style={{ display: 'block' }}>
+              <div style={lbl}>Date</div>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+            </label>
+            <label style={{ display: 'block' }}>
+              <div style={lbl}>Name</div>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Independence Day"
+                onKeyDown={e => { if (e.key === 'Enter') add() }} style={inputStyle} />
+            </label>
+            <button onClick={add} disabled={!date} style={{ ...btnPrimary, opacity: date ? 1 : 0.5 }}>
+              <Plus size={13} /> Add holiday
+            </button>
+          </div>
+          {/* A board exam or a class trip closes one class, not the school. */}
+          <ScopePicker sections={sectionNames} value={scope} onChange={setScope} />
         </div>
 
         {/* Bulk */}
@@ -166,14 +185,16 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
           {bulkOpen && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11.5, color: '#8B87AD' }}>
-                One per line: <code>date, name</code> — e.g. <code>2026-08-15, Independence Day</code>.
+                One per line: <code>date, name, classes</code> — e.g. <code>2026-08-15, Independence Day</code>.
                 Dates may be <code>YYYY-MM-DD</code> or <code>DD/MM/YYYY</code>; a header row and blank lines are ignored.
+                Leave the third field out for the whole school, or list class-sections
+                (<code>IX-A IX-B</code>) to close only those.
               </div>
               <input type="file" accept=".csv,.txt" onChange={e => onFile(e.target.files?.[0] ?? null)}
                 style={{ fontSize: 12, color: '#4B5275' }} />
               <textarea
                 value={bulk} onChange={e => { setBulk(e.target.value); setBulkMsg('') }}
-                rows={6} placeholder={'2026-08-15, Independence Day\n2026-10-02, Gandhi Jayanti\n25/12/2026, Christmas'}
+                rows={6} placeholder={'2026-08-15, Independence Day\n2026-10-02, Gandhi Jayanti\n25/12/2026, Christmas\n2026-11-09, Board exam leave, IX-A IX-B'}
                 style={{ ...inputStyle, fontFamily: "'DM Mono', monospace", fontSize: 12, resize: 'vertical' }}
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

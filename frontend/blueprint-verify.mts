@@ -81,24 +81,39 @@ import {
 const mkPlan = (subject: string, section: string, o: Partial<SyllabusPlan> = {}): SyllabusPlan =>
   ({ subject, section, chapters: [], loggedHours: 0, ...o })
 
-// §1 required hours — direct, or summed from chapters (chapters win)
+// §1 required hours — the subject's own figure. Chapters say WHAT to cover,
+// never how long it takes: nobody could estimate per-chapter hours honestly, so
+// that box is gone and every chapter now counts equally.
 ok(requiredHours(mkPlan('Phy', 'XI-A', { requiredHours: 40 })) === 40, 'required hours: direct figure')
 const chaptered = mkPlan('Chem', 'XI-A', {
-  requiredHours: 999,  // must be ignored once chapters exist
+  requiredHours: 30,
   chapters: [
-    { id: 'c1', name: 'Ch1', hours: 10 },
-    { id: 'c2', name: 'Ch2', hours: 12 },
-    { id: 'c3', name: 'Ch3', hours: 8 },
+    { id: 'c1', name: 'Ch1' },
+    { id: 'c2', name: 'Ch2' },
+    { id: 'c3', name: 'Ch3' },
   ],
 })
-ok(requiredHours(chaptered) === 30, 'required hours: chapter sum overrides the direct figure')
+ok(requiredHours(chaptered) === 30, 'required hours: the subject figure stands, chapters do not override it')
 
-// §6/§7 faculty marks chapters covered → live coverage
+// §6/§7 faculty marks chapters covered → live coverage. 1 of 3 chapters ticked
+// is a third of the syllabus, whatever the chapters happen to be.
 const partly: SyllabusPlan = { ...chaptered, chapters: chaptered.chapters.map((c, i) => i === 0 ? { ...c, coveredAt: 'now' } : c) }
-ok(coveredHours(partly) === 10, 'covered hours: only ticked chapters count')
+ok(coveredHours(partly) === 10, 'covered hours: chapters weigh equally (1 of 3 → 10 of 30 h)')
 ok(remainingHours(partly) === 20, 'remaining hours = required − covered')
 ok(coveragePct(partly) === 33, 'coverage % (10/30)')
 ok(!isCovered(partly), 'partly-taught syllabus is not "covered"')
+// A part-taught chapter carries its own %, still equal-weight.
+const halfChapter: SyllabusPlan = { ...chaptered, chapters: chaptered.chapters.map((c, i) => i === 0 ? { ...c, percentCovered: 50 } : c) }
+ok(coveredHours(halfChapter) === 5, 'a chapter at 50% of three counts as one sixth (5 of 30 h)')
+// Legacy data that still carries per-chapter hours keeps weighting by them.
+const legacy = mkPlan('Bio', 'XI-A', {
+  chapters: [
+    { id: 'c1', name: 'Ch1', hours: 10, coveredAt: 'now' },
+    { id: 'c2', name: 'Ch2', hours: 30 },
+  ],
+})
+ok(requiredHours(legacy) === 40, 'legacy plan with no subject figure falls back to its chapter hours')
+ok(coveredHours(legacy) === 10, 'legacy per-chapter hours still weight coverage (10 of 40 h)')
 
 // §2 direct hour logging (schools not tracking chapters)
 ok(coveredHours(mkPlan('Bio', 'XI-A', { requiredHours: 20, loggedHours: 5 })) === 5, 'directly-logged hours count as covered')
@@ -379,6 +394,24 @@ const scoped: Holiday[] = [{ id: 'h2', date: '2026-08-17', name: 'Section trip',
 const impScoped = holidayImpact(holTT, scoped, 60)
 ok(!impScoped[planKey('Maths', 'VI-A')] && impScoped[planKey('Maths', 'VI-B')]?.hours === 1,
   'a section-scoped holiday only costs that section')
+// …and a multi-section scope costs exactly those, no more.
+const impBoth = holidayImpact(holTT, [{ id: 'h3', date: '2026-08-17', name: 'Class VI exam', sections: ['VI-A', 'VI-B'] }], 60)
+ok(totalHolidayHours(impBoth) === 4 && impBoth[planKey('Science', 'VI-A')]?.hours === 1,
+  'a holiday scoped to several sections costs each of them')
+
+// ── "Applies to": whole school vs particular classes ──
+import { groupSections, describeScope } from './src/components/ScopePicker'
+const allSecs = ['VI-A', 'VI-B', 'VII-A', 'VIII-A']
+const grouped = groupSections(allSecs)
+ok(grouped.length === 3 && grouped[0].cls === 'VI' && grouped[0].sections.length === 2,
+  'sections group under their class, so "all of VI" is one tap')
+ok(describeScope([], allSecs) === 'Whole school', 'an empty scope IS the whole school — the default needs no thought')
+ok(describeScope(undefined, allSecs) === 'Whole school', 'and so is an absent one (older records)')
+ok(describeScope(['VI-A', 'VI-B'], allSecs) === 'VI',
+  'every section of a class reads as the class, not a list of its sections')
+ok(describeScope(['VI-A'], allSecs) === 'VI-A', 'one section of a two-section class still names the section')
+ok(describeScope(['VI-A', 'VI-B', 'VII-A'], allSecs) === 'VI, VII-A',
+  'a mixed scope names whole classes first, then the loose sections')
 
 // Merging into plans makes every existing helper holiday-aware, unchanged
 const holPlans: Record<string, SyllabusPlan> = {
@@ -411,6 +444,8 @@ ok(scheduledHoursBetween(paceTT, 'Science', 'VI-A', '2026-01-05', '2026-02-02', 
   'only the subject actually on the timetable counts')
 
 const ch = (id: string, hours: number, done?: boolean) => ({ id, name: id, hours, coveredAt: done ? 'x' : undefined })
+/** Hour-less chapter — the shape all new data takes; chapters weigh equally. */
+const ch2 = (id: string, done?: boolean) => ({ id, name: id, coveredAt: done ? 'x' : undefined })
 
 // SAME 10 h taught. Different amounts of syllabus actually covered.
 const slow = mkPlan('Maths', 'VI-A', { teacher: 'A', chapters: [ch('c1', 5, true), ch('c2', 15), ch('c3', 20)] })   // 5 of 40 h covered
@@ -465,6 +500,78 @@ const pacePlans: Record<string, SyllabusPlan> = {
 ok(willNotFinish(pacePlans, paceTT, TERM).length === 1, 'projection feed lists the subject that will miss the term')
 ok(willNotFinish({ [planKey('Maths', 'VI-A')]: fast }, paceTT, TERM).length === 0,
   'a subject on track to finish is not reported')
+
+// ── SUBSTITUTION-AWARE COVERAGE (v6): a covered period ≠ a taught syllabus ──
+import {
+  coverageLoss, hoursNotSpent, bonusSessions, awaitingConfirmation, slotKey,
+  type SubCoverageRecord,
+} from './src/lib/substitutionCoverage'
+import { withLostImpact, lostHours, riskOf } from './src/lib/syllabusTracking'
+
+const sub = (o: Partial<SubCoverageRecord>): SubCoverageRecord => ({
+  id: o.id ?? Math.random().toString(36).slice(2, 8),
+  date: '2026-01-12', sid: 's1', section: 'VI-A', periodId: 'p1',
+  subject: 'Maths', absent: 'A', substitute: 'B', intent: 'continue', hours: 1, ...o,
+})
+
+// 1. Continues the syllabus → nothing is lost, nothing is deducted.
+const contd = [sub({ intent: 'continue' })]
+ok(Object.keys(coverageLoss(contd)).length === 0, 'a substitute continuing the syllabus costs the subject nothing')
+ok(Object.keys(hoursNotSpent(contd)).length === 0, 'continuing cover spends the hour as normal')
+ok(awaitingConfirmation(contd).length === 1,
+  'but the claim is unconfirmed until the absent teacher confirms it — never auto-counted')
+ok(awaitingConfirmation([sub({ intent: 'continue', confirmedAt: 'now' })]).length === 0,
+  'once confirmed it stops asking')
+
+// 2. Just takes the class → the hour is SPENT, the syllabus does not move.
+const occupied = [sub({ intent: 'occupy', hours: 2 })]
+ok(coverageLoss(occupied)[planKey('Maths', 'VI-A')].hours === 2,
+  'taking the class without the syllabus loses those 2 h of syllabus time')
+ok(hoursNotSpent(occupied)[planKey('Maths', 'VI-A')] === undefined,
+  'that time WAS spent on this subject — it just produced nothing, so pace is not credited back')
+ok(awaitingConfirmation(occupied).length === 0, 'nothing to confirm — no coverage was claimed')
+
+// 3. Teaches another subject → the owner loses the period; the other subject
+//    gains content WITHOUT spending any of its own hours.
+const swapped = [sub({ intent: 'other-subject', taughtSubject: 'Science', hours: 1.5 })]
+ok(coverageLoss(swapped)[planKey('Maths', 'VI-A')].hours === 1.5, 'Maths loses the period it owned')
+ok(hoursNotSpent(swapped)[planKey('Maths', 'VI-A')] === 1.5,
+  'and is not charged for time it never received')
+const bonusMap = bonusSessions(swapped)
+ok(bonusMap[planKey('Science', 'VI-A')].hours === 1.5 && bonusMap[planKey('Science', 'VI-A')].from[0] === 'Maths',
+  'Science gains 1.5 free hours, credited from Maths')
+ok(bonusSessions(occupied)[planKey('Science', 'VI-A')] === undefined,
+  'merely occupying a class gifts nobody anything')
+
+// The gain is real: same content, no time spent → the pace IMPROVES.
+const sciTT: any = { 'VI-A': { MONDAY: { p1: { subject: 'Science', teacher: 'B' } } } }
+const sciPlan = mkPlan('Science', 'VI-A', { teacher: 'B', requiredHours: 40, chapters: [ch2('c1', true), ch2('c2'), ch2('c3'), ch2('c4')] })
+const sciBase = paceFor(sciPlan, sciTT, TERM)
+ok(sciBase.timeSpent === 5 && sciBase.contentCovered === 10, 'Science: 5 h spent, 10 h of syllabus covered')
+ok(sciBase.pace === 2, 'so its pace is 2.0 — the free session cost it no time at all')
+
+// Whereas the subject that LOST the period is not charged for it.
+const mathsPlan = mkPlan('Maths', 'VI-A', { teacher: 'A', requiredHours: 40, chapters: [ch2('c1', true), ch2('c2'), ch2('c3'), ch2('c4')] })
+const charged = paceFor(mathsPlan, paceTT, TERM)
+const notCharged = paceFor(mathsPlan, paceTT, { ...TERM, hoursNotSpent: 2 })
+ok(charged.timeSpent === 10 && notCharged.timeSpent === 8,
+  'a period taken by another subject comes OFF this subject\'s time spent (10 h → 8 h)')
+ok(notCharged.pace > charged.pace, 'so the teacher is not blamed for a lesson they never got to give')
+
+// Folded into the plans, a non-continuing cover reads as lost syllabus time and
+// escalates the subject exactly like a holiday does — same machinery.
+const subPlans = { [planKey('Maths', 'VI-A')]: mkPlan('Maths', 'VI-A', { requiredHours: 40, loggedHours: 10, teacher: 'A' }) }
+const afterSub = withLostImpact(subPlans, coverageLoss(occupied), {
+  reason: 'absence', idPrefix: 'substitution', note: () => 'cover did not advance the syllabus',
+})
+ok(lostHours(afterSub[planKey('Maths', 'VI-A')]) === 2, 'the 2 lost hours land on the plan')
+ok(riskOf(afterSub[planKey('Maths', 'VI-A')]) === 'critical',
+  'and the subject is flagged for rescheduling — that time has to be found again')
+ok(lostHours(subPlans[planKey('Maths', 'VI-A')]) === 0, 'the original plan is untouched — effects are derived, not written')
+
+// One record per slot per date, so re-assigning cover can never double-count.
+ok(slotKey(sub({})) === slotKey(sub({ substitute: 'C' })), 'the slot key ignores who covered it')
+ok(slotKey(sub({})) !== slotKey(sub({ date: '2026-01-19' })), 'but the same weekly slot on another date is its own record')
 
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'

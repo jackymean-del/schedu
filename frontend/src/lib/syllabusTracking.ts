@@ -11,10 +11,11 @@
  * Model
  * -----
  * A *plan* is keyed per (subject, section) — a subject can need different hours
- * in different sections. Each plan holds either a direct required-hours figure,
- * or a chapter list (name + hours each), in which case the requirement is the
- * sum of the chapters. Faculty tick chapters off as they're taught; coverage can
- * also be logged directly in hours for schools that don't track chapters.
+ * in different sections. Each plan holds the hours the subject needs, plus a
+ * CONTENT signal saying how much of the syllabus is actually done: a stated %,
+ * a chapter count, or a named chapter checklist. Chapters describe WHAT to
+ * cover, never how long it takes, so they carry no hours and each counts
+ * equally. Schools tracking neither can still log delivered hours directly.
  *
  * Everything below the store is a pure function so it can be unit-tested and
  * reused by the engine without pulling React in.
@@ -25,8 +26,13 @@ import { persist } from 'zustand/middleware'
 export interface Chapter {
   id: string
   name: string
-  /** Teaching hours this chapter is expected to need. */
-  hours: number
+  /**
+   * LEGACY. Chapters no longer carry hours — nobody could estimate them
+   * honestly, and the subject's total is already known. Kept so existing data
+   * keeps weighting correctly (see contentFraction / requiredHours); new
+   * chapters are created without it and every chapter then counts equally.
+   */
+  hours?: number
   /** Set when a faculty member marks it fully taught. */
   coveredAt?: string
   /**
@@ -136,10 +142,17 @@ export function contentFraction(p: SyllabusPlan | undefined): number {
     return Math.max(0, Math.min(1, (p.chaptersCovered ?? 0) / total))
   }
   const chapters = p.chapters ?? []
-  const totalH = chapters.reduce((a, c) => a + (c.hours || 0), 0)
-  if (totalH <= 0) return 0
-  const doneH = chapters.reduce((a, c) => a + (c.hours || 0) * chapterFraction(c), 0)
-  return Math.max(0, Math.min(1, doneH / totalH))
+  if (chapters.length === 0) return 0
+  // Chapters are equal-weight unless EVERY one carries legacy hours. Mixing the
+  // two would silently weight a new (hour-less) chapter at zero, so it's all or
+  // nothing — and all new data takes the equal-weight path.
+  if (chapters.every(c => (c.hours ?? 0) > 0)) {
+    const totalH = chapters.reduce((a, c) => a + (c.hours || 0), 0)
+    const doneH = chapters.reduce((a, c) => a + (c.hours || 0) * chapterFraction(c), 0)
+    return Math.max(0, Math.min(1, doneH / totalH))
+  }
+  const done = chapters.reduce((a, c) => a + chapterFraction(c), 0)
+  return Math.max(0, Math.min(1, done / chapters.length))
 }
 
 /** True when the plan carries a real CONTENT signal (either method). */
@@ -159,11 +172,17 @@ export function planKey(subject: string, section: string): string {
 
 // ── Pure helpers ───────────────────────────────────────────────────────────
 
-/** Hours the syllabus needs: chapter sum when chapters exist, else the direct figure. */
+/**
+ * Hours the syllabus needs. The subject's own figure is the source of truth —
+ * chapters say WHAT to cover, not how long it takes. Legacy plans that only ever
+ * had per-chapter hours still fall back to their sum, so no existing data reads
+ * as zero.
+ */
 export function requiredHours(p: SyllabusPlan | undefined): number {
   if (!p) return 0
-  if ((p.chapters?.length ?? 0) > 0) return round1(p.chapters.reduce((a, c) => a + (c.hours || 0), 0))
-  return round1(p.requiredHours ?? 0)
+  if (p.requiredHours != null && p.requiredHours > 0) return round1(p.requiredHours)
+  const chapterSum = (p.chapters ?? []).reduce((a, c) => a + (c.hours || 0), 0)
+  return round1(chapterSum)
 }
 
 /** Hours actually delivered: covered chapters + any directly-logged hours. */
@@ -301,6 +320,23 @@ export function withHolidayImpact(
   plans: Record<string, SyllabusPlan>,
   impact: Record<string, { hours: number; dates: string[] }>,
 ): Record<string, SyllabusPlan> {
+  return withLostImpact(plans, impact, {
+    reason: 'holiday',
+    idPrefix: 'holiday',
+    note: n => n > 1 ? `${n} school holidays` : 'School holiday',
+  })
+}
+
+/**
+ * The general form: fold any derived {planKey → hours lost} map into the plans
+ * as synthetic lost sessions. Holidays use it, and so do substitutions where the
+ * cover did not carry the syllabus forward (lib/substitutionCoverage).
+ */
+export function withLostImpact(
+  plans: Record<string, SyllabusPlan>,
+  impact: Record<string, { hours: number; dates: string[] }>,
+  opts: { reason: LostSession['reason']; idPrefix: string; note: (dateCount: number) => string },
+): Record<string, SyllabusPlan> {
   if (!impact || Object.keys(impact).length === 0) return plans
   const out: Record<string, SyllabusPlan> = { ...plans }
   for (const key in impact) {
@@ -313,11 +349,11 @@ export function withHolidayImpact(
       lostSessions: [
         ...(base.lostSessions ?? []),
         {
-          id: `holiday:${key}`,
+          id: `${opts.idPrefix}:${key}`,
           date: loss.dates[0] ?? '',
           hours: loss.hours,
-          reason: 'holiday',
-          note: loss.dates.length > 1 ? `${loss.dates.length} school holidays` : 'School holiday',
+          reason: opts.reason,
+          note: opts.note(loss.dates.length),
         },
       ],
     }
@@ -469,7 +505,7 @@ interface SyllabusState {
 
   setRequiredHours: (subject: string, section: string, hours: number | undefined) => void
   setTeacher: (subject: string, section: string, teacher: string) => void
-  addChapter: (subject: string, section: string, name: string, hours: number) => void
+  addChapter: (subject: string, section: string, name: string) => void
   updateChapter: (subject: string, section: string, chapterId: string, patch: Partial<Chapter>) => void
   removeChapter: (subject: string, section: string, chapterId: string) => void
   /** Faculty action — tick a chapter as taught (or untick it). */
@@ -508,10 +544,10 @@ export const useSyllabus = create<SyllabusState>()(
           edit(subject, section, p => ({ ...p, requiredHours: hours && hours > 0 ? hours : undefined })),
         setTeacher: (subject, section, teacher) =>
           edit(subject, section, p => ({ ...p, teacher: teacher || undefined })),
-        addChapter: (subject, section, name, hours) =>
+        addChapter: (subject, section, name) =>
           edit(subject, section, p => ({
             ...p,
-            chapters: [...p.chapters, { id: Math.random().toString(36).slice(2, 9), name: name.trim() || `Chapter ${p.chapters.length + 1}`, hours: Math.max(0, hours) }],
+            chapters: [...p.chapters, { id: Math.random().toString(36).slice(2, 9), name: name.trim() || `Chapter ${p.chapters.length + 1}` }],
           })),
         updateChapter: (subject, section, chapterId, patch) =>
           edit(subject, section, p => ({

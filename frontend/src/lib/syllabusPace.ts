@@ -158,6 +158,13 @@ export function paceFor(
   opts: {
     termStart: string; termEnd: string; today?: string
     periodMinutes: number; holidays?: Holiday[]
+    /**
+     * Hours the timetable ran but this subject never received — a substitute
+     * used the slot for a different subject (lib/substitutionCoverage). The
+     * timetable alone can't know that, and charging the subject for a period it
+     * never got would make its pace look worse than the teaching actually was.
+     */
+    hoursNotSpent?: number
   },
 ): PaceReport {
   // Clamp "now" into the term. Past the end date the term is simply over: time
@@ -175,9 +182,10 @@ export function paceFor(
   const required = requiredHours(plan)
   const contentRemaining = Math.round(Math.max(0, required - contentCovered) * 10) / 10
 
-  const timeSpent = plan
+  const scheduled = plan
     ? scheduledHoursBetween(classTT, plan.subject, plan.section, opts.termStart, today, opts.periodMinutes, opts.holidays ?? [])
     : 0
+  const timeSpent = Math.round(Math.max(0, scheduled - (opts.hoursNotSpent ?? 0)) * 10) / 10
   // From tomorrow, so today isn't counted as both spent and remaining.
   const tomorrow = dayAfter(today)
   const timeRemaining = plan

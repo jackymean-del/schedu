@@ -40,6 +40,11 @@ import {
 import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
 import { bootstrapDirectoryFromSchedules } from '@/lib/directoryBootstrap'
 import { useHolidays, holidayImpact, totalHolidayHours, type Holiday } from '@/lib/holidays'
+import {
+  useSubCoverage, slotKey, INTENT_LABELS, INTENT_HINTS,
+  type SubIntent, type SubCoverageRecord,
+} from '@/lib/substitutionCoverage'
+import { ScopePicker, describeScope, scopePhrase } from '@/components/ScopePicker'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -74,6 +79,8 @@ type View = 'live' | 'day' | 'month'
 interface CalEvent {
   id: string; title: string; description?: string; type: string
   date: string; start?: string; end?: string
+  /** Class-sections it applies to; empty/undefined = the whole school. */
+  sections?: string[]
 }
 interface SubCandidate {
   name: string; staffId: string; tier: MatchTier
@@ -276,20 +283,25 @@ export function CalendarPage() {
   const { holidays, addHoliday, removeHoliday } = useHolidays()
   const periodMinutes = config.periodMinutes ?? 40
   const isAdmin = (useAuthStore.getState().user?.role ?? 'admin') === 'admin'
+  /** Every class-section name — the vocabulary of every "applies to" picker. */
+  const sectionNames: string[] = sections.map((s: any) => s.name).filter(Boolean)
 
   /** Hours the school loses to a prospective holiday on `iso` — the same
-   *  derivation the real thing uses, run on a throwaway holiday. */
-  const holidayHoursOn = (iso: string, scope?: string): number =>
+   *  derivation the real thing uses, run on a throwaway holiday. An empty
+   *  `scope` means the whole school. */
+  const holidayHoursOn = (iso: string, scope?: string[]): number =>
     totalHolidayHours(holidayImpact(
       classTT,
-      [{ id: 'preview', date: iso, name: '', sections: scope ? [scope] : undefined }],
+      [{ id: 'preview', date: iso, name: '', sections: scope?.length ? scope : undefined }],
       periodMinutes,
     ))
 
-  /** Declare a holiday from the calendar. Same day twice is a no-op. */
-  const declareHoliday = (iso: string, name: string, scope?: string) => {
-    if (holidays.some(h => h.date === iso && (h.sections?.[0] ?? '') === (scope ?? ''))) return
-    addHoliday({ date: iso, name: name.trim() || 'Holiday', sections: scope ? [scope] : undefined })
+  /** Declare a holiday from the calendar. The same day at the same scope twice
+   *  is a no-op; the same day for a DIFFERENT class is a separate holiday. */
+  const declareHoliday = (iso: string, name: string, scope?: string[]) => {
+    const key = [...(scope ?? [])].sort().join('|')
+    if (holidays.some(h => h.date === iso && [...(h.sections ?? [])].sort().join('|') === key)) return
+    addHoliday({ date: iso, name: name.trim() || 'Holiday', sections: scope?.length ? scope : undefined })
   }
 
   // Period → wall-clock minutes. Ground truth is config.bellSchedules (assembly,
@@ -617,12 +629,38 @@ export function CalendarPage() {
     if (sid === openId) { store.setSubstitutions(next); saveActiveTimetableSnapshot() }
     else { patchBundleSubstitutions(uid, sid, next); setSubNonce(n => n + 1) }
   }
+  // ── What the cover actually does to the syllabus (Blueprint v6) ───────────
+  // A covered period is not automatically a taught syllabus, so every assignment
+  // records an INTENT alongside it: continue the absent teacher's syllabus, just
+  // take the class, or teach a different subject. lib/substitutionCoverage turns
+  // that into coverage, lost time or a free session for another subject.
+  const { records: subRecords, record: recordCoverage, setIntent: setSubIntent, clearSlot: clearCoverage } = useSubCoverage()
+  const coverageAt = (sid: string, section: string, periodId: string) =>
+    subRecords.find(r => slotKey(r) === slotKey({ date: isoDate, sid, section, periodId }))
+
+  /** Length of one period in hours, from the owning schedule's own bell. */
+  const periodHours = (sid: string, periodId: string): number => {
+    const t = bundleWallTimes(bundleById(sid))[periodId]
+    if (!t) return Math.max(0, periodMinutes) / 60
+    return Math.round(((t.e - t.s) / 60) * 10) / 10
+  }
+
   const assignSub = (sid: string, section: string, periodId: string, subName: string) => {
     writeSubs(sid, { ...bundleById(sid).substitutions, [`${section}|${dayKey}|${periodId}`]: subName })
+    const cell = bundleById(sid).classTT[section]?.[dayKey]?.[periodId]
+    recordCoverage({
+      date: isoDate, sid, section, periodId,
+      subject: cell?.subject ?? '', absent: cell?.teacher ?? '', substitute: subName,
+      // Default to the common case; the admin can change it right there, and the
+      // absent teacher confirms it on return before it counts as covered.
+      intent: 'continue',
+      hours: periodHours(sid, periodId),
+    })
   }
   const clearSub = (sid: string, section: string, periodId: string) => {
     const next = { ...bundleById(sid).substitutions }; delete next[`${section}|${dayKey}|${periodId}`]
     writeSubs(sid, next)
+    clearCoverage(slotKey({ date: isoDate, sid, section, periodId }))
   }
 
   // ── urgent pull-out helpers ───────────────────────────────────────────────
@@ -690,7 +728,18 @@ export function CalendarPage() {
         .filter(c => overrideFor(substitutionSettings, c.staffId).autoAssign)
         .filter(c => !usedAtClock[clock]?.has(c.name))
       const best = cands[0]
-      if (best) { map[key] = best.name; (usedAtClock[clock] ??= new Set()).add(best.name) }
+      if (best) {
+        map[key] = best.name
+        ;(usedAtClock[clock] ??= new Set()).add(best.name)
+        // Auto-assigned cover gets the same syllabus record as a manual one —
+        // it starts as "continues the syllabus" and is still unconfirmed, so it
+        // shows up for the absent teacher to confirm exactly like the rest.
+        recordCoverage({
+          date: isoDate, sid: slot.sid, section: slot.section, periodId: slot.periodId,
+          subject: slot.subject, absent: teacher, substitute: best.name,
+          intent: 'continue', hours: periodHours(slot.sid, slot.periodId),
+        })
+      }
     }
     for (const [sid, map] of Object.entries(bySid)) writeSubs(sid, map)
   }
@@ -995,6 +1044,9 @@ export function CalendarPage() {
                 }}>
                   <span style={{ width: 8, height: 8, borderRadius: 4, background: meta.color }} />
                   <strong style={{ color: '#13111E' }}>{ev.title}</strong>
+                  {ev.sections?.length && (
+                    <span style={{ color: '#4B41C4', fontWeight: 700 }}>{describeScope(ev.sections, sectionNames)}</span>
+                  )}
                   {ev.start && <span style={{ color: '#8B87AD' }}>{ev.start}{ev.end ? `–${ev.end}` : ''}</span>}
                   <button onClick={() => saveEvents(events.filter(e => e.id !== ev.id))}
                     title="Remove event"
@@ -1116,12 +1168,19 @@ export function CalendarPage() {
           }}>
             <CalendarDays size={14} />
             <strong>
-              School holiday — {holidays.filter(h => h.date === isoDate).map(h => h.name).join(', ')}
+              {holidays.filter(h => h.date === isoDate).every(h => h.sections?.length) ? 'Holiday' : 'School holiday'}
+              {' — '}
+              {holidays.filter(h => h.date === isoDate)
+                .map(h => `${h.name} (${describeScope(h.sections, sectionNames)})`).join(', ')}
             </strong>
             <span style={{ color: '#B45309' }}>
-              {holidayHoursOn(isoDate) > 0
-                ? `· ${holidayHoursOn(isoDate)} teaching hours lost; already deducted from every subject's remaining hours.`
-                : '· nothing was scheduled this weekday, so no teaching hours are lost.'}
+              {(() => {
+                const lost = holidays.filter(h => h.date === isoDate)
+                  .reduce((a, h) => a + holidayHoursOn(isoDate, h.sections), 0)
+                return lost > 0
+                  ? `· ${Math.round(lost * 10) / 10} teaching hours lost; already deducted from the affected subjects' remaining hours.`
+                  : '· nothing was scheduled this weekday, so no teaching hours are lost.'
+              })()}
             </span>
           </div>
         )}
@@ -1131,6 +1190,7 @@ export function CalendarPage() {
           ? <MonthGrid
               date={date} setDate={setDate} events={events} onAdd={(iso: string) => setAddOpen(iso)}
               statsByDay={statsByDay} holidays={holidays} isAdmin={isAdmin}
+              sections={sectionNames}
               hoursLostOn={holidayHoursOn}
               onDeclareHoliday={declareHoliday}
               onRemoveHoliday={removeHoliday}
@@ -1253,8 +1313,9 @@ export function CalendarPage() {
       {addOpen && (
         <AddEventModal
           date={addOpen}
-          onDeclareHoliday={(iso, name) => declareHoliday(iso, name)}
-          hoursLostOn={(iso) => holidayHoursOn(iso)}
+          sections={sectionNames}
+          onDeclareHoliday={declareHoliday}
+          hoursLostOn={holidayHoursOn}
           onClose={() => setAddOpen(null)}
           onCreate={ev => { saveEvents([...events, ev]); setAddOpen(null) }}
         />
@@ -1280,6 +1341,9 @@ export function CalendarPage() {
           slots={slotsOf(subFor)}
           multiActive={multiActive}
           subAt={(sid, section, periodId) => bundleById(sid).substitutions[`${section}|${dayKey}|${periodId}`]}
+          coverageAt={coverageAt}
+          subjectOptions={subjects.map((s: any) => s.name).filter(Boolean)}
+          onSetIntent={setSubIntent}
           candidatesFor={candidatesFor}
           onAssign={assignSub}
           onClear={clearSub}
@@ -2061,13 +2125,15 @@ interface DayStats { sessions: number; classes: number; teachers: number; venues
 
 function MonthGrid({
   date, setDate, events, onAdd, statsByDay,
-  holidays, isAdmin, hoursLostOn, onDeclareHoliday, onRemoveHoliday,
+  holidays, isAdmin, sections, hoursLostOn, onDeclareHoliday, onRemoveHoliday,
 }: {
   date: Date; setDate: (d: Date) => void; events: CalEvent[]; onAdd: (iso: string) => void
   statsByDay: Record<string, DayStats>
   holidays: Holiday[]; isAdmin: boolean
-  hoursLostOn: (iso: string, scope?: string) => number
-  onDeclareHoliday: (iso: string, name: string, scope?: string) => void
+  /** Every class-section, for the "applies to" picker. */
+  sections: string[]
+  hoursLostOn: (iso: string, scope?: string[]) => number
+  onDeclareHoliday: (iso: string, name: string, scope?: string[]) => void
   onRemoveHoliday: (id: string) => void
 }) {
   const y = date.getFullYear(), m = date.getMonth()
@@ -2113,6 +2179,10 @@ function MonthGrid({
           const st = c ? statsByDay[DAY_KEY[new Date(y, m, c).getDay()]] : undefined
           const iso = c ? isoOf(c) : ''
           const isHoliday = hols.length > 0
+          // Whole-school closure replaces the day; a class-scoped one sits
+          // alongside the workload the rest of the school still carries.
+          const wholeSchoolOff = hols.some(h => !h.sections?.length)
+          const lostHere = hols.reduce((a, h) => a + hoursLostOn(iso, h.sections), 0)
           return (
             <div key={i} className={c ? 'cal-month-cell' : undefined}
               onClick={() => c && setDate(new Date(y, m, c))}
@@ -2127,7 +2197,7 @@ function MonthGrid({
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: isToday ? 800 : 600, color: isToday ? '#7C6FE0' : '#13111E' }}>{c}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {st && st.sessions > 0 && !isHoliday && (
+                    {st && st.sessions > 0 && !wholeSchoolOff && (
                       <span style={{ fontSize: 10, fontWeight: 800, color: '#7C6FE0', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
                     )}
                     {isAdmin && (
@@ -2144,9 +2214,12 @@ function MonthGrid({
               )}
               {/* Declared holidays first — they change what the rest of the day means. */}
               {hols.map(h => (
-                <div key={h.id} title={`${h.name}${h.sections?.length ? ` · ${h.sections.join(', ')}` : ' · whole school'}`}
+                <div key={h.id} title={`${h.name} · ${describeScope(h.sections, sections)}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 700, color: '#92400E', background: '#FDE68A', borderRadius: 5, padding: '2px 4px 2px 6px', marginBottom: 3 }}>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {h.name}
+                    {h.sections?.length ? <span style={{ fontWeight: 500 }}> · {describeScope(h.sections, sections)}</span> : null}
+                  </span>
                   {isAdmin && (
                     <button title="Remove holiday" onClick={e => { e.stopPropagation(); onRemoveHoliday(h.id) }}
                       style={{ border: 'none', background: 'none', color: '#92400E', cursor: 'pointer', padding: 0, display: 'flex' }}>
@@ -2155,15 +2228,16 @@ function MonthGrid({
                   )}
                 </div>
               ))}
-              {/* Day workload — hidden on a holiday, where nothing is actually taught. */}
-              {st && st.sessions > 0 && !isHoliday && (
+              {/* Day workload — hidden when the whole school is off, where
+                  nothing is actually taught; kept when only a class is out. */}
+              {st && st.sessions > 0 && !wholeSchoolOff && (
                 <div style={{ fontSize: 9.5, fontWeight: 600, color: '#9A95BC', lineHeight: 1.5, marginBottom: evs.length ? 4 : 0 }}>
                   {st.classes} cls · {st.teachers} tch<br />{st.venues} ven · {st.subjects} sub
                 </div>
               )}
-              {isHoliday && st && st.sessions > 0 && (
+              {isHoliday && lostHere > 0 && (
                 <div style={{ fontSize: 9.5, fontWeight: 700, color: '#B45309', lineHeight: 1.5, marginBottom: evs.length ? 4 : 0 }}>
-                  {hoursLostOn(iso)} h of classes lost
+                  {Math.round(lostHere * 10) / 10} h of classes lost
                 </div>
               )}
               {evs.slice(0, 2).map(ev => {
@@ -2179,10 +2253,11 @@ function MonthGrid({
       {markOn && (
         <MarkDayModal
           iso={markOn}
+          sections={sections}
           hoursLostOn={hoursLostOn}
-          alreadyHoliday={holidays.some(h => h.date === markOn)}
+          alreadyHoliday={holidays.some(h => h.date === markOn && !h.sections?.length)}
           onClose={() => setMarkOn(null)}
-          onHoliday={(name) => { onDeclareHoliday(markOn, name); setMarkOn(null) }}
+          onHoliday={(name, scope) => { onDeclareHoliday(markOn, name, scope); setMarkOn(null) }}
           onEvent={() => { const d = markOn; setMarkOn(null); onAdd(d) }}
         />
       )}
@@ -2200,18 +2275,21 @@ function MonthGrid({
  *   - Event    → an ordinary calendar entry (meeting/exam/activity); classes
  *                still run, so nothing is deducted.
  */
-function MarkDayModal({ iso, hoursLostOn, alreadyHoliday, onClose, onHoliday, onEvent }: {
+function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onHoliday, onEvent }: {
   iso: string
-  hoursLostOn: (iso: string, scope?: string) => number
+  /** Every class-section, so the holiday can be narrowed to some of them. */
+  sections: string[]
+  hoursLostOn: (iso: string, scope?: string[]) => number
   alreadyHoliday: boolean
   onClose: () => void
-  onHoliday: (name: string) => void
+  onHoliday: (name: string, scope: string[]) => void
   onEvent: () => void
 }) {
   const [name, setName] = useState('')
+  const [scope, setScope] = useState<string[]>([])
   const d = new Date(iso + 'T00:00:00')
   const pretty = isNaN(d.getTime()) ? iso : `${DOW_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
-  const lost = hoursLostOn(iso)
+  const lost = hoursLostOn(iso, scope)
 
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -2236,9 +2314,12 @@ function MarkDayModal({ iso, hoursLostOn, alreadyHoliday, onClose, onHoliday, on
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5275', marginBottom: 5 }}>Holiday name</div>
                 <input value={name} onChange={e => setName(e.target.value)} autoFocus
                   placeholder="e.g. Founder's Day"
-                  onKeyDown={e => { if (e.key === 'Enter') onHoliday(name) }}
+                  onKeyDown={e => { if (e.key === 'Enter') onHoliday(name, scope) }}
                   style={inp} />
               </div>
+              {/* Not every closure is school-wide — an exam, a trip or a local
+                  observance can take one class out while the rest teach on. */}
+              <ScopePicker sections={sections} value={scope} onChange={setScope} />
               <div style={{
                 fontSize: 12.5, borderRadius: 9, padding: '9px 11px',
                 background: lost > 0 ? '#FFFBEB' : '#F8F7FF',
@@ -2246,10 +2327,10 @@ function MarkDayModal({ iso, hoursLostOn, alreadyHoliday, onClose, onHoliday, on
                 color: lost > 0 ? '#92400E' : '#4B5275',
               }}>
                 {lost > 0
-                  ? <>Declaring this removes <strong>{lost} teaching hours</strong> from the syllabus time available — every affected subject's remaining hours update at once.</>
-                  : <>Nothing is scheduled on this weekday, so no teaching hours are lost.</>}
+                  ? <>Declaring this for <strong>{scopePhrase(scope, sections)}</strong> removes <strong>{lost} teaching hours</strong> from the syllabus time available — every affected subject's remaining hours update at once.</>
+                  : <>Nothing is scheduled for {scopePhrase(scope, sections)} on this weekday, so no teaching hours are lost.</>}
               </div>
-              <button onClick={() => onHoliday(name)}
+              <button onClick={() => onHoliday(name, scope)}
                 style={{ padding: '11px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#D97706,#B45309)', color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Declare holiday
               </button>
@@ -2272,12 +2353,15 @@ function MarkDayModal({ iso, hoursLostOn, alreadyHoliday, onClose, onHoliday, on
 }
 
 // ── Add Event modal ────────────────────────────────────────────
-function AddEventModal({ date, onClose, onCreate, onDeclareHoliday, hoursLostOn }: {
-  date: string; onClose: () => void; onCreate: (e: CalEvent) => void
+function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, hoursLostOn }: {
+  date: string
+  /** Every class-section, so an event can be narrowed to some of them. */
+  sections: string[]
+  onClose: () => void; onCreate: (e: CalEvent) => void
   /** Picking the "Holiday" type here declares a real holiday too — otherwise
    *  the label would be decoration and coverage would silently over-count. */
-  onDeclareHoliday: (iso: string, name: string) => void
-  hoursLostOn: (iso: string) => number
+  onDeclareHoliday: (iso: string, name: string, scope?: string[]) => void
+  hoursLostOn: (iso: string, scope?: string[]) => number
 }) {
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
@@ -2285,15 +2369,17 @@ function AddEventModal({ date, onClose, onCreate, onDeclareHoliday, hoursLostOn 
   const [when, setWhen] = useState(date)
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const [scope, setScope] = useState<string[]>([])
   const valid = title.trim().length > 0
 
   const create = () => {
     if (!valid) return
-    if (type === 'holiday') onDeclareHoliday(when, title.trim())
+    if (type === 'holiday') onDeclareHoliday(when, title.trim(), scope)
     onCreate({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       title: title.trim(), description: desc.trim() || undefined, type,
       date: when, start: start || undefined, end: end || undefined,
+      sections: scope.length ? scope : undefined,
     })
   }
 
@@ -2333,14 +2419,19 @@ function AddEventModal({ date, onClose, onCreate, onDeclareHoliday, hoursLostOn 
           <Field label="Date">
             <input type="date" value={when} onChange={e => setWhen(e.target.value)} style={inp} />
           </Field>
+          {/* An exam, assembly or trip rarely involves every class — say who
+              it's for, and (for a holiday) only their hours come off. */}
+          <div style={{ marginBottom: 14 }}>
+            <ScopePicker sections={sections} value={scope} onChange={setScope} label="Applies to" />
+          </div>
           {type === 'holiday' && (
             <div style={{
               fontSize: 12.5, borderRadius: 9, padding: '9px 11px', marginBottom: 14,
               background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
             }}>
-              {hoursLostOn(when) > 0
-                ? <>This also declares a school holiday — <strong>{hoursLostOn(when)} teaching hours</strong> come off the syllabus time available, and every affected subject's remaining hours update at once.</>
-                : <>This also declares a school holiday. Nothing is scheduled on this weekday, so no teaching hours are lost.</>}
+              {hoursLostOn(when, scope) > 0
+                ? <>This also declares a holiday for <strong>{scopePhrase(scope, sections)}</strong> — <strong>{hoursLostOn(when, scope)} teaching hours</strong> come off the syllabus time available, and every affected subject's remaining hours update at once.</>
+                : <>This also declares a holiday for {scopePhrase(scope, sections)}. Nothing is scheduled on this weekday, so no teaching hours are lost.</>}
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -2458,11 +2549,16 @@ const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: str
 }
 
 // ── Substitute panel ───────────────────────────────────────────
-function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
+function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, coverageAt, subjectOptions, onSetIntent, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
   teacher: string; dayLabel: string
   slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
   multiActive: boolean
   subAt: (sid: string, section: string, periodId: string) => string | undefined
+  /** What this covered slot is recorded as doing to the syllabus, if anything. */
+  coverageAt: (sid: string, section: string, periodId: string) => SubCoverageRecord | undefined
+  /** Subjects a substitute could teach instead of the absent teacher's. */
+  subjectOptions: string[]
+  onSetIntent: (id: string, intent: SubIntent, taughtSubject?: string) => void
   candidatesFor: (sid: string, section: string, periodId: string, subject: string, absent: string) => SubCandidate[]
   onAssign: (sid: string, section: string, periodId: string, name: string) => void
   onClear: (sid: string, section: string, periodId: string) => void
@@ -2510,9 +2606,11 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {slots.map(slot => {
                 const current = subAt(slot.sid, slot.section, slot.periodId)
+                const cov = coverageAt(slot.sid, slot.section, slot.periodId)
                 const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
                 return (
-                  <div key={`${slot.sid}|${slot.section}|${slot.periodId}`} style={{ display: 'flex', gap: 14, background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16 }}>
+                  <div key={`${slot.sid}|${slot.section}|${slot.periodId}`} style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 13 }}>
+                    <div style={{ display: 'flex', gap: 14 }}>
                     {/* slot info */}
                     <div style={{ width: 168, flexShrink: 0, borderRight: '1px solid #F2F0FB', paddingRight: 14 }}>
                       <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E' }}>{slot.periodName}</div>
@@ -2570,12 +2668,81 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
                         </div>
                       )}
                     </div>
+                    </div>
+
+                    {/* What will the substitute actually DO with this period?
+                        Blueprint v6 — a covered slot is not a taught syllabus,
+                        and the three answers have three different effects. */}
+                    {current && cov && (
+                      <IntentPicker
+                        record={cov} subject={slot.subject}
+                        subjectOptions={subjectOptions.filter(s => s !== slot.subject)}
+                        onSetIntent={onSetIntent}
+                      />
+                    )}
                   </div>
                 )
               })}
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The syllabus question, asked once, at the only moment anyone actually knows
+ * the answer: while cover is being arranged. Defaults to "continues the
+ * syllabus" — the common case — and the absent teacher confirms it on return
+ * (Syllabus page), so a default can never quietly inflate coverage.
+ */
+function IntentPicker({ record, subject, subjectOptions, onSetIntent }: {
+  record: SubCoverageRecord; subject: string; subjectOptions: string[]
+  onSetIntent: (id: string, intent: SubIntent, taughtSubject?: string) => void
+}) {
+  const INTENTS: SubIntent[] = ['continue', 'occupy', 'other-subject']
+  const TONE: Record<SubIntent, string> = { continue: '#16A34A', occupy: '#B45309', 'other-subject': '#7C6FE0' }
+  return (
+    <div style={{ borderTop: '1px solid #F2F0FB', paddingTop: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#13111E', marginBottom: 7 }}>
+        Will they continue the {subject} syllabus?
+      </div>
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        {INTENTS.map(i => {
+          const active = record.intent === i
+          return (
+            <button key={i} title={INTENT_HINTS[i]}
+              onClick={() => onSetIntent(record.id, i, i === 'other-subject' ? (record.taughtSubject ?? subjectOptions[0]) : undefined)}
+              style={{
+                padding: '6px 13px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 12, fontWeight: 700,
+                border: `1.5px solid ${active ? TONE[i] : '#ECE9FB'}`,
+                background: active ? `${TONE[i]}14` : '#fff',
+                color: active ? TONE[i] : '#8B87AD',
+              }}>
+              {i === 'continue' ? 'Yes — continues it' : i === 'occupy' ? 'No — just takes the class' : 'Teaches another subject'}
+            </button>
+          )
+        })}
+        {record.intent === 'other-subject' && (
+          <select
+            value={record.taughtSubject ?? ''}
+            onChange={e => onSetIntent(record.id, 'other-subject', e.target.value)}
+            style={{ padding: '6px 10px', borderRadius: 9, border: '1.5px solid #E4E0FF', fontSize: 12, fontWeight: 700, color: '#4B41C4', background: '#fff', fontFamily: 'inherit' }}>
+            <option value="">— which subject? —</option>
+            {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+      </div>
+      <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 6 }}>
+        {record.intent === 'continue'
+          ? `${INTENT_HINTS.continue} ${record.absent || 'The absent teacher'} confirms it on return.`
+          : record.intent === 'occupy'
+            ? `${record.hours} h of ${subject} time spent with no syllabus covered — flagged for rescheduling.`
+            : record.taughtSubject
+              ? `${record.taughtSubject} gains ${record.hours} h of free coverage; ${subject} loses the period.`
+              : INTENT_HINTS['other-subject']}
       </div>
     </div>
   )
