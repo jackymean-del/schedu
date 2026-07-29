@@ -289,6 +289,17 @@ ok(suggestBorrowSwaps(noDonor).length === 0, 'nothing ahead → no swap offered 
 // ── v6 Content coverage — TWO entry methods, chosen per faculty/subject ──
 import { effectiveMethod, contentFraction, chapterFraction, hasContentSignal } from './src/lib/syllabusTracking'
 
+// (0) Simplest of all: faculty just STATES the figure — "75% covered".
+const byPercent = mkPlan('Civics', 'IX-A', { requiredHours: 40, method: 'percent', overallPercentCovered: 75 })
+ok(effectiveMethod(byPercent) === 'percent', 'stated-percentage method recognised')
+ok(contentFraction(byPercent) === 0.75, 'a stated 75% is taken at face value — nothing to tick or list')
+ok(coveredHours(byPercent) === 30 && coveragePct(byPercent) === 75, '75% of a 40 h syllabus = 30 h covered')
+ok(hasContentSignal(byPercent), 'a stated percentage is a real content signal')
+ok(contentFraction(mkPlan('X', 'Y', { requiredHours: 10, method: 'percent', overallPercentCovered: 140 })) === 1,
+  'an out-of-range percentage is clamped, never trusted blindly')
+ok(!hasContentSignal(mkPlan('X', 'Y', { requiredHours: 10, method: 'percent' })),
+  'choosing the method without stating a figure is not yet a signal')
+
 // (i) Chapter-count method: total chapters + how many are done. No names typed.
 const byCount = mkPlan('Hist', 'IX-A', { requiredHours: 40, method: 'count', totalChapters: 10, chaptersCovered: 4 })
 ok(effectiveMethod(byCount) === 'count', 'chapter-count method recognised')

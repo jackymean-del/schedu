@@ -17,7 +17,8 @@ import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
   coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS, suggestBorrowSwaps,
-  LOST_REASON_LABELS, withHolidayImpact, type SyllabusPlan, type LostSession,
+  LOST_REASON_LABELS, withHolidayImpact, effectiveMethod, METHOD_LABELS, METHOD_HINTS,
+  type SyllabusPlan, type LostSession, type CoverageMethod,
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useHolidays, holidayImpact, totalHolidayHours, weekdayOf } from '@/lib/holidays'
@@ -42,6 +43,7 @@ export function SyllabusPage() {
   const {
     plans, setRequiredHours, setTeacher, addChapter, updateChapter,
     removeChapter, markChapterCovered, logHours, logLostSession, removeLostSession,
+    setMethod, setChapterCounts, setOverallPercent,
   } = useSyllabus()
 
   const [tab, setTab] = useState<'capture' | 'coverage'>('capture')
@@ -55,7 +57,8 @@ export function SyllabusPage() {
   const plan: SyllabusPlan | undefined = plans[key]
   const req = requiredHours(plan), cov = coveredHours(plan)
   const rem = remainingHours(plan), pct = coveragePct(plan)
-  const usingChapters = (plan?.chapters.length ?? 0) > 0
+  const usingChapters = (plan?.chapters?.length ?? 0) > 0
+  const method = effectiveMethod(plan)
 
   // Declared school holidays cost each subject whatever the timetable had on
   // that weekday — folded in here so every coverage figure below is holiday-aware.
@@ -149,28 +152,81 @@ export function SyllabusPage() {
                 </div>
               </div>
 
-              {/* Direct hours — only when not using chapters */}
+              {/* Required hours — the denominator, whichever method is used */}
               {!usingChapters && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px', gap: 12, alignItems: 'end', marginTop: 6 }}>
-                  <Field label="Hours needed to cover the syllabus">
-                    <input type="number" min={0} step="0.5" value={plan?.requiredHours ?? ''} placeholder="e.g. 40"
-                      onChange={e => setRequiredHours(subject, section, e.target.value === '' ? undefined : Number(e.target.value))}
+                <Field label="Hours needed to cover the syllabus">
+                  <input type="number" min={0} step="0.5" value={plan?.requiredHours ?? ''} placeholder="e.g. 40"
+                    onChange={e => setRequiredHours(subject, section, e.target.value === '' ? undefined : Number(e.target.value))}
+                    style={{ ...inputStyle, maxWidth: 200 }} />
+                </Field>
+              )}
+
+              {/* Blueprint v6 — how this faculty wants to record content, per subject */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5275', marginBottom: 6 }}>
+                  How do you want to record coverage?
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(['percent', 'count', 'named'] as CoverageMethod[]).map(m => (
+                    <button key={m} onClick={() => setMethod(subject, section, m)}
+                      title={METHOD_HINTS[m]}
+                      style={{
+                        padding: '6px 13px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                        fontSize: 12, fontWeight: 700,
+                        border: `1px solid ${method === m ? ACCENT : '#E4E0FF'}`,
+                        background: method === m ? '#EDE9FF' : '#fff',
+                        color: method === m ? '#4B41C4' : '#8B87AD',
+                      }}>
+                      {METHOD_LABELS[m]}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 5 }}>{METHOD_HINTS[method]}</div>
+              </div>
+
+              {/* (0) Just say the % */}
+              {method === 'percent' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, alignItems: 'end' }}>
+                  <Field label="Syllabus covered (%)">
+                    <input type="number" min={0} max={100} step="1" placeholder="e.g. 75"
+                      value={plan?.overallPercentCovered ?? ''}
+                      onChange={e => setOverallPercent(subject, section, e.target.value === '' ? undefined : Number(e.target.value))}
                       style={inputStyle} />
                   </Field>
-                  <Field label="Log taught hours">
-                    <button onClick={() => logHours(subject, section, 1)} style={btnSoft}>+1 hour taught</button>
+                  <div style={{ fontSize: 11.5, color: '#9A95BC', paddingBottom: 10 }}>
+                    Just state the figure — no chapters to list, nothing to tick. This alone drives coverage, pace and the alerts.
+                  </div>
+                </div>
+              )}
+
+              {/* (i) Chapter count */}
+              {method === 'count' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 150px 1fr', gap: 12, alignItems: 'end' }}>
+                  <Field label="Total chapters">
+                    <input type="number" min={0} step="1" placeholder="e.g. 12"
+                      value={plan?.totalChapters ?? ''}
+                      onChange={e => setChapterCounts(subject, section, e.target.value === '' ? undefined : Number(e.target.value), plan?.chaptersCovered)}
+                      style={inputStyle} />
+                  </Field>
+                  <Field label="Chapters covered">
+                    <input type="number" min={0} step="1" placeholder="e.g. 5"
+                      value={plan?.chaptersCovered ?? ''}
+                      onChange={e => setChapterCounts(subject, section, plan?.totalChapters, e.target.value === '' ? undefined : Number(e.target.value))}
+                      style={inputStyle} />
                   </Field>
                   <div style={{ fontSize: 11.5, color: '#9A95BC', paddingBottom: 10 }}>
-                    …or break it into chapters below for finer tracking.
+                    No chapter names needed. Update the covered count whenever you like — weekly is plenty.
                   </div>
                 </div>
               )}
             </Card>
 
-            {/* Chapters */}
+            {/* Chapters — only for the checklist method, so the other two stay
+                as light as they promise to be. */}
+            {method === 'named' && (
             <Card
               title="Chapters"
-              subtitle="Enter each chapter and the hours it needs; tick it off after the session that taught it. Chapter hours replace the direct figure above."
+              subtitle="Enter each chapter and the hours it needs; tick it off after the session that taught it, or give a % if it's only part-done. Chapter hours replace the direct figure above."
             >
               {(plan?.chapters ?? []).length === 0 && (
                 <p style={{ fontSize: 12.5, color: '#9A95BC', margin: 0 }}>No chapters yet — add the first one below.</p>
@@ -178,7 +234,7 @@ export function SyllabusPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {(plan?.chapters ?? []).map((c, i) => (
                   <div key={c.id} style={{
-                    display: 'grid', gridTemplateColumns: '28px 1fr 92px 34px', gap: 10, alignItems: 'center',
+                    display: 'grid', gridTemplateColumns: '28px 1fr 92px 62px 34px', gap: 10, alignItems: 'center',
                     padding: '7px 10px', borderRadius: 9,
                     background: c.coveredAt ? '#F0FDF4' : '#fff',
                     border: `1px solid ${c.coveredAt ? '#BBF7D0' : '#ECE9FB'}`,
@@ -207,6 +263,22 @@ export function SyllabusPage() {
                       style={{ ...inputStyle, padding: '6px 9px', textAlign: 'right' }}
                       title="Hours this chapter needs"
                     />
+                    {/* v6 — a chapter only part-taught can carry its own % */}
+                    <input
+                      type="number" min={0} max={100} step="5"
+                      value={c.coveredAt ? 100 : (c.percentCovered ?? '')}
+                      disabled={!!c.coveredAt}
+                      placeholder="%"
+                      onChange={e => updateChapter(subject, section, c.id, {
+                        percentCovered: e.target.value === '' ? undefined : Number(e.target.value),
+                      })}
+                      style={{
+                        ...inputStyle, padding: '6px 7px', textAlign: 'right',
+                        background: c.coveredAt ? '#F0FDF4' : '#fff',
+                        color: c.coveredAt ? '#067647' : '#13111E',
+                      }}
+                      title={c.coveredAt ? 'Ticked chapters are 100%' : 'Part-taught? Enter a % covered'}
+                    />
                     <button onClick={() => removeChapter(subject, section, c.id)} title="Remove chapter"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C3EC', display: 'flex', justifyContent: 'center' }}>
                       <Trash2 size={14} />
@@ -230,6 +302,7 @@ export function SyllabusPage() {
                 </button>
               </div>
             </Card>
+            )}
 
             {/* Pace — content covered vs time actually spent */}
             <PaceCard

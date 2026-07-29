@@ -41,12 +41,26 @@ export interface Chapter {
  * "Faculty can go with either method — the choice is per faculty/subject, not
  * fixed system-wide."
  *
- *  'count' — enter the TOTAL number of chapters, then how many are covered so
- *            far. Fast, no chapter names to type.
- *  'named' — list the chapter names in sequence and tick each off, optionally
- *            recording a percentage for one that's only part-taught.
+ *  'percent' — simply state how much of the syllabus is covered ("75%").
+ *              Nothing to break down, nothing to tick. The least work possible,
+ *              and enough on its own to drive coverage, pace and every alert.
+ *  'count'   — enter the TOTAL number of chapters, then how many are covered so
+ *              far. Fast, no chapter names to type.
+ *  'named'   — list the chapter names in sequence and tick each off, optionally
+ *              recording a percentage for one that's only part-taught.
  */
-export type CoverageMethod = 'named' | 'count'
+export type CoverageMethod = 'percent' | 'named' | 'count'
+
+export const METHOD_LABELS: Record<CoverageMethod, string> = {
+  percent: 'Just say the %',
+  count: 'Chapter count',
+  named: 'Chapter checklist',
+}
+export const METHOD_HINTS: Record<CoverageMethod, string> = {
+  percent: 'State how much of the syllabus is covered. Quickest — nothing to list.',
+  count: 'Say how many chapters there are, and how many are done.',
+  named: 'List chapters and tick them off; part-taught ones can carry a %.',
+}
 
 /**
  * A teaching session that did NOT happen — holiday, school event, faculty
@@ -86,12 +100,17 @@ export interface SyllabusPlan {
   totalChapters?: number
   /** Chapter-count method: how many are covered so far. */
   chaptersCovered?: number
+  /** 'percent' method: the whole syllabus, 0–100, stated outright. */
+  overallPercentCovered?: number
 }
 
 /** Which entry method a plan is really using — explicit choice, else inferred. */
 export function effectiveMethod(p: SyllabusPlan | undefined): CoverageMethod {
   if (p?.method) return p.method
-  return (p?.totalChapters ?? 0) > 0 && (p?.chapters?.length ?? 0) === 0 ? 'count' : 'named'
+  if ((p?.chapters?.length ?? 0) > 0) return 'named'
+  if ((p?.totalChapters ?? 0) > 0) return 'count'
+  if (p?.overallPercentCovered != null) return 'percent'
+  return 'named'
 }
 
 /** How much of one chapter is taught, 0–1. A tick beats a percentage. */
@@ -108,6 +127,9 @@ export function chapterFraction(c: Chapter): number {
  */
 export function contentFraction(p: SyllabusPlan | undefined): number {
   if (!p) return 0
+  if (effectiveMethod(p) === 'percent') {
+    return Math.max(0, Math.min(100, p.overallPercentCovered ?? 0)) / 100
+  }
   if (effectiveMethod(p) === 'count') {
     const total = p.totalChapters ?? 0
     if (total <= 0) return 0
@@ -123,9 +145,11 @@ export function contentFraction(p: SyllabusPlan | undefined): number {
 /** True when the plan carries a real CONTENT signal (either method). */
 export function hasContentSignal(p: SyllabusPlan | undefined): boolean {
   if (!p) return false
-  return effectiveMethod(p) === 'count'
-    ? (p.totalChapters ?? 0) > 0
-    : (p.chapters?.length ?? 0) > 0
+  switch (effectiveMethod(p)) {
+    case 'percent': return p.overallPercentCovered != null
+    case 'count':   return (p.totalChapters ?? 0) > 0
+    default:        return (p.chapters?.length ?? 0) > 0
+  }
 }
 
 /** Stable key for a (subject, section) pair. */
@@ -456,6 +480,8 @@ interface SyllabusState {
   setMethod: (subject: string, section: string, m: CoverageMethod) => void
   /** Chapter-count method: total chapters, and how many are done. */
   setChapterCounts: (subject: string, section: string, total?: number, covered?: number) => void
+  /** 'percent' method: state overall syllabus covered, 0–100. */
+  setOverallPercent: (subject: string, section: string, pct: number | undefined) => void
   /** Record a session lost to a holiday / event / absence. */
   logLostSession: (subject: string, section: string, s: Omit<LostSession, 'id'>) => void
   removeLostSession: (subject: string, section: string, id: string) => void
@@ -502,6 +528,11 @@ export const useSyllabus = create<SyllabusState>()(
         logHours: (subject, section, hours) =>
           edit(subject, section, p => ({ ...p, loggedHours: Math.max(0, (p.loggedHours || 0) + hours) })),
         setMethod: (subject, section, m) => edit(subject, section, p => ({ ...p, method: m })),
+        setOverallPercent: (subject, section, pct) =>
+          edit(subject, section, p => ({
+            ...p,
+            overallPercentCovered: pct == null || isNaN(pct) ? undefined : Math.max(0, Math.min(100, pct)),
+          })),
         setChapterCounts: (subject, section, total, covered) =>
           edit(subject, section, p => {
             const t = total != null && total > 0 ? Math.round(total) : undefined
