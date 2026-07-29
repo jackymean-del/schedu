@@ -27,9 +27,26 @@ export interface Chapter {
   name: string
   /** Teaching hours this chapter is expected to need. */
   hours: number
-  /** Set when a faculty member marks it taught. */
+  /** Set when a faculty member marks it fully taught. */
   coveredAt?: string
+  /**
+   * 0–100 for a chapter only PARTIALLY taught (Blueprint v6, method ii).
+   * `coveredAt` wins when both are present — a ticked chapter is 100% done.
+   */
+  percentCovered?: number
 }
+
+/**
+ * How a faculty member records content for THIS subject — Blueprint v6:
+ * "Faculty can go with either method — the choice is per faculty/subject, not
+ * fixed system-wide."
+ *
+ *  'count' — enter the TOTAL number of chapters, then how many are covered so
+ *            far. Fast, no chapter names to type.
+ *  'named' — list the chapter names in sequence and tick each off, optionally
+ *            recording a percentage for one that's only part-taught.
+ */
+export type CoverageMethod = 'named' | 'count'
 
 /**
  * A teaching session that did NOT happen — holiday, school event, faculty
@@ -62,6 +79,53 @@ export interface SyllabusPlan {
   teacher?: string
   /** Sessions lost to holidays / events / absences. Optional for older data. */
   lostSessions?: LostSession[]
+
+  /** Entry method chosen for this subject. Inferred when absent (see effectiveMethod). */
+  method?: CoverageMethod
+  /** Chapter-count method: how many chapters the syllabus has in total. */
+  totalChapters?: number
+  /** Chapter-count method: how many are covered so far. */
+  chaptersCovered?: number
+}
+
+/** Which entry method a plan is really using — explicit choice, else inferred. */
+export function effectiveMethod(p: SyllabusPlan | undefined): CoverageMethod {
+  if (p?.method) return p.method
+  return (p?.totalChapters ?? 0) > 0 && (p?.chapters?.length ?? 0) === 0 ? 'count' : 'named'
+}
+
+/** How much of one chapter is taught, 0–1. A tick beats a percentage. */
+export function chapterFraction(c: Chapter): number {
+  if (c.coveredAt) return 1
+  if (c.percentCovered == null) return 0
+  return Math.max(0, Math.min(100, c.percentCovered)) / 100
+}
+
+/**
+ * Fraction of the syllabus CONTENT actually taught, 0–1 — the metric Blueprint
+ * v6 insists must never be moved by a holiday. Both entry methods reduce to this
+ * single number, so every dashboard consumes them transparently.
+ */
+export function contentFraction(p: SyllabusPlan | undefined): number {
+  if (!p) return 0
+  if (effectiveMethod(p) === 'count') {
+    const total = p.totalChapters ?? 0
+    if (total <= 0) return 0
+    return Math.max(0, Math.min(1, (p.chaptersCovered ?? 0) / total))
+  }
+  const chapters = p.chapters ?? []
+  const totalH = chapters.reduce((a, c) => a + (c.hours || 0), 0)
+  if (totalH <= 0) return 0
+  const doneH = chapters.reduce((a, c) => a + (c.hours || 0) * chapterFraction(c), 0)
+  return Math.max(0, Math.min(1, doneH / totalH))
+}
+
+/** True when the plan carries a real CONTENT signal (either method). */
+export function hasContentSignal(p: SyllabusPlan | undefined): boolean {
+  if (!p) return false
+  return effectiveMethod(p) === 'count'
+    ? (p.totalChapters ?? 0) > 0
+    : (p.chapters?.length ?? 0) > 0
 }
 
 /** Stable key for a (subject, section) pair. */
@@ -74,15 +138,20 @@ export function planKey(subject: string, section: string): string {
 /** Hours the syllabus needs: chapter sum when chapters exist, else the direct figure. */
 export function requiredHours(p: SyllabusPlan | undefined): number {
   if (!p) return 0
-  if (p.chapters.length) return round1(p.chapters.reduce((a, c) => a + (c.hours || 0), 0))
+  if ((p.chapters?.length ?? 0) > 0) return round1(p.chapters.reduce((a, c) => a + (c.hours || 0), 0))
   return round1(p.requiredHours ?? 0)
 }
 
 /** Hours actually delivered: covered chapters + any directly-logged hours. */
 export function coveredHours(p: SyllabusPlan | undefined): number {
   if (!p) return 0
-  const fromChapters = p.chapters.filter(c => c.coveredAt).reduce((a, c) => a + (c.hours || 0), 0)
-  return round1(fromChapters + (p.loggedHours || 0))
+  // With a content signal, credit is driven by CONTENT — chapters taught (either
+  // method, partials included) — never by hours logged. Blueprint v6 is explicit
+  // that duration and content are separate metrics; letting logged time inflate
+  // coverage is exactly the conflation it warns against.
+  if (hasContentSignal(p)) return round1(requiredHours(p) * contentFraction(p))
+  // No content signal at all (bulk-hours school): time is the only thing we know.
+  return round1(p.loggedHours || 0)
 }
 
 /** Hours still to teach (never negative). */
@@ -383,6 +452,10 @@ interface SyllabusState {
   markChapterCovered: (subject: string, section: string, chapterId: string, covered: boolean) => void
   /** Log delivered hours directly, for schools not tracking chapters. */
   logHours: (subject: string, section: string, hours: number) => void
+  /** Choose the entry method for this subject (Blueprint v6 — per subject). */
+  setMethod: (subject: string, section: string, m: CoverageMethod) => void
+  /** Chapter-count method: total chapters, and how many are done. */
+  setChapterCounts: (subject: string, section: string, total?: number, covered?: number) => void
   /** Record a session lost to a holiday / event / absence. */
   logLostSession: (subject: string, section: string, s: Omit<LostSession, 'id'>) => void
   removeLostSession: (subject: string, section: string, id: string) => void
@@ -428,6 +501,15 @@ export const useSyllabus = create<SyllabusState>()(
           })),
         logHours: (subject, section, hours) =>
           edit(subject, section, p => ({ ...p, loggedHours: Math.max(0, (p.loggedHours || 0) + hours) })),
+        setMethod: (subject, section, m) => edit(subject, section, p => ({ ...p, method: m })),
+        setChapterCounts: (subject, section, total, covered) =>
+          edit(subject, section, p => {
+            const t = total != null && total > 0 ? Math.round(total) : undefined
+            const cRaw = covered != null && covered >= 0 ? Math.round(covered) : p.chaptersCovered
+            // Covered can never exceed the total the faculty just declared.
+            const c = t != null && cRaw != null ? Math.min(cRaw, t) : cRaw
+            return { ...p, totalChapters: t, chaptersCovered: c }
+          }),
         logLostSession: (subject, section, s) =>
           edit(subject, section, p => ({
             ...p,

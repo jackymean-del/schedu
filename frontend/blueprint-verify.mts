@@ -286,6 +286,56 @@ const noDonor: Record<string, SyllabusPlan> = {
 }
 ok(suggestBorrowSwaps(noDonor).length === 0, 'nothing ahead → no swap offered (rather than a bad one)')
 
+// ── v6 Content coverage — TWO entry methods, chosen per faculty/subject ──
+import { effectiveMethod, contentFraction, chapterFraction, hasContentSignal } from './src/lib/syllabusTracking'
+
+// (i) Chapter-count method: total chapters + how many are done. No names typed.
+const byCount = mkPlan('Hist', 'IX-A', { requiredHours: 40, method: 'count', totalChapters: 10, chaptersCovered: 4 })
+ok(effectiveMethod(byCount) === 'count', 'chapter-count method recognised')
+ok(contentFraction(byCount) === 0.4, 'count method: 4 of 10 chapters = 40% of the syllabus')
+ok(coveredHours(byCount) === 16 && coveragePct(byCount) === 40, 'count method drives covered hours (40% of 40 h = 16 h)')
+ok(hasContentSignal(byCount), 'count method is a real content signal')
+
+// (ii) Named checklist, WITH a partially-taught chapter (v6 addition)
+const byNames = mkPlan('Geo', 'IX-A', {
+  chapters: [
+    { id: 'a', name: 'Ch1', hours: 10, coveredAt: 'x' },        // done
+    { id: 'b', name: 'Ch2', hours: 10, percentCovered: 50 },     // half taught
+    { id: 'c', name: 'Ch3', hours: 20 },                         // not started
+  ],
+})
+ok(effectiveMethod(byNames) === 'named', 'named-checklist method recognised')
+ok(chapterFraction(byNames.chapters[1]) === 0.5, 'a partly-taught chapter counts as its percentage')
+ok(contentFraction(byNames) === 0.375, 'named method: (10 + 5) of 40 h = 37.5% covered')
+ok(coveredHours(byNames) === 15, 'partial chapters contribute their share of hours, not all-or-nothing')
+ok(chapterFraction({ id: 'z', name: 'z', hours: 1, coveredAt: 'x', percentCovered: 20 }) === 1,
+  'a ticked chapter is 100% even if a stale percentage lingers')
+
+// The two methods are per SUBJECT, not system-wide — both can coexist
+const mixedPlans: Record<string, SyllabusPlan> = {
+  [planKey('Hist', 'IX-A')]: byCount,
+  [planKey('Geo', 'IX-A')]: byNames,
+}
+const mixedRows = coverageRows(mixedPlans)
+ok(mixedRows.length === 2 && mixedRows.every(r => r.required > 0),
+  'one school can run both entry methods at once — dashboards consume either transparently')
+
+// ── v6's hard rule: a holiday must NEVER move content coverage ──
+const contentBefore = coveragePct(byNames)
+const holidayHit = withHolidayImpact(
+  { [planKey('Geo', 'IX-A')]: byNames },
+  { [planKey('Geo', 'IX-A')]: { hours: 6, dates: ['2026-08-17'] } },
+)[planKey('Geo', 'IX-A')]
+ok(coveragePct(holidayHit) === contentBefore,
+  'a holiday leaves the CONTENT percentage untouched (v6: it only affects duration)')
+ok(lostHours(holidayHit) === 6, 'the same holiday does show up as lost DURATION')
+ok(riskOf(holidayHit) === 'critical', 'and it still raises the risk flag, via time — not by faking content')
+
+// Logged hours must not inflate content either, once a content signal exists
+const loggedButUntaught = mkPlan('Bio', 'IX-A', { chapters: [{ id: 'x', name: 'C1', hours: 20 }], loggedHours: 15 })
+ok(coveredHours(loggedButUntaught) === 0,
+  'logging 15 h against an untaught chapter covers NO syllabus — duration is not content')
+
 // ── v5 Holiday handling — declared once, hours DERIVED from the timetable ──
 import { holidayImpact, totalHolidayHours, weekdayOf, type Holiday } from './src/lib/holidays'
 import { withHolidayImpact } from './src/lib/syllabusTracking'

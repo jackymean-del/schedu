@@ -39,7 +39,7 @@
  */
 import type { ClassTimetable } from '@/types'
 import type { SyllabusPlan } from './syllabusTracking'
-import { requiredHours, planKey } from './syllabusTracking'
+import { requiredHours, planKey, contentFraction, hasContentSignal as planHasContent } from './syllabusTracking'
 import type { Holiday } from './holidays'
 
 const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
@@ -117,12 +117,14 @@ export function scheduledHoursBetween(
   return Math.round(periods * (Math.max(0, periodMinutes) / 60) * 10) / 10
 }
 
-/** Content actually covered, in syllabus hours — ticked chapters only. */
+/**
+ * Content actually covered, in syllabus hours. Delegates to the shared content
+ * model so BOTH v6 entry methods — named checklist (with partials) and plain
+ * chapter counts — feed pace identically.
+ */
 export function contentCoveredHours(p: SyllabusPlan | undefined): number {
   if (!p) return 0
-  return Math.round(
-    (p.chapters ?? []).filter(c => c.coveredAt).reduce((a, c) => a + (c.hours || 0), 0) * 10,
-  ) / 10
+  return Math.round(requiredHours(p) * contentFraction(p) * 10) / 10
 }
 
 export interface PaceReport {
@@ -167,8 +169,7 @@ export function paceFor(
   const today = rawToday > opts.termEnd ? opts.termEnd
     : rawToday < opts.termStart ? dayBefore(opts.termStart)
     : rawToday
-  const chapters = plan?.chapters ?? []
-  const hasContentSignal = chapters.length > 0
+  const hasContentSignal = planHasContent(plan)
 
   const contentCovered = contentCoveredHours(plan)
   const required = requiredHours(plan)
