@@ -639,6 +639,60 @@ ok(absentOn(longLeave, '2026-01-15')[0] === 'A' && absentOn(longLeave, '2026-02-
 ok(slotKey(sub({})) === slotKey(sub({ substitute: 'C' })), 'the slot key ignores who covered it')
 ok(slotKey(sub({})) !== slotKey(sub({ date: '2026-01-19' })), 'but the same weekly slot on another date is its own record')
 
+// ── ALLOCATION: the timetable already knows the hours, so nobody types them ──
+import { allocatedHoursByPlan, unionEntities, compareSection, classRank } from './src/lib/scheduleAllocation'
+import { withAllocatedHours } from './src/lib/syllabusTracking'
+
+// Two schedules running side by side, each with its OWN bell and term.
+const bundleA: any = {
+  id: 'a', name: 'I–V TT', staff: [{ name: 'Anita' }], sections: [], rooms: [], subjects: [], periods: [],
+  config: { periodMinutes: 60, timetableStartDate: '2026-01-05', timetableEndDate: '2026-03-30' },
+  classTT: { 'I-A': { MONDAY: { p1: { subject: 'English', teacher: 'Anita' } } } },
+  substitutions: {},
+}
+const bundleB: any = {
+  id: 'b', name: 'VI–X TT', staff: [{ name: 'Bhaskar' }], sections: [], rooms: [], subjects: [], periods: [],
+  config: { periodMinutes: 30, timetableStartDate: '2026-01-05', timetableEndDate: '2026-03-30' },
+  classTT: { 'X-A': { MONDAY: { p1: { subject: 'Physics', teacher: 'Bhaskar' } } } },
+  substitutions: {},
+}
+
+// 13 Mondays in the term. A: 13 × 60 min = 13 h. B: 13 × 30 min = 6.5 h.
+const alloc = allocatedHoursByPlan([bundleA, bundleB])
+ok(alloc[planKey('English', 'I-A')] === 13, 'allocation is derived from the timetable — 13 Mondays × 60 min = 13 h')
+ok(alloc[planKey('Physics', 'X-A')] === 6.5,
+  "each schedule uses ITS OWN period length — 30-min periods give 6.5 h, not 13")
+
+// The union is what a school with two active schedules must see.
+const union = unionEntities([bundleA, bundleB])
+ok(union.sections.length === 2 && union.sections.includes('I-A') && union.sections.includes('X-A'),
+  'both schedules contribute their class-sections — not just whichever was opened last')
+ok(union.subjects.join() === 'English,Physics' && union.staff.join() === 'Anita,Bhaskar',
+  'subjects and staff are unioned too')
+ok(union.scheduleOf['X-A'] === 'VI–X TT', 'each section remembers which schedule it came from')
+
+// Class order is school order, not alphabetical.
+ok(compareSection('Nursery-A', 'I-A') < 0, 'Nursery sorts before Class I')
+ok(compareSection('II-A', 'X-A') < 0, 'II sorts before X — alphabetically it would not')
+ok(classRank('Nursery') < classRank('I') && classRank('I') < classRank('II'), 'ranks ascend as a school lists them')
+
+// Folding allocation into the plans: seeds what has none, respects an override.
+const seeded = withAllocatedHours({}, alloc)
+ok(requiredHours(seeded[planKey('English', 'I-A')]) === 13,
+  'a subject nobody has touched still shows its allocated hours — no empty box to fill in')
+ok(riskOf(seeded[planKey('English', 'I-A')]) === 'untracked',
+  'but with nothing recorded it stays UNTRACKED, so seeding cannot flood the alert')
+const overridden = withAllocatedHours(
+  { [planKey('English', 'I-A')]: mkPlan('English', 'I-A', { requiredHours: 20 }) }, alloc)
+ok(requiredHours(overridden[planKey('English', 'I-A')]) === 20,
+  'an explicit figure wins — a syllabus needing more than it was allocated must show the gap')
+const filled = withAllocatedHours(
+  { [planKey('English', 'I-A')]: mkPlan('English', 'I-A', { overallPercentCovered: 50 }) }, alloc)
+ok(requiredHours(filled[planKey('English', 'I-A')]) === 13 && coveredHours(filled[planKey('English', 'I-A')]) === 6.5,
+  'a plan with content but no hours takes the timetable figure, and coverage follows from it')
+ok(riskOf(filled[planKey('English', 'I-A')]) === 'on-track',
+  'once something IS recorded the subject is assessed normally again')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

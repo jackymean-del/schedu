@@ -239,6 +239,11 @@ export function riskOf(p: SyllabusPlan | undefined): Risk {
   if (requiredHours(p) <= 0) return 'untracked'
   if (remainingHours(p) <= 0) return 'covered'
   if (lostHours(p) > 0) return 'critical'
+  // Nothing recorded at all yet. Now that the requirement is DERIVED from the
+  // timetable, every scheduled subject has one from day one — and calling a
+  // subject "behind" when nobody has said anything about it is a guess, not a
+  // finding. Silence until there's something to go on.
+  if (!hasContentSignal(p) && (p?.loggedHours ?? 0) <= 0) return 'untracked'
   if (coveragePct(p) < 50) return 'behind'
   return 'on-track'
 }
@@ -325,6 +330,39 @@ export function withHolidayImpact(
     idPrefix: 'holiday',
     note: n => n > 1 ? `${n} school holidays` : 'School holiday',
   })
+}
+
+/**
+ * Fill in each plan's requirement from what the TIMETABLE actually allocates,
+ * and surface every scheduled (subject, section) even before anyone has touched
+ * it — so the coverage dashboard is complete from the moment a timetable exists
+ * and nobody has to type an hours figure that could disagree with the schedule.
+ *
+ * An explicit `requiredHours` on the plan always wins: a school that knows its
+ * syllabus needs 50 h in a 40 h allocation must be able to say so, and see the
+ * gap rather than have it quietly rounded away.
+ */
+export function withAllocatedHours(
+  plans: Record<string, SyllabusPlan>,
+  allocated: Record<string, number>,
+): Record<string, SyllabusPlan> {
+  if (!allocated || Object.keys(allocated).length === 0) return plans
+  const out: Record<string, SyllabusPlan> = { ...plans }
+  for (const key in allocated) {
+    const hours = allocated[key]
+    if (!(hours > 0)) continue
+    const base = out[key]
+    if (!base) {
+      // Seeded, not invented: these carry no content signal, so riskOf reports
+      // them as 'untracked' and they stay silent in every alert.
+      const [subject, section] = key.split('||')
+      out[key] = { subject, section, chapters: [], loggedHours: 0, requiredHours: hours }
+      continue
+    }
+    if (base.requiredHours != null && base.requiredHours > 0) continue   // explicit override wins
+    out[key] = { ...base, requiredHours: hours }
+  }
+  return out
 }
 
 /**

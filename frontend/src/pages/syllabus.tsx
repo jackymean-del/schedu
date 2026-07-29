@@ -12,7 +12,6 @@
  */
 import { useMemo, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { useTimetableStore } from '@/store/timetableStore'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
   coverageRows, summariseBy, classOfSection, lostHours, riskOf, RISK_LABELS, suggestBorrowSwaps,
@@ -21,6 +20,7 @@ import {
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
+import { compareSection } from '@/lib/scheduleAllocation'
 import { paceFor } from '@/lib/syllabusPace'
 import {
   useSubCoverage, bonusSessions, recordsFor,
@@ -39,37 +39,55 @@ const DIMS: Array<{ k: Dim; label: string }> = [
 const ACCENT = '#7C6FE0'
 
 export function SyllabusPage() {
-  const store = useTimetableStore() as any
-  const sections: any[] = store.sections ?? []
-  const subjects: any[] = store.subjects ?? []
-  const staff: any[] = store.staff ?? []
   const {
     plans, setRequiredHours, setTeacher, addChapter, updateChapter,
     removeChapter, markChapterCovered, logHours, logLostSession, removeLostSession,
     setMethod, setChapterCounts, setOverallPercent,
   } = useSyllabus()
 
+  // Holidays, cover that didn't carry the syllabus forward, absences nobody
+  // covered, and the hours the timetable allocates are all composed in one
+  // shared place so this page and the dashboard alert can never disagree — and
+  // it spans every ACTIVE schedule, not just whichever one is open.
+  const {
+    plans: effectivePlans, holidays, notSpent, entities, contextFor, activeCount,
+  } = useEffectiveCoverage()
+  const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
+
+  const sectionNames = entities.sections
+  const subjectNames = entities.subjects
+  const staffNames = entities.staff
+
   const [tab, setTab] = useState<'capture' | 'coverage'>('capture')
   const [dim, setDim] = useState<Dim>('subject')
-  const [section, setSection] = useState<string>(sections[0]?.name ?? '')
-  const [subject, setSubject] = useState<string>(subjects[0]?.name ?? '')
+  const [pickedSection, setSection] = useState<string>('')
+  const [pickedSubject, setSubject] = useState<string>('')
   const [chName, setChName] = useState('')
 
+  // The pickers default to the first real option and self-heal if the active
+  // schedules change underneath them (publishing one, switching another off).
+  const section = sectionNames.includes(pickedSection) ? pickedSection : (sectionNames[0] ?? '')
+  // Only the subjects this section is actually taught — otherwise you can pick
+  // "English in X-A", a combination the timetable has never heard of, and read
+  // a meaningless zero.
+  const sectionSubjects = entities.subjectsBySection[section] ?? subjectNames
+  const subject = sectionSubjects.includes(pickedSubject) ? pickedSubject : (sectionSubjects[0] ?? '')
+
   const key = planKey(subject, section)
-  const plan: SyllabusPlan | undefined = plans[key]
+  // Read the EFFECTIVE plan: it carries the timetable's own allocation, so the
+  // headline figures match the schedule without anyone typing an hours number.
+  const plan: SyllabusPlan | undefined = effectivePlans[key]
+  const rawPlan: SyllabusPlan | undefined = plans[key]
   const req = requiredHours(plan), cov = coveredHours(plan)
   const rem = remainingHours(plan), pct = coveragePct(plan)
   const method = effectiveMethod(plan)
+  const ctx = contextFor(section)
+  const periodMinutes = ctx?.periodMinutes ?? 40
 
-  // Holidays, cover that didn't carry the syllabus forward, and absences nobody
-  // covered all eat into a subject's time. All four sources are composed in one
-  // shared place so this page and the dashboard alert can never disagree.
-  const { plans: effectivePlans, holidays, periodMinutes, notSpent } = useEffectiveCoverage()
-  const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
   const bonus = useMemo(() => bonusSessions(subRecords), [subRecords])
   const rows = useMemo(() => coverageRows(effectivePlans), [effectivePlans])
 
-  const canPick = sections.length > 0 && subjects.length > 0
+  const canPick = sectionNames.length > 0 && subjectNames.length > 0
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
@@ -113,22 +131,31 @@ export function SyllabusPage() {
         {canPick && tab === 'capture' && (
           <>
             {/* Picker */}
-            <Card title="Choose a subject" subtitle="Syllabus is tracked per subject, per class-section — the same subject can need different hours in different sections.">
+            <Card
+              title="Choose a subject"
+              subtitle={activeCount > 1
+                ? `Every class-section across your ${activeCount} active schedules. Syllabus is tracked per subject, per class-section.`
+                : 'Syllabus is tracked per subject, per class-section — the same subject can need different hours in different sections.'}
+            >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <Field label="Class-section">
                   <select value={section} onChange={e => setSection(e.target.value)} style={inputStyle}>
-                    {sections.map((s: any) => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    {sectionNames.map(s => (
+                      <option key={s} value={s}>
+                        {s}{activeCount > 1 && entities.scheduleOf[s] ? ` — ${entities.scheduleOf[s]}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </Field>
                 <Field label="Subject">
                   <select value={subject} onChange={e => setSubject(e.target.value)} style={inputStyle}>
-                    {subjects.map((s: any) => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    {sectionSubjects.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </Field>
                 <Field label="Faculty (for teacher-wise reports)">
                   <select value={plan?.teacher ?? ''} onChange={e => setTeacher(subject, section, e.target.value)} style={inputStyle}>
                     <option value="">— unassigned —</option>
-                    {staff.map((t: any) => <option key={t.name} value={t.name}>{t.name}</option>)}
+                    {staffNames.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </Field>
               </div>
@@ -170,14 +197,19 @@ export function SyllabusPage() {
                 </div>
               )}
 
-              {/* Required hours — the denominator, whichever method is used.
-                  Always the subject's own figure now: chapters say WHAT to
-                  cover, never how long it takes. */}
-              <Field label="Hours needed to cover the syllabus">
-                <input type="number" min={0} step="0.5" value={plan?.requiredHours ?? ''} placeholder="e.g. 40"
-                  onChange={e => setRequiredHours(subject, section, e.target.value === '' ? undefined : Number(e.target.value))}
-                  style={{ ...inputStyle, maxWidth: 200 }} />
-              </Field>
+              {/* The denominator. DERIVED from the timetable — the schedule
+                  already says how many hours this subject gets, so nobody
+                  types it and it can never disagree with the schedule. The
+                  override exists for the school whose syllabus genuinely needs
+                  more than it was allocated: that gap should be visible, not
+                  rounded away. */}
+              <AllocatedHours
+                allocated={req}
+                override={rawPlan?.requiredHours}
+                scheduleName={activeCount > 1 ? ctx?.scheduleName : undefined}
+                hasSchedule={!!ctx}
+                onOverride={h => setRequiredHours(subject, section, h)}
+              />
 
               {/* Blueprint v6 — how this faculty wants to record content, per subject */}
               <div>
@@ -330,13 +362,15 @@ export function SyllabusPage() {
             </Card>
             )}
 
-            {/* Pace — content covered vs time actually spent */}
+            {/* Pace — content covered vs time actually spent. Resolved against
+                the schedule that OWNS this section, so a school running two
+                timetables with different bells gets each one's real figures. */}
             <PaceCard
-              plan={plan} classTT={store.classTT ?? {}} periodMinutes={periodMinutes}
+              plan={plan} classTT={ctx?.classTT ?? {}} periodMinutes={periodMinutes}
               holidays={holidays}
               hoursNotSpent={notSpent[key] ?? 0}
-              termStart={store.config?.timetableStartDate}
-              termEnd={store.config?.timetableEndDate}
+              termStart={ctx?.termStart}
+              termEnd={ctx?.termEnd}
             />
 
             {/* What substitutes actually did with this subject's periods */}
@@ -344,7 +378,7 @@ export function SyllabusPage() {
               subject={subject} section={section}
               records={recordsFor(subRecords, subject, section)}
               bonus={bonus[key]}
-              subjectOptions={subjects.map((s: any) => s.name).filter(Boolean)}
+              subjectOptions={subjectNames}
               onConfirm={confirmSub}
               onSetIntent={setSubIntent}
             />
@@ -440,6 +474,71 @@ function detailRowsFor(
     a.subject.localeCompare(b.subject) ||
     b.remaining - a.remaining ||
     a.section.localeCompare(b.section))
+}
+
+/**
+ * The hours figure, derived rather than asked for.
+ *
+ * This used to be an empty "Hours needed to cover the syllabus" box, which was
+ * work for the user AND a second source of truth that could drift from the
+ * timetable. The schedule already knows: periods per week × the term × the bell.
+ * So state it, and keep a quiet override for the one case the derivation can't
+ * know — a syllabus that genuinely needs more hours than it was allocated.
+ */
+function AllocatedHours({ allocated, override, scheduleName, hasSchedule, onOverride }: {
+  allocated: number
+  /** Set only when someone has deliberately replaced the derived figure. */
+  override?: number
+  scheduleName?: string
+  hasSchedule: boolean
+  onOverride: (hours: number | undefined) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const overridden = override != null && override > 0
+
+  if (!hasSchedule) return (
+    <div style={{ fontSize: 12.5, color: '#8B87AD' }}>
+      No timetable is active for this class yet — generate or publish one and the hours it
+      allocates appear here automatically.
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#4B5275' }}>
+        Hours allocated by the timetable
+      </div>
+      {editing ? (
+        <>
+          <input
+            type="number" min={0} step="0.5" autoFocus
+            defaultValue={override ?? allocated}
+            onKeyDown={e => { if (e.key === 'Enter') { onOverride(Number((e.target as HTMLInputElement).value) || undefined); setEditing(false) } }}
+            onBlur={e => { onOverride(Number(e.target.value) || undefined); setEditing(false) }}
+            style={{ ...inputStyle, maxWidth: 120, padding: '6px 9px' }}
+          />
+          <span style={{ fontSize: 11.5, color: '#9A95BC' }}>Enter to save</span>
+        </>
+      ) : (
+        <>
+          <strong style={{ fontSize: 15, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>{allocated} h</strong>
+          <span style={{ fontSize: 11.5, color: '#9A95BC' }}>
+            {overridden
+              ? 'set by hand — not what the timetable allocates'
+              : `counted from the schedule${scheduleName ? ` · ${scheduleName}` : ''}`}
+          </span>
+          <button onClick={() => setEditing(true)} style={{ ...btnSoft, padding: '4px 10px', fontSize: 11.5 }}>
+            {overridden ? 'Change' : 'Override'}
+          </button>
+          {overridden && (
+            <button onClick={() => onOverride(undefined)} style={{ ...btnSoft, padding: '4px 10px', fontSize: 11.5 }}>
+              Use the timetable's figure
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -852,8 +951,11 @@ function CoverageDashboard({
   // Each dropdown's options come from the rows the OTHER filters allow, so a
   // choice never leads to an empty view.
   const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b))
-  const classOpts   = useMemo(() => uniq(allRows.filter(r => match(r, 'class')).map(r => classOfSection(r.section))), [allRows, fSection, fSubject, fTeacher])
-  const sectionOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'section')).map(r => r.section)), [allRows, fClass, fSubject, fTeacher])
+  // Classes and sections list in SCHOOL order (Nursery, I, II … X), not
+  // alphabetical — where "X" lands before "II" and nobody finds their class.
+  const uniqClasses = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort(compareSection)
+  const classOpts   = useMemo(() => uniqClasses(allRows.filter(r => match(r, 'class')).map(r => classOfSection(r.section))), [allRows, fSection, fSubject, fTeacher])
+  const sectionOpts = useMemo(() => uniqClasses(allRows.filter(r => match(r, 'section')).map(r => r.section)), [allRows, fClass, fSubject, fTeacher])
   const subjectOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'subject')).map(r => r.subject)), [allRows, fClass, fSection, fTeacher])
   const teacherOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'teacher')).map(r => r.teacher || '—')), [allRows, fClass, fSection, fSubject])
   const anyFilter = !!(fClass || fSection || fSubject || fTeacher)
