@@ -21,7 +21,7 @@ import {
   type SyllabusPlan, type LostSession, type CoverageMethod,
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
-import { useHolidays, holidayImpact, totalHolidayHours, weekdayOf } from '@/lib/holidays'
+import { useHolidays, holidayImpact } from '@/lib/holidays'
 import { paceFor } from '@/lib/syllabusPace'
 import { BookOpen, Plus, Trash2, Check } from 'lucide-react'
 
@@ -231,6 +231,20 @@ export function SyllabusPage() {
               {(plan?.chapters ?? []).length === 0 && (
                 <p style={{ fontSize: 12.5, color: '#9A95BC', margin: 0 }}>No chapters yet — add the first one below.</p>
               )}
+              {/* Column headers so the bare numbers in each row can't be misread */}
+              {(plan?.chapters ?? []).length > 0 && (
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '28px 1fr 92px 62px 34px', gap: 10,
+                  padding: '0 10px', fontSize: 10.5, fontWeight: 700, color: '#9A95BC',
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                }}>
+                  <span>Done</span>
+                  <span>Chapter</span>
+                  <span style={{ textAlign: 'right' }}>Hours</span>
+                  <span style={{ textAlign: 'right' }}>% done</span>
+                  <span />
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {(plan?.chapters ?? []).map((c, i) => (
                   <div key={c.id} style={{
@@ -258,10 +272,11 @@ export function SyllabusPage() {
                       style={{ ...inputStyle, padding: '6px 9px', textDecoration: c.coveredAt ? 'line-through' : 'none', color: c.coveredAt ? '#6b6786' : '#13111E' }}
                     />
                     <input
-                      type="number" min={0} step="0.5" value={c.hours}
+                      type="number" min={0} step="0.5" value={c.hours} placeholder="hrs"
                       onChange={e => updateChapter(subject, section, c.id, { hours: Number(e.target.value) })}
                       style={{ ...inputStyle, padding: '6px 9px', textAlign: 'right' }}
-                      title="Hours this chapter needs"
+                      title={`${c.hours || 0} teaching hours needed for "${c.name || 'this chapter'}"`}
+                      aria-label="Teaching hours for this chapter"
                     />
                     {/* v6 — a chapter only part-taught can carry its own % */}
                     <input
@@ -277,7 +292,10 @@ export function SyllabusPage() {
                         background: c.coveredAt ? '#F0FDF4' : '#fff',
                         color: c.coveredAt ? '#067647' : '#13111E',
                       }}
-                      title={c.coveredAt ? 'Ticked chapters are 100%' : 'Part-taught? Enter a % covered'}
+                      title={c.coveredAt
+                        ? 'Ticked — counts as 100% covered'
+                        : `${c.percentCovered ?? 0}% of this chapter covered. Part-taught? Enter a percentage.`}
+                      aria-label="Percent of this chapter covered"
                     />
                     <button onClick={() => removeChapter(subject, section, c.id)} title="Remove chapter"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C3EC', display: 'flex', justifyContent: 'center' }}>
@@ -312,8 +330,25 @@ export function SyllabusPage() {
               termEnd={store.config?.timetableEndDate}
             />
 
-            {/* School holidays — declared once, applied everywhere */}
-            <HolidayCard sections={sections} impact={impact} periodMinutes={periodMinutes} />
+            {/* Holidays are an ADMIN action (Blueprint v6) and now live in
+                Settings. Faculty keep only the narrower right the blueprint
+                grants them: logging a missed period for their own subject. */}
+            {holidays.length > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                padding: '9px 12px', borderRadius: 10, background: '#F8F7FF',
+                border: '1px solid #ECE9FB', fontSize: 12, color: '#4B5275',
+              }}>
+                <strong style={{ color: '#4B41C4' }}>{holidays.length} school holiday{holidays.length > 1 ? 's' : ''} declared</strong>
+                <span style={{ color: '#8B87AD' }}>
+                  — already deducted from the hours available for every subject.
+                </span>
+                <div style={{ flex: 1 }} />
+                <a href="/settings" style={{ fontSize: 11.5, fontWeight: 700, color: ACCENT, textDecoration: 'none' }}>
+                  Manage in Settings →
+                </a>
+              </div>
+            )}
 
             {/* Lost sessions — one-off events / absences for THIS subject */}
             <LostSessionsCard
@@ -453,105 +488,6 @@ function PaceCard({
           {holidays.length > 0 ? ' (declared holidays already removed)' : ''}.
         </div>
       </div>
-    </Card>
-  )
-}
-
-/**
- * School holidays — Blueprint v5, Part C "Holiday Handling".
- *
- * Declared ONCE for the school, "upfront at the start of the session or on the
- * go". The hours each subject loses are derived from the timetable (whatever was
- * scheduled that weekday), so nobody has to log a holiday against every subject.
- */
-function HolidayCard({
-  sections, impact, periodMinutes,
-}: {
-  sections: any[]
-  impact: Record<string, { hours: number; dates: string[] }>
-  periodMinutes: number
-}) {
-  const { holidays, addHoliday, removeHoliday } = useHolidays()
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [name, setName] = useState('')
-  const [scope, setScope] = useState('')   // '' = whole school
-
-  const total = totalHolidayHours(impact)
-  const add = () => {
-    if (!date) return
-    addHoliday({ date, name: name.trim() || 'Holiday', sections: scope ? [scope] : undefined })
-    setName('')
-  }
-
-  return (
-    <Card
-      title="School holidays"
-      subtitle="Declare a holiday once — every subject scheduled that weekday loses its periods automatically, and remaining-hours figures update across the app. Add them upfront or as they come up."
-    >
-      {holidays.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-          padding: '8px 11px', borderRadius: 9, background: total > 0 ? '#FFFBEB' : '#F8F7FF',
-          border: `1px solid ${total > 0 ? '#FDE68A' : '#ECE9FB'}`, fontSize: 12,
-        }}>
-          <strong style={{ color: total > 0 ? '#92400E' : '#4B41C4' }}>
-            {holidays.length} holiday{holidays.length > 1 ? 's' : ''} declared
-          </strong>
-          <span style={{ color: '#8B87AD' }}>
-            {total > 0
-              ? `— ${total} teaching hours removed from the year, spread across the affected subjects.`
-              : '— no teaching hours affected yet (generate a timetable and the impact appears here).'}
-          </span>
-        </div>
-      )}
-
-      {holidays.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {holidays.map(h => {
-            const wd = weekdayOf(h.date)
-            const hrs = Object.entries(impact)
-              .filter(([, v]) => v.dates.includes(h.date))
-              .reduce((a, [, v]) => a + v.hours, 0)
-            return (
-              <div key={h.id} style={{ display: 'grid', gridTemplateColumns: '110px 90px 1fr 90px 30px', gap: 8, alignItems: 'center', padding: '6px 9px', borderRadius: 8, border: '1px solid #ECE9FB' }}>
-                <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{h.date}</span>
-                <span style={{ fontSize: 11, color: '#8B87AD' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '—'}</span>
-                <span style={{ fontSize: 12, color: '#13111E', fontWeight: 600 }}>
-                  {h.name}
-                  {h.sections?.length ? <span style={{ color: '#8B87AD', fontWeight: 400 }}> · {h.sections.join(', ')}</span> : null}
-                </span>
-                <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: hrs > 0 ? '#B45309' : '#C9C3EC', fontWeight: 700 }}>
-                  {hrs > 0 ? `${Math.round(hrs * 10) / 10} h` : '—'}
-                </span>
-                <button onClick={() => removeHoliday(h.id)} title="Remove holiday"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C3EC', display: 'flex', justifyContent: 'center' }}>
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 160px 110px', gap: 8, alignItems: 'end' }}>
-        <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} /></Field>
-        <Field label="Name">
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Independence Day"
-            onKeyDown={e => { if (e.key === 'Enter') add() }} style={inputStyle} />
-        </Field>
-        <Field label="Applies to">
-          <select value={scope} onChange={e => setScope(e.target.value)} style={inputStyle}>
-            <option value="">Whole school</option>
-            {sections.map((s: any) => <option key={s.name} value={s.name}>{s.name} only</option>)}
-          </select>
-        </Field>
-        <button onClick={add} disabled={!date} style={{ ...btnSoft, opacity: date ? 1 : 0.5 }}>
-          <Plus size={13} /> Add holiday
-        </button>
-      </div>
-      <p style={{ fontSize: 11, color: '#9A95BC', margin: 0 }}>
-        Hours are worked out from the current timetable at {periodMinutes} min per period, so they follow any later change to the schedule.
-      </p>
     </Card>
   )
 }

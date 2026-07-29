@@ -10,6 +10,7 @@ import { meApi } from '@/api/client'
 import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKey } from '@/lib/terms'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useWorkloadLimits } from '@/store/workloadLimits'
+import { HolidayManager } from '@/components/HolidayManager'
 import {
   BAND_LABELS, normTeacherHoursWeek, normStudentHoursWeek, effectiveTeacherMaxPeriods,
   type GradeBand,
@@ -65,6 +66,9 @@ export function SettingsPage() {
 
         {/* Institution naming */}
         <NamingCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
+
+        {/* School holidays — admin-only (Blueprint v6 permissions) */}
+        <HolidayManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
 
         {/* Workload limits */}
         <WorkloadCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />

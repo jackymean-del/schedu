@@ -39,6 +39,7 @@ import {
 } from '@/lib/urgentReassignments'
 import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
 import { bootstrapDirectoryFromSchedules } from '@/lib/directoryBootstrap'
+import { useHolidays, holidayImpact, totalHolidayHours, type Holiday } from '@/lib/holidays'
 
 // ── constants ──────────────────────────────────────────────────
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -223,7 +224,9 @@ export function CalendarPage() {
     setEvents(next)
     try { localStorage.setItem(`${EVENTS_KEY}:${uid}`, JSON.stringify(next)) } catch { /* quota */ }
   }
-  const [addOpen, setAddOpen] = useState(false)
+  // Add-Event modal — holds the ISO date it should open on (null = closed), so
+  // a click on a month cell adds to THAT day, not whatever day is selected.
+  const [addOpen, setAddOpen] = useState<string | null>(null)
 
   // ── institution naming (admin-set in Settings; live-updates on save) ──
   const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
@@ -263,6 +266,31 @@ export function CalendarPage() {
   const workDays: string[] = config.workDays?.length
     ? config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
   const isWorkDay = workDays.includes(dayKey)
+
+  // ── School holidays (admin) ────────────────────────────────────────────
+  // Declared once and shared with Settings and the Syllabus coverage maths —
+  // this page is just a second, more natural place to declare one: click the
+  // day on the calendar. The hours each subject loses are DERIVED from the
+  // timetable (lib/holidays), so a holiday added here updates lost classes and
+  // remaining-hours everywhere without anyone logging anything per subject.
+  const { holidays, addHoliday, removeHoliday } = useHolidays()
+  const periodMinutes = config.periodMinutes ?? 40
+  const isAdmin = (useAuthStore.getState().user?.role ?? 'admin') === 'admin'
+
+  /** Hours the school loses to a prospective holiday on `iso` — the same
+   *  derivation the real thing uses, run on a throwaway holiday. */
+  const holidayHoursOn = (iso: string, scope?: string): number =>
+    totalHolidayHours(holidayImpact(
+      classTT,
+      [{ id: 'preview', date: iso, name: '', sections: scope ? [scope] : undefined }],
+      periodMinutes,
+    ))
+
+  /** Declare a holiday from the calendar. Same day twice is a no-op. */
+  const declareHoliday = (iso: string, name: string, scope?: string) => {
+    if (holidays.some(h => h.date === iso && (h.sections?.[0] ?? '') === (scope ?? ''))) return
+    addHoliday({ date: iso, name: name.trim() || 'Holiday', sections: scope ? [scope] : undefined })
+  }
 
   // Period → wall-clock minutes. Ground truth is config.bellSchedules (assembly,
   // lunch and dispersal included) so the calendar clock matches the timetable
@@ -889,7 +917,7 @@ export function CalendarPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <button
               className="cal-primary"
-              onClick={() => setAddOpen(true)}
+              onClick={() => setAddOpen(toISODate(date))}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '11px 20px', borderRadius: 11, border: 'none',
@@ -1078,9 +1106,35 @@ export function CalendarPage() {
           </div>
         )}
 
+        {/* A declared holiday changes what every row below means — say so once,
+            at the top, rather than leaving a full grid of lessons that won't run. */}
+        {view !== 'month' && holidays.some(h => h.date === isoDate) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+            background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12,
+            padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: '#92400E',
+          }}>
+            <CalendarDays size={14} />
+            <strong>
+              School holiday — {holidays.filter(h => h.date === isoDate).map(h => h.name).join(', ')}
+            </strong>
+            <span style={{ color: '#B45309' }}>
+              {holidayHoursOn(isoDate) > 0
+                ? `· ${holidayHoursOn(isoDate)} teaching hours lost; already deducted from every subject's remaining hours.`
+                : '· nothing was scheduled this weekday, so no teaching hours are lost.'}
+            </span>
+          </div>
+        )}
+
         {/* ── Main ───────────────────────────────────────────── */}
         {view === 'month'
-          ? <MonthGrid date={date} setDate={setDate} events={events} onAdd={() => setAddOpen(true)} statsByDay={statsByDay} />
+          ? <MonthGrid
+              date={date} setDate={setDate} events={events} onAdd={(iso: string) => setAddOpen(iso)}
+              statsByDay={statsByDay} holidays={holidays} isAdmin={isAdmin}
+              hoursLostOn={holidayHoursOn}
+              onDeclareHoliday={declareHoliday}
+              onRemoveHoliday={removeHoliday}
+            />
           : !hasTimetable
           ? <EmptyState />
           : (view === 'live' ? (multiActive ? !gridWorkDay : !isWorkDay) : !gridWorkDay)
@@ -1198,9 +1252,11 @@ export function CalendarPage() {
 
       {addOpen && (
         <AddEventModal
-          date={toISODate(date)}
-          onClose={() => setAddOpen(false)}
-          onCreate={ev => { saveEvents([...events, ev]); setAddOpen(false) }}
+          date={addOpen}
+          onDeclareHoliday={(iso, name) => declareHoliday(iso, name)}
+          hoursLostOn={(iso) => holidayHoursOn(iso)}
+          onClose={() => setAddOpen(null)}
+          onCreate={ev => { saveEvents([...events, ev]); setAddOpen(null) }}
         />
       )}
 
@@ -2003,9 +2059,16 @@ function RestDay({ day }: { day: string }) {
 /** What a day-of-week actually holds in the schedule — shown on month cells. */
 interface DayStats { sessions: number; classes: number; teachers: number; venues: number; subjects: number }
 
-function MonthGrid({ date, setDate, events, onAdd, statsByDay }: {
-  date: Date; setDate: (d: Date) => void; events: CalEvent[]; onAdd: () => void
+function MonthGrid({
+  date, setDate, events, onAdd, statsByDay,
+  holidays, isAdmin, hoursLostOn, onDeclareHoliday, onRemoveHoliday,
+}: {
+  date: Date; setDate: (d: Date) => void; events: CalEvent[]; onAdd: (iso: string) => void
   statsByDay: Record<string, DayStats>
+  holidays: Holiday[]; isAdmin: boolean
+  hoursLostOn: (iso: string, scope?: string) => number
+  onDeclareHoliday: (iso: string, name: string, scope?: string) => void
+  onRemoveHoliday: (id: string) => void
 }) {
   const y = date.getFullYear(), m = date.getMonth()
   const first = new Date(y, m, 1).getDay()
@@ -2018,35 +2081,89 @@ function MonthGrid({ date, setDate, events, onAdd, statsByDay }: {
     const d = new Date(e.date + 'T00:00:00')
     if (d.getFullYear() === y && d.getMonth() === m) (evByDay[d.getDate()] ??= []).push(e)
   })
+  const holByDay: Record<number, Holiday[]> = {}
+  holidays.forEach(h => {
+    const d = new Date(h.date + 'T00:00:00')
+    if (!isNaN(d.getTime()) && d.getFullYear() === y && d.getMonth() === m) (holByDay[d.getDate()] ??= []).push(h)
+  })
+
+  // Day the admin is marking (ISO) — the inline "mark this day" panel.
+  const [markOn, setMarkOn] = useState<string | null>(null)
+  const isoOf = (d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, padding: 18 }}>
+      <style>{`
+        .cal-month-cell .cal-mark-btn { opacity: 0; transition: opacity .12s; }
+        .cal-month-cell:hover .cal-mark-btn { opacity: 1; }
+        .cal-month-cell:hover { box-shadow: 0 2px 10px rgba(124,111,224,0.13); }
+      `}</style>
+      {isAdmin && (
+        <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: 10 }}>
+          Hover a day and hit <strong style={{ color: '#4B5275' }}>＋</strong> to declare a holiday or add an event.
+          A holiday automatically removes that day's periods from every subject's available hours.
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
         {DOW.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 800, color: '#8B87AD', padding: '4px 0' }}>{d}</div>)}
         {cells.map((c, i) => {
           const isToday = c === today.getDate() && m === today.getMonth() && y === today.getFullYear()
           const evs = c ? (evByDay[c] ?? []) : []
+          const hols = c ? (holByDay[c] ?? []) : []
           const st = c ? statsByDay[DAY_KEY[new Date(y, m, c).getDay()]] : undefined
+          const iso = c ? isoOf(c) : ''
+          const isHoliday = hols.length > 0
           return (
-            <div key={i}
+            <div key={i} className={c ? 'cal-month-cell' : undefined}
               onClick={() => c && setDate(new Date(y, m, c))}
-              onDoubleClick={() => c && onAdd()}
+              onDoubleClick={() => c && isAdmin && setMarkOn(iso)}
               style={{
+                position: 'relative',
                 minHeight: 96, borderRadius: 10, padding: 8, cursor: c ? 'pointer' : 'default',
-                background: isToday ? '#F1ECFF' : c ? '#FBFAFF' : 'transparent',
-                border: isToday ? '1.5px solid #7C6FE0' : c ? '1px solid #F2F0FB' : 'none',
+                background: isHoliday ? '#FFFBEB' : isToday ? '#F1ECFF' : c ? '#FBFAFF' : 'transparent',
+                border: isHoliday ? '1.5px solid #FDE68A' : isToday ? '1.5px solid #7C6FE0' : c ? '1px solid #F2F0FB' : 'none',
               }}>
               {c && (
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: isToday ? 800 : 600, color: isToday ? '#7C6FE0' : '#13111E' }}>{c}</span>
-                  {st && st.sessions > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#7C6FE0', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
-                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {st && st.sessions > 0 && !isHoliday && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#7C6FE0', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
+                    )}
+                    {isAdmin && (
+                      <button className="cal-mark-btn" title="Mark this day — holiday or event"
+                        onClick={e => { e.stopPropagation(); setMarkOn(iso) }}
+                        style={{
+                          width: 18, height: 18, borderRadius: 6, border: '1px solid #E0DBF2', background: '#fff',
+                          color: '#7C6FE0', fontSize: 12, fontWeight: 800, lineHeight: 1, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit',
+                        }}>+</button>
+                    )}
+                  </span>
                 </div>
               )}
-              {/* Day workload — sessions badge above; classes/teachers/venues/subjects below */}
-              {st && st.sessions > 0 && (
+              {/* Declared holidays first — they change what the rest of the day means. */}
+              {hols.map(h => (
+                <div key={h.id} title={`${h.name}${h.sections?.length ? ` · ${h.sections.join(', ')}` : ' · whole school'}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 700, color: '#92400E', background: '#FDE68A', borderRadius: 5, padding: '2px 4px 2px 6px', marginBottom: 3 }}>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                  {isAdmin && (
+                    <button title="Remove holiday" onClick={e => { e.stopPropagation(); onRemoveHoliday(h.id) }}
+                      style={{ border: 'none', background: 'none', color: '#92400E', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {/* Day workload — hidden on a holiday, where nothing is actually taught. */}
+              {st && st.sessions > 0 && !isHoliday && (
                 <div style={{ fontSize: 9.5, fontWeight: 600, color: '#9A95BC', lineHeight: 1.5, marginBottom: evs.length ? 4 : 0 }}>
                   {st.classes} cls · {st.teachers} tch<br />{st.venues} ven · {st.subjects} sub
+                </div>
+              )}
+              {isHoliday && st && st.sessions > 0 && (
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: '#B45309', lineHeight: 1.5, marginBottom: evs.length ? 4 : 0 }}>
+                  {hoursLostOn(iso)} h of classes lost
                 </div>
               )}
               {evs.slice(0, 2).map(ev => {
@@ -2058,13 +2175,109 @@ function MonthGrid({ date, setDate, events, onAdd, statsByDay }: {
           )
         })}
       </div>
+
+      {markOn && (
+        <MarkDayModal
+          iso={markOn}
+          hoursLostOn={hoursLostOn}
+          alreadyHoliday={holidays.some(h => h.date === markOn)}
+          onClose={() => setMarkOn(null)}
+          onHoliday={(name) => { onDeclareHoliday(markOn, name); setMarkOn(null) }}
+          onEvent={() => { const d = markOn; setMarkOn(null); onAdd(d) }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Mark a day from the calendar — Blueprint v6 ("admin can set an ad hoc missed
+ * day at any point"). Two outcomes, deliberately one click apart:
+ *   - Holiday  → declared school-wide; the periods that day were carrying are
+ *                derived from the timetable and removed from every subject's
+ *                available hours. Shown BEFORE confirming, so nobody declares a
+ *                holiday without seeing what it costs.
+ *   - Event    → an ordinary calendar entry (meeting/exam/activity); classes
+ *                still run, so nothing is deducted.
+ */
+function MarkDayModal({ iso, hoursLostOn, alreadyHoliday, onClose, onHoliday, onEvent }: {
+  iso: string
+  hoursLostOn: (iso: string, scope?: string) => number
+  alreadyHoliday: boolean
+  onClose: () => void
+  onHoliday: (name: string) => void
+  onEvent: () => void
+}) {
+  const [name, setName] = useState('')
+  const d = new Date(iso + 'T00:00:00')
+  const pretty = isNaN(d.getTime()) ? iso : `${DOW_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  const lost = hoursLostOn(iso)
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: 460, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+        <div style={{ background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ color: '#fff' }}>
+            <div style={{ fontSize: 16, fontWeight: 800 }}>Mark this day</div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>{pretty}</div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+        </div>
+
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {alreadyHoliday ? (
+            <div style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 9, padding: '9px 11px' }}>
+              This day is already a declared holiday. Remove it from the day cell (or in Settings) if that was a mistake.
+            </div>
+          ) : (
+            <>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5275', marginBottom: 5 }}>Holiday name</div>
+                <input value={name} onChange={e => setName(e.target.value)} autoFocus
+                  placeholder="e.g. Founder's Day"
+                  onKeyDown={e => { if (e.key === 'Enter') onHoliday(name) }}
+                  style={inp} />
+              </div>
+              <div style={{
+                fontSize: 12.5, borderRadius: 9, padding: '9px 11px',
+                background: lost > 0 ? '#FFFBEB' : '#F8F7FF',
+                border: `1px solid ${lost > 0 ? '#FDE68A' : '#ECE9FB'}`,
+                color: lost > 0 ? '#92400E' : '#4B5275',
+              }}>
+                {lost > 0
+                  ? <>Declaring this removes <strong>{lost} teaching hours</strong> from the syllabus time available — every affected subject's remaining hours update at once.</>
+                  : <>Nothing is scheduled on this weekday, so no teaching hours are lost.</>}
+              </div>
+              <button onClick={() => onHoliday(name)}
+                style={{ padding: '11px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#D97706,#B45309)', color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Declare holiday
+              </button>
+            </>
+          )}
+
+          <div style={{ borderTop: '1px solid #F1EFFA', paddingTop: 13 }}>
+            <div style={{ fontSize: 12, color: '#8B87AD', marginBottom: 8 }}>
+              Classes still running that day? Add it as an event instead — nothing is deducted.
+            </div>
+            <button onClick={onEvent}
+              style={{ padding: '10px 16px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', color: '#4B5275', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Add an event instead
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
 // ── Add Event modal ────────────────────────────────────────────
-function AddEventModal({ date, onClose, onCreate }: {
+function AddEventModal({ date, onClose, onCreate, onDeclareHoliday, hoursLostOn }: {
   date: string; onClose: () => void; onCreate: (e: CalEvent) => void
+  /** Picking the "Holiday" type here declares a real holiday too — otherwise
+   *  the label would be decoration and coverage would silently over-count. */
+  onDeclareHoliday: (iso: string, name: string) => void
+  hoursLostOn: (iso: string) => number
 }) {
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
@@ -2076,6 +2289,7 @@ function AddEventModal({ date, onClose, onCreate }: {
 
   const create = () => {
     if (!valid) return
+    if (type === 'holiday') onDeclareHoliday(when, title.trim())
     onCreate({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       title: title.trim(), description: desc.trim() || undefined, type,
@@ -2119,6 +2333,16 @@ function AddEventModal({ date, onClose, onCreate }: {
           <Field label="Date">
             <input type="date" value={when} onChange={e => setWhen(e.target.value)} style={inp} />
           </Field>
+          {type === 'holiday' && (
+            <div style={{
+              fontSize: 12.5, borderRadius: 9, padding: '9px 11px', marginBottom: 14,
+              background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
+            }}>
+              {hoursLostOn(when) > 0
+                ? <>This also declares a school holiday — <strong>{hoursLostOn(when)} teaching hours</strong> come off the syllabus time available, and every affected subject's remaining hours update at once.</>
+                : <>This also declares a school holiday. Nothing is scheduled on this weekday, so no teaching hours are lost.</>}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Start time"><input type="time" value={start} onChange={e => setStart(e.target.value)} style={inp} /></Field>
             <Field label="End time"><input type="time" value={end} onChange={e => setEnd(e.target.value)} style={inp} /></Field>
