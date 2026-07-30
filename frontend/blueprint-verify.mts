@@ -641,7 +641,7 @@ ok(slotKey(sub({})) !== slotKey(sub({ date: '2026-01-19' })), 'but the same week
 
 // ── ALLOCATION: the timetable already knows the hours, so nobody types them ──
 import {
-  allocatedHoursByPlan, elapsedHoursByPlan, unionEntities, compareSection, classRank, liveSections,
+  allocatedHoursByPlan, elapsedHoursByPlan, futureHoursByPlan, unionEntities, compareSection, classRank, liveSections,
   teachingMap, cascadeOptions, teacherFor, matchStaffName,
 } from './src/lib/scheduleAllocation'
 import { withAllocatedHours } from './src/lib/syllabusTracking'
@@ -728,6 +728,38 @@ ok(elapsedHoursByPlan([bundleA], '2026-02-02', () => [{ id: 'h', date: '2026-01-
 const spentPlan = withAllocatedHours({}, allocatedHoursByPlan([bundleA]))[planKey('English', 'I-A')]
 ok(requiredHours(spentPlan) === 13 && coveredHours(spentPlan) === 0,
   'five hours can have run with zero syllabus covered — the gap is the whole point')
+
+// TIME LEFT is measured, not subtracted. Allocated is the term as planned;
+// spent has holidays removed. So allocated − spent would hand back every past
+// holiday as though it were still available.
+const holidayOnJan12 = () => [{ id: 'h', date: '2026-01-12', name: 'x' }]
+const allocA = allocatedHoursByPlan([bundleA])[planKey('English', 'I-A')]
+const spentA = elapsedHoursByPlan([bundleA], '2026-02-02', holidayOnJan12)[planKey('English', 'I-A')]
+const leftA  = futureHoursByPlan([bundleA], '2026-02-02', holidayOnJan12)[planKey('English', 'I-A')]
+ok(allocA === 13 && spentA === 4 && leftA === 8,
+  'allocated 13 h, 4 h run (one Monday lost to a holiday), 8 h still to come')
+ok(allocA - spentA === 9 && leftA === 8,
+  'and subtracting would have claimed 9 h left — the extra hour is the holiday, which is gone')
+ok(spentA + leftA + 1 === allocA,
+  'spent + left + time lost = allocated, so the figures reconcile instead of overlapping')
+ok(futureHoursByPlan([bundleA], '2026-03-30')[planKey('English', 'I-A')] === undefined,
+  'nothing is still to come once the term has ended')
+ok(futureHoursByPlan([bundleA], '2025-12-01')[planKey('English', 'I-A')] === 13,
+  'before the term starts, the whole term is still to come')
+// Today counts as spent, never as both.
+const onATeachingDay = {
+  spent: elapsedHoursByPlan([bundleA], '2026-01-12')[planKey('English', 'I-A')],
+  left: futureHoursByPlan([bundleA], '2026-01-12')[planKey('English', 'I-A')],
+}
+ok(onATeachingDay.spent + onATeachingDay.left === 13,
+  "a lesson today is counted once — spent, not also still to come")
+
+// The bug this replaced: with nothing covered, "remaining syllabus" equals
+// "allocated", so showing both said the same thing twice.
+const nothingCovered = withAllocatedHours({}, allocatedHoursByPlan([bundleA]))[planKey('English', 'I-A')]
+ok(requiredHours(nothingCovered) === remainingHours(nothingCovered),
+  'remaining-syllabus IS allocated until something is recorded — which is why the headline now shows time left instead')
+ok(leftA !== allocA, 'time left is a different measurement, so it never mirrors allocated')
 
 // ── CASCADING PICKERS: any of the three can be the entry point ──
 const mapTT: any = {

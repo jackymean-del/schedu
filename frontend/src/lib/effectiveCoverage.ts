@@ -21,7 +21,8 @@ import { useSubCoverage, coverageLoss, hoursNotSpent, uncoveredAbsenceLoss } fro
 import { loadLeaves, type CalLeave } from './leaveUtils'
 import { loadActiveBundles, type ScheduleBundle } from './activeSchedules'
 import {
-  allocatedHoursByPlan, elapsedHoursByPlan, unionEntities, contextForSection, teachingMap, teacherFor,
+  allocatedHoursByPlan, elapsedHoursByPlan, futureHoursByPlan, unionEntities, contextForSection,
+  teachingMap, teacherFor,
   type UnionEntities, type Assignment,
 } from './scheduleAllocation'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -104,6 +105,8 @@ export interface EffectiveCoverage {
    * Derived from the published schedule; NEVER a measure of coverage.
    */
   elapsed: Record<string, number>
+  /** planKey → hours still scheduled before the term ends, holidays removed. */
+  future: Record<string, number>
   /** Who teaches what, for cascading pickers and faculty-scoped views. */
   teaching: Assignment[]
   /** How many schedules are currently active. */
@@ -148,16 +151,21 @@ export function useEffectiveCoverage(): EffectiveCoverage {
   const entities = useMemo(() => unionEntities(bundles), [bundles])
   const notSpent = useMemo(() => hoursNotSpent(subRecords), [subRecords])
   const teaching = useMemo(() => teachingMap(bundles), [bundles])
-  const elapsed = useMemo(() => {
-    const today = new Date()
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    // A holiday means the period didn't run, so it isn't time spent either.
-    return elapsedHoursByPlan(bundles, iso, section =>
-      holidays.filter(h => !h.sections?.length || h.sections.includes(section)))
-  }, [bundles, holidays])
+  const todayISO = useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }, [])
+  // A holiday means the period didn't run, so it is neither time spent nor time
+  // still to come.
+  const forSection = useMemo(
+    () => (section: string) => holidays.filter(h => !h.sections?.length || h.sections.includes(section)),
+    [holidays],
+  )
+  const elapsed = useMemo(() => elapsedHoursByPlan(bundles, todayISO, forSection), [bundles, todayISO, forSection])
+  const future = useMemo(() => futureHoursByPlan(bundles, todayISO, forSection), [bundles, todayISO, forSection])
 
   return {
-    plans: effective, holidays, leaves, entities, notSpent, elapsed, teaching,
+    plans: effective, holidays, leaves, entities, notSpent, elapsed, future, teaching,
     activeCount: bundles.length,
     contextFor: (section: string) => contextForSection(bundles, section),
   }

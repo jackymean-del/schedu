@@ -129,6 +129,49 @@ export function elapsedHoursByPlan(
   return out
 }
 
+/**
+ * Hours of this subject STILL TO COME — tomorrow up to the end of term.
+ *
+ * Derived the same way as elapsed rather than as (allocated − spent), because
+ * those two are measured differently on purpose: allocated is the full term as
+ * planned, spent has holidays removed. Subtracting one from the other would
+ * hand back every past holiday as though it were still available. Keeping this
+ * separate means allocated = spent + left + time lost, and the "h lost" line
+ * accounts for the difference.
+ */
+export function futureHoursByPlan(
+  bundles: ScheduleBundle[],
+  todayISO: string,
+  holidaysFor?: (section: string) => Holiday[],
+): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const b of bundles) {
+    const term = termOf(b)
+    if (!term) continue
+    if (todayISO >= term.end) continue                       // the term is over
+    // From TOMORROW, so today is never counted as both spent and still to come.
+    const from = todayISO < term.start ? term.start : nextDay(todayISO)
+    const periodMinutes = b.config?.periodMinutes ?? 40
+    for (const section of liveSections(b)) {
+      for (const subject of subjectsIn(b.classTT, section)) {
+        const h = scheduledHoursBetween(
+          b.classTT, subject, section, from, term.end, periodMinutes, holidaysFor?.(section) ?? [],
+        )
+        const k = planKey(subject, section)
+        if (h > 0) out[k] = Math.round(((out[k] ?? 0) + h) * 10) / 10
+      }
+    }
+  }
+  return out
+}
+
+/** Calendar arithmetic, never UTC — see the note in syllabusPace about IST. */
+function nextDay(iso: string): string {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00`)
+  d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** One (section, subject, teacher) the timetable actually assigns. */
 export interface Assignment {
   section: string

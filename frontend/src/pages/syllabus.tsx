@@ -51,7 +51,7 @@ export function SyllabusPage() {
   // shared place so this page and the dashboard alert can never disagree — and
   // it spans every ACTIVE schedule, not just whichever one is open.
   const {
-    plans: effectivePlans, holidays, notSpent, elapsed, teaching, entities, contextFor, activeCount,
+    plans: effectivePlans, holidays, notSpent, elapsed, future, teaching, entities, contextFor, activeCount,
   } = useEffectiveCoverage()
   const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
 
@@ -104,9 +104,10 @@ export function SyllabusPage() {
   const rawPlan: SyllabusPlan | undefined = plans[key]
   const req = requiredHours(plan), cov = coveredHours(plan)
   const rem = remainingHours(plan), pct = coveragePct(plan)
-  // Hours already run, straight from the published schedule — never typed, and
-  // deliberately not the same thing as coverage.
+  // Hours already run and hours still scheduled, straight from the published
+  // schedule — never typed, and deliberately not the same thing as coverage.
   const spent = elapsed[key] ?? 0
+  const left = future[key] ?? 0
   const method = effectiveMethod(plan)
   const ctx = contextFor(section)
   const periodMinutes = ctx?.periodMinutes ?? 40
@@ -240,21 +241,26 @@ export function SyllabusPage() {
             {/* Coverage */}
             <Card title={`${subject} · ${section}`} subtitle="Live coverage — updates the moment a chapter is ticked.">
               <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
-                {/* Two DERIVED figures and two RECORDED ones, kept apart on
-                    purpose. Allocated and Spent come from the published
-                    schedule and need no input at all; Covered and Remaining
-                    move only when faculty record content. A subject can be 20 h
-                    spent and 5 h covered — that gap is the whole point. */}
+                {/* THREE time figures from the schedule, then coverage from the
+                    faculty. The old row showed "Remaining" as allocated minus
+                    covered, which made it identical to Allocated whenever
+                    nothing was recorded — two of four numbers saying the same
+                    thing. Time left is its own measurement, and the syllabus
+                    figure is stated as coverage, so no two can coincide.
+                    Left is derived, not subtracted: allocated is the term as
+                    planned while spent has holidays removed, so the difference
+                    between them is time LOST, reported separately below. */}
                 <Stat label="Allocated" value={`${req} h`} color="#4B41C4" />
                 <Stat label="Spent" value={`${spent} h`} color="#4B5275" />
-                <Stat label="Covered" value={`${cov} h`} color="#067647" />
-                <Stat label="Remaining" value={`${rem} h`} color={rem > 0 ? '#B45309' : '#067647'} />
+                <Stat label="Left" value={`${left} h`} color={left > 0 ? '#4B5275' : '#B45309'} />
+                <Stat label="Covered" value={`${pct}%`} color={pct >= 100 ? '#067647' : pct > 0 ? '#067647' : '#8B87AD'} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ height: 12, background: '#EDE9FF', borderRadius: 6, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#16A34A' : ACCENT, transition: 'width .25s' }} />
                   </div>
                   <div style={{ fontSize: 11, color: '#8B87AD', marginTop: 3 }}>
-                    {pct}% covered · {spent} h of class time already run
+                    {cov} of {req} h of syllabus covered
+                    {rem > 0 && <> · {rem} h still to teach in {left} h of class time</>}
                   </div>
                 </div>
               </div>
