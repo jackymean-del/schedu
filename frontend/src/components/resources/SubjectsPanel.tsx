@@ -532,25 +532,22 @@ function GradeSlotRow({
           </button>
         </td>
 
-        {/* Slots/Wk */}
+        {/* Slots/Wk — READ-ONLY here. Blueprint v6 scopes Resources to WHICH
+            subjects a class takes; HOW MANY periods each gets is derived by the
+            Period Allocation Engine and edited on Mapping (Step 5). Editing it
+            in two places let the typed number drift from the schedule. */}
         <td style={{ padding: '3px 8px' }}>
-          <input
-            type="text" inputMode="decimal"
-            value={inputValue}
-            data-grade-input className="rp-inp rp-num"
-            onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur}
-            onKeyDown={e => {
-              e.stopPropagation()
-              gradeTableKeyNav(e)
-              if (e.key === 'Enter') e.currentTarget.blur()
-            }}
+          <div
+            title={`${displayVal} — derived from your board's curriculum norm, working days and period length. Change it on the Mapping step.`}
             style={{
-              width: '100%', padding: '3px 6px', border: '1.5px solid #C4BDFF', borderRadius: 5,
+              width: '100%', padding: '3px 6px', border: '1.5px dashed #D8D2FF', borderRadius: 5,
               fontSize: 12.5, color: P_D, fontWeight: 800,
-              outline: 'none', textAlign: 'center', background: P_L,
-              fontFamily: 'inherit', boxSizing: 'border-box' as const,
+              textAlign: 'center', background: '#FAFAFE',
+              boxSizing: 'border-box' as const, cursor: 'default',
             }}
-          />
+          >
+            {displayVal}
+          </div>
         </td>
 
         {/* Max/day — applies to all sections of this grade */}
@@ -689,6 +686,11 @@ function ClassSlotsExpanded({
         </span>
         <span style={{ fontWeight: 500, textTransform: 'none', fontSize: 9.5, color: '#C4C0DC' }}>
           · {ALLOCATION_LABELS[unit]}
+        </span>
+        {/* Say where these numbers come from, so a read-only field reads as
+            derived rather than broken. */}
+        <span style={{ fontWeight: 500, textTransform: 'none', fontSize: 9.5, color: '#A9A4C6' }}>
+          · auto-derived from the curriculum norm · edit on <strong style={{ color: '#7C6FE0' }}>Mapping</strong>
         </span>
         {sub.isOptional && (
           <span style={{ marginLeft: 4, fontSize: 9.5, fontWeight: 700, color: P, background: P_L, border: `1px solid ${P_B}`, borderRadius: 4, padding: '1px 7px' }}>

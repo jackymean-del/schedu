@@ -819,6 +819,70 @@ ok(requiredHours(filled[planKey('English', 'I-A')]) === 13 && coveredHours(fille
 ok(riskOf(filled[planKey('English', 'I-A')]) === 'on-track',
   'once something IS recorded the subject is assessed normally again')
 
+// ── PERIOD ALLOCATION ENGINE (master doc "STEP 6") ──
+// "System automatically generates: Subject | Weekly Periods … based on CBSE
+//  norms, working days, period duration, academic hours." The numbers are an
+//  OUTPUT of the engine, not something anyone types on the Resources page.
+import { scaleToTarget, periodsForHours, deriveWeeklySlots, toAllocationGrid } from './src/lib/periodAllocationEngine'
+
+ok(periodsForHours(22.5, 45) === 30, '22.5 h/week at 45-min periods = 30 periods')
+ok(periodsForHours(22.5, 60) === 22, 'the same norm at 60-min periods = 22 — period duration is a real input')
+ok(periodsForHours(0, 45) === 0 && periodsForHours(22, 0) === 0, 'no norm or no duration → nothing derived')
+
+// Scaling: the total must land EXACTLY on target, never near it.
+ok(scaleToTarget([5, 5, 5], 30).join() === '5,5,5', 'a curriculum that already fits is left alone')
+const squeezed = scaleToTarget([8, 6, 4, 2], 15)
+ok(squeezed.reduce((a, b) => a + b, 0) === 15, 'a curriculum that overflows is scaled to fit the week exactly (sums to 15)')
+ok(squeezed.every(v => v >= 1), 'and every subject keeps at least one period')
+ok(squeezed[0] > squeezed[3], 'relative weight survives scaling — the heavier subject stays heavier')
+const tightWeek = scaleToTarget([5, 4, 3, 2, 1], 3)
+ok(tightWeek.reduce((a, b) => a + b, 0) === 3 && tightWeek.filter(v => v > 0).length === 3,
+  'when there is not even one period each, the heaviest three are served and the rest are honestly zero')
+ok(tightWeek[0] === 1 && tightWeek[4] === 0, 'served worst-first by curriculum weight, not by list order')
+ok(scaleToTarget([], 10).length === 0 && scaleToTarget([3, 3], 0).join() === '0,0', 'degenerate inputs stay safe')
+// Largest-remainder, not naive rounding: 3 equal subjects into 10 periods.
+const remainder = scaleToTarget([4, 4, 4], 10)
+ok(remainder.reduce((a, b) => a + b, 0) === 10,
+  'ten periods across three equal subjects sums to 10 — naive rounding would have given 9 or 12')
+
+// End to end: the same subjects, two different period lengths → different slots.
+const engineInput = {
+  sections: ['I-A'],
+  subjects: [
+    { name: 'English', sections: ['I-A'] },
+    { name: 'Mathematics', sections: ['I-A'] },
+    { name: 'Science', sections: ['I-A'] },
+  ],
+  board: 'CBSE',
+  capacityFor: () => 30,
+  periodMinutes: 45,
+}
+const derived = deriveWeeklySlots(engineInput)[0]
+ok(derived.rows.length === 3 && derived.rows.every(r => r.ideal > 0),
+  'the board knowledge base supplies the ideal weekly periods — nobody typed them')
+ok(derived.totalSlots <= derived.target, 'the derivation never exceeds what the week can hold')
+
+// The Step 0 norm caps the bell: 20 h/week at 45 min = 26 periods, below the
+// bell's 30, so the norm wins.
+const capped = deriveWeeklySlots({ ...engineInput, studentHoursWeekFor: () => 20 })[0]
+ok(capped.normPeriods === 26 && capped.target === 26,
+  "the student hours/week norm is the seed input, and caps the bell's capacity when it is lower")
+ok(capped.totalSlots <= 26, 'so the allocation respects the national/custom norm, not just the grid')
+
+// An override set on Mapping survives, and is not scaled away.
+const withOverride = deriveWeeklySlots(engineInput, { 'I-A': { English: 9 } })[0]
+const eng = withOverride.rows.find(r => r.subject === 'English')!
+ok(eng.slots === 9 && eng.overridden, 'an explicit override replaces the derived figure')
+ok(withOverride.rows.filter(r => !r.overridden).every(r => r.slots >= 1),
+  'and the remaining subjects still get their share of what is left')
+
+// A lab subject renders in the grid syntax the Mapping table already speaks.
+const gridOut = toAllocationGrid(deriveWeeklySlots({
+  ...engineInput,
+  subjects: [{ name: 'Science', sections: ['I-A'], requiresLab: true }],
+}))
+ok(/\+1L$/.test(gridOut['I-A']['Science']), 'a lab subject is emitted as "n+1L" for the existing grid syntax')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

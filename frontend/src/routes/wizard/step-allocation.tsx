@@ -21,6 +21,10 @@ import {
   bellWeeklyCapacity,
 } from '@/lib/capacityEngine'
 import { parseAllocation } from '@/lib/allocationSyntax'
+import { deriveWeeklySlots, toAllocationGrid, periodsForHours } from '@/lib/periodAllocationEngine'
+import { bandForSection, BAND_LABELS, type GradeBand } from '@/lib/educationNorms'
+import { studentHoursWeekFor, teacherHoursWeekFor } from '@/lib/countryHours'
+import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 import type { Section, Subject, Staff } from '@/types'
 import {
   Grid3x3, Users, ChevronLeft, ChevronRight,
@@ -70,6 +74,14 @@ export function StepAllocation() {
   // Capacity engine
   const cap = useMemo(() => computeCapacity(workDays, periodsArr), [workDays, periodsArr])
   const periodMinutes = config?.periodMinutes ?? 40
+
+  // Step 0's workload norms — the country reference plus any custom override.
+  // Blueprint v6 requires these both to SEED the allocation engine and to be
+  // shown here for faculty and students; previously they existed only in
+  // Settings and reached nothing.
+  const studentMaxHoursWeek = useWorkloadLimits(s => s.studentMaxHoursWeek)
+  const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
+  const country = schoolCountry((config as any)?.countryCode)
 
   // Capacity resolution: user override → bell-true (real periods/day × days,
   // covers per-group early dispersal) → band heuristic fallback.
@@ -352,53 +364,38 @@ export function StepAllocation() {
     (row: any) => Object.values(row ?? {}).some((v: any) => v && String(v).trim() !== '')
   )
 
-  // ── Derive period allocations from per-class subject configs in Resources ──────
-  // Only assigns subjects that are explicitly mapped to each section, uses
-  // classConfigs[].periodsPerWeek overrides rather than the global default.
-  const derivePeriodsFromResources = useCallback((): Record<string, Record<string, string>> => {
-    const next: Record<string, Record<string, string>> = {}
-    ;(sections as Section[]).forEach((sec: Section) => {
-      const capacity = capFor(sec.name)
-      // Only subjects assigned to this section (respect classConfigs from Resources)
-      const assignedSubjects = (subjects as Subject[]).filter(s => {
-        const configs = (s as any).classConfigs as any[] | undefined
-        if (configs && configs.length > 0)
-          return configs.some((c: any) => c.sectionName === sec.name)
-        return ((s as any).sections ?? []).includes(sec.name)
-      })
-      // Per-class period count: classConfigs override → subject default
-      const ideal = assignedSubjects.map(s => {
-        const configs = (s as any).classConfigs as any[] | undefined
-        const cfg     = configs?.find((c: any) => c.sectionName === sec.name)
-        const pw      = cfg?.periodsPerWeek ?? s.periodsPerWeek ?? 0
-        const labCfg  = cfg?.requiresLab
-        const isLab   = labCfg !== undefined ? labCfg : !!(s as any).requiresLab
-        return { name: s.name, pw, isLab }
-      }).filter(s => s.pw > 0)
-      if (!ideal.length) return
-      const totalIdeal = ideal.reduce((a, s) => a + s.pw, 0)
-      const row: Record<string, string> = {}
-      if (capacity <= 0 || totalIdeal <= capacity) {
-        ideal.forEach(s => { row[s.name] = s.isLab ? `${Math.max(1, s.pw - 1)}+1L` : String(s.pw) })
-      } else {
-        // Scale down proportionally — never exceed capacity
-        const scale = capacity / totalIdeal
-        let allocated = 0
-        ideal.forEach((s, i) => {
-          const isLast = i === ideal.length - 1
-          const raw = isLast ? Math.max(0, capacity - allocated) : Math.max(1, Math.floor(s.pw * scale))
-          if (raw > 0) row[s.name] = String(raw)
-          allocated += raw
-        })
-      }
-      if (Object.keys(row).length) next[sec.name] = row
-    })
-    return next
-  }, [sections, subjects, capFor])
+  // ── THE PERIOD ALLOCATION ENGINE (master doc "STEP 6") ────────────────────────
+  // Weekly periods are DERIVED here, from the board's curriculum norms, the
+  // working days, the period duration and the Step 0 student hours/week — not
+  // read back from numbers typed on the Resources page. That inversion is why
+  // changing the bell or the working week used to leave the allocation stale.
+  //
+  // Resources still owns WHICH subjects a section takes; this owns HOW MANY
+  // periods each one gets.
+  const derivedAllocation = useMemo(() => deriveWeeklySlots({
+    sections: (sections as Section[]).map(s => s.name),
+    subjects: (subjects as Subject[]).map(s => ({
+      name: s.name,
+      periodsPerWeek: s.periodsPerWeek,
+      requiresLab: !!(s as any).requiresLab,
+      sections: (s as any).sections,
+      classConfigs: (s as any).classConfigs,
+    })),
+    board: (config as any)?.boardType ?? (config as any)?.board,
+    capacityFor: capFor,
+    // Step 0's figure, per v6: "becomes the seed input to the allocation engine".
+    studentHoursWeekFor: (section: string) => {
+      const band = bandForSection(section)
+      const custom = studentMaxHoursWeek?.[band]
+      if (custom && custom > 0) return custom
+      return studentHoursWeekFor(country, band)?.hours
+    },
+    periodMinutes,
+  }), [sections, subjects, config, capFor, studentMaxHoursWeek, country, periodMinutes])
 
   const handleAIPeriodSuggest = useCallback(() => {
-    store.setSubjectAllocations?.(derivePeriodsFromResources())
-  }, [derivePeriodsFromResources, store])
+    store.setSubjectAllocations?.(toAllocationGrid(derivedAllocation))
+  }, [derivedAllocation, store])
 
   // ── Derive teacher allocations ─────────────────────────────────────────────────
   // Pass 1a: explicit subjectMappings, strictly capped at teacher's weekly max.
@@ -581,7 +578,7 @@ export function StepAllocation() {
     setSyncDone(false)
     // Yield to paint thread so the spinner renders before heavy computation
     await new Promise<void>(r => setTimeout(r, 60))
-    const nextPeriods = derivePeriodsFromResources()
+    const nextPeriods = toAllocationGrid(derivedAllocation)
     if (Object.keys(nextPeriods).length > 0) {
       store.setSubjectAllocations?.(nextPeriods)
       handleAITeacherAllocate(nextPeriods)   // passes fresh periods — avoids stale-state race
@@ -594,7 +591,7 @@ export function StepAllocation() {
     setSyncing(false)
     setSyncDone(true)
     setTimeout(() => setSyncDone(false), 2500)
-  }, [derivePeriodsFromResources, handleAITeacherAllocate, store, syncing])
+  }, [derivedAllocation, handleAITeacherAllocate, store, syncing])
 
   // ── Hard guarantee: AI never leaves an over-capacity section ──────────────────
   // Whatever produced the allocations (resource sync, stale data, raw subject
@@ -968,6 +965,13 @@ export function StepAllocation() {
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
           {sub === 'periods' && (
             <>
+              <WorkloadNormPanel
+                country={country}
+                periodMinutes={periodMinutes}
+                studentCustom={studentMaxHoursWeek}
+                teacherCustom={teacherMaxHoursWeek}
+                sections={sections as Section[]}
+              />
               <PeriodSyntaxGuide periodMinutes={periodMinutes} />
               <CapacityEnginePanel bandStats={bandStats} sections={sections as Section[]} />
               <AINotesPanel sections={sections as Section[]} sectionTotals={sectionTotals} capFor={capFor} />
@@ -1104,6 +1108,90 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
         1 period = {periodMinutes} min
       </div>
     </SideCard>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Sidebar: Workload norms — Blueprint v6, Step 5
+//
+// "The globally-set workload/hours-per-week (from Step 0 — either the
+//  country-wise auto-populated default, or the admin's custom override) is shown
+//  for both faculty and students."
+//
+// It is also the SEED for the allocation above, so showing it here is not
+// decoration: it explains where the derived period counts came from.
+// ─────────────────────────────────────────────────────────────────
+
+function WorkloadNormPanel({
+  country, periodMinutes, studentCustom, teacherCustom, sections,
+}: {
+  country: string
+  periodMinutes: number
+  studentCustom: Partial<Record<string, number>>
+  teacherCustom?: number
+  sections: Section[]
+}) {
+  // Only the bands this school actually has — a primary school shouldn't be
+  // shown senior-secondary norms it will never use.
+  const bands = useMemo(() => {
+    const seen = new Set<string>()
+    for (const s of sections) seen.add(bandForSection(s.name))
+    return [...seen]
+  }, [sections])
+  if (bands.length === 0) return null
+
+  const teacher = teacherHoursWeekFor(country, 'lowerPrimary' as any)
+  const label = teacher?.country?.name ?? country
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #E8E4FF', borderRadius: 12, padding: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+        <ShieldCheck size={14} color="#7C6FE0" />
+        <span style={{ fontSize: 12.5, fontWeight: 800, color: '#13111E' }}>Workload norm</span>
+      </div>
+      <div style={{ fontSize: 10.5, color: '#9896B5', marginBottom: 9 }}>
+        {label} · seeds the period counts on the left
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {bands.map(band => {
+          const custom = studentCustom?.[band]
+          const norm = studentHoursWeekFor(country, band as any)
+          const hours = custom && custom > 0 ? custom : norm?.hours
+          if (hours == null) return null
+          const periods = periodsForHours(hours, periodMinutes)
+          return (
+            <div key={band} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11.5 }}>
+              <span style={{ flex: 1, color: '#4B5275' }}>{BAND_LABELS[band as GradeBand] ?? band}</span>
+              <strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>{hours} h</strong>
+              <span style={{ color: '#9896B5' }}>≈ {periods}p</span>
+              {custom && custom > 0 && (
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: '#4B41C4', background: '#EFEBFF', borderRadius: 4, padding: '1px 5px' }}>custom</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ marginTop: 9, paddingTop: 9, borderTop: '1px solid #F1EFFA', fontSize: 11.5, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span style={{ flex: 1, color: '#4B5275' }}>Faculty</span>
+        {teacherCustom && teacherCustom > 0 ? (
+          <>
+            <strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>{teacherCustom} h</strong>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#4B41C4', background: '#EFEBFF', borderRadius: 4, padding: '1px 5px' }}>custom</span>
+          </>
+        ) : teacher?.usable ? (
+          <strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>{teacher.hours} h</strong>
+        ) : (
+          <span style={{ fontSize: 10.5, color: '#B45309' }}>
+            {teacher ? 'includes prep — set a custom cap' : 'not in the reference set'}
+          </span>
+        )}
+      </div>
+      <a href="/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', textDecoration: 'none' }}>
+        Change in Settings →
+      </a>
+    </div>
   )
 }
 
