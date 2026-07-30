@@ -22,7 +22,7 @@ import {
 } from '@/lib/capacityEngine'
 import { parseAllocation } from '@/lib/allocationSyntax'
 import { deriveWeeklySlots, toAllocationGrid, periodsForHours } from '@/lib/periodAllocationEngine'
-import { bandForSection, BAND_LABELS, type GradeBand } from '@/lib/educationNorms'
+import { bandForSection, BAND_LABELS, effectiveTeacherMaxPeriods, type GradeBand } from '@/lib/educationNorms'
 import { studentHoursWeekFor, teacherHoursWeekFor } from '@/lib/countryHours'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 import type { Section, Subject, Staff } from '@/types'
@@ -82,6 +82,10 @@ export function StepAllocation() {
   const studentMaxHoursWeek = useWorkloadLimits(s => s.studentMaxHoursWeek)
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const country = schoolCountry((config as any)?.countryCode)
+  // The default teacher cap, from the norms database. Every allocation pass must
+  // use this rather than a literal: a hardcoded 32 is only right for a country
+  // whose safe teaching load happens to be 32.
+  const normTeacherMax = effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek)
 
   // Capacity resolution: user override → bell-true (real periods/day × days,
   // covers per-group early dispersal) → band heuristic fallback.
@@ -452,7 +456,9 @@ export function StepAllocation() {
 
     // PASS 1a — explicit subjectMappings, capped at maxPeriodsPerWeek
     ;(staff as Staff[]).forEach((t: Staff) => {
-      const maxPeriods = (t as any).maxPeriodsPerWeek ?? 32
+      // Fall back to the WORKLOAD NORM, not a literal — a hardcoded 32 silently
+      // overloaded every country whose safe teaching load is lower (GB 22, AU 20).
+      const maxPeriods = (t as any).maxPeriodsPerWeek ?? normTeacherMax
       const maps: Array<{ subject: string; classes: string[] }> = ((t as any).subjectMappings ?? [])
         .filter((m: any) => (m.classes ?? []).length > 0)
       if (!maps.length) return
@@ -484,7 +490,7 @@ export function StepAllocation() {
     // Returns false only when truly no teacher has any remaining capacity.
     const assignToAvailable = (cls: string, subject: string, target: number): boolean => {
       if (covered.has(`${cls}::${subject}`)) return true
-      const maxFn = (t: Staff) => (t as any).maxPeriodsPerWeek ?? 32
+      const maxFn = (t: Staff) => (t as any).maxPeriodsPerWeek ?? normTeacherMax
       const hasRoom  = (t: Staff) => (load[t.name] ?? 0) + target <= maxFn(t)
       const knowsSub = (t: Staff) => (t.subjects ?? []).some((x: string) => x === subject)
       const inBand   = (t: Staff) => teacherAllowedForSection(t as any, cls)

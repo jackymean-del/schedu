@@ -31,6 +31,9 @@ import type { ChipOption } from './shared'
 import { calcTeacherSlots, slotLoadLevel, seedStandardStaff } from './aiEngine'
 import { normalizeBoardType, type CurriculumBoard } from './curriculum'
 import { useDirectoryStore, linkOrRegisterStaff } from '@/store/directoryStore'
+import { useTimetableStore } from '@/store/timetableStore'
+import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
+import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SubjectMapping { subject: string; classes: string[] }
@@ -466,12 +469,14 @@ function RoleHeaderRow({ role, count, collapsed, onToggle }: {
 }
 
 // ─── Teacher row ──────────────────────────────────────────────────────────────
-function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, onUpdate, onDelete, onScopeClick }: {
+function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, normCap, onUpdate, onDelete, onScopeClick }: {
   t: StaffExt
   subjects: Subject[]
   classOpts: ChipOption[]
   classTeacherOpts: ChipOption[]
   coClassTeacherOpts: ChipOption[]
+  /** Fallback cap from the workload norm when this teacher has no override. */
+  normCap: number
   onUpdate: (p: Partial<StaffExt>) => void
   onDelete: () => void
   onScopeClick?: (t: StaffExt, rect: DOMRect) => void
@@ -489,6 +494,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
 
   const isClassTeacherOf = t.isClassTeacher || ''
   const slots = calcTeacherSlots(t as any, subjects)
+  const cap = (t.maxPeriodsPerWeek && t.maxPeriodsPerWeek > 0) ? t.maxPeriodsPerWeek : normCap
   const level = slotLoadLevel(slots)
   const { bg: loadBg, fg: loadFg, border: loadBorder } = LOAD_STYLE[level]
 
@@ -520,24 +526,26 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
           <SubjectAssignmentCell teacher={t} subjects={subjects} classOpts={classOpts} onUpdateMappings={updateMappings} />
         </td>
 
-        {/* Slots / Week — single editable input, load-level colored */}
+        {/* Slots / Week — READ-ONLY here. Blueprint v6 puts workload editing on
+            Step 5 (Mapping): "User can override/change the load per teacher."
+            Resources owns WHO exists and WHAT they teach; how many periods they
+            may carry is a workload decision, and having it editable in two
+            places let the two drift apart. */}
         <td style={{ ...TD, padding: '7px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          <input
-            type="number" min={1} max={60}
-            value={t.maxPeriodsPerWeek ?? 30}
-            onChange={e => onUpdate({ maxPeriodsPerWeek: +e.target.value } as any)}
-            className="rp-inp rp-num"
-            title="Max periods per week"
+          <div
+            title={`${cap} periods/week — the workload norm, or a per-teacher override set on the Mapping step.`}
             style={{
-              width: 72, padding: '4px 8px',
-              border: `1.5px solid ${loadBorder}`,
+              width: 72, margin: '0 auto', padding: '4px 8px',
+              border: `1.5px dashed ${loadBorder}`,
               borderRadius: 5,
               fontSize: 13, fontWeight: 700, color: loadFg,
-              textAlign: 'center', outline: 'none',
+              textAlign: 'center',
               background: loadBg, fontFamily: 'inherit',
-              boxSizing: 'border-box' as const,
+              boxSizing: 'border-box' as const, cursor: 'default',
             }}
-          />
+          >
+            {cap}
+          </div>
           <div style={{ fontSize: 9, color: '#9896B5', marginTop: 2, fontWeight: 600 }}>
             {slots} assigned{level !== 'none' ? ` · ${level}` : ''}
           </div>
@@ -627,6 +635,14 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   aiApplied?: boolean
   hasGaps?: boolean
 }) {
+  // The workload norm a teacher falls back to when no per-person override has
+  // been set on Mapping. Read-only here — see the Slots/Wk cell.
+  const config = useTimetableStore(s => (s as any).config)
+  const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
+  const normCap = effectiveTeacherMaxPeriods(
+    schoolCountry(config?.countryCode), config?.periodMinutes ?? 40, teacherMaxHoursWeek,
+  )
+
   const [search, setSearch]         = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -654,7 +670,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
       .map(cells => ({
         id: makeId(), name: cells[0]?.trim() || '',
         role: cells[1]?.trim() || 'Teacher',
-        subjects: [], classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30,
+        subjects: [], classes: [], isClassTeacher: '', maxPeriodsPerWeek: normCap,
       } as unknown as Staff))
       .filter(t => (t as any).name)
     if (newStaff.length) setStaff([...staff, ...linkOrRegisterStaff(newStaff)])
@@ -893,7 +909,12 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
               <tr>
                 <th style={TH}>Educator</th>
                 <th style={TH}>Subject Assignments</th>
-                <th style={{ ...TH, textAlign: 'center' }}>Slots/Wk</th>
+                <th style={{ ...TH, textAlign: 'center' }}>
+                  Slots/Wk
+                  <div style={{ fontSize: 8.5, fontWeight: 600, color: '#B3AECF', textTransform: 'none', letterSpacing: 0, marginTop: 1 }}>
+                    norm {normCap}p · edit on Mapping
+                  </div>
+                </th>
                 <th style={TH}>Class Teacher Of</th>
                 <th style={TH}>Co-Class Teacher Of</th>
                 <th style={{ ...TH, whiteSpace: 'nowrap' }}>Actions</th>
@@ -911,6 +932,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
                       classOpts={classOpts}
                       classTeacherOpts={classTeacherOpts}
                       coClassTeacherOpts={classTeacherOpts}
+                      normCap={normCap}
                       onUpdate={p => update(t.id, p)}
                       onDelete={() => remove(t.id)}
                       onScopeClick={onScopeClick

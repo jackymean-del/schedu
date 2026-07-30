@@ -883,6 +883,32 @@ const gridOut = toAllocationGrid(deriveWeeklySlots({
 }))
 ok(/\+1L$/.test(gridOut['I-A']['Science']), 'a lab subject is emitted as "n+1L" for the existing grid syntax')
 
+// ── IS THE DEFAULT WORKLOAD ACTUALLY THE NORM? ──
+// The teacher cap defaults were hardcoded literals (30 in Resources, 32 in the
+// allocation passes, 40 in most consumers, 36 in orgData's own country table).
+// India's safe load happens to be 30, which is why the figure looked right —
+// but every other system was being overloaded by 20–100%.
+import { teacherNorms, effectiveTeacherMaxPeriods as effMax } from './src/lib/educationNorms'
+import { getCountry } from './src/lib/orgData'
+
+for (const [code, safe] of [['IN', 30], ['US', 25], ['GB', 22], ['AU', 20]] as Array<[string, number]>) {
+  ok(teacherNorms(code).safeMaxPeriodsWeek === safe,
+    `${code}: the norms database says ${safe} teaching periods/week is the safe load`)
+  ok(effMax(code, 40, undefined) === safe,
+    `${code}: with no custom override the default cap IS that norm — not a literal`)
+}
+// The literals that were in the code, measured against the norm they replaced.
+ok(effMax('GB', 40, undefined) === 22 && 32 - 22 === 10,
+  'the old hardcoded 32 would have given a UK teacher 10 periods/week over the norm')
+ok(effMax('AU', 40, undefined) === 20 && 40 / 20 === 2,
+  'and the old ?? 40 fallback was double the Australian norm')
+// A custom override still wins — that is the point of an override.
+ok(effMax('GB', 40, 20) === 30, 'a custom 20 h/week at 40-min periods overrides the norm with 30p')
+// orgData keeps its OWN country table, which disagrees. Pin the discrepancy so
+// nobody "fixes" one table and leaves the other silently contradicting it.
+ok(getCountry('IN').maxPeriodsWeek === 36 && teacherNorms('IN').safeMaxPeriodsWeek === 30,
+  'KNOWN: orgData.COUNTRIES still says 36 for India while the norms database says 30 — two sources of truth')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
