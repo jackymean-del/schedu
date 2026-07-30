@@ -47,6 +47,29 @@ export function termOf(b: ScheduleBundle): { start: string; end: string } | null
 }
 
 /**
+ * The class-sections a schedule ACTUALLY has right now: present in its roster
+ * AND present in its generated timetable.
+ *
+ * Both halves matter. classTT alone is not enough — a generated timetable keeps
+ * whatever sections existed when it was generated, so a school that has since
+ * dropped its Nursery classes still had "Nursery-A…D" appearing in every picker,
+ * labelled with the schedule they were removed from. The roster alone is not
+ * enough either — a section nobody scheduled has no hours and would only add an
+ * empty row. The intersection is the honest answer to "what does this schedule
+ * cover?", and it self-heals: regenerate, and stale keys drop out.
+ *
+ * A bundle with no roster at all (older snapshots didn't always store one) falls
+ * back to the timetable's keys rather than showing nothing.
+ */
+export function liveSections(b: ScheduleBundle): string[] {
+  const scheduled = Object.keys(b.classTT ?? {})
+  const roster = (b.sections ?? []).map((s: any) => s?.name).filter(Boolean) as string[]
+  if (roster.length === 0) return scheduled
+  const inRoster = new Set(roster)
+  return scheduled.filter(s => inRoster.has(s))
+}
+
+/**
  * planKey → hours the timetable allocates to that subject over the whole term.
  *
  * Deliberately NOT holiday-adjusted: this is what the school set aside, and
@@ -60,7 +83,7 @@ export function allocatedHoursByPlan(bundles: ScheduleBundle[]): Record<string, 
     const term = termOf(b)
     if (!term) continue
     const periodMinutes = b.config?.periodMinutes ?? 40
-    for (const section of Object.keys(b.classTT ?? {})) {
+    for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
         const h = scheduledHoursBetween(b.classTT, subject, section, term.start, term.end, periodMinutes, [])
         if (h > 0) out[planKey(subject, section)] = Math.round(((out[planKey(subject, section)] ?? 0) + h) * 10) / 10
@@ -83,7 +106,7 @@ export interface ScheduleContext {
  * computed against ITS bell and ITS term, not a merged approximation.
  */
 export function contextForSection(bundles: ScheduleBundle[], section: string): ScheduleContext | null {
-  const b = bundles.find(x => Object.keys(x.classTT ?? {}).includes(section))
+  const b = bundles.find(x => liveSections(x).includes(section))
   if (!b) return null
   const term = termOf(b)
   return {
@@ -114,9 +137,9 @@ export function unionEntities(bundles: ScheduleBundle[]): UnionEntities {
   const scheduleOf: Record<string, string> = {}
   const subjectsBySection: Record<string, string[]> = {}
   for (const b of bundles) {
-    // Sections come from the timetable itself, so a section that exists in the
-    // master list but was never scheduled doesn't create an empty row.
-    for (const s of Object.keys(b.classTT ?? {})) {
+    // Only sections the schedule currently has — see liveSections for why the
+    // timetable's keys alone were showing classes the school had dropped.
+    for (const s of liveSections(b)) {
       if (!sections.includes(s)) { sections.push(s); scheduleOf[s] = b.name }
       const mine = subjectsBySection[s] ?? (subjectsBySection[s] = [])
       for (const subj of subjectsIn(b.classTT, s)) {

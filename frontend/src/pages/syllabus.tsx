@@ -85,7 +85,15 @@ export function SyllabusPage() {
   const periodMinutes = ctx?.periodMinutes ?? 40
 
   const bonus = useMemo(() => bonusSessions(subRecords), [subRecords])
-  const rows = useMemo(() => coverageRows(effectivePlans), [effectivePlans])
+  // Syllabus data is global and outlives any one schedule, so plans recorded for
+  // a class-section the school has since dropped are still stored. Reporting
+  // them would put classes in the filters that no longer exist anywhere — so
+  // they're set aside rather than listed, and counted so nothing vanishes
+  // silently.
+  const allRows = useMemo(() => coverageRows(effectivePlans), [effectivePlans])
+  const known = useMemo(() => new Set(sectionNames), [sectionNames])
+  const rows = useMemo(() => allRows.filter(r => known.has(r.section)), [allRows, known])
+  const staleRows = allRows.length - rows.length
 
   const canPick = sectionNames.length > 0 && subjectNames.length > 0
 
@@ -125,7 +133,21 @@ export function SyllabusPage() {
         )}
 
         {tab === 'coverage' && (
-          <CoverageDashboard rows={rows} dim={dim} setDim={setDim} onPick={(sub, sec) => { setSubject(sub); setSection(sec); setTab('capture') }} />
+          <>
+            <CoverageDashboard rows={rows} dim={dim} setDim={setDim} onPick={(sub, sec) => { setSubject(sub); setSection(sec); setTab('capture') }} />
+            {staleRows > 0 && (
+              <div style={{
+                fontSize: 11.5, color: '#8B87AD', padding: '9px 12px', borderRadius: 10,
+                background: '#FBFAFF', border: '1px solid #ECE9FB',
+              }}>
+                {staleRows === 1
+                  ? '1 recorded subject belongs to a class-section that is'
+                  : `${staleRows} recorded subjects belong to class-sections that are`} no longer in any
+                active schedule. The data is kept, but left out of the figures above so they describe the
+                school as it is now.
+              </div>
+            )}
+          </>
         )}
 
         {canPick && tab === 'capture' && (

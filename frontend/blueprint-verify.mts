@@ -640,7 +640,7 @@ ok(slotKey(sub({})) === slotKey(sub({ substitute: 'C' })), 'the slot key ignores
 ok(slotKey(sub({})) !== slotKey(sub({ date: '2026-01-19' })), 'but the same weekly slot on another date is its own record')
 
 // ── ALLOCATION: the timetable already knows the hours, so nobody types them ──
-import { allocatedHoursByPlan, unionEntities, compareSection, classRank } from './src/lib/scheduleAllocation'
+import { allocatedHoursByPlan, unionEntities, compareSection, classRank, liveSections } from './src/lib/scheduleAllocation'
 import { withAllocatedHours } from './src/lib/syllabusTracking'
 
 // Two schedules running side by side, each with its OWN bell and term.
@@ -675,6 +675,40 @@ ok(union.scheduleOf['X-A'] === 'VI–X TT', 'each section remembers which schedu
 ok(compareSection('Nursery-A', 'I-A') < 0, 'Nursery sorts before Class I')
 ok(compareSection('II-A', 'X-A') < 0, 'II sorts before X — alphabetically it would not')
 ok(classRank('Nursery') < classRank('I') && classRank('I') < classRank('II'), 'ranks ascend as a school lists them')
+
+// A DROPPED class must not haunt the pickers. A generated timetable keeps
+// whatever sections existed when it ran, so a school that has since removed its
+// Nursery classes had them appearing in every dropdown — labelled with the
+// schedule they were removed from. The roster is the authority on what exists.
+const staleTT: any = {
+  id: 'c', name: 'I–V TT', staff: [], rooms: [], subjects: [], periods: [],
+  // Roster says I-A only. The generated timetable still carries Nursery-A.
+  sections: [{ name: 'I-A' }],
+  config: { periodMinutes: 60, timetableStartDate: '2026-01-05', timetableEndDate: '2026-03-30' },
+  classTT: {
+    'I-A':       { MONDAY: { p1: { subject: 'English', teacher: 'Anita' } } },
+    'Nursery-A': { MONDAY: { p1: { subject: 'English', teacher: 'Anita' } } },
+  },
+  substitutions: {},
+}
+ok(liveSections(staleTT).join() === 'I-A',
+  'a section left behind in a stale generated timetable is not a section the school has')
+ok(unionEntities([staleTT]).sections.join() === 'I-A',
+  'so it never reaches the class-section picker')
+ok(allocatedHoursByPlan([staleTT])[planKey('English', 'Nursery-A')] === undefined,
+  'and it gets no allocation, so no phantom plan is seeded for it')
+ok(allocatedHoursByPlan([staleTT])[planKey('English', 'I-A')] === 13,
+  'while the section that IS in the roster is allocated normally')
+
+// The other half: a section in the roster that nobody scheduled adds no row.
+const unscheduled: any = { ...staleTT, sections: [{ name: 'I-A' }, { name: 'V-C' }] }
+ok(!unionEntities([unscheduled]).sections.includes('V-C'),
+  'a rostered section with no periods stays out — there is nothing to report on it')
+
+// Older snapshots that never stored a roster must still work.
+const noRoster: any = { ...staleTT, sections: [] }
+ok(liveSections(noRoster).length === 2,
+  'a bundle with no roster falls back to its timetable rather than showing nothing')
 
 // Folding allocation into the plans: seeds what has none, respects an override.
 const seeded = withAllocatedHours({}, alloc)
