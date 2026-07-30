@@ -20,7 +20,10 @@ import { useHolidays, holidayImpact, type Holiday } from './holidays'
 import { useSubCoverage, coverageLoss, hoursNotSpent, uncoveredAbsenceLoss } from './substitutionCoverage'
 import { loadLeaves, type CalLeave } from './leaveUtils'
 import { loadActiveBundles, type ScheduleBundle } from './activeSchedules'
-import { allocatedHoursByPlan, unionEntities, contextForSection, type UnionEntities } from './scheduleAllocation'
+import {
+  allocatedHoursByPlan, elapsedHoursByPlan, unionEntities, contextForSection, teachingMap, teacherFor,
+  type UnionEntities, type Assignment,
+} from './scheduleAllocation'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 
@@ -57,6 +60,16 @@ export function composeEffectivePlans(input: {
   // Requirement first: everything below is expressed against it.
   let out = withAllocatedHours(plans, allocatedHoursByPlan(bundles))
 
+  // The timetable also says who teaches each subject, so faculty-wise reports
+  // need nobody to fill that in. An explicitly-set teacher still wins.
+  const map = teachingMap(bundles)
+  for (const key in out) {
+    const p = out[key]
+    if (p.teacher) continue
+    const t = teacherFor(map, p.subject, p.section)
+    if (t) out[key] = { ...p, teacher: t }
+  }
+
   // Holidays and uncovered absences are counted PER SCHEDULE, because each one
   // has its own period length — merging the timetables and applying a single
   // figure would mis-price every schedule but one.
@@ -86,6 +99,13 @@ export interface EffectiveCoverage {
   contextFor: (section: string) => ReturnType<typeof contextForSection>
   /** planKey → hours that ran but went to another subject (pace correction). */
   notSpent: Record<string, number>
+  /**
+   * planKey → hours of this subject that have already run, holidays removed.
+   * Derived from the published schedule; NEVER a measure of coverage.
+   */
+  elapsed: Record<string, number>
+  /** Who teaches what, for cascading pickers and faculty-scoped views. */
+  teaching: Assignment[]
   /** How many schedules are currently active. */
   activeCount: number
 }
@@ -127,9 +147,17 @@ export function useEffectiveCoverage(): EffectiveCoverage {
   )
   const entities = useMemo(() => unionEntities(bundles), [bundles])
   const notSpent = useMemo(() => hoursNotSpent(subRecords), [subRecords])
+  const teaching = useMemo(() => teachingMap(bundles), [bundles])
+  const elapsed = useMemo(() => {
+    const today = new Date()
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    // A holiday means the period didn't run, so it isn't time spent either.
+    return elapsedHoursByPlan(bundles, iso, section =>
+      holidays.filter(h => !h.sections?.length || h.sections.includes(section)))
+  }, [bundles, holidays])
 
   return {
-    plans: effective, holidays, leaves, entities, notSpent,
+    plans: effective, holidays, leaves, entities, notSpent, elapsed, teaching,
     activeCount: bundles.length,
     contextFor: (section: string) => contextForSection(bundles, section),
   }

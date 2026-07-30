@@ -20,7 +20,8 @@ import {
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
-import { compareSection } from '@/lib/scheduleAllocation'
+import { compareSection, cascadeOptions, matchStaffName, teacherFor } from '@/lib/scheduleAllocation'
+import { useAuthStore } from '@/store/authStore'
 import { paceFor } from '@/lib/syllabusPace'
 import {
   useSubCoverage, bonusSessions, recordsFor,
@@ -40,7 +41,7 @@ const ACCENT = '#7C6FE0'
 
 export function SyllabusPage() {
   const {
-    plans, setRequiredHours, setTeacher, addChapter, updateChapter,
+    plans, setRequiredHours, addChapter, updateChapter,
     removeChapter, markChapterCovered, logHours, logLostSession, removeLostSession,
     setMethod, setChapterCounts, setOverallPercent,
   } = useSyllabus()
@@ -50,28 +51,51 @@ export function SyllabusPage() {
   // shared place so this page and the dashboard alert can never disagree — and
   // it spans every ACTIVE schedule, not just whichever one is open.
   const {
-    plans: effectivePlans, holidays, notSpent, entities, contextFor, activeCount,
+    plans: effectivePlans, holidays, notSpent, elapsed, teaching, entities, contextFor, activeCount,
   } = useEffectiveCoverage()
   const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
 
   const sectionNames = entities.sections
   const subjectNames = entities.subjects
-  const staffNames = entities.staff
 
   const [tab, setTab] = useState<'capture' | 'coverage'>('capture')
   const [dim, setDim] = useState<Dim>('subject')
   const [pickedSection, setSection] = useState<string>('')
   const [pickedSubject, setSubject] = useState<string>('')
+  const [pickedTeacher, setTeacherFilter] = useState<string>('')
   const [chName, setChName] = useState('')
 
-  // The pickers default to the first real option and self-heal if the active
-  // schedules change underneath them (publishing one, switching another off).
-  const section = sectionNames.includes(pickedSection) ? pickedSection : (sectionNames[0] ?? '')
-  // Only the subjects this section is actually taught — otherwise you can pick
-  // "English in X-A", a combination the timetable has never heard of, and read
-  // a meaningless zero.
-  const sectionSubjects = entities.subjectsBySection[section] ?? subjectNames
-  const subject = sectionSubjects.includes(pickedSubject) ? pickedSubject : (sectionSubjects[0] ?? '')
+  // A signed-in faculty member sees only their own teaching. Matched by name
+  // against the timetable (see matchStaffName) — the only link that exists
+  // between an account and a slot today.
+  const user = useAuthStore(s => s.user)
+  const isFaculty = (user?.role ?? 'admin') === 'teacher'
+  const ownName = useMemo(() => matchStaffName(teaching, user ?? undefined), [teaching, user])
+  const scopedTeaching = useMemo(
+    () => (isFaculty && ownName) ? teaching.filter(a => a.teacher === ownName) : teaching,
+    [isFaculty, ownName, teaching],
+  )
+  // Faculty are locked to themselves; admins may filter to one, or see everyone.
+  const teacherFilter = isFaculty ? (ownName ?? '') : pickedTeacher
+
+  // Every picker's options come from the OTHER two selections, so any of the
+  // three can be the entry point and no dead combination is ever offered.
+  const opts = useMemo(
+    () => cascadeOptions(scopedTeaching, { teacher: teacherFilter || undefined, section: pickedSection || undefined, subject: pickedSubject || undefined }),
+    [scopedTeaching, teacherFilter, pickedSection, pickedSubject],
+  )
+  // Selections self-heal: narrowing one picker can invalidate another, and the
+  // active schedules can change underneath all three.
+  const section = opts.sections.includes(pickedSection) ? pickedSection : (opts.sections[0] ?? '')
+  const subjectsHere = useMemo(
+    () => cascadeOptions(scopedTeaching, { teacher: teacherFilter || undefined, section: section || undefined }).subjects,
+    [scopedTeaching, teacherFilter, section],
+  )
+  const subject = subjectsHere.includes(pickedSubject) ? pickedSubject : (subjectsHere[0] ?? '')
+  const teachersHere = useMemo(
+    () => cascadeOptions(scopedTeaching, { section: section || undefined, subject: subject || undefined }).teachers,
+    [scopedTeaching, section, subject],
+  )
 
   const key = planKey(subject, section)
   // Read the EFFECTIVE plan: it carries the timetable's own allocation, so the
@@ -80,6 +104,9 @@ export function SyllabusPage() {
   const rawPlan: SyllabusPlan | undefined = plans[key]
   const req = requiredHours(plan), cov = coveredHours(plan)
   const rem = remainingHours(plan), pct = coveragePct(plan)
+  // Hours already run, straight from the published schedule — never typed, and
+  // deliberately not the same thing as coverage.
+  const spent = elapsed[key] ?? 0
   const method = effectiveMethod(plan)
   const ctx = contextFor(section)
   const periodMinutes = ctx?.periodMinutes ?? 40
@@ -152,17 +179,33 @@ export function SyllabusPage() {
 
         {canPick && tab === 'capture' && (
           <>
-            {/* Picker */}
+            {/* Picker — three cascading dropdowns. Start from whichever you
+                know: a faculty member, a class, or a subject. Each one narrows
+                the other two to combinations the timetable actually has. */}
             <Card
-              title="Choose a subject"
-              subtitle={activeCount > 1
-                ? `Every class-section across your ${activeCount} active schedules. Syllabus is tracked per subject, per class-section.`
-                : 'Syllabus is tracked per subject, per class-section — the same subject can need different hours in different sections.'}
+              title={isFaculty ? 'Your classes' : 'Choose a subject'}
+              subtitle={isFaculty
+                ? 'Only the classes and subjects you teach. Pick one and record how much of its syllabus is covered.'
+                : activeCount > 1
+                  ? `Everything across your ${activeCount} active schedules. Narrow by faculty, class-section or subject — each choice filters the others.`
+                  : 'Narrow by faculty, class-section or subject — each choice filters the others to what the timetable actually assigns.'}
             >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <Field label="Faculty">
+                  {isFaculty ? (
+                    <div style={{ ...inputStyle, background: '#F8F7FF', color: '#4B41C4', fontWeight: 700 }}>
+                      {ownName ?? user?.name ?? 'You'}
+                    </div>
+                  ) : (
+                    <select value={pickedTeacher} onChange={e => setTeacherFilter(e.target.value)} style={inputStyle}>
+                      <option value="">All faculty</option>
+                      {opts.teachers.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  )}
+                </Field>
                 <Field label="Class-section">
                   <select value={section} onChange={e => setSection(e.target.value)} style={inputStyle}>
-                    {sectionNames.map(s => (
+                    {opts.sections.map(s => (
                       <option key={s} value={s}>
                         {s}{activeCount > 1 && entities.scheduleOf[s] ? ` — ${entities.scheduleOf[s]}` : ''}
                       </option>
@@ -171,31 +214,48 @@ export function SyllabusPage() {
                 </Field>
                 <Field label="Subject">
                   <select value={subject} onChange={e => setSubject(e.target.value)} style={inputStyle}>
-                    {sectionSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </Field>
-                <Field label="Faculty (for teacher-wise reports)">
-                  <select value={plan?.teacher ?? ''} onChange={e => setTeacher(subject, section, e.target.value)} style={inputStyle}>
-                    <option value="">— unassigned —</option>
-                    {staffNames.map(t => <option key={t} value={t}>{t}</option>)}
+                    {subjectsHere.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </Field>
               </div>
+
+              {/* Who teaches it is read off the timetable, not asked for. */}
+              <div style={{ fontSize: 11.5, color: '#8B87AD', marginTop: 2 }}>
+                {teachersHere.length > 0
+                  ? <>Taught by <strong style={{ color: '#4B5275' }}>{teachersHere.join(', ')}</strong> — from the schedule, so faculty-wise reports need no extra input.</>
+                  : 'No faculty is assigned to this slot in the timetable.'}
+              </div>
+
+              {isFaculty && !ownName && (
+                <div style={{
+                  fontSize: 12, color: '#92400E', background: '#FFFBEB',
+                  border: '1px solid #FDE68A', borderRadius: 9, padding: '9px 11px',
+                }}>
+                  We couldn't match your account to a name in the timetable, so everything is shown.
+                  Ask an admin to check that your staff record uses the same name as your login.
+                </div>
+              )}
             </Card>
 
             {/* Coverage */}
             <Card title={`${subject} · ${section}`} subtitle="Live coverage — updates the moment a chapter is ticked.">
               <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Stat label="Required" value={`${req} h`} color="#4B41C4" />
-                {/* These hours are time TAUGHT, not syllabus covered — the two
-                    are different, and only the Pace card can tell them apart. */}
-                <Stat label="Spent" value={`${cov} h`} color="#067647" />
+                {/* Two DERIVED figures and two RECORDED ones, kept apart on
+                    purpose. Allocated and Spent come from the published
+                    schedule and need no input at all; Covered and Remaining
+                    move only when faculty record content. A subject can be 20 h
+                    spent and 5 h covered — that gap is the whole point. */}
+                <Stat label="Allocated" value={`${req} h`} color="#4B41C4" />
+                <Stat label="Spent" value={`${spent} h`} color="#4B5275" />
+                <Stat label="Covered" value={`${cov} h`} color="#067647" />
                 <Stat label="Remaining" value={`${rem} h`} color={rem > 0 ? '#B45309' : '#067647'} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ height: 12, background: '#EDE9FF', borderRadius: 6, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#16A34A' : ACCENT, transition: 'width .25s' }} />
                   </div>
-                  <div style={{ fontSize: 11, color: '#8B87AD', marginTop: 3 }}>{pct}% covered</div>
+                  <div style={{ fontSize: 11, color: '#8B87AD', marginTop: 3 }}>
+                    {pct}% covered · {spent} h of class time already run
+                  </div>
                 </div>
               </div>
 
@@ -439,7 +499,7 @@ export function SyllabusPage() {
                   <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
                     <thead>
                       <tr style={{ background: '#F3F1FC' }}>
-                        {['Subject', 'Section', 'Faculty', 'Required', 'Spent', 'Remaining', ''].map((h, i) => (
+                        {['Subject', 'Section', 'Faculty', 'Allocated', 'Covered', 'Remaining', ''].map((h, i) => (
                           <th key={h + i} style={{ ...cellS, textAlign: i >= 3 ? 'right' : 'left', fontWeight: 700 }}>{h}</th>
                         ))}
                       </tr>
@@ -1059,8 +1119,8 @@ function CoverageDashboard({
         subtitle={anyFilter ? 'Across the filtered selection.' : 'Across every tracked subject and section.'}
       >
         <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Stat label="Required" value={`${totals.required} h`} color="#4B41C4" />
-          <Stat label="Spent" value={`${totals.covered} h`} color="#067647" />
+          <Stat label="Allocated" value={`${totals.required} h`} color="#4B41C4" />
+          <Stat label="Covered" value={`${totals.covered} h`} color="#067647" />
           <Stat label="Remaining" value={`${totals.remaining} h`} color={totals.remaining > 0 ? '#B45309' : '#067647'} />
           <Stat label="Tracked" value={`${rows.length}`} color="#8B87AD" />
           <div style={{ flex: 1, minWidth: 180 }}>
@@ -1116,8 +1176,8 @@ function CoverageDashboard({
                     <tr style={{ color: '#8B87AD' }}>
                       {showSubject && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Subject</th>}
                       {showSection && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Section</th>}
-                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Required</th>
-                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Spent</th>
+                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Allocated</th>
+                      <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Covered</th>
                       <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Left</th>
                       <th style={{ ...cellS, width: 80 }} />
                     </tr>

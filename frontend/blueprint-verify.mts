@@ -640,7 +640,10 @@ ok(slotKey(sub({})) === slotKey(sub({ substitute: 'C' })), 'the slot key ignores
 ok(slotKey(sub({})) !== slotKey(sub({ date: '2026-01-19' })), 'but the same weekly slot on another date is its own record')
 
 // ── ALLOCATION: the timetable already knows the hours, so nobody types them ──
-import { allocatedHoursByPlan, unionEntities, compareSection, classRank, liveSections } from './src/lib/scheduleAllocation'
+import {
+  allocatedHoursByPlan, elapsedHoursByPlan, unionEntities, compareSection, classRank, liveSections,
+  teachingMap, cascadeOptions, teacherFor, matchStaffName,
+} from './src/lib/scheduleAllocation'
 import { withAllocatedHours } from './src/lib/syllabusTracking'
 
 // Two schedules running side by side, each with its OWN bell and term.
@@ -709,6 +712,63 @@ ok(!unionEntities([unscheduled]).sections.includes('V-C'),
 const noRoster: any = { ...staleTT, sections: [] }
 ok(liveSections(noRoster).length === 2,
   'a bundle with no roster falls back to its timetable rather than showing nothing')
+
+// ── SPENT is derived, COVERAGE is recorded — never the same number ──
+// The schedule is published, so the app knows which periods have already run.
+// Jan 5 → Feb 2 inclusive is 5 Mondays; the term runs to Mar 30.
+ok(elapsedHoursByPlan([bundleA], '2026-02-02')[planKey('English', 'I-A')] === 5,
+  'hours already run come from the published schedule — 5 Mondays elapsed, nobody typed it')
+ok(elapsedHoursByPlan([bundleA], '2026-01-04')[planKey('English', 'I-A')] === undefined,
+  'nothing has run before the term starts')
+ok(elapsedHoursByPlan([bundleA], '2026-12-31')[planKey('English', 'I-A')] === 13,
+  'and it stops at the final teaching day instead of growing for ever')
+ok(elapsedHoursByPlan([bundleA], '2026-02-02', () => [{ id: 'h', date: '2026-01-12', name: 'x' }])[planKey('English', 'I-A')] === 4,
+  'a holiday means the period never ran, so it is not time spent either')
+// The distinction that matters: spent moves on its own, covered does not.
+const spentPlan = withAllocatedHours({}, allocatedHoursByPlan([bundleA]))[planKey('English', 'I-A')]
+ok(requiredHours(spentPlan) === 13 && coveredHours(spentPlan) === 0,
+  'five hours can have run with zero syllabus covered — the gap is the whole point')
+
+// ── CASCADING PICKERS: any of the three can be the entry point ──
+const mapTT: any = {
+  id: 'm', name: 'Main', staff: [], rooms: [], subjects: [], periods: [],
+  sections: [{ name: 'I-A' }, { name: 'I-B' }, { name: 'II-A' }],
+  config: { periodMinutes: 60, timetableStartDate: '2026-01-05', timetableEndDate: '2026-03-30' },
+  classTT: {
+    'I-A':  { MONDAY: { p1: { subject: 'English', teacher: 'Anita' }, p2: { subject: 'Maths', teacher: 'Bhaskar' } } },
+    'I-B':  { MONDAY: { p1: { subject: 'English', teacher: 'Anita' } } },
+    'II-A': { MONDAY: { p1: { subject: 'Maths', teacher: 'Chandra' } } },
+  },
+  substitutions: {},
+}
+const map = teachingMap(mapTT ? [mapTT] : [])
+ok(map.length === 4, 'the teaching map lists every (section, subject, teacher) the timetable assigns')
+
+// Start from a faculty member → only their classes and subjects remain.
+const byAnita = cascadeOptions(map, { teacher: 'Anita' })
+ok(byAnita.sections.join() === 'I-A,I-B' && byAnita.subjects.join() === 'English',
+  'choosing a faculty member narrows to the classes and subjects they teach')
+
+// Start from a class-section → only the subjects it is taught, and their staff.
+const cascByClass = cascadeOptions(map, { section: 'I-A' })
+ok(cascByClass.subjects.join() === 'English,Maths' && cascByClass.teachers.join() === 'Anita,Bhaskar',
+  'choosing a class-section loads the subjects mapped to it, and who teaches them')
+
+// Start from a subject → only the sections and staff attached to it.
+const cascBySubject = cascadeOptions(map, { subject: 'Maths' })
+ok(cascBySubject.sections.join() === 'I-A,II-A' && cascBySubject.teachers.join() === 'Bhaskar,Chandra',
+  'choosing a subject loads its class-sections and mapped faculty')
+
+// Combinations that don't exist are never offered.
+ok(cascadeOptions(map, { teacher: 'Anita', section: 'II-A' }).subjects.length === 0,
+  'a combination the timetable has no assignment for offers nothing, rather than a dead zero')
+ok(teacherFor(map, 'Maths', 'II-A') === 'Chandra', 'and the teacher of a slot is read off the schedule')
+
+// A faculty account is matched to their timetable name, loosely but not wildly.
+ok(matchStaffName(map, { name: 'anita' }) === 'Anita', 'case-insensitive name match')
+ok(matchStaffName(map, { name: '', email: 'bhaskar@school.edu' }) === 'Bhaskar', 'falls back to the email local part')
+ok(matchStaffName(map, { name: 'chandra.k', email: 'x@y.z' }) === undefined,
+  'a near-miss is NOT matched — showing someone else\'s classes would be worse than showing none')
 
 // Folding allocation into the plans: seeds what has none, respects an override.
 const seeded = withAllocatedHours({}, alloc)

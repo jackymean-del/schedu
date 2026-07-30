@@ -21,6 +21,7 @@
 import { planKey } from './syllabusTracking'
 import { scheduledHoursBetween } from './syllabusPace'
 import type { ScheduleBundle } from './activeSchedules'
+import type { Holiday } from './holidays'
 
 /** Subjects that actually appear in one section of one bundle's timetable. */
 function subjectsIn(classTT: any, section: string): Set<string> {
@@ -91,6 +92,132 @@ export function allocatedHoursByPlan(bundles: ScheduleBundle[]): Record<string, 
     }
   }
   return out
+}
+
+/**
+ * Hours of this subject that have ALREADY RUN — term start up to today.
+ *
+ * "Spent" is not something anyone should type either: the schedule is published,
+ * so the app knows which periods have happened. Kept strictly separate from
+ * coverage, which only ever moves when faculty record content. Conflating them
+ * is the mistake Blueprint v6 exists to prevent — a teacher can spend ten hours
+ * and cover one chapter.
+ */
+export function elapsedHoursByPlan(
+  bundles: ScheduleBundle[],
+  todayISO: string,
+  holidaysFor?: (section: string) => Holiday[],
+): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const b of bundles) {
+    const term = termOf(b)
+    if (!term) continue
+    // Nothing has run before the term, and it stops accruing once it ends.
+    if (todayISO < term.start) continue
+    const upto = todayISO > term.end ? term.end : todayISO
+    const periodMinutes = b.config?.periodMinutes ?? 40
+    for (const section of liveSections(b)) {
+      for (const subject of subjectsIn(b.classTT, section)) {
+        const h = scheduledHoursBetween(
+          b.classTT, subject, section, term.start, upto, periodMinutes, holidaysFor?.(section) ?? [],
+        )
+        const k = planKey(subject, section)
+        if (h > 0) out[k] = Math.round(((out[k] ?? 0) + h) * 10) / 10
+      }
+    }
+  }
+  return out
+}
+
+/** One (section, subject, teacher) the timetable actually assigns. */
+export interface Assignment {
+  section: string
+  subject: string
+  /** '' when the slot carries no teacher. */
+  teacher: string
+  scheduleName: string
+}
+
+/**
+ * Who teaches what, to whom — read straight off the active timetables.
+ *
+ * This is what lets the three pickers cascade from ANY starting point: choose a
+ * faculty member and only their classes and subjects remain; choose a section and
+ * only the subjects it is taught appear; choose a subject and only the sections
+ * and staff attached to it. It also means nobody has to tell the syllabus page
+ * who teaches a subject — the schedule already said.
+ */
+export function teachingMap(bundles: ScheduleBundle[]): Assignment[] {
+  const seen = new Set<string>()
+  const out: Assignment[] = []
+  for (const b of bundles) {
+    for (const section of liveSections(b)) {
+      const days = (b.classTT as any)?.[section] ?? {}
+      for (const dayKey of Object.keys(days)) {
+        const slots = days[dayKey] ?? {}
+        for (const periodId of Object.keys(slots)) {
+          const cell: any = slots[periodId]
+          if (!cell) continue
+          const pairs: Array<{ subject: string; teacher: string }> = cell.groupAssignments?.length
+            ? cell.groupAssignments.map((g: any) => ({ subject: g?.subject ?? cell.subject, teacher: g?.teacher ?? cell.teacher ?? '' }))
+            : [{ subject: cell.subject, teacher: cell.teacher ?? '' }]
+          for (const p of pairs) {
+            if (!p.subject) continue
+            const k = `${section}||${p.subject}||${p.teacher}`
+            if (seen.has(k)) continue
+            seen.add(k)
+            out.push({ section, subject: p.subject, teacher: p.teacher ?? '', scheduleName: b.name })
+          }
+        }
+      }
+    }
+  }
+  return out
+}
+
+export interface Selection { teacher?: string; section?: string; subject?: string }
+
+/** The assignments still possible given a partial selection. */
+export function matching(map: Assignment[], sel: Selection): Assignment[] {
+  return map.filter(a =>
+    (!sel.teacher || a.teacher === sel.teacher) &&
+    (!sel.section || a.section === sel.section) &&
+    (!sel.subject || a.subject === sel.subject))
+}
+
+/**
+ * Options for each picker, each computed from the OTHER two selections — so
+ * every dropdown only ever offers combinations that exist.
+ */
+export function cascadeOptions(map: Assignment[], sel: Selection) {
+  const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))]
+  return {
+    sections: uniq(matching(map, { teacher: sel.teacher, subject: sel.subject }).map(a => a.section)).sort(compareSection),
+    subjects: uniq(matching(map, { teacher: sel.teacher, section: sel.section }).map(a => a.subject)).sort((a, b) => a.localeCompare(b)),
+    teachers: uniq(matching(map, { section: sel.section, subject: sel.subject }).map(a => a.teacher)).sort((a, b) => a.localeCompare(b)),
+  }
+}
+
+/** The teacher the timetable assigns to a (subject, section), if any. */
+export function teacherFor(map: Assignment[], subject: string, section: string): string {
+  return matching(map, { subject, section }).map(a => a.teacher).filter(Boolean)[0] ?? ''
+}
+
+/**
+ * Match a signed-in person to a name in the timetable. Staff are identified by
+ * name here, so compare case- and space-insensitively and fall back to the local
+ * part of their email — enough to recognise "anita.sharma@school.edu" as "Anita
+ * Sharma" without pretending to be an identity system.
+ */
+export function matchStaffName(map: Assignment[], user?: { name?: string; email?: string }): string | undefined {
+  const names = [...new Set(map.map(a => a.teacher).filter(Boolean))]
+  const norm = (s: string) => s.trim().toLowerCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ')
+  const candidates = [user?.name, user?.email?.split('@')[0]].filter(Boolean) as string[]
+  for (const c of candidates) {
+    const hit = names.find(n => norm(n) === norm(c))
+    if (hit) return hit
+  }
+  return undefined
 }
 
 export interface ScheduleContext {
