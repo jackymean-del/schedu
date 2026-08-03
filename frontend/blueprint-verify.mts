@@ -935,6 +935,55 @@ ok(atDailyLimit(5, 5) && atDailyLimit(6, 5), 'a teacher at or past their daily c
 ok(!atDailyLimit(4, 5), 'and available below it')
 ok(!atDailyLimit(99, 0), 'no cap set means no limit — never accidentally zero')
 
+// ── THREE GRAINS: national → stage → class, and per-subject on top ──
+// Each level states only what differs from the one above, so a school sets a
+// stage figure once and corrects the single class or subject that departs.
+import { studentHoursFor, expandSubjectOverrides } from './src/lib/facultyWorkload'
+
+const noLimits = {}
+ok(studentHoursFor('V', 'lowerPrimary', noLimits, 22.5) === 22.5,
+  'with nothing set, a class follows the national norm')
+ok(studentHoursFor('V', 'lowerPrimary', { studentMaxHoursWeek: { lowerPrimary: 25 } }, 22.5) === 25,
+  'a STAGE figure overrides the national one for every class in it')
+ok(studentHoursFor('V', 'lowerPrimary', {
+  studentMaxHoursWeek: { lowerPrimary: 25 },
+  studentMaxHoursWeekByClass: { V: 28 },
+}, 22.5) === 28, 'and a CLASS figure overrides the stage — narrowest wins')
+ok(studentHoursFor('IV', 'lowerPrimary', {
+  studentMaxHoursWeek: { lowerPrimary: 25 },
+  studentMaxHoursWeekByClass: { V: 28 },
+}, 22.5) === 25, 'while its siblings keep following the stage — an override is not contagious')
+ok(studentHoursFor('V', 'lowerPrimary', { studentMaxHoursWeekByClass: { V: 0 } }, 22.5) === 22.5,
+  'a cleared class figure falls back rather than capping the class at zero')
+
+// A subject override is stated once per CLASS and expands to its sections.
+const expanded = expandSubjectOverrides(
+  { V: { Mathematics: 8 } },
+  ['V-A', 'V-B', 'IV-A'],
+  (s) => s.split('-')[0],
+)
+ok(expanded['V-A']?.Mathematics === 8 && expanded['V-B']?.Mathematics === 8,
+  'a subject override on Class V reaches V-A and V-B without being retyped per section')
+ok(expanded['IV-A'] === undefined, 'and does not leak into another class')
+
+// It reaches the engine: 8 periods of Maths survives the scaling untouched.
+const subjOverride = deriveWeeklySlots({
+  sections: ['V-A'],
+  subjects: [
+    { name: 'Mathematics', sections: ['V-A'] },
+    { name: 'English', sections: ['V-A'] },
+    { name: 'Science', sections: ['V-A'] },
+  ],
+  board: 'CBSE',
+  capacityFor: () => 30,
+  periodMinutes: 45,
+}, { 'V-A': { Mathematics: 8 } })[0]
+const maths = subjOverride.rows.find(r => r.subject === 'Mathematics')!
+ok(maths.slots === 8 && maths.overridden,
+  'the per-subject figure reaches the allocation engine and is not scaled away')
+ok(subjOverride.totalSlots <= subjOverride.target,
+  'and the rest of the curriculum still fits the week around it')
+
 // END TO END: does the SOLVER honour it? A cap the engine ignores is a form
 // field, not a constraint — today's load used to be a -3 scoring nudge only.
 import { solveTimetable } from './src/lib/schedulingEngine'

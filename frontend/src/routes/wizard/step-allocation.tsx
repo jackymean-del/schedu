@@ -24,6 +24,8 @@ import { parseAllocation } from '@/lib/allocationSyntax'
 import { deriveWeeklySlots, toAllocationGrid, periodsForHours } from '@/lib/periodAllocationEngine'
 import { WorkloadNormModal } from '@/components/master/WorkloadNormModal'
 import { bandForSection, BAND_LABELS, effectiveTeacherMaxPeriods, type GradeBand } from '@/lib/educationNorms'
+import { studentHoursFor, expandSubjectOverrides } from '@/lib/facultyWorkload'
+import { classOfSection } from '@/lib/syllabusTracking'
 import { studentHoursWeekFor, teacherHoursWeekFor } from '@/lib/countryHours'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 import type { Section, Subject, Staff } from '@/types'
@@ -82,6 +84,8 @@ export function StepAllocation() {
   // shown here for faculty and students; previously they existed only in
   // Settings and reached nothing.
   const studentMaxHoursWeek = useWorkloadLimits(s => s.studentMaxHoursWeek)
+  const studentMaxHoursWeekByClass = useWorkloadLimits(s => s.studentMaxHoursWeekByClass)
+  const subjectPeriodsByClass = useWorkloadLimits(s => s.subjectPeriodsByClass)
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const country = schoolCountry((config as any)?.countryCode)
   // The default teacher cap, from the norms database. Every allocation pass must
@@ -389,15 +393,19 @@ export function StepAllocation() {
     })),
     board: (config as any)?.boardType ?? (config as any)?.board,
     capacityFor: capFor,
-    // Step 0's figure, per v6: "becomes the seed input to the allocation engine".
-    studentHoursWeekFor: (section: string) => {
-      const band = bandForSection(section)
-      const custom = studentMaxHoursWeek?.[band]
-      if (custom && custom > 0) return custom
-      return studentHoursWeekFor(country, band)?.hours
-    },
+    // Step 0's figure, per v6: "becomes the seed input to the allocation
+    // engine" — resolved narrowest-first, class over stage over national.
+    studentHoursWeekFor: (section: string) => studentHoursFor(
+      classOfSection(section),
+      bandForSection(section),
+      { studentMaxHoursWeekByClass, studentMaxHoursWeek },
+      studentHoursWeekFor(country, bandForSection(section))?.hours,
+    ),
     periodMinutes,
-  }), [sections, subjects, config, capFor, studentMaxHoursWeek, country, periodMinutes])
+    // Per-subject overrides, stated once per CLASS and expanded to its sections.
+  }, expandSubjectOverrides(subjectPeriodsByClass, (sections as Section[]).map(s => s.name), classOfSection)),
+  [sections, subjects, config, capFor, studentMaxHoursWeek, studentMaxHoursWeekByClass,
+   subjectPeriodsByClass, country, periodMinutes])
 
   const handleAIPeriodSuggest = useCallback(() => {
     store.setSubjectAllocations?.(toAllocationGrid(derivedAllocation))
@@ -1029,6 +1037,8 @@ export function StepAllocation() {
           periodMinutes={periodMinutes}
           workDays={workDays.length}
           sections={sections as Section[]}
+          subjects={(subjects as Subject[]).map(s => ({ name: s.name }))}
+          board={(config as any)?.boardType ?? (config as any)?.board}
           onClose={() => setWorkloadOpen(false)}
         />
       )}

@@ -133,3 +133,52 @@ export function effectiveCaps(
 export function atDailyLimit(loadToday: number, perDay: number): boolean {
   return perDay > 0 && loadToday >= perDay
 }
+
+// ── Student load: national → band → class ──────────────────────────────────
+
+/**
+ * Instructional hours/week for one class, resolved narrowest-first.
+ *
+ *   class override  →  band override  →  national norm
+ *
+ * Three levels rather than two because schools genuinely work this way: a
+ * national figure for the system, a band figure for "our primary school runs
+ * longer than the norm", and a class figure for the one year group that differs
+ * (a board-exam class, a half-day nursery). Each level only has to state what
+ * differs from the level above, so nothing has to be repeated to stay in force.
+ */
+export function studentHoursFor(
+  cls: string,
+  band: string,
+  limits: {
+    studentMaxHoursWeekByClass?: Record<string, number>
+    studentMaxHoursWeek?: Partial<Record<string, number>>
+  },
+  nationalNorm: number | undefined,
+): number | undefined {
+  const byClass = limits.studentMaxHoursWeekByClass?.[cls]
+  if (byClass && byClass > 0) return byClass
+  const byBand = limits.studentMaxHoursWeek?.[band]
+  if (byBand && byBand > 0) return byBand
+  return nationalNorm != null && nationalNorm > 0 ? nationalNorm : undefined
+}
+
+/**
+ * Expand class-level subject overrides to the per-SECTION shape the allocation
+ * engine takes. An override set on "Class V" applies to V-A, V-B and V-C —
+ * stating it once per class rather than once per section is the whole point,
+ * and re-typing it per section is how sections drift apart.
+ */
+export function expandSubjectOverrides(
+  byClass: Record<string, Record<string, number>>,
+  sections: string[],
+  classOf: (section: string) => string,
+): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {}
+  for (const section of sections) {
+    const row = byClass[classOf(section)]
+    if (!row || !Object.keys(row).length) continue
+    out[section] = { ...row }
+  }
+  return out
+}

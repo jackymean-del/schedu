@@ -25,10 +25,24 @@ interface WorkloadLimitsState {
   teacherMaxHoursWeek?: number
   /** Max instructional hours/week per grade band (missing band ⇒ national norm). */
   studentMaxHoursWeek: Partial<Record<GradeBand, number>>
+  /**
+   * Instructional hours/week for one CLASS — "Class V runs 25 h while the rest
+   * of Primary runs 22.5". Blueprint v6 Step 5: "User can edit load class-wise."
+   * Missing class ⇒ fall back to its band.
+   */
+  studentMaxHoursWeekByClass: Record<string, number>
+  /**
+   * Weekly periods for one SUBJECT within one class — the finest grain, and the
+   * one that overrides the curriculum knowledge base. class → subject → periods.
+   * Missing entry ⇒ fall back to the board norm for that subject.
+   */
+  subjectPeriodsByClass: Record<string, Record<string, number>>
 
   setCountry: (code: string | undefined) => void
   setTeacherMaxHoursWeek: (h: number | undefined) => void
   setStudentMaxHoursWeek: (band: GradeBand, h: number | undefined) => void
+  setStudentMaxHoursWeekForClass: (cls: string, h: number | undefined) => void
+  setSubjectPeriods: (cls: string, subject: string, periods: number | undefined) => void
   reset: () => void
 }
 
@@ -38,6 +52,8 @@ export const useWorkloadLimits = create<WorkloadLimitsState>()(
       country: undefined,
       teacherMaxHoursWeek: undefined,
       studentMaxHoursWeek: {},
+      studentMaxHoursWeekByClass: {},
+      subjectPeriodsByClass: {},
       setCountry: (code) => set({ country: code ? code.toUpperCase() : undefined }),
       setTeacherMaxHoursWeek: (h) =>
         set({ teacherMaxHoursWeek: h && h > 0 ? h : undefined }),
@@ -48,7 +64,29 @@ export const useWorkloadLimits = create<WorkloadLimitsState>()(
           else delete next[band]
           return { studentMaxHoursWeek: next }
         }),
-      reset: () => set({ teacherMaxHoursWeek: undefined, studentMaxHoursWeek: {} }),
+      setStudentMaxHoursWeekForClass: (cls, h) =>
+        set((s) => {
+          const next = { ...s.studentMaxHoursWeekByClass }
+          // Deleting rather than storing 0 keeps "follows the band" and
+          // "explicitly zero" from ever looking the same.
+          if (h && h > 0) next[cls] = h
+          else delete next[cls]
+          return { studentMaxHoursWeekByClass: next }
+        }),
+      setSubjectPeriods: (cls, subject, periods) =>
+        set((s) => {
+          const byClass = { ...s.subjectPeriodsByClass }
+          const row = { ...(byClass[cls] ?? {}) }
+          if (periods && periods > 0) row[subject] = Math.round(periods)
+          else delete row[subject]
+          if (Object.keys(row).length) byClass[cls] = row
+          else delete byClass[cls]
+          return { subjectPeriodsByClass: byClass }
+        }),
+      reset: () => set({
+        teacherMaxHoursWeek: undefined, studentMaxHoursWeek: {},
+        studentMaxHoursWeekByClass: {}, subjectPeriodsByClass: {},
+      }),
     }),
     { name: 'schedu-workload-limits' },
   ),
