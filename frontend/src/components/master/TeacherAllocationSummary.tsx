@@ -14,6 +14,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import type { Staff } from '@/types'
 import { AlertTriangle, BarChart3, ChevronUp, ChevronDown, ExternalLink, Sparkles, ArrowUpDown, RotateCcw } from 'lucide-react'
 import { TeacherAllocationModal } from './TeacherAllocationModal'
+import { WorkloadNormModal } from './WorkloadNormModal'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
 import { teacherHoursWeekFor } from '@/lib/countryHours'
 import {
@@ -126,6 +127,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
   // them. Blueprint v6 Step 0 allows either; forcing one means somebody does
   // the conversion by hand, which is where the mistakes come from.
   const [unit, setUnit] = useState<WorkloadUnit>('periods')
+  const [normOpen, setNormOpen] = useState(false)
 
   /** Write a cap in whatever span/unit it was entered, storing periods. */
   const updateCap = (name: string, span: WorkloadSpan, raw: string) => {
@@ -227,6 +229,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
         overriddenCount={rows.filter((r: any) => r.overridden).length}
         unit={unit}
         onUnitChange={setUnit}
+        onEditNorm={() => setNormOpen(true)}
       />
 
       {/* ── AI overload warning ── */}
@@ -334,6 +337,18 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           onClose={() => setEditTarget(null)}
         />
       )}
+
+      {/* School-wide default, edited here rather than in Settings — every cap on
+          this table falls back to it, so it belongs next to them. */}
+      {normOpen && (
+        <WorkloadNormModal
+          country={country}
+          periodMinutes={periodMinutes}
+          workDays={workingDays}
+          sections={(store.sections ?? []) as any}
+          onClose={() => setNormOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -348,7 +363,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
 // that admits what it is.
 
 function NormDefaultsBar({
-  country, periodMinutes, normCaps, workingDays, teacherCustom, overriddenCount, unit, onUnitChange,
+  country, periodMinutes, normCaps, workingDays, teacherCustom, overriddenCount, unit, onUnitChange, onEditNorm,
 }: {
   country: string
   periodMinutes: number
@@ -358,6 +373,7 @@ function NormDefaultsBar({
   overriddenCount: number
   unit: WorkloadUnit
   onUnitChange: (u: WorkloadUnit) => void
+  onEditNorm: () => void
 }) {
   const ref = teacherHoursWeekFor(country, 'lowerPrimary' as any)
   const custom = !!(teacherCustom && teacherCustom > 0)
@@ -422,9 +438,14 @@ function NormDefaultsBar({
           {overriddenCount} teacher{overriddenCount > 1 ? 's' : ''} overridden
         </span>
       )}
-      <a href="/settings" style={{ fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', textDecoration: 'none' }}>
-        Change default →
-      </a>
+      <button onClick={onEditNorm}
+        style={{
+          padding: '3px 10px', borderRadius: 6, border: '1px solid #E4E0FF',
+          background: '#fff', fontSize: 10.5, fontWeight: 700, color: '#7C6FE0',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+        Set custom loads
+      </button>
     </div>
   )
 }

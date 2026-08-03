@@ -22,6 +22,7 @@ import {
 } from '@/lib/capacityEngine'
 import { parseAllocation } from '@/lib/allocationSyntax'
 import { deriveWeeklySlots, toAllocationGrid, periodsForHours } from '@/lib/periodAllocationEngine'
+import { WorkloadNormModal } from '@/components/master/WorkloadNormModal'
 import { bandForSection, BAND_LABELS, effectiveTeacherMaxPeriods, type GradeBand } from '@/lib/educationNorms'
 import { studentHoursWeekFor, teacherHoursWeekFor } from '@/lib/countryHours'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
@@ -58,6 +59,7 @@ export function StepAllocation() {
   const [syncing, setSyncing]   = useState(false)
   const [syncDone, setSyncDone] = useState(false)
   const [sortRowsAZ, setSortRowsAZ] = useState(false)
+  const [workloadOpen, setWorkloadOpen] = useState(false)
   const [sortColsAZ, setSortColsAZ] = useState(false)
 
   // Derive bell-schedule periods for TeacherAvailabilityEditor
@@ -977,6 +979,7 @@ export function StepAllocation() {
                 studentCustom={studentMaxHoursWeek}
                 teacherCustom={teacherMaxHoursWeek}
                 sections={sections as Section[]}
+                onEdit={() => setWorkloadOpen(true)}
               />
               <PeriodSyntaxGuide periodMinutes={periodMinutes} />
               <CapacityEnginePanel bandStats={bandStats} sections={sections as Section[]} />
@@ -1014,6 +1017,19 @@ export function StepAllocation() {
           displayMode={displayMode}
           periodMinutes={periodMinutes}
           onClose={() => setShowReport(null)}
+        />
+      )}
+
+      {/* Custom workload, set on this page rather than in Settings. Saving
+          re-seeds derivedAllocation, so the period counts on the left update
+          without leaving the screen. */}
+      {workloadOpen && (
+        <WorkloadNormModal
+          country={country}
+          periodMinutes={periodMinutes}
+          workDays={workDays.length}
+          sections={sections as Section[]}
+          onClose={() => setWorkloadOpen(false)}
         />
       )}
 
@@ -1129,13 +1145,14 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
 // ─────────────────────────────────────────────────────────────────
 
 function WorkloadNormPanel({
-  country, periodMinutes, studentCustom, teacherCustom, sections,
+  country, periodMinutes, studentCustom, teacherCustom, sections, onEdit,
 }: {
   country: string
   periodMinutes: number
   studentCustom: Partial<Record<string, number>>
   teacherCustom?: number
   sections: Section[]
+  onEdit: () => void
 }) {
   // Only the bands this school actually has — a primary school shouldn't be
   // shown senior-secondary norms it will never use.
@@ -1194,9 +1211,19 @@ function WorkloadNormPanel({
           </span>
         )}
       </div>
-      <a href="/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', textDecoration: 'none' }}>
-        Change in Settings →
-      </a>
+      {/* Edited here, not in Settings. This figure seeds the allocation on this
+          same screen, so sending someone away to change it — and back again to
+          see what it did — was the wrong shape for the task. */}
+      <button
+        onClick={onEdit}
+        style={{
+          display: 'inline-block', marginTop: 9, padding: '5px 11px', borderRadius: 7,
+          border: '1px solid #E4E0FF', background: '#F8F7FF',
+          fontSize: 10.5, fontWeight: 700, color: '#7C6FE0',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+        Set custom loads
+      </button>
     </div>
   )
 }
