@@ -1150,6 +1150,11 @@ export const StaffSchema = z.object({
   isClassTeacher: z.string().default(''),
   isCoClassTeacher: z.string().optional(),
   maxPeriodsPerWeek: z.number().int().positive(),
+  /** Per-DAY teaching cap (Blueprint v6 Step 0 — workload may be stated per week
+   *  or per day). Optional: absent means "derive it from the weekly figure", so
+   *  existing records need no migration. Enforced as a hard constraint by the
+   *  scheduling engine — see lib/facultyWorkload. */
+  maxPeriodsPerDay: z.number().int().positive().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
   scope: ScopeMatrixSchema.optional(),   // schedU Scope System
   /** Links this schedule's row to a shared cross-schedule roster entry

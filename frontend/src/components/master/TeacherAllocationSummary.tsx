@@ -16,6 +16,10 @@ import { AlertTriangle, BarChart3, ChevronUp, ChevronDown, ExternalLink, Sparkle
 import { TeacherAllocationModal } from './TeacherAllocationModal'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
 import { teacherHoursWeekFor } from '@/lib/countryHours'
+import {
+  resolveCaps, effectiveCaps, displayCap, perDayFromPerWeek,
+  type WorkloadSpan, type WorkloadUnit,
+} from '@/lib/facultyWorkload'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 
 interface SummaryProps {
@@ -115,24 +119,51 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
   const country = schoolCountry(config?.countryCode)
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const normMax = effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek)
+  const workingDays = config?.workDays?.length || 5
+  const normCaps = { perWeek: normMax, perDay: perDayFromPerWeek(normMax, workingDays) }
 
-  const updateMax = (name: string, next: number | undefined) => {
-    setStaff?.(staff.map((t: Staff) => t.name === name ? { ...t, maxPeriodsPerWeek: next as any } : t))
+  // Periods or hours — the same caps, stated the way this school talks about
+  // them. Blueprint v6 Step 0 allows either; forcing one means somebody does
+  // the conversion by hand, which is where the mistakes come from.
+  const [unit, setUnit] = useState<WorkloadUnit>('periods')
+
+  /** Write a cap in whatever span/unit it was entered, storing periods. */
+  const updateCap = (name: string, span: WorkloadSpan, raw: string) => {
+    const value = parseFloat(raw)
+    const clear = isNaN(value) || value <= 0
+    const caps = clear ? null : resolveCaps({ value, span, unit, workingDays, periodMinutes })
+    setStaff?.(staff.map((t: Staff) => {
+      if (t.name !== name) return t
+      if (span === 'week') {
+        // Storing the norm itself is the same as no override — keep tracking it.
+        const next = clear || caps!.perWeek === normCaps.perWeek ? undefined : caps!.perWeek
+        return { ...t, maxPeriodsPerWeek: (next ?? normCaps.perWeek) as any }
+      }
+      const next = clear || caps!.perDay === normCaps.perDay ? undefined : caps!.perDay
+      return { ...t, maxPeriodsPerDay: next as any }
+    }))
+  }
+
+  /** Back to the school norm on both spans, without having to recall the number. */
+  const resetCaps = (name: string) => {
+    setStaff?.(staff.map((t: Staff) => t.name === name
+      ? { ...t, maxPeriodsPerWeek: normCaps.perWeek as any, maxPeriodsPerDay: undefined as any }
+      : t))
   }
 
   // Per-teacher stats
   const rows = useMemo(() => staff.map((t: Staff) => {
     const load = weeklyLoad(t.name, teacherAllocations)
-    const explicit = (t as any).maxPeriodsPerWeek
-    const max = explicit && explicit > 0 ? explicit : normMax
+    const caps = effectiveCaps(t as any, normCaps, workingDays)
+    const max = caps.perWeek
     const assignments = assignmentsForTeacher(t.name, teacherAllocations)
     const type = inferType(t, assignments.length)
     const status = statusBadge(load, max)
     // `overridden` drives the "custom" chip and the reset affordance — a school
     // must be able to see at a glance which caps are its own and which are the
     // national norm, and get back to the norm without remembering the number.
-    return { t, load, max, assignments, type, status, overridden: !!(explicit && explicit > 0) }
-  }), [staff, teacherAllocations, normMax])
+    return { t, load, max, caps, assignments, type, status, overridden: caps.weekOverridden || caps.dayOverridden }
+  }), [staff, teacherAllocations, normCaps, workingDays])
 
   // Overloaded
   const overloaded = rows.filter((r: any) => r.load > r.max && r.max > 0)
@@ -190,9 +221,12 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
       <NormDefaultsBar
         country={country}
         periodMinutes={periodMinutes}
-        normMax={normMax}
+        normCaps={normCaps}
+        workingDays={workingDays}
         teacherCustom={teacherMaxHoursWeek}
         overriddenCount={rows.filter((r: any) => r.overridden).length}
+        unit={unit}
+        onUnitChange={setUnit}
       />
 
       {/* ── AI overload warning ── */}
@@ -265,8 +299,9 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
             displayMode={displayMode}
             periodMinutes={periodMinutes}
             fmtLoad={fmtLoad}
-            normMax={normMax}
-            onUpdateMax={next => updateMax(row.t.name, next)}
+            unit={unit}
+            onUpdateCap={(span, raw) => updateCap(row.t.name, span, raw)}
+            onResetCaps={() => resetCaps(row.t.name)}
             onEditSubject={(sub) => setEditTarget({ teacher: row.t.name, subject: sub })}
           />
         ))}
@@ -313,13 +348,16 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
 // that admits what it is.
 
 function NormDefaultsBar({
-  country, periodMinutes, normMax, teacherCustom, overriddenCount,
+  country, periodMinutes, normCaps, workingDays, teacherCustom, overriddenCount, unit, onUnitChange,
 }: {
   country: string
   periodMinutes: number
-  normMax: number
+  normCaps: { perWeek: number; perDay: number }
+  workingDays: number
   teacherCustom?: number
   overriddenCount: number
+  unit: WorkloadUnit
+  onUnitChange: (u: WorkloadUnit) => void
 }) {
   const ref = teacherHoursWeekFor(country, 'lowerPrimary' as any)
   const custom = !!(teacherCustom && teacherCustom > 0)
@@ -333,12 +371,34 @@ function NormDefaultsBar({
       fontSize: 11, color: '#4B5275',
     }}>
       <span style={{ fontWeight: 800, color: '#13111E' }}>Default faculty workload</span>
+      {/* Both spans, because the blueprint lets a school think in either — and
+          seeing the pair makes the ×/÷ working-days relationship obvious. */}
       <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 800, color: '#4B41C4' }}>
-        {normMax}p / week
+        {normCaps.perWeek}p / week
       </span>
+      <span style={{ color: '#B8B4D4' }}>·</span>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 800, color: '#4B41C4' }}>
+        {normCaps.perDay}p / day
+      </span>
+      <span style={{ color: '#8B87AD' }}>over {workingDays} days</span>
       {hours != null && (
-        <span style={{ color: '#8B87AD' }}>≈ {hours} h at {periodMinutes} min</span>
+        <span style={{ color: '#8B87AD' }}>≈ {hours} h/wk at {periodMinutes} min</span>
       )}
+      {/* Enter caps in whichever unit this school speaks. */}
+      <span style={{ display: 'inline-flex', border: '1px solid #E0DBF2', borderRadius: 6, overflow: 'hidden' }}>
+        {(['periods', 'hours'] as WorkloadUnit[]).map(u => (
+          <button key={u} onClick={() => onUnitChange(u)}
+            title={`Enter and show caps in ${u}`}
+            style={{
+              all: 'unset', cursor: 'pointer', padding: '2px 9px',
+              fontSize: 10, fontWeight: 700,
+              background: unit === u ? '#7C6FE0' : '#fff',
+              color: unit === u ? '#fff' : '#8B87AD',
+            }}>
+            {u === 'periods' ? 'Periods' : 'Hours'}
+          </button>
+        ))}
+      </span>
       <span style={{
         fontSize: 9.5, fontWeight: 700, borderRadius: 4, padding: '1px 6px',
         background: custom ? '#EFEBFF' : '#EEF6FF',
@@ -369,23 +429,55 @@ function NormDefaultsBar({
   )
 }
 
+/** One cap field. Draft state is local so a half-typed number never round-trips
+ *  through the store and gets re-derived mid-keystroke. */
+function CapInput({ value, draft, setDraft, overridden, onCommit, title }: {
+  value: number
+  draft: string | null
+  setDraft: (s: string | null) => void
+  overridden: boolean
+  onCommit: (raw: string) => void
+  title: string
+}) {
+  return (
+    <input
+      type="number" min={0} max={60} step="any"
+      value={draft ?? String(value)}
+      onChange={e => setDraft(e.target.value)}
+      onFocus={() => setDraft(String(value))}
+      onBlur={() => { onCommit(draft ?? ''); setDraft(null) }}
+      onKeyDown={e => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur() }}
+      title={title}
+      style={{
+        width: 44, padding: '1px 4px', borderRadius: 5,
+        border: `1.5px solid ${overridden ? '#C4BDFF' : '#E8E4FF'}`,
+        background: overridden ? '#F4F1FF' : '#fff',
+        fontSize: 12, fontWeight: 800, color: '#4B41C4',
+        textAlign: 'center', outline: 'none', fontFamily: "'DM Mono', monospace",
+        boxSizing: 'border-box' as const,
+      }}
+    />
+  )
+}
+
 // ── TeacherRow ────────────────────────────────────────────────
 
 function TeacherRow({
-  row, borderTop, displayMode, periodMinutes, fmtLoad, normMax, onUpdateMax, onEditSubject,
+  row, borderTop, displayMode, periodMinutes, unit, fmtLoad, onUpdateCap, onResetCaps, onEditSubject,
 }: {
-  row: { t: Staff; load: number; max: number; assignments: Array<{ subject: string; sections: string[]; totalPeriods: number }>; type: TeacherType; status: ReturnType<typeof statusBadge>; overridden: boolean }
+  row: { t: Staff; load: number; max: number; caps: ReturnType<typeof effectiveCaps>; assignments: Array<{ subject: string; sections: string[]; totalPeriods: number }>; type: TeacherType; status: ReturnType<typeof statusBadge>; overridden: boolean }
   borderTop: boolean
   displayMode: 'periods' | 'hours'
   periodMinutes: number
   fmtLoad: (p: number) => string
-  /** The national/custom norm — what the cap falls back to. */
-  normMax: number
-  onUpdateMax: (next: number | undefined) => void
+  unit: WorkloadUnit
+  onUpdateCap: (span: WorkloadSpan, raw: string) => void
+  onResetCaps: () => void
   onEditSubject: (sub: string) => void
 }) {
-  const { t, load, max, assignments, type, status, overridden } = row
-  const [draft, setDraft] = useState<string | null>(null)
+  const { t, load, max, caps, assignments, type, status, overridden } = row
+  const [draftWeek, setDraftWeek] = useState<string | null>(null)
+  const [draftDay, setDraftDay] = useState<string | null>(null)
   const pct = max > 0 ? Math.min(100, (load / max) * 100) : 0
   const barColor = load > max ? '#DC2626' : load >= max * 0.9 ? '#D4920E' : load > 0 ? '#16A34A' : '#B8B4D4'
   const typeStyle = TYPE_STYLE[type]
@@ -429,45 +521,38 @@ function TeacherRow({
         </div>
       </div>
 
-      {/* ── Col 2: Weekly load + the EDITABLE cap ──
-          Blueprint v6 Step 5: "User can override/change the load per teacher."
-          This is the only place that cap is editable; Resources shows it
-          read-only. The norm it defaults to is stated underneath rather than
-          silently baked in, so an override is always visibly an override. */}
+      {/* ── Col 2: Weekly load + the EDITABLE caps, per week AND per day ──
+          Blueprint v6 Step 5 ("User can override/change the load per teacher")
+          and Step 0 ("entered as either: Per week, or Per day"). Both spans are
+          editable in whichever unit the toolbar is set to; each is stored as
+          typed, and the norm it defaults to is stated rather than baked in, so
+          an override is always visibly an override. */}
       <div style={{ paddingTop: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 5 }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: barColor, fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
             {fmtLoad(load)}
           </span>
           <span style={{ fontSize: 10, color: '#B8B4D4', fontFamily: "'DM Mono', monospace" }}>/</span>
-          <input
-            type="number" min={1} max={60}
-            value={draft ?? String(max)}
-            onChange={e => setDraft(e.target.value)}
-            onFocus={() => setDraft(String(max))}
-            onBlur={() => {
-              const v = parseInt(draft ?? '', 10)
-              // Typing the norm back is the same as having no override at all —
-              // clear it, so the teacher keeps tracking the norm if it changes.
-              if (!isNaN(v) && v > 0 && v !== normMax) onUpdateMax(v)
-              else if (!isNaN(v) && v === normMax) onUpdateMax(undefined)
-              setDraft(null)
-            }}
-            onKeyDown={e => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur() }}
-            title={`Max periods per week for ${t.name}. Default is the ${normMax}p workload norm.`}
-            style={{
-              width: 52, padding: '1px 5px', borderRadius: 5,
-              border: `1.5px solid ${overridden ? '#C4BDFF' : '#E8E4FF'}`,
-              background: overridden ? '#F4F1FF' : '#fff',
-              fontSize: 12, fontWeight: 800, color: '#4B41C4',
-              textAlign: 'center', outline: 'none', fontFamily: "'DM Mono', monospace",
-              boxSizing: 'border-box' as const,
-            }}
+          <CapInput
+            value={displayCap(caps.perWeek, unit, periodMinutes)}
+            draft={draftWeek} setDraft={setDraftWeek}
+            overridden={caps.weekOverridden}
+            onCommit={v => onUpdateCap('week', v)}
+            title={`Max ${unit} per week for ${t.name}. Default is the workload norm.`}
           />
+          <span style={{ fontSize: 9, color: '#B8B4D4' }}>/wk</span>
+          <CapInput
+            value={displayCap(caps.perDay, unit, periodMinutes)}
+            draft={draftDay} setDraft={setDraftDay}
+            overridden={caps.dayOverridden}
+            onCommit={v => onUpdateCap('day', v)}
+            title={`Max ${unit} per day for ${t.name}. Blank follows the weekly cap.`}
+          />
+          <span style={{ fontSize: 9, color: '#B8B4D4' }}>/day</span>
           {overridden && (
             <button
-              onClick={() => onUpdateMax(undefined)}
-              title={`Reset to the ${normMax}p norm`}
+              onClick={onResetCaps}
+              title="Reset both caps to the workload norm"
               style={{
                 all: 'unset', cursor: 'pointer', display: 'inline-flex',
                 alignItems: 'center', color: '#9A95BC', flexShrink: 0,
@@ -483,10 +568,10 @@ function TeacherRow({
           }} />
         </div>
         <div style={{ marginTop: 4, fontSize: 9, color: '#B8B4D4' }}>
-          {Math.round(pct)}% of {fmtLoad(max)}
+          {Math.round(pct)}% of {fmtLoad(max)} · max {caps.perDay}p/day
           {overridden
-            ? <> · <span style={{ color: '#7C6FE0', fontWeight: 700 }}>custom</span> (norm {normMax}p)</>
-            : ' · workload norm'}
+            ? <> · <span style={{ color: '#7C6FE0', fontWeight: 700 }}>custom</span></>
+            : ' · norm'}
         </div>
       </div>
 

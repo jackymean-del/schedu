@@ -883,6 +883,85 @@ const gridOut = toAllocationGrid(deriveWeeklySlots({
 }))
 ok(/\+1L$/.test(gridOut['I-A']['Science']), 'a lab subject is emitted as "n+1L" for the existing grid syntax')
 
+// ── PER-DAY FACULTY WORKLOAD (Blueprint v6 Step 0) ──
+// "entered as either: Per week, or Per day. Editing one field auto-updates the
+//  other (per-day × working days = per-week, and vice versa)."
+import {
+  resolveCaps, effectiveCaps, atDailyLimit,
+  perDayFromPerWeek, perWeekFromPerDay, periodsFromHours, hoursFromPeriods, displayCap,
+} from './src/lib/facultyWorkload'
+
+// The blueprint's linkage, both directions.
+ok(perWeekFromPerDay(5, 5) === 25, 'per-day × working days = per-week (5/day × 5 = 25)')
+ok(perDayFromPerWeek(25, 5) === 5, 'and back again (25/week ÷ 5 = 5/day)')
+// Rounding is asymmetric ON PURPOSE — a derived daily figure must never make the
+// admin's own weekly figure unreachable.
+ok(perDayFromPerWeek(32, 5) === 7,
+  '32/week over 5 days rounds UP to 7/day — rounding down to 6 would cap the week at 30 and contradict the stated 32')
+ok(perWeekFromPerDay(perDayFromPerWeek(32, 5), 5) >= 32,
+  'so the round-trip never shrinks the weekly budget')
+// Hours → periods rounds DOWN, because a cap is a limit.
+ok(periodsFromHours(20, 45) === 26, '20 h at 45-min periods = 26 periods (26.7 truncated, not rounded up past the stated hours)')
+ok(periodsFromHours(20, 40) === 30, '20 h at 40-min periods = 30 periods exactly')
+ok(hoursFromPeriods(30, 40) === 20, 'and back to 20 h')
+ok(displayCap(30, 'hours', 40) === 20 && displayCap(30, 'periods', 40) === 30, 'the same cap shown in either unit')
+
+// All four ways of stating the same constraint.
+const asWeekPeriods = resolveCaps({ value: 25, span: 'week', unit: 'periods', workingDays: 5, periodMinutes: 40 })
+const asDayPeriods  = resolveCaps({ value: 5,  span: 'day',  unit: 'periods', workingDays: 5, periodMinutes: 40 })
+ok(asWeekPeriods.perWeek === 25 && asWeekPeriods.perDay === 5, '25 periods/week resolves to 5/day')
+ok(asDayPeriods.perDay === 5 && asDayPeriods.perWeek === 25, '5 periods/day resolves to 25/week — the same constraint either way')
+const asDayHours = resolveCaps({ value: 4, span: 'day', unit: 'hours', workingDays: 5, periodMinutes: 40 })
+ok(asDayHours.perDay === 6 && asDayHours.perWeek === 30, '4 hours/day at 40 min = 6 periods/day = 30/week')
+// The span the admin CHOSE stays authoritative — typing 5/day must not come
+// back as 6/day via a weekly round-trip.
+ok(resolveCaps({ value: 5, span: 'day', unit: 'periods', workingDays: 6, periodMinutes: 40 }).perDay === 5,
+  'a stated per-day figure is never overwritten by re-deriving it from the week')
+ok(resolveCaps({ value: 0, span: 'week', unit: 'periods', workingDays: 5, periodMinutes: 40 }).perWeek === 0,
+  'a zero or blank entry means no cap, not a cap of zero-ish')
+
+// Effective caps: own override first, else the norm — and the two must agree.
+const norm = { perWeek: 30, perDay: 6 }
+ok(effectiveCaps(undefined, norm, 5).perWeek === 30, 'a teacher with no overrides takes the school norm')
+const weekOnly = effectiveCaps({ maxPeriodsPerWeek: 20 }, norm, 5)
+ok(weekOnly.perWeek === 20 && weekOnly.perDay === 4,
+  "a weekly-only override derives its OWN daily figure (4), not the norm's 6 — otherwise the two would contradict")
+ok(weekOnly.weekOverridden && !weekOnly.dayOverridden, 'and only the week reads as overridden')
+const dayOnly = effectiveCaps({ maxPeriodsPerDay: 3 }, norm, 5)
+ok(dayOnly.perDay === 3 && dayOnly.perWeek === 30, 'a daily-only override keeps the norm week but binds each day at 3')
+
+// Enforcement — the reason this is a constraint and not a form field.
+ok(atDailyLimit(5, 5) && atDailyLimit(6, 5), 'a teacher at or past their daily cap is unavailable')
+ok(!atDailyLimit(4, 5), 'and available below it')
+ok(!atDailyLimit(99, 0), 'no cap set means no limit — never accidentally zero')
+
+// END TO END: does the SOLVER honour it? A cap the engine ignores is a form
+// field, not a constraint — today's load used to be a -3 scoring nudge only.
+import { solveTimetable } from './src/lib/schedulingEngine'
+
+const capDays = ['MONDAY']
+const capPeriods = Array.from({ length: 6 }, (_, i) => ({
+  id: `p${i + 1}`, name: `P${i + 1}`, type: 'class', startTime: '09:00', endTime: '09:40', duration: 40,
+})) as any[]
+// One section, six Monday periods, one subject. Two teachers can teach it, but
+// the first is capped at 2 periods a day — so they must not take all six.
+const capStaff: any[] = [
+  { id: 't1', name: 'Capped', shortName: 'CP', subjects: ['Maths'], classes: ['I-A'], isClassTeacher: '', maxPeriodsPerWeek: 40, maxPeriodsPerDay: 2 },
+  { id: 't2', name: 'Spare',  shortName: 'SP', subjects: ['Maths'], classes: ['I-A'], isClassTeacher: '', maxPeriodsPerWeek: 40 },
+]
+const capOut = solveTimetable({
+  sections: [{ id: 's1', name: 'I-A', grade: 'I' }] as any,
+  staff: capStaff,
+  subjects: [{ id: 'j1', name: 'Maths', periodsPerWeek: 6, maxPeriodsPerDay: 6 }] as any,
+  periods: capPeriods,
+  workDays: capDays,
+  requirements: [],
+} as any)
+const cappedLoad = Object.values(capOut.classTT?.['I-A']?.MONDAY ?? {})
+  .filter((c: any) => c?.teacher === 'Capped').length
+ok(cappedLoad <= 2,
+  `the solver respects a 2-periods/day cap — "Capped" took ${cappedLoad} of Monday's periods, not more`)
+
 // ── IS THE DEFAULT WORKLOAD ACTUALLY THE NORM? ──
 // The teacher cap defaults were hardcoded literals (30 in Resources, 32 in the
 // allocation passes, 40 in most consumers, 36 in orgData's own country table).

@@ -33,6 +33,7 @@ import { normalizeBoardType, type CurriculumBoard } from './curriculum'
 import { useDirectoryStore, linkOrRegisterStaff } from '@/store/directoryStore'
 import { useTimetableStore } from '@/store/timetableStore'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
+import { effectiveCaps, perDayFromPerWeek } from '@/lib/facultyWorkload'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -469,7 +470,7 @@ function RoleHeaderRow({ role, count, collapsed, onToggle }: {
 }
 
 // ─── Teacher row ──────────────────────────────────────────────────────────────
-function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, normCap, onUpdate, onDelete, onScopeClick }: {
+function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, normCap, workDayCount, onUpdate, onDelete, onScopeClick }: {
   t: StaffExt
   subjects: Subject[]
   classOpts: ChipOption[]
@@ -477,6 +478,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
   coClassTeacherOpts: ChipOption[]
   /** Fallback cap from the workload norm when this teacher has no override. */
   normCap: number
+  workDayCount: number
   onUpdate: (p: Partial<StaffExt>) => void
   onDelete: () => void
   onScopeClick?: (t: StaffExt, rect: DOMRect) => void
@@ -494,7 +496,8 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
 
   const isClassTeacherOf = t.isClassTeacher || ''
   const slots = calcTeacherSlots(t as any, subjects)
-  const cap = (t.maxPeriodsPerWeek && t.maxPeriodsPerWeek > 0) ? t.maxPeriodsPerWeek : normCap
+  const capsEff = effectiveCaps(t as any, { perWeek: normCap, perDay: perDayFromPerWeek(normCap, workDayCount) }, workDayCount)
+  const cap = capsEff.perWeek
   const level = slotLoadLevel(slots)
   const { bg: loadBg, fg: loadFg, border: loadBorder } = LOAD_STYLE[level]
 
@@ -547,7 +550,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
             {cap}
           </div>
           <div style={{ fontSize: 9, color: '#9896B5', marginTop: 2, fontWeight: 600 }}>
-            {slots} assigned{level !== 'none' ? ` · ${level}` : ''}
+            max {capsEff.perDay}/day · {slots} assigned{level !== 'none' ? ` · ${level}` : ''}
           </div>
         </td>
 
@@ -639,6 +642,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   // been set on Mapping. Read-only here — see the Slots/Wk cell.
   const config = useTimetableStore(s => (s as any).config)
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
+  const workDayCount = config?.workDays?.length || 5
   const normCap = effectiveTeacherMaxPeriods(
     schoolCountry(config?.countryCode), config?.periodMinutes ?? 40, teacherMaxHoursWeek,
   )
@@ -933,6 +937,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
                       classTeacherOpts={classTeacherOpts}
                       coClassTeacherOpts={classTeacherOpts}
                       normCap={normCap}
+                      workDayCount={workDayCount}
                       onUpdate={p => update(t.id, p)}
                       onDelete={() => remove(t.id)}
                       onScopeClick={onScopeClick

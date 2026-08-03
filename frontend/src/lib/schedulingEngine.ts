@@ -15,6 +15,7 @@
 
 import type { Section, Staff, Subject, Period, ClassTimetable, TeacherSchedule, Conflict, Suggestion, SchedulingRequirement } from '@/types'
 import { parseAllocation } from './allocationSyntax'
+import { atDailyLimit, perDayFromPerWeek } from './facultyWorkload'
 
 // ─── Mode 2: Duration → Weekly Periods Formula ───────────
 export interface DurationInput {
@@ -513,6 +514,23 @@ export function extractDynamicLearningGroups(
     })
   })
   return out
+}
+
+/**
+ * The per-day teaching cap in force for one teacher — their own figure if set,
+ * otherwise derived from their weekly cap so the two can never contradict each
+ * other (lib/facultyWorkload). Returns 0 when no cap applies, which
+ * atDailyLimit reads as "unlimited".
+ *
+ * Module scope because BOTH the first-pass solver and the re-optimiser must
+ * apply the same limit — a cap the re-optimiser ignored would be undone the
+ * moment anyone pressed "optimise".
+ */
+function dailyCapFor(st: any, workDayCount: number): number {
+  const day = st?.maxPeriodsPerDay
+  if (day && day > 0) return day
+  const week = st?.maxPeriodsPerWeek
+  return week && week > 0 ? perDayFromPerWeek(week, workDayCount) : 0
 }
 
 // ─── Main Solver (JS CSP implementation) ─────────────────
@@ -1086,8 +1104,23 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           return
         }
 
+        // Pre-compute today's load for each teacher once per slot (subject-
+        // independent, so it must NOT be recomputed per candidate subject).
+        // Computed BEFORE isAvailable because the daily cap is an availability
+        // question, not a scoring one.
+        const teacherLoadToday: Record<string, number> = {}
+        Object.values(classTT).forEach(secData => {
+          Object.values(secData[day] ?? {}).forEach((cell: any) => {
+            if (cell?.teacher) teacherLoadToday[cell.teacher] = (teacherLoadToday[cell.teacher] ?? 0) + 1
+          })
+        })
+
         const isAvailable = (st: any) => {
           if (teacherBusy[st.name]?.[day]?.has(period.id)) return false
+          // PER-DAY workload cap (Blueprint v6 Step 0). A HARD constraint, not
+          // the -3 score nudge today's load used to get: "no more than 5 periods
+          // a day" has to mean it, or it isn't a cap.
+          if (atDailyLimit(teacherLoadToday[st.name] ?? 0, dailyCapFor(st, workDays.length))) return false
           // TEACHER scope hard exclusion
           const tScope = (st as any).scope
           if (tScope) {
@@ -1096,15 +1129,6 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           }
           return true
         }
-
-        // Pre-compute today's load for each teacher once per slot (subject-
-        // independent, so it must NOT be recomputed per candidate subject).
-        const teacherLoadToday: Record<string, number> = {}
-        Object.values(classTT).forEach(secData => {
-          Object.values(secData[day] ?? {}).forEach((cell: any) => {
-            if (cell?.teacher) teacherLoadToday[cell.teacher] = (teacherLoadToday[cell.teacher] ?? 0) + 1
-          })
-        })
 
         // ── Try each candidate subject in score order until one places with a
         //    PROPER teacher. A subject whose specialists are all busy at this
@@ -1652,8 +1676,19 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     const sectionKey = `${secName}::${subject}`
     const gradeKey   = sec?.grade ? `${(sec as any).grade}::${subject}` : ''
 
+    // Today's load, needed before availability because the per-day cap decides
+    // availability (see the Phase-2 site above for the same reasoning).
+    const loadTodayForCap: Record<string, number> = {}
+    Object.values(classTT).forEach(sd => {
+      Object.values((sd as any)[day] ?? {}).forEach((c: any) => {
+        if (c?.teacher) loadTodayForCap[c.teacher] = (loadTodayForCap[c.teacher] ?? 0) + 1
+      })
+    })
+
     const isAvailable = (st: Staff): boolean => {
       if (teacherBusy[st.name]?.[day]?.has(periodId)) return false
+      // PER-DAY workload cap — hard, same as Phase 2.
+      if (atDailyLimit(loadTodayForCap[st.name] ?? 0, dailyCapFor(st, workDays.length))) return false
       const tScope = (st as any).scope
       if (tScope) {
         const s = tScope.cells?.[day]?.[periodId] ?? 'allowed'
