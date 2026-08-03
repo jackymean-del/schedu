@@ -220,9 +220,17 @@ export function WorkloadNormModal({
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       }}
     >
-      <div style={{ width: '100%', maxWidth: 640, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+      {/* Height-bounded flex column: header and footer stay put and only the
+          table scrolls. Without the bound, a school with a dozen subjects grew
+          the card past the viewport and lost both the close button and Save. */}
+      <div style={{
+        width: '100%', maxWidth: 640, maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column',
+        background: '#fff', borderRadius: 16, overflow: 'hidden',
+        boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+      }}>
         {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ color: '#fff' }}>
             <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7 }}>
               <ShieldCheck size={16} /> Custom workload
@@ -236,7 +244,10 @@ export function WorkloadNormModal({
           </button>
         </div>
 
-        <div style={{ padding: 18 }}>
+        {/* minHeight:0 is what actually lets a flex child shrink and scroll —
+            without it the body keeps its content height and pushes the footer
+            off-screen regardless of the parent's maxHeight. */}
+        <div style={{ padding: 18, flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {/* Grain. Each level only states what differs from the one above, so
               a school can set a stage figure once and correct the single class
               or subject that departs from it. */}
@@ -353,7 +364,7 @@ export function WorkloadNormModal({
           </p>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '13px 20px', borderTop: '1px solid #F1EFFA' }}>
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '13px 20px', borderTop: '1px solid #F1EFFA', background: '#fff' }}>
           <button onClick={onClose}
             style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 13, fontWeight: 700, color: '#4B5275', cursor: 'pointer', fontFamily: 'inherit' }}>
             Cancel
@@ -401,5 +412,8 @@ function Switch<T extends string>({ label, value, onChange, options }: {
 const th: React.CSSProperties = {
   padding: '7px 10px', fontSize: 10, fontWeight: 800, color: '#8B87AD',
   textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left',
+  // Sticky within the scrolling body — a long subject list otherwise scrolls
+  // its own column headings away, leaving three unlabelled numbers.
+  position: 'sticky', top: 0, zIndex: 1, background: '#F8F7FF',
 }
 const td: React.CSSProperties = { padding: '8px 10px' }

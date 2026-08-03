@@ -2302,8 +2302,14 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 460, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
-        <div style={{ background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Height-bounded so a school with many classes can't push the header and
+          the Declare button off-screen — see WorkloadNormModal for the same. */}
+      <div style={{
+        width: '100%', maxWidth: 460, maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column',
+        background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+      }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ color: '#fff' }}>
             <div style={{ fontSize: 16, fontWeight: 800 }}>Mark this day</div>
             <div style={{ fontSize: 12, opacity: 0.85 }}>{pretty}</div>
@@ -2311,7 +2317,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
           <button onClick={onClose} style={{ border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
         </div>
 
-        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ padding: 20, flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {alreadyHoliday ? (
             <div style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 9, padding: '9px 11px' }}>
               This day is already a declared holiday. Remove it from the day cell (or in Settings) if that was a mistake.
@@ -2394,9 +2400,9 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+      <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
         {/* header */}
-        <div style={{ background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
             <CalendarDays size={20} />
             <span style={{ fontSize: 18, fontWeight: 800 }}>Add Event</span>
@@ -2404,7 +2410,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
           <button onClick={onClose} style={{ border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
         </div>
 
-        <div style={{ padding: 22, maxHeight: '70vh', overflowY: 'auto' }}>
+        <div style={{ padding: 22, flex: 1, minHeight: 0, overflowY: 'auto' }}>
           <Field label="Event Title" required>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Enter event title" autoFocus style={inp} />
           </Field>
@@ -2448,7 +2454,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA' }}>
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA', background: '#fff' }}>
           <button onClick={onClose} style={{ padding: '11px 22px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 14, fontWeight: 700, color: '#4B5275', cursor: 'pointer' }}>Cancel</button>
           <button onClick={create} disabled={!valid}
             style={{ padding: '11px 26px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 800, cursor: valid ? 'pointer' : 'not-allowed',
@@ -2481,7 +2487,7 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+      <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
         <div style={{ padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #F1EFFA' }}>
           <button onClick={onClose} style={{ border: 'none', background: '#F4F2FC', width: 32, height: 32, borderRadius: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B6890' }}><ArrowLeft size={16} /></button>
           <div>
@@ -2490,7 +2496,7 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
           </div>
         </div>
 
-        <div style={{ padding: 22, maxHeight: '68vh', overflowY: 'auto' }}>
+        <div style={{ padding: 22, flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {/* Duration */}
           <div style={{ background: '#F4F8FF', border: '1px solid #E2ECFF', borderRadius: 12, padding: 14, marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -2537,7 +2543,7 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
           </Field>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA' }}>
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA', background: '#fff' }}>
           <button onClick={onClose} style={{ padding: '11px 22px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 14, fontWeight: 700, color: '#4B5275', cursor: 'pointer' }}>Cancel</button>
           <button onClick={mark}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 800, cursor: 'pointer',
@@ -2867,7 +2873,7 @@ function AssignTaskModal({ target, date, terms, history, weekCount, multiActive,
           )}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA' }}>
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA', background: '#fff' }}>
           <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 13.5, fontWeight: 700, color: '#4B5275', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
           <button onClick={submit} disabled={!valid}
             style={{ padding: '10px 24px', borderRadius: 10, border: 'none', fontSize: 13.5, fontWeight: 800, cursor: valid ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
