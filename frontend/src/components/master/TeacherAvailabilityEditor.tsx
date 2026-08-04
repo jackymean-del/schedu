@@ -19,6 +19,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import type { Staff, Period, TeacherAvailability, SlotStatus } from '@/types'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
@@ -147,7 +148,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
     return totalClassSlots - blockedCount
   }, [selectedTeacher, teacherAvailability, classPeriods, workDays])
 
-  const maxWeeklyLoad = (selectedTeacher as any)?.maxPeriodsPerWeek ?? 40
+  const maxWeeklyLoad = teacherWeeklyCap(selectedTeacher as any)
   const loadOk = availableCount >= maxWeeklyLoad
 
   return (

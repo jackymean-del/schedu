@@ -1064,10 +1064,12 @@ ok(effMax('AU', 40, undefined) === 20 && 40 / 20 === 2,
   'and the old ?? 40 fallback was double the Australian norm')
 // A custom override still wins — that is the point of an override.
 ok(effMax('GB', 40, 20) === 30, 'a custom 20 h/week at 40-min periods overrides the norm with 30p')
-// orgData keeps its OWN country table, which disagrees. Pin the discrepancy so
-// nobody "fixes" one table and leaves the other silently contradicting it.
+// orgData's figure is the SCHOOL DAY (6 periods/day × 6 days = 36), not a
+// teacher's teaching cap (30). Both are correct for what they describe — the bug
+// was reading one as the other, which no code does now. Pinned so the two stay
+// distinguishable rather than being "reconciled" into a single wrong number.
 ok(getCountry('IN').maxPeriodsWeek === 36 && teacherNorms('IN').safeMaxPeriodsWeek === 30,
-  'KNOWN: orgData.COUNTRIES still says 36 for India while the norms database says 30 — two sources of truth')
+  "orgData describes the school day (36); the norms database describes the teaching cap (30) — different questions, different answers")
 
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'

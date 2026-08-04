@@ -14,6 +14,7 @@
  */
 
 import type { Staff, Subject, Section } from '@/types'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 
 export type FixCategory = 'rebalance' | 'reassign' | 'unscope' | 'manual'
 
@@ -103,7 +104,7 @@ function findCapableTeacher(
         subs.includes(`${section}::${subject}`) ||
         ctx.sections.some(s => s.name === section && s.grade && subs.includes(`${s.grade}::${subject}`))
       const load = weeklyLoad(t.name, ctx.teacherAllocations)
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       const headroom = max - load
       return { t, matches, headroom }
     })

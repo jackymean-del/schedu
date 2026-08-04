@@ -574,7 +574,7 @@ export function Step6Generate() {
                     <span>
                       <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
                       ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
-                      extra lessons will be dropped. Trim in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
+                      extra lessons will be dropped. Trim in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
                     </span>
                   </div>
                 ) : preflight.unallocated.length > 0 ? (
@@ -702,7 +702,7 @@ export function Step6Generate() {
                       style={{ padding:"7px 14px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:11.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
                       Cancel
                     </button>
-                  : <button className="g6-ghost" onClick={() => setStep(4)}
+                  : <button className="g6-ghost" onClick={() => setStep(3)}
                       style={{ padding:"7px 14px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:11.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
                       ← Student Groups
                     </button>
@@ -780,9 +780,9 @@ export function Step6Generate() {
             </button>
             {/* Most generation failures trace back to allocation gaps — offer
                 the fix path directly instead of a dead end */}
-            <button onClick={() => setStep(3)}
+            <button onClick={() => setStep(4)}
               style={{ padding:"13px 20px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
-              ← Check Allocation (Step 3)
+              ← Check Mapping (Step 4)
             </button>
           </div>
         )}

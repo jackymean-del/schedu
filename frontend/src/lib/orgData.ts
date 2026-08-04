@@ -3,6 +3,16 @@ import { generateId } from './utils'
 import { teacherNorms } from './educationNorms'
 
 // ─── Country Data ─────────────────────────────────────────
+//
+// NOTE ON `maxPeriodsWeek` / `maxPeriodsDay`:
+// These describe the SCHOOL DAY — how many periods a class sits through (India:
+// 6 a day, 36 a week). They are NOT a teacher's teaching cap, which is a
+// different and much lower figure (India's safe teaching load is 30/week) and
+// lives in lib/educationNorms, resolved through lib/teacherCap.
+//
+// Reading these as a teacher cap is exactly the bug that had a UK teacher
+// allowed 32–40 periods against a 22-period norm. If you need a teacher's limit,
+// call teacherWeeklyCap(staff) — never a figure from this table.
 export const COUNTRIES: Country[] = [
   {
     code: 'IN', flag: '🇮🇳', name: 'India', subtitle: 'NCTE · Labour Act 1948',

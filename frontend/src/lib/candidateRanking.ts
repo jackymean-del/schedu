@@ -9,6 +9,7 @@
  */
 
 import type { Staff, Section, Subject } from '@/types'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { explainAssignment, type AssignmentExplanation } from './explanationEngine'
 import { parseAllocation } from './allocationSyntax'
 
@@ -83,7 +84,7 @@ export function rankCandidates(input: RankCandidatesInput): RankedCandidate[] {
       const existing = existingInSlot(teacher.name)
       // Projected delta = remaining slot capacity that this teacher could take
       //   (capped by their own headroom too)
-      const max = (teacher as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(teacher as any)
       const personalHeadroom = Math.max(0, max - currentLoad + existing)
       // If they're already in the slot we count their existing contribution
       // separately; otherwise assume they could take the full available

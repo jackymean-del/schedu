@@ -13,6 +13,7 @@
  */
 
 import { useMemo, useState, useEffect, useRef } from 'react'
+import { teacherWeeklyCap, schoolTeacherCap } from '@/lib/teacherCap'
 import type { Section, Subject, Staff, Period, OptionalBlock, Conflict, ClassTimetable } from '@/types'
 import { computeCapacity, inferBandFromSection, utilisationStatus } from '@/lib/capacityEngine'
 import { suggestFixes, type FixSuggestion } from '@/lib/fixSuggester'
@@ -122,7 +123,7 @@ export function ReviewDashboard({
     const list = staff.map(t => ({
       name: t.name,
       load: loadOf(t.name),
-      max: (t as any).maxPeriodsPerWeek ?? 40,
+      max: teacherWeeklyCap(t as any),
     }))
     return list.sort((a, b) => b.load - a.load)
   }, [staff, classTT])
@@ -229,6 +230,7 @@ export function ReviewDashboard({
         subjects,
         periods,
         workDays,
+        defaultTeacherMaxPeriods: schoolTeacherCap(),
         subjectAllocations: liveStore.subjectAllocations ?? {},
       })
       const stddevBefore = loadStats.stddev

@@ -44,6 +44,13 @@ import {
 } from '@/lib/capacityEngine'
 import { Search, ChevronDown, Minus, Plus, Check } from 'lucide-react'
 
+// Community only — ag-grid-enterprise is not a dependency of this project.
+//
+// The grid used to ask for `rowNumbers` and `cellSelection` (column selection +
+// fill handle), both ENTERPRISE features. AG Grid logged error #200 for each on
+// every render and ignored them, so they never worked; those props are gone.
+// Restoring them means adding ag-grid-enterprise (a paid licence) and
+// registering RowNumbersModule + CellSelectionModule here.
 ModuleRegistry.registerModules([AllCommunityModule])
 
 // ─────────────────────────────────────────────────────────────────
@@ -1458,14 +1465,18 @@ export function AllocationGridAG({
       >
         <AgGridReact<RowData>
           ref={gridRef}
+          // This grid is styled by the imported ag-grid.css + quartz theme files
+          // and by our own .ag-theme-quartz overrides above. AG Grid v33+ defaults
+          // to the Theming API instead, which fights those stylesheets and logs
+          // error #239 on every render. "legacy" keeps the CSS-file styling the
+          // component was actually written against.
+          theme="legacy"
           rowData={rowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           getRowId={(p) => p.data.__sectionId}
           context={gridContext}
           onGridReady={e => { if (import.meta.env.DEV) (window as any).__allocApi = e.api }}
-
-          rowNumbers={{ width: 40, minWidth: 36 }}
 
           singleClickEdit={false}
           stopEditingWhenCellsLoseFocus={true}
@@ -1474,11 +1485,6 @@ export function AllocationGridAG({
           undoRedoCellEditing={true}
           undoRedoCellEditingLimit={1000}
           suppressLastEmptyLineOnPaste={true}
-
-          cellSelection={{
-            enableColumnSelection: true,
-            handle: { mode: 'fill', direction: 'xy' },
-          }}
 
           suppressColumnVirtualisation={true}
           ensureDomOrder={true}

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { useTimetableStore } from "@/store/timetableStore"
 import { ORG_CONFIGS, getCountry } from "@/lib/orgData"
 
@@ -226,7 +227,7 @@ export function Step6Assign() {
                 const clsSubs = subjects.filter(sub => isSubjectCheckedForClass(i, sub.name, cls))
                 return total + clsSubs.reduce((a, s) => a + s.periodsPerWeek, 0)
               }, 0)
-              const maxP = st.maxPeriodsPerWeek ?? country.maxPeriodsWeek
+              const maxP = teacherWeeklyCap(st as any)
               const pct  = Math.min(150, Math.round(load / maxP * 100))
               const barColor = pct>100?"#ef4444":pct>85?"#f59e0b":"#7C6FE0"
 

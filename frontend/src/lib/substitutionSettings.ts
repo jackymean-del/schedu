@@ -26,7 +26,16 @@ export interface ScoringWeights {
 export interface SubstitutionDefaults {
   autoSuggestionsEnabled: boolean
   maxSuggestionsToShow: number | null   // null = show all available
-  maxPeriodsPerDay: number              // total periods including substitutions
+  /**
+   * Ceiling on a COVER DAY: own lessons + substitutions combined, past which a
+   * teacher stops being offered as a substitute.
+   *
+   * NOT the same thing as Staff.maxPeriodsPerDay, which is the regular teaching
+   * cap the scheduling engine enforces when building the timetable. This one is
+   * higher by design — a school will let someone exceed their normal daily shape
+   * to cover an absence, but not without limit.
+   */
+  maxPeriodsPerDay: number
   maxSubstitutesPerDay: number
   maxSubstitutesPerWeek: number
 }

@@ -10,6 +10,7 @@
  */
 
 import { useMemo } from 'react'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { useTimetableStore } from '@/store/timetableStore'
 import type { Section, Subject } from '@/types'
 import { rankCandidates, type RankedCandidate } from '@/lib/candidateRanking'
@@ -158,7 +159,7 @@ function CandidateRow({
     cand.loadStatus === 'over-target' ? '#D4920E' :
     cand.loadStatus === 'near-target' ? '#16A34A' : '#7C6FE0'
 
-  const max = (cand.teacher as any).maxPeriodsPerWeek ?? 40
+  const max = teacherWeeklyCap(cand.teacher as any)
   const canTake = cand.projectedDelta > 0
 
   // Top 2 factors (positive) for summary

@@ -12,6 +12,7 @@
  */
 
 import type { Staff, Subject, Section, ScopeState } from '@/types'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 
 export type FactorCategory =
   | 'expertise'      // teacher's subjects array matches
@@ -108,7 +109,7 @@ export function explainAssignment(ctx: ExplainContext): AssignmentExplanation {
   if (ctx.weeklyLoad != null && ctx.targetWeeklyLoad != null) {
     const load = ctx.weeklyLoad
     const target = ctx.targetWeeklyLoad
-    const max = (ctx.teacher as any).maxPeriodsPerWeek ?? 40
+    const max = teacherWeeklyCap(ctx.teacher as any)
 
     if (load > max) {
       const over = load - max

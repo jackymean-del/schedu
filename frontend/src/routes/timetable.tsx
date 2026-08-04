@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { loadTerms, plural, type Terms } from "@/lib/terms"
 import { useTimetableStore } from "@/store/timetableStore"
@@ -2356,7 +2357,7 @@ export function TimetablePage() {
     // Count from classTT directly (tdata.schedule collapses staggered same-id periods)
     const total = sections.reduce((sum, s) => sum + config.workDays.reduce((sd, d) =>
       sd + Object.values(classTT[s.name]?.[d] ?? {}).filter((c:any)=>cellHasTeacher(c, tn)).length, 0), 0)
-    const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
+    const max = teacherWeeklyCap(st as any)
     const pct = Math.min(150, Math.round(total/max*100))
     // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
     const draggedCellTeacher = dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.teacher : null
@@ -2569,7 +2570,7 @@ export function TimetablePage() {
     const st = staff.find(s => s.name === tn)
     const total = sections.reduce((sum, s) => sum + config.workDays.reduce((sd, d) =>
       sd + Object.values(classTT[s.name]?.[d] ?? {}).filter((c:any)=>cellHasTeacher(c, tn)).length, 0), 0)
-    const max = st?.maxPeriodsPerWeek ?? country.maxPeriodsWeek
+    const max = teacherWeeklyCap(st as any)
     const pct = Math.min(150, Math.round(total/max*100))
     // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
     const draggedCellTeacher = dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.teacher : null
@@ -4366,7 +4367,7 @@ export function TimetablePage() {
             <div style={{ fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.07em", marginBottom:8 }}>Staff Workload</div>
             {staff.map(st => {
               const total = Object.values(teacherTT[st.name]?.schedule ?? {}).reduce((a,d) => a + Object.values(d).filter(x=>x?.subject).length, 0)
-              const max   = st.maxPeriodsPerWeek ?? country.maxPeriodsWeek
+              const max   = teacherWeeklyCap(st as any)
               const pct   = Math.min(100, Math.round(total/max*100))
               const color = pct>100?"#dc2626":pct>90?"#ea580c":pct>75?"#D4920E":"#10B981"
               return (

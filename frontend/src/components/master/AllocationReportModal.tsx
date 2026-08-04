@@ -13,6 +13,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 // xlsx is loaded on demand (export click) — keeps it out of the main bundle
 import { useTimetableStore } from '@/store/timetableStore'
 import type { Section, Subject, Staff } from '@/types'
@@ -218,7 +219,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
         if (typeof p === 'number' && p > 0) { total += p; subjectCount.add(sub); sectionCount.add(sec) }
       })
     })
-    const max = (t as any).maxPeriodsPerWeek ?? 40
+    const max = teacherWeeklyCap(t as any)
     return {
       teacher: t.name, total, max,
       subjects: subjectCount.size, sections: sectionCount.size,

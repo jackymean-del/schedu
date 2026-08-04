@@ -9,6 +9,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 // xlsx is loaded on demand (export click) — keeps it out of the main bundle
 import { useTimetableStore } from '@/store/timetableStore'
 import { AllocationGridAG } from '@/components/master/AllocationGridAG'
@@ -155,7 +156,7 @@ export function StepAllocation() {
 
     // Teacher load checks
     ;(staff as Staff[]).forEach(t => {
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       let total = 0
       const tMap = teacherAllocations[t.name] ?? {}
       Object.values(tMap).forEach((sMap: any) =>
@@ -342,7 +343,7 @@ export function StepAllocation() {
       })
     })
     const totalTeacherCapacity = (staff as Staff[]).reduce((sum, t) =>
-      sum + ((t as any).maxPeriodsPerWeek ?? 40), 0)
+      sum + (teacherWeeklyCap(t as any)), 0)
     if (totalTeacherCapacity > 0 && totalPeriodDemand > totalTeacherCapacity) {
       const deficit = totalPeriodDemand - totalTeacherCapacity
       const approx  = Math.ceil(deficit / 30)
@@ -355,7 +356,7 @@ export function StepAllocation() {
   // Teacher allocation summary stats
   const teacherStats = useMemo(() => {
     const rows = (staff as Staff[]).map((t: Staff) => {
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       let load = 0
       const tMap = teacherAllocations[t.name] ?? {}
       Object.values(tMap).forEach((sMap: any) =>
@@ -727,7 +728,7 @@ export function StepAllocation() {
           }
         })
       })
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       return [t.name, String(total), String(max), `${max > 0 ? Math.round(total / max * 100) : 0}%`, String(subSet.size), String(secSet.size), details.join('; ')]
     })
     const data = [header, ...rows]
@@ -1077,18 +1078,18 @@ export function StepAllocation() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginTop: 20, paddingTop: 14, borderTop: '1px solid #F0EDFF',
       }}>
-        <button onClick={() => setStep(2)} style={btnSecondary}>
-          <ChevronLeft size={14} /> Shift & timing
+        <button onClick={() => setStep(3)} style={btnSecondary}>
+          <ChevronLeft size={14} /> Groups & Combos
         </button>
         <span style={{ fontSize: 10, color: '#B8B4D4', textAlign: 'center' as const, lineHeight: 1.5 }}>
-          Step 3 of 5 · Period allocation → Teacher allocation → Validation
+          Step 4 of 5 · Period allocation → Teacher allocation → Validation
           {hardConflicts.length > 0 && (
             <span style={{ display: 'block', color: '#DC2626', fontWeight: 700, marginTop: 2 }}>
               Fix {hardConflicts.length} conflict{hardConflicts.length !== 1 ? 's' : ''} before proceeding
             </span>
           )}
         </span>
-        <button onClick={() => setStep(4)} disabled={hardConflicts.length > 0} style={btnPrimary(hardConflicts.length === 0)}>
+        <button onClick={() => setStep(5)} disabled={hardConflicts.length > 0} style={btnPrimary(hardConflicts.length === 0)}>
           Save & Continue <ChevronRight size={14} />
         </button>
       </div>
@@ -1388,7 +1389,7 @@ function AIAllocationNotesPanel({
 
     // Overloaded teachers
     const overloaded = staff.filter(t => {
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       let load = 0
       const tMap = teacherAllocations[t.name] ?? {}
       Object.values(tMap).forEach((sMap: any) =>
@@ -1397,7 +1398,7 @@ function AIAllocationNotesPanel({
       return load > max * 1.05
     })
     overloaded.forEach(t => {
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       let load = 0
       const tMap = teacherAllocations[t.name] ?? {}
       Object.values(tMap).forEach((sMap: any) =>
@@ -1409,7 +1410,7 @@ function AIAllocationNotesPanel({
 
     // Light teachers
     const light = staff.filter(t => {
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       let load = 0
       const tMap = teacherAllocations[t.name] ?? {}
       Object.values(tMap).forEach((sMap: any) =>
@@ -1496,9 +1497,16 @@ function AllocationSummaryPanel({
           <SumRow label="Unassigned"         value={teacherStats.unassigned}     color={teacherStats.unassigned > 0 ? '#B8B4D4' : undefined} />
         </tbody>
       </table>
-      <div style={{ marginTop: 8, borderTop: '1px solid #F0EDFF', paddingTop: 8, display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-        <SumRow label="Hard conflicts"  value={hardConflicts.length}  color={hardConflicts.length > 0 ? '#DC2626' : '#16A34A'} />
-        <SumRow label="Soft warnings"   value={softWarnings.length}   color={softWarnings.length > 0 ? '#D97706' : '#16A34A'} />
+      {/* SumRow renders a <tr>, so it needs a table around it — these two used
+          to sit in a bare <div>, which is invalid DOM and what React was
+          warning about on every render of this panel. */}
+      <div style={{ marginTop: 8, borderTop: '1px solid #F0EDFF', paddingTop: 8 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            <SumRow label="Hard conflicts"  value={hardConflicts.length}  color={hardConflicts.length > 0 ? '#DC2626' : '#16A34A'} />
+            <SumRow label="Soft warnings"   value={softWarnings.length}   color={softWarnings.length > 0 ? '#D97706' : '#16A34A'} />
+          </tbody>
+        </table>
       </div>
     </SideCard>
   )

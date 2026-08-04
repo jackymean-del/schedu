@@ -41,14 +41,15 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
     'Define your daily periods and breaks — start/end times, period length and lunch.',
     'Set the working days and any shifts; this becomes the grid every class is scheduled into.',
   ] },
-  { title: 'Step 3 · Mapping', tips: [
+  { title: 'Step 3 · Groups & Combos', tips: [
+    'Set up electives and combined groups (students pick one option, or classes merge for a subject).',
+    'Skip this step if your classes don’t share subjects across sections.',
+    'These rules come first because Mapping allocates around them.',
+  ] },
+  { title: 'Step 4 · Mapping', tips: [
     'Map each subject to its class-sections, then map those to teachers.',
     'Subject and teacher mappings stay in sync — edit either side and the other reflows.',
     'Overloaded faculty or venues are flagged here, with one-click load optimisation.',
-  ] },
-  { title: 'Step 4 · Groups & Combos', tips: [
-    'Set up electives and combined groups (students pick one option, or classes merge for a subject).',
-    'Skip this step if your classes don’t share subjects across sections.',
   ] },
   { title: 'Step 5 · Review & Generate', tips: [
     'Review your setup, then generate a conflict-free schedule.',
@@ -57,13 +58,18 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
 ]
 
 // ── Step registry ─────────────────────────────────────────────
-const STEPS = [StepResourcesV2, StepBell, StepAllocation, StepStudentGroups, Step6Generate]
+// Groups & Combos comes BEFORE Mapping. Blueprint v6 Step 5: Mapping "depends
+// on Step 2 (subjects/teachers/venues), Step 3 (time grid), and Step 4
+// (parallel-subject rules) — this is the only step that requires all three prior
+// steps to be complete." Mapping consumes the AND/OR rules, so configuring them
+// afterwards meant mapping against rules that didn't exist yet.
+const STEPS = [StepResourcesV2, StepBell, StepStudentGroups, StepAllocation, Step6Generate]
 
 const STEP_META = [
   { label: 'Resources',         sub: 'Classes, subjects, teachers & rooms'  },
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
-  { label: 'Mapping',           sub: 'Subject → class-section → teacher mapping' },
   { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules' },
+  { label: 'Mapping',           sub: 'Subject → class-section → teacher mapping' },
   { label: 'Review & generate', sub: 'HI builds your schedule'              },
 ]
 

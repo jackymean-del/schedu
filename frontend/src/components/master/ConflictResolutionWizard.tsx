@@ -16,6 +16,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import type { Conflict, Section, Staff, Subject, Period, ClassTimetable } from '@/types'
 import {
   AlertTriangle, CheckCircle2, ChevronRight, ChevronLeft,
@@ -121,7 +122,7 @@ function resolveDoubleBooking(
     else s -= 50   // wrong subject — heavily penalised
     const load = weeklyLoad[t.name] ?? 0
     s -= load * 2
-    const maxWeek = (t as any).maxPeriodsPerWeek ?? 40
+    const maxWeek = teacherWeeklyCap(t as any)
     if (load >= maxWeek * 0.9) s -= 40
     // Scope check
     const scope = (t as any).scope

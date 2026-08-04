@@ -15,6 +15,7 @@
  */
 
 import type { Staff } from '@/types'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { parseAllocation } from './allocationSyntax'
 
 export interface RecomputedPenalty {
@@ -79,7 +80,7 @@ export function recomputeWorkloadPenalties(input: RecomputeInput): RecomputedPen
   // Per-teacher overload penalties
   staff.forEach(t => {
     const load = loads[t.name] ?? 0
-    const max = (t as any).maxPeriodsPerWeek ?? 40
+    const max = teacherWeeklyCap(t as any)
     if (load > max) {
       out.push({
         constraint: 'teacher-overload',

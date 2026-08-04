@@ -4,11 +4,13 @@ import { useTimetableStore } from "@/store/timetableStore"
 import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layout/AppShell"
 
+// Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
+// (Blueprint v6: Mapping depends on the parallel-subject rules).
 const STEP_LABELS = [
   'Resources',
   'Shifts & Timing',
-  'Mapping',
   'Student Groups',
+  'Mapping',
   'Generate',
 ]
 

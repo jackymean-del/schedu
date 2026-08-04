@@ -201,8 +201,8 @@ const WIZARD_STEP_LABELS: Record<number, string> = {
   0: 'Named',
   1: 'Resources',
   2: 'Shift & timing',
-  3: 'Allocation',
-  4: 'Student groups',
+  3: 'Student groups',
+  4: 'Mapping',
   5: 'Complete',
 }
 

@@ -17,6 +17,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { useTimetableStore } from '@/store/timetableStore'
 import type { Staff, Subject, Section } from '@/types'
 import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
@@ -79,7 +80,7 @@ export function TeacherAllocationGrid() {
         format: (r) => String(weeklyLoad(r.teacherName)),
         render: (_, r) => {
           const load = weeklyLoad(r.teacherName)
-          const max = (staff.find((s: Staff) => s.name === r.teacherName) as any)?.maxPeriodsPerWeek ?? 40
+          const max = teacherWeeklyCap(staff.find((s: Staff) => s.name === r.teacherName) as any)
           const pct = max > 0 ? Math.min(100, (load / max) * 100) : 0
           const color = load > max ? '#DC2626' : load >= max * 0.9 ? '#D4920E' : load > 0 ? '#16A34A' : '#B8B4D4'
           return (

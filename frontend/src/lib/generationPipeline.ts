@@ -12,6 +12,7 @@
  * step6-generate.tsx — the wizard re-imports the ones it still uses.
  */
 import { buildPeriodSequence, buildPeriodSequenceFromCw, rebuildTeacherTT } from './aiEngine'
+import { schoolTeacherCap } from './teacherCap'
 import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from './schedulingEngine'
 import type { OptionalBlock, OptionalOption, Period, Suggestion } from '@/types'
 
@@ -603,6 +604,7 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
 
       const out = solveTimetable({
         sections: lockedBlockSections, staff, subjects: resolvedSubjects, periods: bp, workDays,
+        defaultTeacherMaxPeriods: schoolTeacherCap(),
         requirements: [], optionalBlocks, subjectCombinations, sectionStrengths,
         subjectAllocations, rooms, teacherAvailability: avail,
         dayOffRules: config.dayOffRules ?? [],
@@ -662,6 +664,7 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
 
   const output = solveTimetable({
     sections: effSections, staff, subjects: resolvedSubjects, periods, workDays,
+    defaultTeacherMaxPeriods: schoolTeacherCap(),
     requirements: [],
     optionalBlocks,
     subjectCombinations,

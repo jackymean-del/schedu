@@ -109,7 +109,12 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
               Applied to all faculty by default. Override per person in Faculty Settings below.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-              <Stepper label="Max Periods/Day" hint="Total periods including substitutions"
+              {/* Named "on a cover day" on purpose: the teaching cap set on
+                  Mapping is also "max periods per day", and two different limits
+                  wearing identical words on different screens read as a
+                  contradiction. This one is the ceiling once substitutions are
+                  piled on top of a normal day. */}
+              <Stepper label="Ceiling on a cover day" hint="Own lessons + substitutions combined, before this teacher stops being offered"
                 value={settings.defaults.maxPeriodsPerDay} onChange={v => setDefault('maxPeriodsPerDay', v)} />
               <Stepper label="Max Substitutes/Day" hint="Maximum substitute periods per day"
                 value={settings.defaults.maxSubstitutesPerDay} onChange={v => setDefault('maxSubstitutesPerDay', v)} />

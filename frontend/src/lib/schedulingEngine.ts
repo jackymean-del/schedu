@@ -63,6 +63,12 @@ export interface SolverInput {
   subjects: Subject[]
   periods: Period[]
   workDays: string[]
+  /**
+   * School default teacher cap in periods/week, from the norms database. Passed
+   * IN rather than read from a store so the solver stays a pure function —
+   * testable, and safe to move to a worker. Omitted only by legacy callers.
+   */
+  defaultTeacherMaxPeriods?: number
   requirements: SchedulingRequirement[]
   softConstraints?: SoftConstraint[]
   /** schedU Phase 3: Optional blocks to pin into specific (day, period, sections) slots */
@@ -536,6 +542,9 @@ function dailyCapFor(st: any, workDayCount: number): number {
 // ─── Main Solver (JS CSP implementation) ─────────────────
 export function solveTimetable(input: SolverInput): SolverOutput {
   const { sections, staff, subjects, periods, workDays } = input
+  // School default cap from the norms database, passed in so the solver stays
+  // pure. Falls back to 30 only for legacy callers that omit it.
+  const normCap = input.defaultTeacherMaxPeriods ?? 30
   const classPeriods = periods.filter(p => p.type === 'class')
   const classTT: ClassTimetable = {}
   const penalties: SolverOutput['penalties'] = []
@@ -1207,7 +1216,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             const name = st.name
             const weeklyLoad = teacherWeeklyLoad[name] ?? 0
             const todayLoad = teacherLoadToday[name] ?? 0
-            const maxWeek = (st as any).maxPeriodsPerWeek ?? 40
+            const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
 
             // Vertical continuity — already teaches this subject in another section
             if (teacherSubjectSet[name]?.has(chosenSub.name)) score += 25
@@ -1390,7 +1399,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     // Per-teacher overload penalties — exceeded individual max
     staff.forEach(t => {
       const load = teacherWeeklyLoad[t.name] ?? 0
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = (t as any).maxPeriodsPerWeek ?? normCap
       if (load > max) {
         penalties.push({
           constraint: 'teacher-overload',
@@ -1555,6 +1564,9 @@ export interface ReoptimizeInput {
   subjects: Subject[]
   periods: Period[]
   workDays: string[]
+  /** See SolverInput.defaultTeacherMaxPeriods — the re-optimiser needs the same
+   *  figure, or it would undo caps the first pass respected. */
+  defaultTeacherMaxPeriods?: number
   subjectAllocations?: Record<string, Record<string, string>>
 }
 
@@ -1571,7 +1583,7 @@ export interface ReoptimizeResult {
  *  judge whether a re-optimise attempt actually improved on the incumbent. */
 function measureLoads(
   classTT: ClassTimetable, sections: Section[], staff: Staff[], workDays: string[],
-  classPeriods: Period[],
+  classPeriods: Period[], normCap: number,
 ): { load: Record<string, number>; stddev: number; overCap: number } {
   const load: Record<string, number> = {}
   staff.forEach(t => { load[t.name] = 0 })
@@ -1592,7 +1604,7 @@ function measureLoads(
   }
   let overCap = 0
   staff.forEach(t => {
-    const max = (t as any).maxPeriodsPerWeek ?? 40
+    const max = (t as any).maxPeriodsPerWeek ?? normCap
     if (max > 0 && (load[t.name] ?? 0) > max) overCap += (load[t.name] ?? 0) - max
   })
   return { load, stddev, overCap }
@@ -1600,12 +1612,13 @@ function measureLoads(
 
 export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   const { sections, staff, subjects, periods, workDays } = input
+  const normCap = input.defaultTeacherMaxPeriods ?? 30
   const classPeriods = periods.filter(p => p.type === 'class')
 
   // Incumbent stats — the bar any re-optimise attempt must beat. Without
   // this, a greedy pass that happened to land WORSE (higher stddev, new cap
   // violations) was still returned and applied.
-  const before = measureLoads(input.classTT, sections, staff, workDays, classPeriods)
+  const before = measureLoads(input.classTT, sections, staff, workDays, classPeriods, normCap)
 
   // Deep-clone classTT — we mutate the clone, never the caller's data
   const classTT: ClassTimetable = JSON.parse(JSON.stringify(input.classTT))
@@ -1714,7 +1727,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     // that tier (an overload warning beats a blank cell — same philosophy
     // as the main solver).
     const underCap = (st: Staff): boolean => {
-      const maxWeek = (st as any).maxPeriodsPerWeek ?? 40
+      const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
       return maxWeek <= 0 || (teacherWeeklyLoad[st.name] ?? 0) < maxWeek
     }
     const pickTier = (pool: Staff[]): Staff[] => {
@@ -1745,7 +1758,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       let s = 0
       const wkLoad  = teacherWeeklyLoad[name] ?? 0
       const dayLoad = teacherLoadToday[name] ?? 0
-      const maxWeek = (st as any).maxPeriodsPerWeek ?? 40
+      const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
 
       if (teacherSubjectSet[name]?.has(subject)) s += 25
       if (teacherSectionSet[name]?.has(secName)) s += 8
@@ -1806,7 +1819,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     }
     staff.forEach(t => {
       const load = teacherWeeklyLoad[t.name] ?? 0
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = (t as any).maxPeriodsPerWeek ?? normCap
       if (load > max) {
         penalties.push({
           constraint: 'teacher-overload',
@@ -1821,7 +1834,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   // "Better" = fewer cap violations, or equal violations with lower stddev.
   // Otherwise keep the incumbent untouched and say so — re-optimise must
   // never be able to make a schedule worse.
-  const after = measureLoads(classTT, sections, staff, workDays, classPeriods)
+  const after = measureLoads(classTT, sections, staff, workDays, classPeriods, normCap)
   const improved = after.overCap < before.overCap ||
     (after.overCap === before.overCap && after.stddev < before.stddev - 1e-9)
   if (!improved) {
@@ -1834,7 +1847,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     })
     staff.forEach(t => {
       const load = before.load[t.name] ?? 0
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = (t as any).maxPeriodsPerWeek ?? normCap
       if (max > 0 && load > max) keptPenalties.push({
         constraint: 'teacher-overload', penalty: (load - max) * 5,
         details: `${t.name} has ${load} periods/week (max ${max})`,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { schoolTeacherCap } from '@/lib/teacherCap'
 import { useTimetableStore } from "@/store/timetableStore"
 import { buildPeriodSequence } from "@/lib/aiEngine"
 import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from "@/lib/schedulingEngine"
@@ -103,6 +104,7 @@ export function Step7Generate() {
           subjects: resolvedSubjects,
           periods,
           workDays: config.workDays,
+          defaultTeacherMaxPeriods: schoolTeacherCap(),
           requirements: [],
         })
 

@@ -11,6 +11,7 @@
  */
 
 import type { Staff } from '@/types'
+import { teacherWeeklyCap } from '@/lib/teacherCap'
 import type { FixChange, FixSuggestion } from './fixSuggester'
 
 export interface FixPreview {
@@ -97,7 +98,7 @@ export function previewFix(fix: FixSuggestion, ctx: PreviewContext): FixPreview 
   const beforeOverloads: string[] = []
   const afterOverloads: string[]  = []
   ctx.staff.forEach(t => {
-    const max = (t as any).maxPeriodsPerWeek ?? 40
+    const max = teacherWeeklyCap(t as any)
     if ((beforeLoads.get(t.name) ?? 0) > max) beforeOverloads.push(t.name)
     if ((afterLoads.get(t.name) ?? 0)  > max) afterOverloads.push(t.name)
   })
@@ -108,7 +109,7 @@ export function previewFix(fix: FixSuggestion, ctx: PreviewContext): FixPreview 
     const b = beforeLoads.get(t.name) ?? 0
     const a = afterLoads.get(t.name) ?? 0
     if (b !== a) {
-      const max = (t as any).maxPeriodsPerWeek ?? 40
+      const max = teacherWeeklyCap(t as any)
       loadDeltas.push({ teacher: t.name, before: b, after: a, max })
     }
   })
@@ -120,7 +121,7 @@ export function previewFix(fix: FixSuggestion, ctx: PreviewContext): FixPreview 
   const after_imbalance  = Math.min(50, Math.round(afterStddev * 4))
   let before_overload_pts = 0, after_overload_pts = 0
   ctx.staff.forEach(t => {
-    const max = (t as any).maxPeriodsPerWeek ?? 40
+    const max = teacherWeeklyCap(t as any)
     const bL = beforeLoads.get(t.name) ?? 0
     const aL = afterLoads.get(t.name)  ?? 0
     if (bL > max) before_overload_pts += (bL - max) * 5
