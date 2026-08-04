@@ -21,7 +21,7 @@ import {
   bellWeeklyCapacity,
 } from '@/lib/capacityEngine'
 import { parseAllocation } from '@/lib/allocationSyntax'
-import { deriveWeeklySlots, toAllocationGrid, periodsForHours } from '@/lib/periodAllocationEngine'
+import { deriveWeeklySlots, toAllocationGrid, periodsForHours, mergePreservingManual } from '@/lib/periodAllocationEngine'
 import { WorkloadNormModal } from '@/components/master/WorkloadNormModal'
 import { bandForSection, BAND_LABELS, effectiveTeacherMaxPeriods, type GradeBand } from '@/lib/educationNorms'
 import { studentHoursFor, expandSubjectOverrides } from '@/lib/facultyWorkload'
@@ -62,6 +62,7 @@ export function StepAllocation() {
   const [syncDone, setSyncDone] = useState(false)
   const [sortRowsAZ, setSortRowsAZ] = useState(false)
   const [workloadOpen, setWorkloadOpen] = useState(false)
+  const [keptEdits, setKeptEdits] = useState(0)
   const [sortColsAZ, setSortColsAZ] = useState(false)
 
   // Derive bell-schedule periods for TeacherAvailabilityEditor
@@ -407,8 +408,17 @@ export function StepAllocation() {
   [sections, subjects, config, capFor, studentMaxHoursWeek, studentMaxHoursWeekByClass,
    subjectPeriodsByClass, country, periodMinutes])
 
+  // Re-derive, but never at the cost of somebody's hand-tuned cells. The
+  // derivation is a default; a figure a person typed stands until they clear it.
   const handleAIPeriodSuggest = useCallback(() => {
-    store.setSubjectAllocations?.(toAllocationGrid(derivedAllocation))
+    const { grid, kept } = mergePreservingManual(
+      toAllocationGrid(derivedAllocation),
+      store.subjectAllocations ?? {},
+      store.manualSubjectAllocations ?? {},
+    )
+    store.setSubjectAllocations?.(grid)
+    setKeptEdits(kept)
+    if (kept > 0) setTimeout(() => setKeptEdits(0), 6000)
   }, [derivedAllocation, store])
 
   // ── Derive teacher allocations ─────────────────────────────────────────────────
@@ -594,9 +604,16 @@ export function StepAllocation() {
     setSyncDone(false)
     // Yield to paint thread so the spinner renders before heavy computation
     await new Promise<void>(r => setTimeout(r, 60))
-    const nextPeriods = toAllocationGrid(derivedAllocation)
+    // Same rule as Suggest: re-deriving must not throw away hand-typed cells.
+    const { grid: nextPeriods, kept } = mergePreservingManual(
+      toAllocationGrid(derivedAllocation),
+      store.subjectAllocations ?? {},
+      store.manualSubjectAllocations ?? {},
+    )
     if (Object.keys(nextPeriods).length > 0) {
       store.setSubjectAllocations?.(nextPeriods)
+      setKeptEdits(kept)
+      if (kept > 0) setTimeout(() => setKeptEdits(0), 6000)
       handleAITeacherAllocate(nextPeriods)   // passes fresh periods — avoids stale-state race
     } else {
       // Resources carry no explicit class↔subject mappings — there is nothing
@@ -768,9 +785,21 @@ export function StepAllocation() {
         color: '#A99FF5', fontSize: 10, fontWeight: 600,
         cursor: 'pointer', fontFamily: 'inherit',
       }}
-        title="Auto-fill all sections with conflict-free allocations">
+        title="Re-derive every section from the curriculum norms. Cells you typed yourself are kept.">
         <Sparkles size={9} /> Suggest
       </button>
+
+      {/* Say what was preserved. A merge that looks identical to a replace is
+          no more trustworthy than the replace was. */}
+      {keptEdits > 0 && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          padding: '2px 7px', borderRadius: 4, background: '#F0FDF4',
+          border: '1px solid #BBF7D0', color: '#067647', fontSize: 10, fontWeight: 700,
+        }}>
+          <CheckCircle2 size={9} /> kept {keptEdits} of your edit{keptEdits > 1 ? 's' : ''}
+        </span>
+      )}
 
       {/* Reports & Export group */}
       <div style={{ display: 'inline-flex', borderRadius: 5, overflow: 'hidden', border: '1px solid #EEECF2', gap: 0 }}>

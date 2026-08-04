@@ -214,6 +214,12 @@ interface ScheduState {
   //    Empty/unset cell ⇒ engine falls back to Subject.periodsPerWeek default.
   //    Named `subjectAllocations` to avoid colliding with engine output `periodAllocations`.
   subjectAllocations: Record<string, Record<string, string>>
+  /**
+   * Cells in subjectAllocations a PERSON typed, as opposed to ones the period
+   * allocation engine derived. Re-deriving preserves these instead of silently
+   * discarding hand-tuned work — see lib/periodAllocationEngine.mergePreservingManual.
+   */
+  manualSubjectAllocations: Record<string, Record<string, true>>
 
   // ── Per-section capacity overrides (editable denominator in Allocation grid) ──
   //    Shape: { [sectionName]: maxPeriodsPerWeek }
@@ -370,6 +376,10 @@ interface ScheduState {
 
   // ── Doc Part 1 — Subject Period Allocations (cell-syntax matrix) ──
   setSubjectAllocations: (a: Record<string, Record<string, string>>) => void
+  /** Mark (or unmark) cells as hand-set. Applied to every section given, since a
+   *  grid edit propagates across a grade's sections. */
+  markSubjectAllocationsManual: (sections: string[], subject: string, manual: boolean) => void
+  clearManualSubjectAllocations: () => void
   setSubjectAllocationCell: (section: string, subject: string, value: string) => void
   setSectionCapacityOverrides: (o: Record<string, number>) => void
 
@@ -431,6 +441,7 @@ const initialState: Omit<ScheduState,
   | 'setSubjectCombinations' | 'upsertSubjectCombination' | 'removeSubjectCombination'
   | 'setSectionStrengths' | 'upsertSectionStrength'
   | 'setSubjectAllocations' | 'setSubjectAllocationCell' | 'setSectionCapacityOverrides'
+  | 'markSubjectAllocationsManual' | 'clearManualSubjectAllocations'
   | 'setTeacherAllocations' | 'setTeacherAllocationCell'
   | 'setBlockedSlots'
   | 'setDynamicLearningGroups'
@@ -499,6 +510,7 @@ const initialState: Omit<ScheduState,
   subjectCombinations: [],
   sectionStrengths: [],
   subjectAllocations: {},
+  manualSubjectAllocations: {},
   sectionCapacityOverrides: {},
   teacherAllocations: {},
   blockedSlots: [],
@@ -696,6 +708,19 @@ export const useTimetableStore = create<ScheduState>()(
 
         // ── Doc Part 1 — Subject Period Allocation actions ──
         setSubjectAllocations: (subjectAllocations) => set({ subjectAllocations }),
+        markSubjectAllocationsManual: (sections, subject, manual) =>
+          set((st) => {
+            const next = { ...st.manualSubjectAllocations }
+            for (const sec of sections) {
+              const row = { ...(next[sec] ?? {}) }
+              if (manual) row[subject] = true
+              else delete row[subject]
+              if (Object.keys(row).length) next[sec] = row
+              else delete next[sec]
+            }
+            return { manualSubjectAllocations: next }
+          }),
+        clearManualSubjectAllocations: () => set({ manualSubjectAllocations: {} }),
         setSectionCapacityOverrides: (sectionCapacityOverrides) => set({ sectionCapacityOverrides }),
         setSubjectAllocationCell: (section, subject, value) => set(st => {
           const sectionRow = { ...(st.subjectAllocations[section] ?? {}) }
@@ -890,6 +915,10 @@ export const useTimetableStore = create<ScheduState>()(
           subjectGroupingRules: state.subjectGroupingRules,
           sectionStrengths: state.sectionStrengths,
           subjectAllocations: state.subjectAllocations,
+          // Which of those cells a person set. Must persist alongside the values
+          // themselves — without it, a reload turns every hand-tuned figure back
+          // into a derived one and the next Suggest silently overwrites it.
+          manualSubjectAllocations: state.manualSubjectAllocations,
           sectionCapacityOverrides: state.sectionCapacityOverrides,
           teacherAllocations: state.teacherAllocations,
           dynamicLearningGroups: state.dynamicLearningGroups,

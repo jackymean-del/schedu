@@ -186,6 +186,45 @@ export function deriveWeeklySlots(
   })
 }
 
+/** section → subject → true, for cells a person typed rather than derived. */
+export type ManualCells = Record<string, Record<string, true>>
+
+/**
+ * Re-derive without discarding what a human typed.
+ *
+ * "Suggest" used to REPLACE the whole grid, so hand-tuning one section and then
+ * pressing Suggest for an unrelated reason silently threw that work away. The
+ * derivation is a default, not an authority: where somebody has deliberately set
+ * a cell, their figure stands until they clear it.
+ *
+ * Manual cells survive even when the derivation no longer produces that
+ * (section, subject) at all — deleting someone's entry because the curriculum
+ * norm stopped suggesting the subject would be the same silent loss in a
+ * different disguise.
+ */
+export function mergePreservingManual(
+  derived: Record<string, Record<string, string>>,
+  current: Record<string, Record<string, string>>,
+  manual: ManualCells,
+): { grid: Record<string, Record<string, string>>; kept: number } {
+  const grid: Record<string, Record<string, string>> = {}
+  for (const section in derived) grid[section] = { ...derived[section] }
+
+  let kept = 0
+  for (const section in manual) {
+    for (const subject in manual[section]) {
+      const value = current?.[section]?.[subject]
+      if (value == null || value === '') continue      // cleared — let the norm apply again
+      if (!grid[section]) grid[section] = {}
+      // Only counts as "kept" when it actually differs from what we'd derive;
+      // reporting cells that happen to match would overstate the rescue.
+      if (grid[section][subject] !== value) kept++
+      grid[section][subject] = value
+    }
+  }
+  return { grid, kept }
+}
+
 /**
  * Flatten to the shape the Mapping grid persists: section → subject → "5" (or
  * "4+1L" where the subject needs a lab period), matching the existing

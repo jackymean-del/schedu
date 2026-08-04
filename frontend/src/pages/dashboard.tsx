@@ -233,7 +233,7 @@ const TT_SNAPSHOT_FIELDS = [
   // Elective-grouping data — keep OR/AND combos, generated groups, the
   // preference matrix and grouping rules so they survive snapshot save/restore.
   'subjectGroups','subjectCombinations','dynamicLearningGroups',
-  'sectionStrengths','subjectGroupingRules','subjectAllocations',
+  'sectionStrengths','subjectGroupingRules','subjectAllocations','manualSubjectAllocations',
 ] as const
 
 /** Build a plain snapshot object of the current wizard store state. */

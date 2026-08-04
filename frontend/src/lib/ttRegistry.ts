@@ -76,7 +76,7 @@ const TT_SNAPSHOT_FIELDS = [
   'optionalConfigs','subjectPools','participantPools','rooms',
   'facilities','teacherPools',
   'subjectGroups','subjectCombinations','dynamicLearningGroups',
-  'sectionStrengths','subjectGroupingRules','subjectAllocations',
+  'sectionStrengths','subjectGroupingRules','subjectAllocations','manualSubjectAllocations',
 ]
 
 /**

@@ -687,7 +687,7 @@ export function AllocationGridAG({
   sortColsAZ = false,
 }: Props) {
   const store = useTimetableStore() as any
-  const { sections, subjects, subjectAllocations, sectionCapacityOverrides = {}, config } = store
+  const { sections, subjects, subjectAllocations, manualSubjectAllocations = {}, sectionCapacityOverrides = {}, config } = store
   // store.periods is only populated AFTER the first generation — on a fresh
   // wizard run derive the abstract sequence from the bell-step breaks so the
   // capacity engine (and the auto-suggest that depends on it) works first time.
@@ -726,6 +726,7 @@ export function AllocationGridAG({
   // These allow all useCallback / useMemo closures to read fresh data
   // without declaring it in their deps (which would cause re-creation).
   const allocationsRef  = useRef<Record<string, Record<string, string>>>(subjectAllocations)
+  const manualRef       = useRef<Record<string, Record<string, true>>>(manualSubjectAllocations)
   const capOverrideRef  = useRef<Record<string, number>>(sectionCapacityOverrides)
   const capRef          = useRef(cap)
   const bellCapsRef     = useRef(bellCaps)
@@ -733,6 +734,7 @@ export function AllocationGridAG({
   const displayModeRef  = useRef(displayMode)
   const periodMinRef    = useRef(periodMinutes)
   allocationsRef.current  = subjectAllocations
+  manualRef.current       = manualSubjectAllocations
   capOverrideRef.current  = sectionCapacityOverrides
   capRef.current          = cap
   bellCapsRef.current     = bellCaps
@@ -1103,6 +1105,9 @@ export function AllocationGridAG({
 
           if (isPastingRef.current) {
             store.setSubjectAllocations?.(withCurrent)
+            // A paste is a deliberate entry too — mark it, or Suggest would
+            // quietly undo an imported set of figures.
+            store.markSubjectAllocationsManual?.([sn], sub.name, val !== '')
             return true
           }
 
@@ -1118,6 +1123,11 @@ export function AllocationGridAG({
             if (Object.keys(sibRow).length === 0) delete merged[s.name]; else merged[s.name] = sibRow
           })
           store.setSubjectAllocations?.(merged)
+          // Record that a PERSON set this, across every section the edit reached,
+          // so re-deriving keeps it. Clearing the cell releases it back to the norm.
+          store.markSubjectAllocationsManual?.(
+            [sn, ...siblings.map((s: Section) => s.name)], sub.name, val !== '',
+          )
           return true
         },
 
@@ -1129,6 +1139,12 @@ export function AllocationGridAG({
           if (!parsed.valid) return { backgroundColor: '#FEF2F2' }
           const c = effectiveCap(gridContext, sn)
           if (!validateAllocationCapacity(parsed, c).ok) return { backgroundColor: '#FFFBEB' }
+          // A cell somebody set by hand survives Suggest, so it has to LOOK
+          // different from a derived one — otherwise "why didn't this change?"
+          // has no answer on screen.
+          if (manualRef.current?.[sn]?.[sub.name]) {
+            return { borderLeft: '2px solid #7C6FE0', fontWeight: 700 } as Record<string, string | number>
+          }
           return null
         },
       })

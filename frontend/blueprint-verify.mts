@@ -984,6 +984,38 @@ ok(maths.slots === 8 && maths.overridden,
 ok(subjOverride.totalSlots <= subjOverride.target,
   'and the rest of the curriculum still fits the week around it')
 
+// ── SUGGEST MUST NOT DISCARD HAND-TYPED CELLS ──
+// Re-deriving used to REPLACE the whole grid, so hand-tuning one section and
+// then pressing Suggest for an unrelated reason threw that work away silently.
+import { mergePreservingManual } from './src/lib/periodAllocationEngine'
+
+const derivedGrid = { 'I-A': { Maths: '6', English: '5' }, 'I-B': { Maths: '6', English: '5' } }
+const editedGrid  = { 'I-A': { Maths: '9', English: '5' }, 'I-B': { Maths: '6', English: '5' } }
+
+const untouched = mergePreservingManual(derivedGrid, editedGrid, {})
+ok(untouched.grid['I-A'].Maths === '6' && untouched.kept === 0,
+  'with nothing marked manual, the derivation applies in full — the default behaviour is unchanged')
+
+const keptEdit = mergePreservingManual(derivedGrid, editedGrid, { 'I-A': { Maths: true } })
+ok(keptEdit.grid['I-A'].Maths === '9', "a hand-typed cell survives re-derivation — Suggest no longer overwrites it")
+ok(keptEdit.grid['I-A'].English === '5' && keptEdit.grid['I-B'].Maths === '6',
+  'while every other cell still takes the freshly derived figure')
+ok(keptEdit.kept === 1, 'and the count reports exactly what was rescued, for telling the user')
+
+// Clearing a cell hands it back to the norm rather than pinning an empty value.
+const cleared = mergePreservingManual(derivedGrid, { 'I-A': { English: '5' } }, { 'I-A': { Maths: true } })
+ok(cleared.grid['I-A'].Maths === '6' && cleared.kept === 0,
+  'clearing a manual cell releases it back to the derivation')
+
+// A manual entry the derivation no longer produces must not be deleted.
+const orphan = mergePreservingManual({ 'I-A': { English: '5' } }, { 'I-A': { Drama: '2' } }, { 'I-A': { Drama: true } })
+ok(orphan.grid['I-A'].Drama === '2',
+  'a deliberate entry survives even when the curriculum norm stops suggesting that subject')
+
+// A cell marked manual whose value matches the derivation isn't counted as rescued.
+const same = mergePreservingManual(derivedGrid, derivedGrid, { 'I-A': { Maths: true } })
+ok(same.kept === 0, 'a manual cell that agrees with the norm is not reported as an override')
+
 // END TO END: does the SOLVER honour it? A cap the engine ignores is a form
 // field, not a constraint — today's load used to be a -3 scoring nudge only.
 import { solveTimetable } from './src/lib/schedulingEngine'
