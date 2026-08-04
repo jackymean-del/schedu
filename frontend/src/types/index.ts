@@ -1184,7 +1184,11 @@ export interface Room {
   id: string
   generatedName: string
   actualName: string
-  roomType: 'classroom' | 'lab' | 'hall' | 'gym' | 'other'
+  /** Display casing — 'Classroom', 'Computer Lab'. See lib/roomShape: this was
+   *  declared as a lowercase union that the editors never actually wrote, so
+   *  the union documented a shape no stored record had. Free-form because a
+   *  school may add its own venue type. */
+  roomType: string
   capacity: number
   shiftId?: string
   /** schedU Scope System — when set, room can only be used where allowed */

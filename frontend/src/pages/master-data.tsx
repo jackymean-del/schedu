@@ -28,6 +28,7 @@ import {
 } from '@/components/master/EntityGrids'
 import { DirectoryPanel } from '@/components/master/DirectoryPanel'
 import { useDirectoryStore } from '@/store/directoryStore'
+import { roomRowFrom, storedRoomsFrom } from '@/lib/roomShape'
 import {
   GraduationCap, BookOpen, Users, Building2, Grid3x3, Sparkles, BookMarked,
 } from 'lucide-react'
@@ -58,35 +59,36 @@ export function MasterDataPage() {
   const [tab, setTab] = useState<Tab>('classes')
   const [scopeTarget, setScopeTarget] = useState<{ kind: string; entity: any } | null>(null)
 
-  // Local rooms state mirrored to store (matches wizard behavior)
-  const [rooms, setRooms] = useState<RoomRow[]>(() => {
-    if (Array.isArray(storedRooms) && storedRooms.length > 0) {
-      return storedRooms.map((r: any) => ({
-        id: r.id ?? makeId(),
-        name: r.actualName ?? r.name ?? r.generatedName ?? 'Room',
-        type: r.roomType ?? r.type ?? 'Classroom',
-        capacity: r.capacity ?? 40,
-        building: r.building ?? 'Main Block',
-        floor: r.floor ?? 'Ground',
-        scope: r.scope,
-        directoryId: r.directoryId,
-      }))
-    }
-    return (sections ?? []).map((s: any, i: number) => ({
+  // Rooms are DERIVED from the store, not mirrored in local state.
+  //
+  // The mirror was seeded once, at first render — before the effect below
+  // hydrates this timetable's saved resources — and never re-derived. So the
+  // Venues tab could show the previously-open timetable's rooms while every
+  // other tab showed the active one's, and the first edit wrote those stale
+  // rooms back over the real ones. Deriving each render removes both.
+  const rooms = useMemo<RoomRow[]>(
+    () => (storedRooms ?? []).map(roomRowFrom) as RoomRow[],
+    [storedRooms],
+  )
+  // Writes merge onto the stored record — see lib/roomShape. A room's subject
+  // mappings and notes are not shown on this page, and must survive editing it.
+  const setRooms = (next: RoomRow[]) => setStoredRooms?.(storedRoomsFrom(next, storedRooms ?? []))
+
+  // A school that has classes but no room records yet gets one room per class,
+  // named from the class's own room where it has one. Deliberately an explicit
+  // seed after hydration rather than a fallback inside the render: as a
+  // fallback it re-ran on every render that saw an empty list, including the
+  // one before this timetable's rooms had loaded.
+  const seededRooms = useRef(false)
+  useEffect(() => {
+    if (seededRooms.current) return
+    if ((storedRooms ?? []).length > 0 || (sections ?? []).length === 0) return
+    seededRooms.current = true
+    setRooms((sections ?? []).map((s: any, i: number) => ({
       id: makeId(), name: s.room ?? `Room ${101 + i}`,
       type: 'Classroom', capacity: 40, building: 'Main Block', floor: 'Ground',
-    }))
-  })
-
-  useEffect(() => {
-    if (setStoredRooms) {
-      setStoredRooms(rooms.map(r => ({
-        id: r.id, generatedName: r.name, actualName: r.name,
-        roomType: (r.type.toLowerCase().replace(/ /g, '-') as any) || 'classroom',
-        capacity: r.capacity, scope: r.scope, directoryId: r.directoryId,
-      })))
-    }
-  }, [rooms])
+    })))
+  }, [storedRooms, sections])
 
   // ── Per-timetable resources ────────────────────────────────────
   // Resources (classes, subjects, teachers, rooms, strengths) are scoped to the

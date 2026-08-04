@@ -21,6 +21,7 @@ import { generateStaff, generateSubjects, generateBreaks } from '@/lib/orgData'
 import type { Section, Subject, Staff } from '@/types'
 import { ScopeMatrixModal } from '@/components/DataGrid/ScopeMatrixModal'
 import { parseGradeLevel } from '@/lib/gradeParse'
+import { roomRowFrom, storedRoomsFrom } from '@/lib/roomShape'
 import { makeId } from '@/components/master/EntityGrids'
 import { TeachersPanel } from '@/components/resources/TeachersPanel'
 import { ClassesPanel }  from '@/components/resources/ClassesPanel'
@@ -639,56 +640,19 @@ export function StepResourcesV2() {
   }
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
-  // Convert any legacy kebab-case roomType values that were saved by older code
-  // e.g. 'computer-lab' → 'Computer Lab', 'staff-room' → 'Staff Room'
-  const KEBAB_TO_ROOM_TYPE: Record<string, string> = {
-    'classroom': 'Classroom', 'lab': 'Lab', 'computer-lab': 'Computer Lab',
-    'library': 'Library', 'hall': 'Hall', 'gym': 'Gym',
-    'staff-room': 'Staff Room', 'staff room': 'Staff Room', 'other': 'Other',
-  }
-  function normalizeRoomType(raw: string | undefined): string {
-    if (!raw) return 'Classroom'
-    return KEBAB_TO_ROOM_TYPE[raw.toLowerCase()] ?? raw
-  }
-
-  const [rooms, setRoomsLocal] = useState<RoomExt[]>(() => {
-    const stored = store.rooms ?? []
-    if (Array.isArray(stored) && stored.length > 0) {
-      return stored.map((r: any) => ({
-        id:              r.id ?? makeId(),
-        name:            r.actualName ?? r.name ?? r.generatedName ?? 'Room',
-        type:            normalizeRoomType(r.roomType ?? r.type),
-        capacity:        r.capacity ?? 40,
-        building:        r.building ?? 'Main Block',
-        floor:           r.floor ?? 'Ground',
-        subjectMappings: r.subjectMappings ?? [],
-        notes:           r.notes ?? '',
-        scope:           r.scope,
-        directoryId:     r.directoryId,
-      }))
-    }
-    return []
-  })
+  // Read/write shape is shared with Master Data — see lib/roomShape for why the
+  // two pages must not each carry their own mapping.
+  const [rooms, setRoomsLocal] = useState<RoomExt[]>(
+    () => (store.rooms ?? []).map(roomRowFrom) as RoomExt[],
+  )
 
   const setRooms = (next: RoomExt[]) => {
     setRoomsLocal(next)
-    store.setRooms?.(next.map(r => ({
-      id: r.id, generatedName: r.name, actualName: r.name,
-      roomType: r.type,   // store as Title Case — no kebab conversion
-      capacity: r.capacity, building: r.building, floor: r.floor,
-      subjectMappings: r.subjectMappings,
-      notes: r.notes, scope: r.scope, directoryId: r.directoryId,
-    })))
+    store.setRooms?.(storedRoomsFrom(next, store.rooms ?? []))
   }
 
   useEffect(() => {
-    store.setRooms?.(rooms.map(r => ({
-      id: r.id, generatedName: r.name, actualName: r.name,
-      roomType: r.type,   // store as Title Case — no kebab conversion
-      capacity: r.capacity, building: r.building, floor: r.floor,
-      subjectMappings: r.subjectMappings,
-      notes: r.notes, scope: r.scope, directoryId: r.directoryId,
-    })))
+    store.setRooms?.(storedRoomsFrom(rooms, store.rooms ?? []))
   }, [rooms]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

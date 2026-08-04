@@ -1164,6 +1164,50 @@ ok(leaveCoversDate(extendedLeave, '2026-08-05') && !leaveCoversDate(extendedLeav
 ok(isOnLeaveOn([extendedLeave], 'Meera', '2026-08-04') && !isOnLeaveOn([extendedLeave], 'Ravi', '2026-08-04'),
   'being on leave is per teacher')
 
+// ── Two pages editing one room list ──
+// Master Data and the wizard's Resources step both edit rooms. They used to
+// carry their own read/write mappings, which disagreed on casing and dropped
+// every field one of them didn't show.
+import { roomRowFrom, storedRoomFrom, storedRoomsFrom, normalizeRoomType } from './src/lib/roomShape'
+
+ok(normalizeRoomType('computer-lab') === 'Computer Lab', 'kebab from the old write path reads back as a real option')
+ok(normalizeRoomType('Computer Lab') === 'Computer Lab', 'the canonical casing is left alone')
+ok(normalizeRoomType(undefined) === 'Classroom', 'a room with no type is a classroom')
+ok(normalizeRoomType('Planetarium') === 'Planetarium', "a school's own venue type is not discarded")
+
+// The bug that cost data: a lab's subject mappings are what tell the scheduler
+// Chemistry belongs in it. Master Data never showed them, and rebuilt the room
+// from its row on the way out.
+const labStored = {
+  id: 'r1', generatedName: 'Lab 1', actualName: 'Chem Lab', roomType: 'Computer Lab',
+  capacity: 30, building: 'Science Block', floor: 'First',
+  subjectMappings: [{ subject: 'Chemistry', classes: ['IX-A'] }], notes: 'fume hood',
+}
+const row = roomRowFrom(labStored)
+ok(row.name === 'Chem Lab', 'the room shows the name a person gave it, not the generated one')
+
+const renamed = storedRoomFrom({ ...row, name: 'Chemistry Lab' }, labStored)
+ok(renamed.subjectMappings.length === 1, 'renaming a room on a page that never showed its subjects keeps them')
+ok(renamed.notes === 'fume hood', 'and keeps its notes')
+ok(renamed.building === 'Science Block' && renamed.floor === 'First', 'and its building and floor')
+ok(renamed.generatedName === 'Lab 1', 'the generated name is not overwritten by the display name')
+ok(renamed.actualName === 'Chemistry Lab', 'the rename itself lands')
+
+// A round trip must be stable: read → write → read gives the same row back.
+const twice = roomRowFrom(storedRoomFrom(row, labStored))
+ok(twice.type === row.type && twice.name === row.name && twice.capacity === row.capacity,
+  'reading a room, saving it untouched and reading it again changes nothing')
+ok(storedRoomFrom(row, labStored).roomType === 'Computer Lab',
+  'the type is written in the casing the dropdown offers, so it still matches an option')
+
+// A room the other editor added while this page held an older list.
+const mergedRooms = storedRoomsFrom(
+  [roomRowFrom(labStored), { id: 'r2', name: 'Hall', type: 'Hall', capacity: 200 }],
+  [labStored],
+)
+ok(mergedRooms.length === 2 && mergedRooms[1].actualName === 'Hall', 'a brand-new room needs no previous record')
+ok((mergedRooms[1].subjectMappings ?? []).length === 0, 'and starts with no subject mappings rather than undefined')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
