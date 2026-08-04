@@ -1071,6 +1071,46 @@ ok(effMax('GB', 40, 20) === 30, 'a custom 20 h/week at 40-min periods overrides 
 ok(getCountry('IN').maxPeriodsWeek === 36 && teacherNorms('IN').safeMaxPeriodsWeek === 30,
   "orgData describes the school day (36); the norms database describes the teaching cap (30) — different questions, different answers")
 
+// ── SCHOOL ROSTER: the thing that makes the permissions model reachable ──
+// The Users page used to be a mock, so no role was ever assigned and every
+// account behaved as an administrator — a faculty member could declare a
+// school-wide holiday.
+import { roleForEmail, canDemote, type Member } from './src/store/members'
+import { can } from './src/lib/permissionPolicy'
+
+const mkMember = (email: string, role: any, id = email): Member =>
+  ({ id, email, role, status: 'active', addedAt: '2026-01-01' })
+
+const roster: Member[] = [
+  mkMember('head@school.edu', 'admin'),
+  mkMember('anita@school.edu', 'teacher'),
+  mkMember('parent@school.edu', 'viewer'),
+]
+
+ok(roleForEmail(roster, 'anita@school.edu') === 'teacher', 'the roster answers what a signed-in person may do')
+ok(roleForEmail(roster, 'ANITA@School.edu ') === 'teacher',
+  'matched case- and space-insensitively — an email typed with capitals is the same person')
+ok(roleForEmail(roster, 'stranger@school.edu') === undefined,
+  'someone not on the roster gets no answer, so the caller can fall back rather than guess')
+ok(roleForEmail(roster, undefined) === undefined && roleForEmail(roster, '') === undefined,
+  'no email, no role')
+
+// The roles have to actually differ, or assigning them is theatre.
+ok(can('admin', 'holiday.manage') && !can('teacher', 'holiday.manage'),
+  'an administrator may declare holidays; a faculty member may not')
+ok(can('teacher', 'period.markMissed') && can('teacher', 'coverage.confirm'),
+  'but faculty keep the narrow rights the blueprint grants them')
+ok(!can('viewer', 'syllabus.record') && !can('viewer', 'period.markMissed'),
+  'a viewer changes nothing at all')
+
+// Lock-out guard: this roster is client-side with no server to repair it.
+ok(!canDemote(roster, 'head@school.edu'),
+  'the only administrator cannot be demoted — the school would lose holidays and settings with no way back')
+ok(canDemote(roster, 'anita@school.edu'), 'anyone who is not an admin can be changed freely')
+const twoAdmins = [...roster, mkMember('deputy@school.edu', 'admin')]
+ok(canDemote(twoAdmins, 'head@school.edu'),
+  'with a second administrator in place, the first can safely be demoted')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

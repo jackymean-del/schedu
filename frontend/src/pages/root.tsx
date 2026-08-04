@@ -1,8 +1,11 @@
+import { useEffect } from "react"
 import { Outlet } from "@tanstack/react-router"
 import { Topbar } from "@/components/layout/Topbar"
 import { useTimetableStore } from "@/store/timetableStore"
 import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layout/AppShell"
+import { useAuthStore } from "@/store/authStore"
+import { useMembers } from "@/store/members"
 
 // Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).
@@ -17,6 +20,17 @@ const STEP_LABELS = [
 export function RootLayout() {
   const step = useTimetableStore(s => s.step)
   const path = window.location.pathname
+
+  // Record whoever signs in on the school roster, so an administrator can see
+  // them and set a role. Done here rather than in each of the auth store's
+  // sign-in paths because this also catches Clerk sessions restored on load.
+  // The first person through the door becomes the administrator — see
+  // store/members.ensureMember.
+  const authedUser = useAuthStore(s => s.user)
+  const ensureMember = useMembers(s => s.ensureMember)
+  useEffect(() => {
+    if (authedUser?.email) ensureMember(authedUser.email, authedUser.name)
+  }, [authedUser?.email, authedUser?.name, ensureMember])
   const isWizard    = path.startsWith('/wizard')
   const isAuthPage  = path === '/login' || path === '/register'
   const isHome      = path === '/'
