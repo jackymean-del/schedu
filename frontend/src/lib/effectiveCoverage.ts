@@ -19,6 +19,7 @@ import { useSyllabus, withHolidayImpact, withLostImpact, withAllocatedHours, typ
 import { useHolidays, holidayImpact, type Holiday } from './holidays'
 import { useSubCoverage, coverageLoss, hoursNotSpent, uncoveredAbsenceLoss } from './substitutionCoverage'
 import { useLeaves, type CalLeave } from './leaveUtils'
+import type { AcademicTerm } from './academicTerms'
 import { loadActiveBundles, type ScheduleBundle } from './activeSchedules'
 import {
   allocatedHoursByPlan, elapsedHoursByPlan, futureHoursByPlan, unionEntities, contextForSection,
@@ -55,11 +56,13 @@ export function composeEffectivePlans(input: {
   holidays: Holiday[]
   subRecords: Parameters<typeof coverageLoss>[0]
   leaves: CalLeave[]
+  /** Narrow every derived figure to one academic term. Omit for the whole run. */
+  term?: AcademicTerm | null
 }): Record<string, SyllabusPlan> {
-  const { plans, bundles, holidays, subRecords, leaves } = input
+  const { plans, bundles, holidays, subRecords, leaves, term } = input
 
   // Requirement first: everything below is expressed against it.
-  let out = withAllocatedHours(plans, allocatedHoursByPlan(bundles))
+  let out = withAllocatedHours(plans, allocatedHoursByPlan(bundles, term))
 
   // The timetable also says who teaches each subject, so faculty-wise reports
   // need nobody to fill that in. An explicitly-set teacher still wins.
@@ -113,8 +116,14 @@ export interface EffectiveCoverage {
   activeCount: number
 }
 
-/** The hook every coverage surface should use. */
-export function useEffectiveCoverage(): EffectiveCoverage {
+/**
+ * The hook every coverage surface should use.
+ *
+ * `term` narrows every hours figure to that academic term (lib/academicTerms).
+ * Undefined — the default — means the whole of each schedule, which is exactly
+ * what every caller got before terms existed.
+ */
+export function useEffectiveCoverage(term?: AcademicTerm | null): EffectiveCoverage {
   const plans = useSyllabus(s => s.plans)
   const holidays = useHolidays(s => s.holidays)
   const subRecords = useSubCoverage(s => s.records)
@@ -145,8 +154,8 @@ export function useEffectiveCoverage(): EffectiveCoverage {
   const leaves = useLeaves(s => s.leaves)
 
   const effective = useMemo(
-    () => composeEffectivePlans({ plans, bundles, holidays, subRecords, leaves }),
-    [plans, bundles, holidays, subRecords, leaves],
+    () => composeEffectivePlans({ plans, bundles, holidays, subRecords, leaves, term }),
+    [plans, bundles, holidays, subRecords, leaves, term],
   )
   const entities = useMemo(() => unionEntities(bundles), [bundles])
   const notSpent = useMemo(() => hoursNotSpent(subRecords), [subRecords])
@@ -161,12 +170,12 @@ export function useEffectiveCoverage(): EffectiveCoverage {
     () => (section: string) => holidays.filter(h => !h.sections?.length || h.sections.includes(section)),
     [holidays],
   )
-  const elapsed = useMemo(() => elapsedHoursByPlan(bundles, todayISO, forSection), [bundles, todayISO, forSection])
-  const future = useMemo(() => futureHoursByPlan(bundles, todayISO, forSection), [bundles, todayISO, forSection])
+  const elapsed = useMemo(() => elapsedHoursByPlan(bundles, todayISO, forSection, term), [bundles, todayISO, forSection, term])
+  const future = useMemo(() => futureHoursByPlan(bundles, todayISO, forSection, term), [bundles, todayISO, forSection, term])
 
   return {
     plans: effective, holidays, leaves, entities, notSpent, elapsed, future, teaching,
     activeCount: bundles.length,
-    contextFor: (section: string) => contextForSection(bundles, section),
+    contextFor: (section: string) => contextForSection(bundles, section, term),
   }
 }

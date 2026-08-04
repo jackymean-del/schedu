@@ -20,6 +20,7 @@ import {
 } from '@/lib/syllabusTracking'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
+import { useAcademicTerms, defaultTerm } from '@/lib/academicTerms'
 import { compareSection, cascadeOptions, matchStaffName, teacherFor } from '@/lib/scheduleAllocation'
 import { useAuthStore } from '@/store/authStore'
 import { paceFor } from '@/lib/syllabusPace'
@@ -39,6 +40,21 @@ const DIMS: Array<{ k: Dim; label: string }> = [
 
 const ACCENT = '#7C6FE0'
 
+/** Sentinel for the term picker's "whole schedule" option — an empty value would
+ *  be indistinguishable from "nothing chosen yet", which means the default. */
+const WHOLE_RUN = '__whole__'
+
+/** '2026-04-01' → '1 Apr'; both ends shown with the year only when they differ. */
+function fmtRange(start: string, end: string): string {
+  const d = (s: string) => new Date(`${s}T00:00:00`)
+  const a = d(start), b = d(end)
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  const sameYear = a.getFullYear() === b.getFullYear()
+  const left = a.toLocaleDateString('en-GB', sameYear ? opts : { ...opts, year: 'numeric' })
+  const right = b.toLocaleDateString('en-GB', { ...opts, year: 'numeric' })
+  return `${left} – ${right}`
+}
+
 export function SyllabusPage() {
   const {
     plans, setRequiredHours, addChapter, updateChapter,
@@ -50,9 +66,25 @@ export function SyllabusPage() {
   // covered, and the hours the timetable allocates are all composed in one
   // shared place so this page and the dashboard alert can never disagree — and
   // it spans every ACTIVE schedule, not just whichever one is open.
+  // Which academic term the figures below are measured over. "Whole schedule"
+  // (null) is always available and stays the default for a school that has
+  // declared no terms — see lib/academicTerms.
+  const terms = useAcademicTerms(s => s.terms)
+  const todayISO = useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }, [])
+  const [pickedTermId, setPickedTermId] = useState<string>('')
+  // Land on the term the school is actually in, but only once terms exist and
+  // only until somebody chooses otherwise.
+  const term = useMemo(() => {
+    if (pickedTermId === WHOLE_RUN) return null
+    return terms.find(t => t.id === pickedTermId) ?? defaultTerm(terms, todayISO) ?? null
+  }, [terms, pickedTermId, todayISO])
+
   const {
     plans: effectivePlans, holidays, notSpent, elapsed, future, teaching, entities, contextFor, activeCount,
-  } = useEffectiveCoverage()
+  } = useEffectiveCoverage(term)
   const { records: subRecords, confirm: confirmSub, setIntent: setSubIntent } = useSubCoverage()
 
   const sectionNames = entities.sections
@@ -132,6 +164,33 @@ export function SyllabusPage() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Same always-on alert as the dashboard — silent when nothing is slipping. */}
         <SyllabusAlert />
+
+        {/* Term lens. Absent entirely until a school declares terms, so nobody
+            is asked to think about a distinction they don't make. */}
+        {terms.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '10px 14px', borderRadius: 12,
+            background: '#fff', border: '1px solid #ECE9FB',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#4B5275' }}>Measuring</span>
+            <select
+              value={term ? term.id : WHOLE_RUN}
+              onChange={e => setPickedTermId(e.target.value)}
+              style={{
+                padding: '6px 10px', borderRadius: 8, border: '1px solid #E3DFF7',
+                fontSize: 12.5, fontFamily: 'inherit', color: '#2E2A4A', background: '#fff',
+              }}>
+              <option value={WHOLE_RUN}>Whole schedule</option>
+              {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <span style={{ fontSize: 11.5, color: '#8B87AD' }}>
+              {term
+                ? <>Hours, pace and time left below cover <strong>{fmtRange(term.start, term.end)}</strong> only.</>
+                : <>Hours, pace and time left below cover each schedule's full run.</>}
+            </span>
+          </div>
+        )}
 
         {!canPick && tab === 'capture' && (
           <Card title="No subjects yet">

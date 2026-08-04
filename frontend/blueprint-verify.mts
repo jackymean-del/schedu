@@ -1208,6 +1208,117 @@ const mergedRooms = storedRoomsFrom(
 ok(mergedRooms.length === 2 && mergedRooms[1].actualName === 'Hall', 'a brand-new room needs no previous record')
 ok((mergedRooms[1].subjectMappings ?? []).length === 0, 'and starts with no subject mappings rather than undefined')
 
+// ── Academic terms as a measuring window ──
+// A term never extends a schedule's range, only narrows it. Declaring none
+// leaves every figure exactly as it was.
+import {
+  clampToTerm, termOn, defaultTerm, overlappingTerms, termGaps, type AcademicTerm,
+} from './src/lib/academicTerms'
+
+const mkTerm = (id: string, name: string, start: string, end: string): AcademicTerm =>
+  ({ id, name, start, end })
+
+const year = { start: '2026-04-01', end: '2027-03-31' }
+const t1 = mkTerm('t1', 'Term 1', '2026-04-01', '2026-09-30')
+const t2 = mkTerm('t2', 'Term 2', '2026-10-15', '2027-03-31')
+
+ok(clampToTerm(year, null)!.start === year.start && clampToTerm(year, null)!.end === year.end,
+  'no term chosen leaves the schedule range untouched')
+
+const inT1 = clampToTerm(year, t1)!
+ok(inT1.start === '2026-04-01' && inT1.end === '2026-09-30', 'a term inside the year is the window')
+
+// A schedule that began mid-term must not claim the weeks before it existed.
+const lateSchedule = { start: '2026-07-01', end: '2027-03-31' }
+const lateInT1 = clampToTerm(lateSchedule, t1)!
+ok(lateInT1.start === '2026-07-01',
+  'a schedule starting mid-term counts from ITS start, not the term\'s')
+ok(lateInT1.end === '2026-09-30', 'and still stops at the end of the term')
+
+// A term running past the schedule stops where the schedule does.
+const shortSchedule = { start: '2026-04-01', end: '2026-06-30' }
+ok(clampToTerm(shortSchedule, t1)!.end === '2026-06-30',
+  'a term outlasting the schedule is cut to the schedule')
+
+// No overlap at all must count NOTHING, not fall back to the whole range —
+// otherwise a term the schedule never ran in would report a full year of hours.
+const nextYearSchedule = { start: '2027-04-01', end: '2028-03-31' }
+ok(clampToTerm(nextYearSchedule, t1) === null,
+  'a schedule that never ran during the term contributes nothing')
+ok(clampToTerm({ start: '2026-10-01', end: '2026-10-14' }, t2) === null,
+  'a schedule falling entirely in the between-term break contributes nothing')
+
+// Touching at exactly one day still counts — the boundaries are inclusive.
+ok(clampToTerm({ start: '2026-09-30', end: '2027-03-31' }, t1)!.start === '2026-09-30',
+  'a single shared day is an overlap, not a miss')
+
+// Which term are we in?
+ok(termOn([t1, t2], '2026-05-10')?.id === 't1', 'a date inside a term finds it')
+ok(termOn([t1, t2], '2026-10-05') === undefined,
+  'a date in the break between terms belongs to neither')
+
+ok(defaultTerm([t1, t2], '2026-05-10')?.id === 't1', 'mid-term, the default is the term we are in')
+ok(defaultTerm([t1, t2], '2026-10-05')?.id === 't2',
+  'in the break, the default is the term about to start')
+ok(defaultTerm([t1, t2], '2027-06-01')?.id === 't2',
+  'after the last term ends, the default is the one that just finished')
+ok(defaultTerm([], '2026-05-10') === undefined, 'a school with no terms has no default')
+
+// Overlaps are reported, not rejected — a school mid-edit will briefly have them.
+const clashing = mkTerm('t3', 'Term 2 (draft)', '2026-09-01', '2027-03-31')
+ok(overlappingTerms([t1, clashing]).length === 1, 'overlapping terms are reported')
+ok(overlappingTerms([t1, t2]).length === 0, 'terms with a gap between them are not')
+
+const gapList = termGaps([t1, t2])
+ok(gapList.length === 1 && gapList[0].days === 14,
+  'the break between terms is counted in days, excluding both end dates')
+ok(termGaps([t1, mkTerm('x', 'Next', '2026-10-01', '2027-03-31')]).length === 0,
+  'terms that meet the next day have no gap to report')
+
+// ── Hours measured PER TERM ──
+// bundleA runs 5 Jan – 30 Mar 2026, one 60-min English period every Monday:
+// 13 Mondays over the whole run.
+const springTerm: AcademicTerm = { id: 's', name: 'Spring', start: '2026-01-05', end: '2026-02-02' }
+const summerTerm: AcademicTerm = { id: 'u', name: 'Summer', start: '2026-02-09', end: '2026-03-30' }
+const otherYear: AcademicTerm = { id: 'o', name: 'Last year', start: '2025-01-01', end: '2025-12-31' }
+
+ok(allocatedHoursByPlan([bundleA])[planKey('English', 'I-A')] === 13,
+  'no term chosen still reports the whole run — declaring terms changes nothing by itself')
+
+// 5 Jan, 12, 19, 26, 2 Feb = 5 Mondays.
+ok(allocatedHoursByPlan([bundleA], springTerm)[planKey('English', 'I-A')] === 5,
+  'a term reports only the hours inside it')
+// 9, 16, 23 Feb, 2, 9, 16, 23, 30 Mar = 8 Mondays.
+ok(allocatedHoursByPlan([bundleA], summerTerm)[planKey('English', 'I-A')] === 8,
+  'the rest of the run belongs to the next term')
+ok(
+  allocatedHoursByPlan([bundleA], springTerm)[planKey('English', 'I-A')] +
+  allocatedHoursByPlan([bundleA], summerTerm)[planKey('English', 'I-A')] === 13,
+  'the terms add back up to the whole run — no hour is counted twice or lost',
+)
+ok(allocatedHoursByPlan([bundleA], otherYear)[planKey('English', 'I-A')] === undefined,
+  'a term the schedule never ran in reports nothing, not a full year')
+
+// Spent and still-to-come are measured over the same window.
+ok(elapsedHoursByPlan([bundleA], '2026-01-19', undefined, springTerm)[planKey('English', 'I-A')] === 3,
+  'hours already run are counted from the TERM start, not the schedule start')
+ok(elapsedHoursByPlan([bundleA], '2026-03-30', undefined, springTerm)[planKey('English', 'I-A')] === 5,
+  'once the term is over its spent figure stops growing, even mid-schedule')
+ok(elapsedHoursByPlan([bundleA], '2026-01-19', undefined, summerTerm)[planKey('English', 'I-A')] === undefined,
+  'a term that has not started yet has nothing spent')
+ok(futureHoursByPlan([bundleA], '2026-01-19', undefined, springTerm)[planKey('English', 'I-A')] === 2,
+  'time still to come stops at the end of the TERM, not the end of the schedule')
+ok(futureHoursByPlan([bundleA], '2026-03-01', undefined, springTerm)[planKey('English', 'I-A')] === undefined,
+  'a finished term has no time left')
+
+// The property the Syllabus page relies on: spent + left = the term's total,
+// once holidays are out of the picture.
+const midTerm = '2026-01-19'
+const spentT = elapsedHoursByPlan([bundleA], midTerm, undefined, springTerm)[planKey('English', 'I-A')]
+const leftT  = futureHoursByPlan([bundleA], midTerm, undefined, springTerm)[planKey('English', 'I-A')]
+ok(spentT + leftT === allocatedHoursByPlan([bundleA], springTerm)[planKey('English', 'I-A')],
+  'within a term, hours spent plus hours left equal the hours allocated')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

@@ -11,6 +11,7 @@ import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKe
 import { useTimetableStore } from '@/store/timetableStore'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import { HolidayManager } from '@/components/HolidayManager'
+import { TermManager } from '@/components/TermManager'
 import { WorkloadNormModal } from '@/components/master/WorkloadNormModal'
 import { useCan } from '@/lib/permissions'
 import {
@@ -74,6 +75,12 @@ export function SettingsPage() {
             teaching time from every subject in the school. */}
         {canManageHolidays && (
           <HolidayManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
+        )}
+
+        {/* Academic terms — same admin authority as holidays: both decide the
+            calendar every subject's hours are measured against. */}
+        {canManageHolidays && (
+          <TermManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
         )}
 
         {/* Workload limits */}

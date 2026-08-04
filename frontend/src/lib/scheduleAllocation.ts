@@ -22,6 +22,7 @@ import { planKey } from './syllabusTracking'
 import { scheduledHoursBetween } from './syllabusPace'
 import type { ScheduleBundle } from './activeSchedules'
 import type { Holiday } from './holidays'
+import { clampToTerm, type AcademicTerm } from './academicTerms'
 
 /** Subjects that actually appear in one section of one bundle's timetable. */
 function subjectsIn(classTT: any, section: string): Set<string> {
@@ -41,10 +42,25 @@ function subjectsIn(classTT: any, section: string): Set<string> {
   return out
 }
 
-/** The term a bundle runs over, if it declares one. */
+/** The date range a bundle runs over, if it declares one. */
 export function termOf(b: ScheduleBundle): { start: string; end: string } | null {
   const start = b.config?.timetableStartDate, end = b.config?.timetableEndDate
   return start && end ? { start, end } : null
+}
+
+/**
+ * The window to count hours over: the schedule's own range, narrowed to the
+ * chosen academic term.
+ *
+ * Null means count nothing — either the schedule declares no dates, or it never
+ * ran during that term. The second case is the reason this returns null rather
+ * than falling back to the full range: a schedule that started in September
+ * must contribute zero to a term that ended in August, not a year's hours.
+ */
+function windowFor(b: ScheduleBundle, term?: AcademicTerm | null): { start: string; end: string } | null {
+  const range = termOf(b)
+  if (!range) return null
+  return clampToTerm(range, term)
 }
 
 /**
@@ -78,15 +94,15 @@ export function liveSections(b: ScheduleBundle): string[] {
  * lib/effectiveCoverage). Subtracting them here as well would count them twice
  * — once invisibly in the denominator, once in the "h lost" figure.
  */
-export function allocatedHoursByPlan(bundles: ScheduleBundle[]): Record<string, number> {
+export function allocatedHoursByPlan(bundles: ScheduleBundle[], term?: AcademicTerm | null): Record<string, number> {
   const out: Record<string, number> = {}
   for (const b of bundles) {
-    const term = termOf(b)
-    if (!term) continue
+    const win = windowFor(b, term)
+    if (!win) continue
     const periodMinutes = b.config?.periodMinutes ?? 40
     for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
-        const h = scheduledHoursBetween(b.classTT, subject, section, term.start, term.end, periodMinutes, [])
+        const h = scheduledHoursBetween(b.classTT, subject, section, win.start, win.end, periodMinutes, [])
         if (h > 0) out[planKey(subject, section)] = Math.round(((out[planKey(subject, section)] ?? 0) + h) * 10) / 10
       }
     }
@@ -107,19 +123,20 @@ export function elapsedHoursByPlan(
   bundles: ScheduleBundle[],
   todayISO: string,
   holidaysFor?: (section: string) => Holiday[],
+  term?: AcademicTerm | null,
 ): Record<string, number> {
   const out: Record<string, number> = {}
   for (const b of bundles) {
-    const term = termOf(b)
-    if (!term) continue
+    const win = windowFor(b, term)
+    if (!win) continue
     // Nothing has run before the term, and it stops accruing once it ends.
-    if (todayISO < term.start) continue
-    const upto = todayISO > term.end ? term.end : todayISO
+    if (todayISO < win.start) continue
+    const upto = todayISO > win.end ? win.end : todayISO
     const periodMinutes = b.config?.periodMinutes ?? 40
     for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
         const h = scheduledHoursBetween(
-          b.classTT, subject, section, term.start, upto, periodMinutes, holidaysFor?.(section) ?? [],
+          b.classTT, subject, section, win.start, upto, periodMinutes, holidaysFor?.(section) ?? [],
         )
         const k = planKey(subject, section)
         if (h > 0) out[k] = Math.round(((out[k] ?? 0) + h) * 10) / 10
@@ -143,19 +160,20 @@ export function futureHoursByPlan(
   bundles: ScheduleBundle[],
   todayISO: string,
   holidaysFor?: (section: string) => Holiday[],
+  term?: AcademicTerm | null,
 ): Record<string, number> {
   const out: Record<string, number> = {}
   for (const b of bundles) {
-    const term = termOf(b)
-    if (!term) continue
-    if (todayISO >= term.end) continue                       // the term is over
+    const win = windowFor(b, term)
+    if (!win) continue
+    if (todayISO >= win.end) continue                       // the term is over
     // From TOMORROW, so today is never counted as both spent and still to come.
-    const from = todayISO < term.start ? term.start : nextDay(todayISO)
+    const from = todayISO < win.start ? win.start : nextDay(todayISO)
     const periodMinutes = b.config?.periodMinutes ?? 40
     for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
         const h = scheduledHoursBetween(
-          b.classTT, subject, section, from, term.end, periodMinutes, holidaysFor?.(section) ?? [],
+          b.classTT, subject, section, from, win.end, periodMinutes, holidaysFor?.(section) ?? [],
         )
         const k = planKey(subject, section)
         if (h > 0) out[k] = Math.round(((out[k] ?? 0) + h) * 10) / 10
@@ -275,14 +293,21 @@ export interface ScheduleContext {
  * The bundle that owns a section — pace and allocation for that section must be
  * computed against ITS bell and ITS term, not a merged approximation.
  */
-export function contextForSection(bundles: ScheduleBundle[], section: string): ScheduleContext | null {
+export function contextForSection(
+  bundles: ScheduleBundle[],
+  section: string,
+  term?: AcademicTerm | null,
+): ScheduleContext | null {
   const b = bundles.find(x => liveSections(x).includes(section))
   if (!b) return null
-  const term = termOf(b)
+  // Pace must be measured over the same window as the hours beside it — a
+  // "behind by 6 h" that was computed over the year while the hours on screen
+  // were the term's would be two different questions sharing one row.
+  const win = windowFor(b, term)
   return {
     classTT: b.classTT,
     periodMinutes: b.config?.periodMinutes ?? 40,
-    termStart: term?.start, termEnd: term?.end,
+    termStart: win?.start, termEnd: win?.end,
     scheduleName: b.name,
   }
 }
