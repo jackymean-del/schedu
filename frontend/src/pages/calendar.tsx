@@ -21,11 +21,13 @@ import {
   overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
 } from '@/lib/substitutionSettings'
 import { SubstitutionSettingsModal } from '@/components/calendar/SubstitutionSettingsModal'
+import { BellScheduleModal } from '@/components/calendar/BellScheduleModal'
+import { useOrgProfile } from '@/store/orgProfile'
 import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
   X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
-  AlertTriangle,
+  AlertTriangle, Bell,
 } from 'lucide-react'
 import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
 import { loadTerms, plural, type Terms } from '@/lib/terms'
@@ -462,6 +464,8 @@ export function CalendarPage() {
   const [leaveFor, setLeaveFor] = useState<string | null>(null)   // teacher → Mark Leave modal
   const [subFor, setSubFor]     = useState<string | null>(null)   // teacher → Substitute panel
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [bellOpen, setBellOpen] = useState(false)
+  const orgName = useOrgProfile(s => s.name)
 
   const substitutionSettings: SubstitutionSettings = store.substitutionSettings ?? DEFAULT_SUBSTITUTION_SETTINGS
   const updateSettings = (next: SubstitutionSettings) => {
@@ -977,6 +981,9 @@ export function CalendarPage() {
                 <Plus size={18} strokeWidth={2.6} /> Add Event
               </button>
             )}
+            {/* Derived from the schedule's own timings — the sheet a school
+                actually pins up in the corridor and the office. */}
+            <button title="Bell schedule" onClick={() => setBellOpen(true)} style={iconBtn}><Bell size={17} /></button>
             {canArrangeCover && (
               <button title="Substitution Settings" onClick={() => setSettingsOpen(true)} style={iconBtn}><Settings size={17} /></button>
             )}
@@ -1354,6 +1361,17 @@ export function CalendarPage() {
           suspendedBy={teachingSuspendedOn(events, isoDate)?.title}
           onClose={() => setSubFor(null)}
           settings={substitutionSettings}
+        />
+      )}
+
+      {bellOpen && (
+        <BellScheduleModal
+          sections={sources.flatMap(b => (b.sections ?? []).map((x: any) => x.name)).filter(Boolean)}
+          config={sources[0]?.config ?? store.config ?? {}}
+          periods={sources[0]?.periods ?? store.periods ?? []}
+          schoolName={orgName}
+          nowMin={viewingToday ? nowMin : undefined}
+          onClose={() => setBellOpen(false)}
         />
       )}
 

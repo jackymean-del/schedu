@@ -1383,6 +1383,87 @@ ok(legacyEventKeys(evStore).length === 0, 'the old keys are removed')
 
 ok(mergeEvents([ev()], [ev()]).length === 1, 'the same event seen twice is kept once')
 
+// ── The bell schedule: the moments somebody presses the bell ──
+import {
+  ringsForSection, bellGroups, describeRing, fmtRingTime, nextRing, minutesToNextRing,
+} from './src/lib/bellSchedule'
+
+const bellPeriods: any[] = [
+  { id: 'p1', name: 'Period 1', duration: 40, type: 'class', shiftable: false },
+  { id: 'p2', name: 'Period 2', duration: 40, type: 'class', shiftable: false },
+  { id: 'p3', name: 'Period 3', duration: 40, type: 'class', shiftable: false },
+]
+// One clock for everyone: assembly 8:00, three 40-min lessons with a 20-min
+// break after the second, dispersal at the end.
+const bellConfig: any = {
+  bellSchedules: [{
+    startTime: '08:00',
+    rows: [
+      { id: 'a', name: 'Assembly', type: 'assembly', duration: 15, classes: ['i', 'nur'] },
+      { id: 'r1', name: 'P1', type: 'teaching', duration: 40, classes: ['i', 'nur'] },
+      { id: 'r2', name: 'P2', type: 'teaching', duration: 40, classes: ['i', 'nur'] },
+      { id: 'b1', name: 'Break', type: 'break', duration: 20, classes: ['i', 'nur'] },
+      { id: 'r3', name: 'P3', type: 'teaching', duration: 40, classes: ['i'] },
+      { id: 'd', name: 'Home', type: 'dispersal', duration: 5, classes: ['i'] },
+    ],
+  }],
+}
+
+const ringsIA = ringsForSection('I-A', bellConfig, bellPeriods)
+
+// 08:00 assembly starts, 08:15 assembly ends + P1 starts, 08:55 P1 ends + P2
+// starts, 09:35 P2 ends + break starts, 09:55 break ends + P3 starts,
+// 10:35 P3 ends + dispersal starts, 10:40 dispersal ends.
+ok(ringsIA[0].at === 8 * 60, 'the first bell is the start of the day')
+ok(ringsIA[ringsIA.length - 1].at === 10 * 60 + 40,
+  'the last bell is home time — built from slot ENDS, so it is never dropped')
+
+// The point of the whole module: one moment is ONE bell, described both ways.
+const changeover = ringsIA.find(r => r.at === 8 * 60 + 55)!
+ok(!!changeover, 'the moment P1 ends and P2 starts exists')
+ok(changeover.ends === 'Period 1' && changeover.starts === 'Period 2',
+  'and is a single bell that means both, not two bells a minute apart')
+ok(describeRing(changeover) === 'Period 1 ends · Period 2 begins',
+  'so whoever rings it can read what it means')
+ok(ringsIA.filter(r => r.at === 8 * 60 + 55).length === 1, 'never listed twice')
+
+// Every moment is distinct and ordered.
+ok(ringsIA.every((r, i) => i === 0 || r.at > ringsIA[i - 1].at), 'bells come back in time order, deduped')
+
+// Sections that do NOT share a clock must not be flattened into one sheet.
+// Nursery has no P3 and no dispersal row, so it rings differently.
+const nurseryRings = ringsForSection('Nursery-A', bellConfig, bellPeriods)
+ok(nurseryRings[0].at === 8 * 60,
+  'Nursery shares the assembly bell — it is the SAME schedule, not a fallback clock')
+ok(nurseryRings[nurseryRings.length - 1].at === 9 * 60 + 55 &&
+   ringsIA[ringsIA.length - 1].at === 10 * 60 + 40,
+  'but goes home 45 minutes earlier, which is exactly the case one flat list would get wrong')
+
+const groups = bellGroups(['I-A', 'I-B', 'Nursery-A'], bellConfig, bellPeriods)
+ok(groups.length === 2, 'sections with different clocks get their own bell schedule')
+ok(groups.some(g => g.sections.join() === 'I-A,I-B'),
+  'sections that ring identically are grouped, not repeated')
+ok(groups[0].rings[0].at <= groups[1].rings[0].at, 'groups come back earliest-first')
+
+const oneClock = bellGroups(['I-A', 'I-B'], bellConfig, bellPeriods)
+ok(oneClock.length === 1, 'a school where everyone shares a clock gets exactly one sheet')
+
+// Live board.
+ok(nextRing(ringsIA, 8 * 60 + 30)?.at === 8 * 60 + 55, 'the next bell is the next one due')
+ok(nextRing(ringsIA, 8 * 60 + 55)?.at === 8 * 60 + 55, 'a bell due this very minute is still next')
+ok(minutesToNextRing(ringsIA, 8 * 60 + 45) === 10, 'the countdown is in whole minutes')
+ok(nextRing(ringsIA, 23 * 60) === undefined,
+  "after the last bell there is no next one — a board reading 'next bell in 14 hours' is noise")
+
+ok(fmtRingTime(8 * 60 + 5) === '8:05 AM' && fmtRingTime(13 * 60 + 5) === '1:05 PM', '12-hour clock')
+ok(fmtRingTime(13 * 60 + 5, true) === '13:05', '24-hour clock when the school prefers it')
+
+// A schedule with no bell rows at all still produces a usable sheet from the
+// naive cumulative fallback, rather than an empty one.
+const naiveRings = ringsForSection('I-A', { startTime: '09:00' }, bellPeriods)
+ok(naiveRings.length > 0 && naiveRings[0].at === 9 * 60,
+  'a schedule predating bell rows still gets bells, from its plain period durations')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
