@@ -11,6 +11,7 @@ import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKe
 import { useTimetableStore } from '@/store/timetableStore'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import { HolidayManager } from '@/components/HolidayManager'
+import { WorkloadNormModal } from '@/components/master/WorkloadNormModal'
 import { useCan } from '@/lib/permissions'
 import {
   BAND_LABELS, normTeacherHoursWeek, normStudentHoursWeek, effectiveTeacherMaxPeriods,
@@ -165,12 +166,15 @@ const BAND_ORDER: GradeBand[] = ['prePrimary', 'lowerPrimary', 'upperPrimary', '
 
 function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   const config = useTimetableStore(s => s.config) as any
+  const sections = useTimetableStore(s => (s as any).sections) ?? []
+  const subjects = useTimetableStore(s => (s as any).subjects) ?? []
+  const [workloadOpen, setWorkloadOpen] = useState(false)
   const board = config?.board
   const periodMinutes = config?.periodMinutes ?? 40
   const daysPerWeek = (config?.workDays?.length) || 6
   const {
     country: schoolCountryCode, teacherMaxHoursWeek, studentMaxHoursWeek,
-    setCountry, setTeacherMaxHoursWeek, setStudentMaxHoursWeek,
+    setCountry,
   } = useWorkloadLimits()
 
   // School-level choice wins; fall back to whatever the active schedule was set
@@ -186,20 +190,6 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
     useTimetableStore.getState().setConfig?.({ ...(config ?? {}), countryCode: code } as any)
   }
 
-  // Draft state — edits are held locally until Save, so the custom norms are a
-  // deliberate commit rather than something that changes underfoot as you type.
-  const [dTeacher, setDTeacher] = useState<number | undefined>(teacherMaxHoursWeek)
-  const [dStudents, setDStudents] = useState<Partial<Record<GradeBand, number>>>(studentMaxHoursWeek)
-  const dirty =
-    dTeacher !== teacherMaxHoursWeek ||
-    BAND_ORDER.some(b => (dStudents[b] ?? undefined) !== (studentMaxHoursWeek[b] ?? undefined))
-
-  const saveWorkload = () => {
-    setTeacherMaxHoursWeek(dTeacher)
-    BAND_ORDER.forEach(b => setStudentMaxHoursWeek(b, dStudents[b]))
-    onSaved()
-  }
-  const clearCustom = () => { setDTeacher(undefined); setDStudents({}) }
 
   // Blueprint v5 — country-wise allocation automation. The school's own country
   // seeds the defaults; where the published figure is net teaching time we use
@@ -223,7 +213,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   return (
     <Card
       title="Workload limits"
-      subtitle={`Cap the max weekly hours the planner schedules. Leave a field blank to use your country’s reference value. 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
+      subtitle={`What the planner uses when it allocates. Anything you don’t set follows your country’s reference value. 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
     >
       {/* Country picker — captured once for the school (Blueprint v5) */}
       <Field label="Education system / country">
@@ -309,11 +299,16 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
 
       <div style={{ height: 1, background: '#F0EDFB' }} />
 
-      {/* ── Table 2 · Custom norm (editable) ────────────────────── */}
+      {/* ── Table 2 · What this school actually uses (READ-ONLY) ──
+          Editing lives in ONE place: the workload modal, reached from here and
+          from the Mapping step. Two editors for the same stored values meant two
+          UIs that could drift apart in what they offered — this one only did
+          stages and a global teacher cap, while the modal also does per-class
+          and per-subject. Same data, one editor, several doors. */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4' }}>Custom norm — your school</div>
-          <span style={{ fontSize: 11, color: '#8B87AD' }}>Leave a cell blank to keep the national value. A custom value always wins.</span>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4' }}>In effect — your school</div>
+          <span style={{ fontSize: 11, color: '#8B87AD' }}>A custom value always wins over the national figure.</span>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
@@ -321,58 +316,36 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
               <tr style={{ background: '#F3F1FC' }}>
                 <th style={{ ...th, textAlign: 'left' }}>Level</th>
                 <th style={th}>Students h/wk</th>
-                <th style={{ ...th, textAlign: 'left' }}>In effect</th>
+                <th style={{ ...th, textAlign: 'left' }}>Source</th>
               </tr>
             </thead>
             <tbody>
               {BAND_ORDER.map(band => {
                 const s = studentHoursWeekFor(country, band)
                 const def = s ? s.hours : normStudentHoursWeek(country, board, band, daysPerWeek)
-                const eff = dStudents[band] ?? def
-                const custom = dStudents[band] != null
+                const custom = studentMaxHoursWeek[band]
+                const isCustom = custom != null && custom > 0
                 return (
                   <tr key={band}>
                     <td style={{ ...td, textAlign: 'left' }}>{BAND_LABELS[band]}</td>
-                    <td style={{ ...td, padding: 4 }}>
-                      <input type="number" min={1} step="0.5" placeholder={String(def)}
-                        value={dStudents[band] ?? ''}
-                        onChange={e => setDStudents(p => {
-                          const n = { ...p }
-                          if (e.target.value === '') delete n[band]
-                          else n[band] = Number(e.target.value)
-                          return n
-                        })}
-                        style={{ ...inputStyle, padding: '6px 8px', textAlign: 'right' }} />
+                    <td style={{ ...td, fontWeight: isCustom ? 700 : 400, color: isCustom ? '#4B41C4' : '#13111E' }}>
+                      {isCustom ? custom : def}
                     </td>
-                    <td style={{ ...td, textAlign: 'left', fontWeight: custom ? 700 : 400, color: custom ? '#4B41C4' : '#8B87AD' }}>
-                      {eff} h/wk {custom ? '(custom)' : '(national)'}
+                    <td style={{ ...td, textAlign: 'left', color: isCustom ? '#4B41C4' : '#8B87AD' }}>
+                      {isCustom ? 'Custom' : 'National'}
                     </td>
                   </tr>
                 )
               })}
-              {/* Teachers — one global cap, enterable per week or per day */}
               <tr>
                 <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>All teachers — teaching h/wk</td>
-                <td style={{ ...td, padding: 4 }}>
-                  <input type="number" min={1} step="0.5" placeholder={String(teacherDefault)}
-                    value={dTeacher ?? ''}
-                    onChange={e => setDTeacher(e.target.value === '' ? undefined : Number(e.target.value))}
-                    style={{ ...inputStyle, padding: '6px 8px', textAlign: 'right' }} />
+                <td style={{ ...td, fontWeight: teacherMaxHoursWeek != null ? 700 : 400, color: teacherMaxHoursWeek != null ? '#4B41C4' : '#13111E' }}>
+                  {teacherMaxHoursWeek ?? teacherDefault}
                 </td>
-                <td style={{ ...td, textAlign: 'left', fontWeight: dTeacher != null ? 700 : 400, color: dTeacher != null ? '#4B41C4' : '#8B87AD' }}>
-                  {dTeacher ?? teacherDefault} h/wk ≈ {effectiveTeacherMaxPeriods(country, periodMinutes, dTeacher)} periods
+                <td style={{ ...td, textAlign: 'left', color: teacherMaxHoursWeek != null ? '#4B41C4' : '#8B87AD' }}>
+                  {teacherMaxHoursWeek != null ? 'Custom' : 'National'} · ≈ {teacherPeriods} periods
+                  {' '}({Math.round((teacherPeriods / daysPerWeek) * 10) / 10}/day)
                 </td>
-              </tr>
-              <tr>
-                <td style={{ ...td, textAlign: 'left', color: '#4B5275' }}>…or per day ({daysPerWeek}-day week)</td>
-                <td style={{ ...td, padding: 4 }}>
-                  <input type="number" min={0.5} step="0.25"
-                    placeholder={String(Math.round((teacherDefault / daysPerWeek) * 100) / 100)}
-                    value={dTeacher != null ? Math.round((dTeacher / daysPerWeek) * 100) / 100 : ''}
-                    onChange={e => setDTeacher(e.target.value === '' ? undefined : Number(e.target.value) * daysPerWeek)}
-                    style={{ ...inputStyle, padding: '6px 8px', textAlign: 'right' }} />
-                </td>
-                <td style={{ ...td, textAlign: 'left', fontSize: 11, color: '#8B87AD' }}>× {daysPerWeek} days = the weekly figure above</td>
               </tr>
             </tbody>
           </table>
@@ -383,15 +356,23 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
         <span style={{ fontSize: 11.5, color: '#9A95BC', marginRight: 'auto' }}>
           Applied to every schedule. Teacher hours convert to periods using your {periodMinutes}-min period length.
         </span>
-        <button onClick={clearCustom} disabled={!dTeacher && Object.keys(dStudents).length === 0}
-          style={{ ...btnSecondary, opacity: (!dTeacher && Object.keys(dStudents).length === 0) ? 0.5 : 1 }}>
-          Reset to national
-        </button>
-        <button onClick={saveWorkload} disabled={!dirty}
-          style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: dirty ? ACCENT : '#C9C3EC', color: '#fff', fontWeight: 700, fontSize: 13, cursor: dirty ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-          Save workload
+        <button onClick={() => setWorkloadOpen(true)}
+          style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: ACCENT, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Set custom loads
         </button>
       </div>
+
+      {workloadOpen && (
+        <WorkloadNormModal
+          country={country}
+          periodMinutes={periodMinutes}
+          workDays={daysPerWeek}
+          sections={sections}
+          subjects={subjects.map((s: any) => ({ name: s.name }))}
+          board={board}
+          onClose={() => { setWorkloadOpen(false); onSaved() }}
+        />
+      )}
     </Card>
   )
 }

@@ -49,6 +49,9 @@ interface Row {
   customPeriods?: number
 }
 
+/** Every stage, for the case where no schedule has narrowed it down yet. */
+const ALL_BANDS: GradeBand[] = ['prePrimary', 'lowerPrimary', 'upperPrimary', 'secondary', 'seniorSecondary']
+
 /** Which grain the admin is working at. Each falls back to the one before it. */
 type Scope = 'band' | 'class' | 'subject'
 const SCOPE_LABELS: Record<Scope, string> = {
@@ -76,7 +79,7 @@ export function WorkloadNormModal({
     studentMaxHoursWeek, teacherMaxHoursWeek, studentMaxHoursWeekByClass, subjectPeriodsByClass,
     setStudentMaxHoursWeek, setTeacherMaxHoursWeek, setStudentMaxHoursWeekForClass, setSubjectPeriods,
   } = useWorkloadLimits()
-  const [scope, setScope] = useState<Scope>('band')
+  const [pickedScope, setScope] = useState<Scope>('band')
   const [unit, setUnit] = useState<WorkloadUnit>('hours')
   const [span, setSpan] = useState<WorkloadSpan>('week')
   /** key → what the admin has typed, in HOURS PER WEEK. '' means "clear it". */
@@ -98,12 +101,20 @@ export function WorkloadNormModal({
 
   const [subjectClass, setSubjectClass] = useState<string>('')
   const activeClass = classes.some(c => c.cls === subjectClass) ? subjectClass : (classes[0]?.cls ?? '')
+  // Self-heal: without a schedule there are no classes to scope by, so the
+  // narrower grains can't apply.
+  const scope: Scope = classes.length ? pickedScope : 'band'
 
   // Only the bands this school actually runs — a primary school has no business
   // being shown senior-secondary norms it will never use.
   const rows: Row[] = useMemo(() => {
     if (scope === 'band') {
-      const bands = [...new Set(sections.map(s => bandForSection(s.name)))]
+      // Normally only the stages this school runs. With no schedule loaded —
+      // Settings, before any timetable exists — show them all rather than an
+      // empty table, since there is nothing yet to narrow by.
+      const bands = sections.length
+        ? [...new Set(sections.map(s => bandForSection(s.name)))]
+        : ALL_BANDS
       const out: Row[] = bands.map(band => ({
         key: band,
         label: BAND_LABELS[band] ?? band,
@@ -252,7 +263,9 @@ export function WorkloadNormModal({
               a school can set a stage figure once and correct the single class
               or subject that departs from it. */}
           <div style={{ display: 'inline-flex', background: '#F3F1FC', borderRadius: 9, padding: 3, marginBottom: 8 }}>
-            {(['band', 'class', 'subject'] as Scope[]).map(s => (
+            {/* Class and subject need a schedule to narrow by; offering those
+                tabs with nothing behind them would be a dead end. */}
+            {(classes.length ? (['band', 'class', 'subject'] as Scope[]) : (['band'] as Scope[])).map(s => (
               <button key={s} onClick={() => setScope(s)}
                 style={{
                   all: 'unset', cursor: 'pointer', padding: '5px 13px', borderRadius: 7,
