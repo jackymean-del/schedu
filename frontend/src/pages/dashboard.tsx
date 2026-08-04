@@ -23,7 +23,7 @@ import { GradeInput } from '@/components/GradeInput'
 import { AppFooter } from '@/components/AppFooter'
 import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
 import { DashboardPulse } from '@/components/DashboardPulse'
-import { loadLeaves } from '@/lib/leaveUtils'
+import { useLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary } from '@/lib/scheduleToday'
 import { loadActiveBundles, computeMultiToday } from '@/lib/activeSchedules'
 import {
@@ -1427,13 +1427,14 @@ export function DashboardPage() {
   // cross-schedule venue clashes on the wall-clock axis. Snapshots are fresh
   // here because the mount effect saves the open schedule's snapshot first.
   const activeBundles = hasTimetables ? loadActiveBundles(user?.id ?? '') : []
+  const leaves = useLeaves(s => s.leaves)
   const multiActive = activeBundles.length > 1
   const todaySummary = !hasTimetables ? null
     : multiActive
-    ? computeMultiToday(activeBundles, loadLeaves(user?.id ?? ''), conflicts, new Date())
+    ? computeMultiToday(activeBundles, leaves, conflicts, new Date())
     : computeTodaySummary({
         periods: store.periods ?? [], sections, classTT: store.classTT ?? {}, config: store.config ?? {},
-        substitutions: store.substitutions ?? {}, leaves: loadLeaves(user?.id ?? ''),
+        substitutions: store.substitutions ?? {}, leaves,
         conflicts, date: new Date(),
       })
   const onLeaveCount   = todaySummary?.teachersOnLeave.length ?? 0

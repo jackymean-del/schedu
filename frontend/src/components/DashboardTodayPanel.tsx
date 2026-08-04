@@ -18,7 +18,7 @@ import { useEffect } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
-import { loadLeaves } from '@/lib/leaveUtils'
+import { useLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary, type AffectedSlot, type TodaySummary } from '@/lib/scheduleToday'
 import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight, DoorOpen } from 'lucide-react'
 
@@ -44,7 +44,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
   if (!hasSchedule) return null
 
   const today = new Date()
-  const leaves = loadLeaves(uid)
+  const leaves = useLeaves(s => s.leaves)
   const h24 = (store.config?.timeFormat ?? '12h') === '24h'
   // When several schedules are active, the dashboard hands us the merged
   // summary so this panel and the Pulse always agree.

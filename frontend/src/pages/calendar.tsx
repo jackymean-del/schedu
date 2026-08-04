@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/authStore'
 import {
   loadActiveTimetableIntoStore, saveActiveTimetableSnapshot, getActiveTimetableId,
 } from '@/lib/ttRegistry'
-import { type CalLeave, LEAVE_KEY, loadLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
+import { type CalLeave, useLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
 import {
   type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
   overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
@@ -464,11 +464,10 @@ export function CalendarPage() {
   const gridWorkDay = gridData.isWorkDay
 
   // ── Leave & substitution ──
-  const [leaves, setLeaves] = useState<CalLeave[]>(() => loadLeaves(uid))
-  const saveLeaves = (next: CalLeave[]) => {
-    setLeaves(next)
-    try { localStorage.setItem(`${LEAVE_KEY}:${uid}`, JSON.stringify(next)) } catch { /* quota */ }
-  }
+  // School-scoped: an absence is a fact about the school, not about whoever
+  // recorded it, so every administrator and the absent teacher see the same one.
+  const leaves = useLeaves(s => s.leaves)
+  const saveLeaves = useLeaves(s => s.setLeaves)
   const [leaveFor, setLeaveFor] = useState<string | null>(null)   // teacher → Mark Leave modal
   const [subFor, setSubFor]     = useState<string | null>(null)   // teacher → Substitute panel
   const [settingsOpen, setSettingsOpen] = useState(false)

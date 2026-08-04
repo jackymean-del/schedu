@@ -1111,6 +1111,59 @@ const twoAdmins = [...roster, mkMember('deputy@school.edu', 'admin')]
 ok(canDemote(twoAdmins, 'head@school.edu'),
   'with a second administrator in place, the first can safely be demoted')
 
+// ── Teacher leave is the SCHOOL's record, not the recorder's ──
+// It used to live under `schedu-cal-leave:<uid>`, so the vice principal saw a
+// fully-staffed school after the principal marked somebody absent.
+class MemStorage {
+  private m = new Map<string, string>()
+  get length() { return this.m.size }
+  key(i: number) { return [...this.m.keys()][i] ?? null }
+  getItem(k: string) { return this.m.has(k) ? this.m.get(k)! : null }
+  setItem(k: string, v: string) { this.m.set(k, v) }
+  removeItem(k: string) { this.m.delete(k) }
+  clear() { this.m.clear() }
+}
+;(globalThis as any).localStorage = new MemStorage()
+const {
+  mergeLeaves, legacyLeaveKeys, migrateLegacyLeaves, useLeaves, isOnLeaveOn, leaveCoversDate,
+} = await import('./src/lib/leaveUtils')
+
+const lv = (id: string, teacher: string, date: string, duration: any = 'full', endDate?: string) =>
+  ({ id, teacher, date, duration, type: 'casual', ...(endDate ? { endDate } : {}) })
+
+// Two administrators recorded absences under their own accounts.
+const legacyStore = new MemStorage() as unknown as Storage
+legacyStore.setItem('schedu-cal-leave:admin-1', JSON.stringify([lv('a1', 'Anita', '2026-08-10')]))
+legacyStore.setItem('schedu-cal-leave:admin-2', JSON.stringify([lv('b1', 'Anita', '2026-08-10'), lv('b2', 'Ravi', '2026-08-11')]))
+legacyStore.setItem('schedu-timetables', '[]')   // unrelated key must not be touched
+
+ok(legacyLeaveKeys(legacyStore).length === 2, 'finds every per-account leave key')
+ok(!legacyLeaveKeys(legacyStore).includes('schedu-timetables'), 'and nothing else')
+
+migrateLegacyLeaves(legacyStore)
+const afterMove = useLeaves.getState().leaves
+ok(afterMove.length === 2, "both administrators' records survive the move to school scope")
+ok(afterMove.some(l => l.teacher === 'Ravi'), 'the absence only the second admin knew about is now visible to all')
+ok(afterMove.filter(l => l.teacher === 'Anita').length === 1,
+  'the same teacher marked absent twice on one day counts once, not twice')
+ok(legacyLeaveKeys(legacyStore).length === 0,
+  'the old keys are removed — otherwise deleting a leave would resurrect it on next load')
+
+migrateLegacyLeaves(legacyStore)
+ok(useLeaves.getState().leaves.length === 2, 'running the migration again changes nothing')
+
+ok(mergeLeaves([lv('x', 'Sara', '2026-09-02')], [lv('x', 'Sara', '2026-09-02')]).length === 1,
+  'the same record seen twice is kept once')
+const orderedLeave = mergeLeaves([lv('l', 'A', '2026-09-05'), lv('m', 'B', '2026-09-01')])
+ok(orderedLeave[0].date === '2026-09-01', 'merged leave comes back in date order')
+
+// A long leave spans its range; a full/half day does not leak into tomorrow.
+const extendedLeave = lv('g', 'Meera', '2026-08-03', 'long', '2026-08-07')
+ok(leaveCoversDate(extendedLeave, '2026-08-05') && !leaveCoversDate(extendedLeave, '2026-08-08'),
+  'long leave covers its range only')
+ok(isOnLeaveOn([extendedLeave], 'Meera', '2026-08-04') && !isOnLeaveOn([extendedLeave], 'Ravi', '2026-08-04'),
+  'being on leave is per teacher')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

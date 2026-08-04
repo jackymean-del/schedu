@@ -18,7 +18,7 @@ import { useMemo } from 'react'
 import { useSyllabus, withHolidayImpact, withLostImpact, withAllocatedHours, type SyllabusPlan } from './syllabusTracking'
 import { useHolidays, holidayImpact, type Holiday } from './holidays'
 import { useSubCoverage, coverageLoss, hoursNotSpent, uncoveredAbsenceLoss } from './substitutionCoverage'
-import { loadLeaves, type CalLeave } from './leaveUtils'
+import { useLeaves, type CalLeave } from './leaveUtils'
 import { loadActiveBundles, type ScheduleBundle } from './activeSchedules'
 import {
   allocatedHoursByPlan, elapsedHoursByPlan, futureHoursByPlan, unionEntities, contextForSection,
@@ -142,7 +142,7 @@ export function useEffectiveCoverage(): EffectiveCoverage {
 
   // Leave still lives in localStorage rather than a store; re-read when the
   // user or the timetable changes, which is when it can have moved.
-  const leaves = useMemo(() => loadLeaves(uid), [uid])
+  const leaves = useLeaves(s => s.leaves)
 
   const effective = useMemo(
     () => composeEffectivePlans({ plans, bundles, holidays, subRecords, leaves }),

@@ -6,6 +6,11 @@ import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layout/AppShell"
 import { useAuthStore } from "@/store/authStore"
 import { useMembers } from "@/store/members"
+import { migrateLegacyLeaves } from "@/lib/leaveUtils"
+
+// Teacher leave used to be stored per signed-in account. Fold any such records
+// into the school-wide store once, before anything reads them.
+migrateLegacyLeaves()
 
 // Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).

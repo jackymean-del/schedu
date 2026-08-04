@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
-import { loadLeaves } from '@/lib/leaveUtils'
+import { useLeaves } from '@/lib/leaveUtils'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
 import { loadAssignments, type FreeAssignment } from '@/lib/freeAssignments'
 import { loadActiveBundles } from '@/lib/activeSchedules'
@@ -32,6 +32,7 @@ function fmtClock(min: number) { const h = Math.floor(min / 60) % 12 || 12, m = 
 export function InsightsPage() {
   const store = useTimetableStore() as any
   const uid = useAuthStore.getState().user?.id ?? ''
+  const leaves = useLeaves(s => s.leaves)
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
   const [tab, setTab] = useState<Tab>('summary')
@@ -49,7 +50,7 @@ export function InsightsPage() {
   const hasData = sources.some(s => s.sections.length > 0 && Object.keys(s.classTT).length > 0)
 
   const reports: ReportsData = useMemo(() => computeReports({
-    leaves: loadLeaves(uid), sources, range: rangeFor(rangeKey),
+    leaves, sources, range: rangeFor(rangeKey),
   }), [uid, sources, rangeKey])
 
   // Extra duties (free-slot task assignments) in the selected range — same
