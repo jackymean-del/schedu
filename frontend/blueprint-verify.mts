@@ -1464,6 +1464,89 @@ const naiveRings = ringsForSection('I-A', { startTime: '09:00' }, bellPeriods)
 ok(naiveRings.length > 0 && naiveRings[0].at === 9 * 60,
   'a schedule predating bell rows still gets bells, from its plain period durations')
 
+// ── The corridor display ──
+// A board that shows a cheerful grid on a holiday, or counts down to a bell
+// that will not ring, is worse than a blank screen — people trust it.
+import { boardNow, boardRows, uncoveredRows, soonestRings } from './src/lib/smartboard'
+
+const boardRings = ringsForSection('I-A', bellConfig, bellPeriods)   // 8:00 → 10:40
+
+// The ordinary case.
+const during = boardNow(boardRings, 9 * 60, { isWorkDay: true })
+ok(during.state === 'during', 'mid-morning on a school day, lessons are running')
+ok(during.nextBellIn === 35 && during.nextBellAt === 9 * 60 + 35,
+  'and the countdown is to the next bell that will actually ring')
+ok(during.nextBellMeans === 'Period 2 ends · Break begins', 'saying what it will mean')
+
+// Before and after the day — the two states a naive board gets wrong by
+// counting down to a bell fourteen hours away.
+const before = boardNow(boardRings, 7 * 60, { isWorkDay: true })
+ok(before.state === 'before' && before.nextBellIn === 60,
+  'before the first bell the board says so, and counts down to it')
+const after = boardNow(boardRings, 22 * 60, { isWorkDay: true })
+ok(after.state === 'after', 'after the last bell the day is over')
+ok(after.nextBellIn === undefined,
+  'with NO countdown — a board reading "next bell in 10 hours" at 10pm is noise')
+ok(after.lastBellAt === 10 * 60 + 40, 'but it still says when the day ended')
+
+// Closed, for each of the three different reasons.
+ok(boardNow(boardRings, 9 * 60, { isWorkDay: false }).state === 'closed',
+  'a weekend is closed even though bells exist')
+const boardOnHoliday = boardNow(boardRings, 9 * 60, { isWorkDay: true, closedReason: 'Diwali — school holiday' })
+ok(boardOnHoliday.state === 'closed' && boardOnHoliday.reason === 'Diwali — school holiday',
+  'a holiday names itself rather than showing a timetable nobody is following')
+ok(boardNow([], 9 * 60, { isWorkDay: true }).state === 'closed',
+  'a working day with no bells at all is a schedule that was never generated, not a day to count down')
+
+// Rows: what each class is doing right now.
+const boardBundle: any = {
+  id: 'b1', name: 'Main',
+  sections: [{ name: 'I-A' }, { name: 'I-B' }],
+  periods: bellPeriods,
+  config: bellConfig,
+  classTT: {
+    'I-A': { MONDAY: { p1: { subject: 'English', teacher: 'Anita', room: 'R1' } } },
+    'I-B': { MONDAY: { p1: { subject: 'Maths', teacher: 'Ravi', room: 'R2' } } },
+  },
+  substitutions: {},
+}
+// 08:30 is inside P1 (08:15–08:55).
+const at830 = boardRows([boardBundle], 'MONDAY', 8 * 60 + 30, new Set<string>())
+ok(at830.length === 2, 'every class gets a row')
+ok(at830.find(r => r.section === 'I-A')?.subject === 'English', 'showing what is on right now')
+ok(at830.find(r => r.section === 'I-A')?.endMin === 8 * 60 + 55, 'and when it finishes')
+
+// A free class keeps its row rather than vanishing — a list that changes
+// length through the day reads as a fault.
+const at940 = boardRows([boardBundle], 'MONDAY', 9 * 60 + 40, new Set<string>())
+ok(at940.length === 2 && at940.every(r => !r.subject),
+  'during the break every class still has a row, with nothing on it')
+
+// The one thing a board exists to shout about.
+const teacherOut = boardRows([boardBundle], 'MONDAY', 8 * 60 + 30, new Set(['Anita']))
+ok(teacherOut.find(r => r.section === 'I-A')?.uncovered === true,
+  'a class whose teacher is absent with no cover is flagged')
+ok(teacherOut.find(r => r.section === 'I-B')?.uncovered === false, 'and the others are not')
+ok(uncoveredRows(teacherOut).length === 1, 'only that one is worth flashing')
+
+const covered: any = { ...boardBundle, substitutions: { 'I-A|MONDAY|p1': 'Meera' } }
+const withSub = boardRows([covered], 'MONDAY', 8 * 60 + 30, new Set(['Anita']))
+const iaSub = withSub.find(r => r.section === 'I-A')!
+ok(iaSub.uncovered === false, 'once a substitute is assigned the class is no longer uncovered')
+ok(iaSub.teacher === 'Meera' && iaSub.isSub,
+  'and the board names who is ACTUALLY in the room, marked as cover')
+ok(uncoveredRows(withSub).length === 0, 'so nothing flashes')
+
+// Sections on different clocks must not be merged into one countdown wrongly.
+const mergedRings = soonestRings(['I-A', 'Nursery-A'], bellConfig, bellPeriods)
+ok(mergedRings.some(r => r.at === 10 * 60 + 40),
+  "the board's next-bell list spans every group — it is the next moment ANYTHING changes")
+ok(mergedRings.filter(r => r.at === 9 * 60 + 55).length === 1,
+  'a minute where two groups both ring is one entry, not two')
+const shared = mergedRings.find(r => r.at === 9 * 60 + 55)!
+ok(shared.ends === 'Break' && shared.starts === 'Period 3',
+  'and it keeps both meanings rather than letting one group overwrite the other')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

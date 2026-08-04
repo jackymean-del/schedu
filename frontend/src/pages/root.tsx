@@ -50,12 +50,16 @@ export function RootLayout() {
   // Pages requiring a signed-in user (real auth via Clerk; open in mock mode).
   const PROTECTED = ['/dashboard', '/wizard', '/timetable', '/master-data',
     '/settings', '/insights', '/users', '/calendar', '/support',
-    '/guide', '/profile', '/subscription', '/configure', '/syllabus']
+    '/guide', '/profile', '/subscription', '/configure', '/syllabus', '/board']
   const isProtected = PROTECTED.some(p => path === p || path.startsWith(p + '/'))
 
-  // Signed-in app pages (everything protected except the wizard, which runs its
-  // own focused chrome) share the persistent AppShell sidebar.
-  const isAppShell = isProtected && !isWizard
+  // The corridor display fills the screen it lives on: no sidebar, no topbar,
+  // nothing to click. Chrome on a wall-mounted board is wasted pixels.
+  const isBoard = path === '/board'
+
+  // Signed-in app pages (everything protected except the wizard and the board,
+  // which run their own focused chrome) share the persistent AppShell sidebar.
+  const isAppShell = isProtected && !isWizard && !isBoard
 
   if (isAppShell) {
     return <AuthGuard><AppShell><Outlet /></AppShell></AuthGuard>
@@ -63,7 +67,7 @@ export function RootLayout() {
 
   // Auth / home / marketing pages own their full-screen layout; the wizard and
   // any other page get the slim topbar.
-  const inner = (isAuthPage || isHome || isMarketing)
+  const inner = (isAuthPage || isHome || isMarketing || isBoard)
     ? <Outlet />
     : (
       <div style={{ minHeight:'100vh', background:'#F9F8FF', display:'flex', flexDirection:'column' }}>

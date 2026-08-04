@@ -27,7 +27,7 @@ import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
   X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
-  AlertTriangle, Bell,
+  AlertTriangle, Bell, Monitor,
 } from 'lucide-react'
 import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
 import { loadTerms, plural, type Terms } from '@/lib/terms'
@@ -984,6 +984,10 @@ export function CalendarPage() {
             {/* Derived from the schedule's own timings — the sheet a school
                 actually pins up in the corridor and the office. */}
             <button title="Bell schedule" onClick={() => setBellOpen(true)} style={iconBtn}><Bell size={17} /></button>
+            {/* Opens in its own tab because that tab is what gets left running
+                on the corridor screen — navigating away from it is the whole
+                thing you don't want to do. */}
+            <button title="Open corridor display" onClick={() => window.open('/board', '_blank')} style={iconBtn}><Monitor size={17} /></button>
             {canArrangeCover && (
               <button title="Substitution Settings" onClick={() => setSettingsOpen(true)} style={iconBtn}><Settings size={17} /></button>
             )}

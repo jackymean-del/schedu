@@ -31,6 +31,7 @@ const MasterDataPage = lazyRouteComponent(() => import("./pages/master-data"), "
 const SettingsPage   = lazyRouteComponent(() => import("./pages/settings"), "SettingsPage")
 const InsightsPage   = lazyRouteComponent(() => import("./pages/insights"), "InsightsPage")
 const CalendarPage   = lazyRouteComponent(() => import("./pages/calendar"), "CalendarPage")
+const BoardPage      = lazyRouteComponent(() => import("./pages/board"), "BoardPage")
 
 const rootRoute      = createRootRoute({ component: RootLayout })
 const indexRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/",           component: MarketingRedirect })
@@ -58,6 +59,8 @@ const profileRoute       = createRoute({ getParentRoute: () => rootRoute, path: 
 const subscriptionRoute  = createRoute({ getParentRoute: () => rootRoute, path: "/subscription",  component: SubscriptionPage })
 const configureRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/configure",     component: ConfigurePage })
 const syllabusRoute      = createRoute({ getParentRoute: () => rootRoute, path: "/syllabus",      component: SyllabusPage })
+// Corridor/staffroom display. Its own full-screen chrome — no sidebar, no topbar.
+const boardRoute         = createRoute({ getParentRoute: () => rootRoute, path: "/board",         component: BoardPage, pendingComponent: RouteLoadingFallback })
 
 export const routeTree = rootRoute.addChildren([
   indexRoute, loginRoute, registerRoute, dashboardRoute,
@@ -65,7 +68,7 @@ export const routeTree = rootRoute.addChildren([
   featuresRoute, pricingRoute, docsRoute, docArticleRoute, contactRoute,
   sharedRoute, ssoCallbackRoute,
   settingsRoute, insightsRoute, usersRoute, calendarRoute, supportRoute,
-  guideRoute, profileRoute, subscriptionRoute, configureRoute, syllabusRoute,
+  guideRoute, profileRoute, subscriptionRoute, configureRoute, syllabusRoute, boardRoute,
 ])
 export const router = createRouter({ routeTree })
 
