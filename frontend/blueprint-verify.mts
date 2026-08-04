@@ -1319,6 +1319,70 @@ const leftT  = futureHoursByPlan([bundleA], midTerm, undefined, springTerm)[plan
 ok(spentT + leftT === allocatedHoursByPlan([bundleA], springTerm)[planKey('English', 'I-A')],
   'within a term, hours spent plus hours left equal the hours allocated')
 
+// ── School events that actually cost teaching time ──
+// Events used to be a coloured chip that changed no hours: a fortnight of board
+// exams left every subject's "remaining hours" untouched.
+const {
+  eventDates, eventCoversDate, eventsOn, teachingSuspendedOn, eventsAsHolidays,
+  mergeEvents, legacyEventKeys, migrateLegacyEvents, useSchoolEvents,
+} = await import('./src/lib/schoolEvents')
+
+const ev = (over: any = {}) => ({
+  id: 'e1', title: 'Term 1 exams', type: 'exam',
+  date: '2026-02-09', suspendsTeaching: true, ...over,
+})
+
+ok(eventDates(ev()).length === 1, 'an event with no end date is one day')
+ok(eventDates(ev({ endDate: '2026-02-13' })).length === 5, 'a range covers both ends inclusively')
+ok(eventDates(ev({ endDate: '2026-02-08' })).length === 1,
+  'an end date before the start is treated as a single day, not an empty event')
+// A mistyped year ('2206') must not expand to sixty-five thousand days.
+ok(eventDates(ev({ endDate: '2206-02-13' })).length === 366,
+  'an absurd range is capped at a year rather than hanging the page')
+
+ok(eventCoversDate(ev({ endDate: '2026-02-13' }), '2026-02-11'), 'a middle day is covered')
+ok(!eventCoversDate(ev({ endDate: '2026-02-13' }), '2026-02-14'), 'the day after is not')
+
+// Scope: Class X board exams don't stop Class VI's lessons.
+const scopedEvent = ev({ id: 'e2', sections: ['X-A'] })
+ok(eventsOn([scopedEvent], '2026-02-09', 'X-A').length === 1, 'a scoped event reaches its own class')
+ok(eventsOn([scopedEvent], '2026-02-09', 'VI-A').length === 0, 'and not the others')
+ok(eventsOn([ev()], '2026-02-09', 'VI-A').length === 1, 'an unscoped event is the whole school')
+
+ok(teachingSuspendedOn([ev()], '2026-02-09')?.id === 'e1', 'a suspending event stops teaching')
+ok(teachingSuspendedOn([ev({ suspendsTeaching: false })], '2026-02-09') === undefined,
+  'a staff meeting that displaces no lesson does not')
+
+// The whole design: suspending events become the holiday records the coverage
+// math already understands, so there is only ever one derivation of "which
+// periods did this remove".
+const asHols = eventsAsHolidays([ev({ endDate: '2026-02-13', sections: ['X-A'] })])
+ok(asHols.length === 5, 'each suspended day becomes one holiday record')
+ok(asHols.every(h => h.sections?.join() === 'X-A'), 'carrying the event\'s own class scope')
+ok(asHols[0].id.startsWith('event:'), 'ids stay distinguishable from a real declared holiday')
+ok(eventsAsHolidays([ev({ suspendsTeaching: false })]).length === 0,
+  'an event that suspends nothing removes no hours')
+
+// Migration off the per-account keys, same as leave before it.
+const evStore = new MemStorage() as unknown as Storage
+evStore.setItem('schedu-cal-events:admin-1', JSON.stringify([{ id: 'a', title: 'Sports Day', type: 'activity', date: '2026-03-02' }]))
+evStore.setItem('schedu-cal-events:admin-2', JSON.stringify([
+  { id: 'b', title: 'Sports Day', type: 'activity', date: '2026-03-02' },
+  { id: 'c', title: 'Parents evening', type: 'meeting', date: '2026-03-05' },
+]))
+ok(legacyEventKeys(evStore).length === 2, 'finds every per-account event key')
+
+migrateLegacyEvents(evStore)
+const movedEvents = useSchoolEvents.getState().events
+ok(movedEvents.length === 2, 'the same day entered by two admins collapses to one chip')
+ok(movedEvents.some(e => e.title === 'Parents evening'),
+  'and an event only one of them knew about is now visible to all')
+ok(movedEvents.every(e => e.suspendsTeaching === false),
+  'anything recorded before events had consequences keeps none — migrating must not rewrite a school\'s hours')
+ok(legacyEventKeys(evStore).length === 0, 'the old keys are removed')
+
+ok(mergeEvents([ev()], [ev()]).length === 1, 'the same event seen twice is kept once')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

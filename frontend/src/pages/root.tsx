@@ -7,10 +7,12 @@ import { AppShell } from "@/components/layout/AppShell"
 import { useAuthStore } from "@/store/authStore"
 import { useMembers } from "@/store/members"
 import { migrateLegacyLeaves } from "@/lib/leaveUtils"
+import { migrateLegacyEvents } from "@/lib/schoolEvents"
 
-// Teacher leave used to be stored per signed-in account. Fold any such records
-// into the school-wide store once, before anything reads them.
+// Leave and calendar events used to be stored per signed-in account. Fold any
+// such records into the school-wide stores once, before anything reads them.
 migrateLegacyLeaves()
+migrateLegacyEvents()
 
 // Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).

@@ -15,6 +15,7 @@ import {
   loadActiveTimetableIntoStore, saveActiveTimetableSnapshot, getActiveTimetableId,
 } from '@/lib/ttRegistry'
 import { type CalLeave, useLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
+import { useSchoolEvents, eventCoversDate, eventDates, teachingSuspendedOn, type SchoolEvent as CalEvent } from '@/lib/schoolEvents'
 import {
   type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
   overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
@@ -74,12 +75,6 @@ const CELL_GAP   = 9
 type Mode = 'class' | 'teacher' | 'room' | 'subject'
 type View = 'live' | 'day' | 'month'
 
-interface CalEvent {
-  id: string; title: string; description?: string; type: string
-  date: string; start?: string; end?: string
-  /** Class-sections it applies to; empty/undefined = the whole school. */
-  sections?: string[]
-}
 interface SubCandidate {
   name: string; staffId: string; tier: MatchTier
   todayReg: number; todaySub: number; weekLoad: number; streak: number; score: number
@@ -126,7 +121,6 @@ function assignLanes(blocks: Block[]): { placed: { b: Block; lane: number }[]; l
 }
 const LANE_H = 66   // per-lane height when a row has stacked lanes
 
-const EVENTS_KEY = 'schedu-cal-events'
 
 function fmtClock(min: number, h24: boolean): string {
   const h = Math.floor(min / 60), m = min % 60
@@ -222,13 +216,10 @@ export function CalendarPage() {
   }, [])
 
   // ── events ──
-  const [events, setEvents] = useState<CalEvent[]>(() => {
-    try { return JSON.parse(localStorage.getItem(`${EVENTS_KEY}:${uid}`) || '[]') } catch { return [] }
-  })
-  const saveEvents = (next: CalEvent[]) => {
-    setEvents(next)
-    try { localStorage.setItem(`${EVENTS_KEY}:${uid}`, JSON.stringify(next)) } catch { /* quota */ }
-  }
+  // School-scoped, like holidays and leave: an exam timetable is not personal
+  // to whoever typed it. See lib/schoolEvents.
+  const events = useSchoolEvents(s => s.events)
+  const saveEvents = useSchoolEvents(s => s.setEvents)
   // Add-Event modal — holds the ISO date it should open on (null = closed), so
   // a click on a month cell adds to THAT day, not whatever day is selected.
   const [addOpen, setAddOpen] = useState<string | null>(null)
@@ -488,6 +479,10 @@ export function CalendarPage() {
     for (const b of sources) {
       const times = bundleWallTimes(b)
       for (const s of b.sections) {
+        // A class sitting exams or away on a trip isn't having lessons, so
+        // there is nothing to cover. Offering these slots would put a
+        // substitute in front of an empty room and count the period as taught.
+        if (teachingSuspendedOn(events, isoDate, s.name)) continue
         const sd = b.classTT[s.name]?.[dayKey] ?? {}
         for (const p of b.periods) {
           const c = sd[p.id]
@@ -905,7 +900,8 @@ export function CalendarPage() {
   const activeScrub = scrub ?? (viewingToday ? nowMin : clampDay(nowMin))
 
   const dayEvents = events
-    .filter(e => e.date === toISODate(date))
+    // A multi-day event shows on every day it covers, not only its first.
+    .filter(e => eventCoversDate(e, toISODate(date)))
     .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
 
   // Month view: what each weekday actually holds — session count plus the
@@ -1355,6 +1351,7 @@ export function CalendarPage() {
           onAssign={assignSub}
           onClear={clearSub}
           onAutoAssign={() => autoAssign(subFor)}
+          suspendedBy={teachingSuspendedOn(events, isoDate)?.title}
           onClose={() => setSubFor(null)}
           settings={substitutionSettings}
         />
@@ -2149,10 +2146,14 @@ function MonthGrid({
   const today = new Date()
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)]
   while (cells.length % 7 !== 0) cells.push(null)
+  // A multi-day event belongs to every day it covers — an exam fortnight that
+  // appeared only on its first Monday was the reason nobody trusted the month.
   const evByDay: Record<number, CalEvent[]> = {}
   events.forEach(e => {
-    const d = new Date(e.date + 'T00:00:00')
-    if (d.getFullYear() === y && d.getMonth() === m) (evByDay[d.getDate()] ??= []).push(e)
+    for (const iso of eventDates(e)) {
+      const d = new Date(iso + 'T00:00:00')
+      if (d.getFullYear() === y && d.getMonth() === m) (evByDay[d.getDate()] ??= []).push(e)
+    }
   })
   const holByDay: Record<number, Holiday[]> = {}
   holidays.forEach(h => {
@@ -2380,10 +2381,26 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   const [desc, setDesc] = useState('')
   const [type, setType] = useState('other')
   const [when, setWhen] = useState(date)
+  const [until, setUntil] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [scope, setScope] = useState<string[]>([])
-  const valid = title.trim().length > 0
+  // Whether normal lessons stop. An exam or a sports day says yes; a staff
+  // meeting says no. Pre-answered from the type, because that is the honest
+  // default for each, but always the admin's call — see lib/schoolEvents.
+  const [suspends, setSuspends] = useState(false)
+  const suspendsTouched = useRef(false)
+  useEffect(() => {
+    if (!suspendsTouched.current) setSuspends(type === 'exam' || type === 'activity')
+  }, [type])
+
+  const rangeValid = !until || until >= when
+  const valid = title.trim().length > 0 && rangeValid
+  // Days the event covers, for the "what this costs" line below.
+  const spanDays = useMemo(
+    () => (until && rangeValid) ? eventDates({ id: '', title: '', type, date: when, endDate: until }).length : 1,
+    [when, until, rangeValid, type],
+  )
 
   const create = () => {
     if (!valid) return
@@ -2391,8 +2408,12 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
     onCreate({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       title: title.trim(), description: desc.trim() || undefined, type,
-      date: when, start: start || undefined, end: end || undefined,
+      date: when, endDate: until || undefined,
+      start: start || undefined, end: end || undefined,
       sections: scope.length ? scope : undefined,
+      // A 'holiday'-typed event already declares a real holiday above; marking
+      // it as suspending too would remove the same periods twice.
+      suspendsTeaching: type === 'holiday' ? false : suspends,
     })
   }
 
@@ -2429,14 +2450,50 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
               ))}
             </div>
           </Field>
-          <Field label="Date">
-            <input type="date" value={when} onChange={e => setWhen(e.target.value)} style={inp} />
-          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Date">
+              <input type="date" value={when} onChange={e => setWhen(e.target.value)} style={inp} />
+            </Field>
+            {/* Exams and trips run for days, not one morning. */}
+            <Field label="Until (optional)">
+              <input type="date" value={until} min={when} onChange={e => setUntil(e.target.value)} style={inp} />
+            </Field>
+          </div>
+          {!rangeValid && (
+            <div style={{ fontSize: 12, color: '#dc2626', marginBottom: 12 }}>
+              The end date is before the start date.
+            </div>
+          )}
           {/* An exam, assembly or trip rarely involves every class — say who
               it's for, and (for a holiday) only their hours come off. */}
           <div style={{ marginBottom: 14 }}>
             <ScopePicker sections={sections} value={scope} onChange={setScope} label="Applies to" />
           </div>
+          {/* Does the timetable actually stop? A coloured chip that changes no
+              hours is what made events untrustworthy — a fortnight of board
+              exams left every subject's "remaining hours" untouched. */}
+          {type !== 'holiday' && (
+            <label style={{
+              display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer',
+              fontSize: 12.5, borderRadius: 9, padding: '10px 12px', marginBottom: 14,
+              background: suspends ? '#FFFBEB' : '#FBFAFF',
+              border: `1px solid ${suspends ? '#FDE68A' : '#ECE9FB'}`,
+              color: suspends ? '#92400E' : '#4B5275',
+            }}>
+              <input
+                type="checkbox" checked={suspends}
+                onChange={e => { suspendsTouched.current = true; setSuspends(e.target.checked) }}
+                style={{ marginTop: 2 }}
+              />
+              <span>
+                <strong>Normal lessons don't run</strong> for {scopePhrase(scope, sections)} during this event.
+                {suspends
+                  ? <> These periods come off the syllabus time available{spanDays > 1 ? <>, across all <strong>{spanDays} days</strong></> : null}.
+                    Staff are still in, so this is not a holiday; nobody will be asked to cover a period that isn't running.</>
+                  : <> Leave this unticked for anything that doesn't displace a lesson — a staff meeting, an after-hours event. Hours stay as they are.</>}
+              </span>
+            </label>
+          )}
           {type === 'holiday' && (
             <div style={{
               fontSize: 12.5, borderRadius: 9, padding: '9px 11px', marginBottom: 14,
@@ -2562,7 +2619,7 @@ const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: str
 }
 
 // ── Substitute panel ───────────────────────────────────────────
-function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings }: {
+function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings, suspendedBy }: {
   teacher: string; dayLabel: string
   slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
   multiActive: boolean
@@ -2573,6 +2630,8 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
   onAutoAssign: () => void
   onClose: () => void
   settings: SubstitutionSettings
+  /** Title of the event suspending lessons today, when one is. */
+  suspendedBy?: string
 }) {
   const showRanking = settings.defaults.autoSuggestionsEnabled
   const maxShow = settings.defaults.maxSuggestionsToShow ?? Infinity
@@ -2608,7 +2667,13 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
             <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '50px 24px', textAlign: 'center' }}>
               <Check size={28} color="#16A34A" />
               <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '10px 0 4px' }}>No cover needed</h3>
-              <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>{teacher} has no classes on {dayLabel}.</p>
+              {/* Say WHICH reason. "No classes today" would be a plain untruth
+                  on an exam day: the classes exist, they just aren't running. */}
+              <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
+                {suspendedBy
+                  ? <>Normal lessons are suspended for <strong>{suspendedBy}</strong>, so {teacher}'s periods aren't running.</>
+                  : <>{teacher} has no classes on {dayLabel}.</>}
+              </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

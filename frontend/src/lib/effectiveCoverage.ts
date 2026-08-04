@@ -20,6 +20,7 @@ import { useHolidays, holidayImpact, type Holiday } from './holidays'
 import { useSubCoverage, coverageLoss, hoursNotSpent, uncoveredAbsenceLoss } from './substitutionCoverage'
 import { useLeaves, type CalLeave } from './leaveUtils'
 import type { AcademicTerm } from './academicTerms'
+import { useSchoolEvents, eventsAsHolidays } from './schoolEvents'
 import { loadActiveBundles, type ScheduleBundle } from './activeSchedules'
 import {
   allocatedHoursByPlan, elapsedHoursByPlan, futureHoursByPlan, unionEntities, contextForSection,
@@ -125,7 +126,16 @@ export interface EffectiveCoverage {
  */
 export function useEffectiveCoverage(term?: AcademicTerm | null): EffectiveCoverage {
   const plans = useSyllabus(s => s.plans)
-  const holidays = useHolidays(s => s.holidays)
+  const declared = useHolidays(s => s.holidays)
+  const events = useSchoolEvents(s => s.events)
+  // An exam week or a sports day removes teaching time exactly as a holiday
+  // does; only the human meaning differs (the school is open, staff are in).
+  // Folding suspending events in here means every coverage surface honours them
+  // without a second derivation that could drift from the holiday one.
+  const holidays = useMemo(
+    () => [...declared, ...eventsAsHolidays(events)],
+    [declared, events],
+  )
   const subRecords = useSubCoverage(s => s.records)
   const uid = useAuthStore(s => s.user?.id) ?? ''
   // Re-read when the OPEN schedule changes: publishing or switching a schedule
