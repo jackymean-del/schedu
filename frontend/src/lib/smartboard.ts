@@ -170,17 +170,25 @@ export function uncoveredRows(rows: BoardRow[]): BoardRow[] {
  * anywhere in the building, which is what someone in the corridor is waiting
  * for. The group it belongs to is named alongside.
  */
-export function soonestRings(sections: string[], config: any, periods: Period[]): Ring[] {
+export function soonestRings(
+  /** Each ACTIVE schedule with its OWN bell — never one schedule's clock
+   *  applied to another's classes. A school running "I–V TT" and "VI–X TT"
+   *  side by side has two bells, and using the first for both would put every
+   *  ring time on the second schedule's classes minutes or hours out. */
+  schedules: Array<{ sections: string[]; config: any; periods: Period[] }>,
+): Ring[] {
   const all = new Map<number, Ring>()
-  for (const s of sections) {
-    for (const r of ringsForSection(s, config, periods)) {
-      const existing = all.get(r.at)
-      if (!existing) all.set(r.at, { ...r })
-      else {
-        // Two groups ringing at the same minute for different reasons: keep
-        // both meanings rather than letting one overwrite the other.
-        if (r.ends && !existing.ends) existing.ends = r.ends
-        if (r.starts && !existing.starts) existing.starts = r.starts
+  for (const { sections, config, periods } of schedules) {
+    for (const s of sections) {
+      for (const r of ringsForSection(s, config, periods)) {
+        const existing = all.get(r.at)
+        if (!existing) all.set(r.at, { ...r })
+        else {
+          // Two groups ringing at the same minute for different reasons: keep
+          // both meanings rather than letting one overwrite the other.
+          if (r.ends && !existing.ends) existing.ends = r.ends
+          if (r.starts && !existing.starts) existing.starts = r.starts
+        }
       }
     }
   }

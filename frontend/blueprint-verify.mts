@@ -1538,7 +1538,7 @@ ok(iaSub.teacher === 'Meera' && iaSub.isSub,
 ok(uncoveredRows(withSub).length === 0, 'so nothing flashes')
 
 // Sections on different clocks must not be merged into one countdown wrongly.
-const mergedRings = soonestRings(['I-A', 'Nursery-A'], bellConfig, bellPeriods)
+const mergedRings = soonestRings([{ sections: ['I-A', 'Nursery-A'], config: bellConfig, periods: bellPeriods }])
 ok(mergedRings.some(r => r.at === 10 * 60 + 40),
   "the board's next-bell list spans every group — it is the next moment ANYTHING changes")
 ok(mergedRings.filter(r => r.at === 9 * 60 + 55).length === 1,
@@ -1546,6 +1546,27 @@ ok(mergedRings.filter(r => r.at === 9 * 60 + 55).length === 1,
 const shared = mergedRings.find(r => r.at === 9 * 60 + 55)!
 ok(shared.ends === 'Break' && shared.starts === 'Period 3',
   'and it keeps both meanings rather than letting one group overwrite the other')
+
+// MULTI-ACTIVE: two schedules on DIFFERENT bells. Using the first schedule's
+// clock for the second's classes would print ring times that never happen.
+const lateConfig: any = {
+  bellSchedules: [{
+    startTime: '13:00',
+    rows: [
+      { id: 'r1', name: 'P1', type: 'teaching', duration: 40, classes: ['x'] },
+      { id: 'r2', name: 'P2', type: 'teaching', duration: 40, classes: ['x'] },
+    ],
+  }],
+}
+const twoBells = soonestRings([
+  { sections: ['I-A'], config: bellConfig, periods: bellPeriods },
+  { sections: ['X-A'], config: lateConfig, periods: bellPeriods },
+])
+ok(twoBells.some(r => r.at === 8 * 60), "the morning schedule's first bell is there")
+ok(twoBells.some(r => r.at === 13 * 60),
+  "and so is the afternoon schedule's — each resolved against ITS OWN bell, not the first one's")
+ok(twoBells.every((r, i) => i === 0 || r.at > twoBells[i - 1].at),
+  'the combined list is still one ordered sequence of moments')
 
 // ── School facts must not live in one account's storage ──
 // The failure is quiet and identical every time: the principal records it, the

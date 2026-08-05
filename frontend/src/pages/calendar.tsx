@@ -1366,9 +1366,11 @@ export function CalendarPage() {
 
       {bellOpen && (
         <BellScheduleModal
-          sections={sources.flatMap(b => (b.sections ?? []).map((x: any) => x.name)).filter(Boolean)}
-          config={sources[0]?.config ?? store.config ?? {}}
-          periods={sources[0]?.periods ?? store.periods ?? []}
+          schedules={(sources.length ? sources : [{ sections: store.sections ?? [], config: store.config ?? {}, periods: store.periods ?? [] } as any]).map((b: any) => ({
+            sections: (b.sections ?? []).map((x: any) => x.name).filter(Boolean),
+            config: b.config ?? {},
+            periods: b.periods ?? [],
+          }))}
           schoolName={orgName}
           nowMin={viewingToday ? nowMin : undefined}
           onClose={() => setBellOpen(false)}

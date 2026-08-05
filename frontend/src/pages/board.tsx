@@ -74,8 +74,10 @@ export function BoardPage() {
   // Why there might be no lessons — three different sources, one answer.
   const holidayToday = holidays.find(h => h.date === isoDate && !h.sections?.length)
   const suspended = teachingSuspendedOn(events, isoDate)
-  const workDays: string[] = bundles[0]?.config?.workDays?.length
-    ? bundles[0].config.workDays
+  // The union: if ANY active schedule teaches today, the school is open.
+  const workDays: string[] = bundles.length
+    ? Array.from(new Set(bundles.flatMap(b =>
+        b.config?.workDays?.length ? b.config.workDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'])))
     : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
   const closedReason = holidayToday
     ? `${holidayToday.name} — school holiday`
@@ -83,9 +85,14 @@ export function BoardPage() {
     ? `${suspended.title} — normal lessons suspended`
     : undefined
 
+  // Each schedule resolves against ITS OWN bell — see lib/smartboard.
   const rings = useMemo(
-    () => soonestRings(allSections, bundles[0]?.config ?? {}, bundles[0]?.periods ?? []),
-    [allSections, bundles],
+    () => soonestRings(bundles.map(b => ({
+      sections: (b.sections ?? []).map((s: any) => s.name).filter(Boolean),
+      config: b.config ?? {},
+      periods: b.periods ?? [],
+    }))),
+    [bundles],
   )
   const state = boardNow(rings, nowMin, { isWorkDay: workDays.includes(dayKey), closedReason })
 

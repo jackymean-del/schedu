@@ -14,18 +14,24 @@ import type { Period } from '@/types'
 const ACCENT = '#7C6FE0'
 
 export function BellScheduleModal({
-  sections, config, periods, schoolName, nowMin, h24 = false, onClose,
+  schedules, schoolName, nowMin, h24 = false, onClose,
 }: {
-  sections: string[]
-  config: any
-  periods: Period[]
+  /** Every ACTIVE schedule with its OWN bell. Passing one schedule's config
+   *  for another's classes would print ring times that never happen — see
+   *  lib/smartboard's note on the same hazard. */
+  schedules: Array<{ sections: string[]; config: any; periods: Period[] }>
   schoolName?: string
   /** Minutes past midnight, for the "next bell" line. Omit to hide it. */
   nowMin?: number
   h24?: boolean
   onClose: () => void
 }) {
-  const groups = useMemo(() => bellGroups(sections, config, periods), [sections, config, periods])
+  // Groups are computed per schedule, then concatenated: two schools-within-a-
+  // school on different bells produce separate sheets rather than one wrong one.
+  const groups = useMemo(
+    () => schedules.flatMap(s => bellGroups(s.sections, s.config, s.periods)),
+    [schedules],
+  )
 
   const print = () => {
     const win = window.open('', '_blank')
