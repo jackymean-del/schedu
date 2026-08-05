@@ -1423,8 +1423,10 @@ const changeover = ringsIA.find(r => r.at === 8 * 60 + 55)!
 ok(!!changeover, 'the moment P1 ends and P2 starts exists')
 ok(changeover.ends === 'Period 1' && changeover.starts === 'Period 2',
   'and is a single bell that means both, not two bells a minute apart')
-ok(describeRing(changeover) === 'Period 1 ends · Period 2 begins',
-  'so whoever rings it can read what it means')
+ok(describeRing(changeover) === 'Period 2',
+  'a bell is named for what STARTS — one moment described twice reads as two events')
+ok(describeRing({ at: 0, ends: 'Period 3' }) === 'End of day',
+  'the last bell of the day starts nothing, and says so rather than naming a period that just finished')
 ok(ringsIA.filter(r => r.at === 8 * 60 + 55).length === 1, 'never listed twice')
 
 // Every moment is distinct and ordered.
@@ -1476,7 +1478,7 @@ const during = boardNow(boardRings, 9 * 60, { isWorkDay: true })
 ok(during.state === 'during', 'mid-morning on a school day, lessons are running')
 ok(during.nextBellIn === 35 && during.nextBellAt === 9 * 60 + 35,
   'and the countdown is to the next bell that will actually ring')
-ok(during.nextBellMeans === 'Period 2 ends · Break begins', 'saying what it will mean')
+ok(during.nextBellMeans === 'Break', 'saying what is coming, not what is ending')
 
 // Before and after the day — the two states a naive board gets wrong by
 // counting down to a bell fourteen hours away.
@@ -1819,6 +1821,51 @@ ok(renameInStringLists(scopedHols, 'sections', 'I-A', 'I-Alpha')![0].sections.jo
   'a holiday scoped to a class follows the rename')
 ok(renameInStringLists(scopedHols, 'sections', 'I-A', 'I-B')![0].sections.join() === 'I-B',
   'renaming onto a class already in the list does not list it twice')
+
+// ── The pinned-up bell chart: classes across, time down ──
+import { slotsForSection, bellColumns, bellGrid } from './src/lib/bellSchedule'
+
+const iaSlots = slotsForSection('I-A', bellConfig, bellPeriods)
+ok(iaSlots[0].label === 'Assembly' && iaSlots[0].startMin === 8 * 60,
+  'the day is a list of named blocks, starting with assembly')
+ok(iaSlots.some(s => s.label === 'Break'), 'breaks are blocks too, not gaps between them')
+ok(iaSlots.every((s, i) => i === 0 || s.startMin >= iaSlots[i - 1].startMin), 'in time order')
+
+// Columns: one per distinct daily pattern, sections that match share one.
+const cols = bellColumns([{ sections: ['I-A', 'I-B', 'Nursery-A'], config: bellConfig, periods: bellPeriods }])
+ok(cols.length === 2, 'classes on different clocks get their own column')
+ok(cols.some(c => c.sections.join() === 'I-A,I-B'), 'and classes that match share one')
+
+const grid = bellGrid(cols)
+ok(grid.length > 0, 'the chart has rows')
+ok(grid.every(r => r.endMin > r.startMin), 'every row is a real band of time')
+ok(grid.every((r, i) => i === 0 || r.startMin >= grid[i - 1].endMin),
+  'rows tile the day in order without overlapping')
+
+// The alignment that makes two columns comparable: a row boundary wherever
+// ANY column changes.
+const firstRow = grid[0]
+ok(firstRow.cells.length === cols.length, 'one cell per column, every row')
+ok(firstRow.cells.every(c => c.label === 'Assembly'),
+  'both groups are in assembly at 8:00, so both cells name it')
+
+// Nursery goes home at 9:55; Class I keeps going to 10:40. After Nursery
+// finishes its column must be EMPTY, not borrowing Class I's block.
+const lateRow = grid.find(r => r.startMin >= 9 * 60 + 55)!
+ok(!!lateRow, 'there are rows after Nursery has gone home')
+const nurseryCol = cols.findIndex(c => c.sections.includes('Nursery-A'))
+ok(!lateRow.cells[nurseryCol].label,
+  "a column with nothing running is blank rather than showing a neighbour's block")
+ok(!!lateRow.cells[1 - nurseryCol].label, 'while the column still in session names its block')
+
+// A block spanning several bands is named ONCE, on the row it starts —
+// otherwise a long lesson repeats its name down the column like an error.
+const p1Rows = grid.filter(r => r.cells.some(c => c.label === 'Period 1'))
+ok(p1Rows.filter(r => r.cells.some(c => c.label === 'Period 1' && c.isStart)).length === 1,
+  'a block that spans rows is named once, where it begins')
+
+// No row where every column is empty — that is a gap in nobody's day.
+ok(grid.every(r => r.cells.some(c => c.label)), 'no empty bands are printed')
 
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'

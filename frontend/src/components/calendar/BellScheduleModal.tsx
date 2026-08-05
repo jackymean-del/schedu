@@ -1,69 +1,60 @@
 /**
  * The bell schedule, as a sheet you can pin up.
  *
- * Everything here is derived — nobody types a bell time. See lib/bellSchedule
- * for why one moment is one bell (P1 ends and P2 begins together) and why
- * sections with different clocks get their own column rather than being
- * flattened into a single list that would ring for nobody.
+ * Laid out the way a bell chart is read on a wall: time down the left, classes
+ * across the top, and each cell naming the block that is running. A block that
+ * spans several time bands is named once, on the row it starts.
+ *
+ * Everything is derived — nobody types a bell time. See lib/bellSchedule for
+ * why classes on different clocks get their own column rather than being
+ * flattened into one list that would ring for nobody.
  */
 import { useMemo } from 'react'
 import { Bell, X, Printer } from 'lucide-react'
-import { bellGroups, describeRing, fmtRingTime, minutesToNextRing } from '@/lib/bellSchedule'
+import { bellColumns, bellGrid, fmtRingTime } from '@/lib/bellSchedule'
 import type { Period } from '@/types'
 
 const ACCENT = '#7C6FE0'
 
 export function BellScheduleModal({
-  schedules, schoolName, nowMin, h24 = false, onClose,
+  schedules, schoolName, h24 = false, onClose,
 }: {
   /** Every ACTIVE schedule with its OWN bell. Passing one schedule's config
-   *  for another's classes would print ring times that never happen — see
-   *  lib/smartboard's note on the same hazard. */
+   *  for another's classes would print ring times that never happen. */
   schedules: Array<{ sections: string[]; config: any; periods: Period[] }>
   schoolName?: string
-  /** Minutes past midnight, for the "next bell" line. Omit to hide it. */
-  nowMin?: number
   h24?: boolean
   onClose: () => void
 }) {
-  // Groups are computed per schedule, then concatenated: two schools-within-a-
-  // school on different bells produce separate sheets rather than one wrong one.
-  const groups = useMemo(
-    () => schedules.flatMap(s => bellGroups(s.sections, s.config, s.periods)),
-    [schedules],
-  )
+  const columns = useMemo(() => bellColumns(schedules), [schedules])
+  const rows = useMemo(() => bellGrid(columns), [columns])
+
+  const band = (startMin: number, endMin: number) =>
+    `${fmtRingTime(startMin, h24)} – ${fmtRingTime(endMin, h24)}`
 
   const print = () => {
     const win = window.open('', '_blank')
     if (!win) return
     const esc = (s: string) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
-    const cols = groups.map(g => `
-      <section>
-        <h2>${esc(g.sections.join(', '))}</h2>
-        <table>
-          <thead><tr><th>Time</th><th>Bell</th></tr></thead>
-          <tbody>
-            ${g.rings.map(r => `<tr><td class="t">${esc(fmtRingTime(r.at, h24))}</td><td>${esc(describeRing(r))}</td></tr>`).join('')}
-          </tbody>
-        </table>
-      </section>`).join('')
+    const head = columns.map(c => `<th>${esc(c.sections.join(', '))}</th>`).join('')
+    const body = rows.map(r => `<tr>
+      <td class="t">${esc(band(r.startMin, r.endMin))}</td>
+      ${r.cells.map(c => `<td>${c.isStart ? esc(c.label!) : ''}</td>`).join('')}
+    </tr>`).join('')
     win.document.write(`<!DOCTYPE html><html><head><title>Bell schedule</title><style>
       *{box-sizing:border-box}
       body{font:13px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#13111E;margin:26px}
       h1{font-size:19px;margin:0 0 3px}
       .sub{color:#666;font-size:12px;margin:0 0 18px}
-      .wrap{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
-      section{break-inside:avoid;min-width:230px}
-      h2{font-size:13px;margin:0 0 7px;padding-bottom:5px;border-bottom:2px solid #13111E}
       table{border-collapse:collapse;width:100%}
-      th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#666;padding:5px 8px 5px 0}
-      td{padding:5px 8px 5px 0;border-top:1px solid #E5E5E5}
-      td.t{font-weight:700;white-space:nowrap}
+      th,td{border:1px solid #D8D8E0;padding:6px 10px;text-align:left;vertical-align:middle}
+      thead th{background:#F4F2FF;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+      td.t{font-weight:700;white-space:nowrap;width:1%}
       @media print{body{margin:12mm}}
     </style></head><body>
       <h1>Bell schedule</h1>
-      <p class="sub">${esc(schoolName ?? '')}</p>
-      <div class="wrap">${cols}</div>
+      ${schoolName ? `<p class="sub">${esc(schoolName)}</p>` : ''}
+      <table><thead><tr><th>Time</th>${head}</tr></thead><tbody>${body}</tbody></table>
     </body></html>`)
     win.document.close()
     win.focus()
@@ -73,7 +64,7 @@ export function BellScheduleModal({
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+      <div style={{ width: '100%', maxWidth: 760, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
         <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
             <Bell size={20} />
@@ -89,50 +80,61 @@ export function BellScheduleModal({
           </div>
         </div>
 
-        <div style={{ padding: 20, flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          {groups.length === 0 ? (
+        <div style={{ padding: 20, flex: 1, minHeight: 0, overflow: 'auto' }}>
+          {rows.length === 0 ? (
             <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
               No bell times yet — generate a schedule and the bells come from its own timings, with nothing to type.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {groups.length > 1 && (
-                <p style={{ fontSize: 12, color: '#8B87AD', margin: 0, lineHeight: 1.5 }}>
+            <>
+              {columns.length > 1 && (
+                <p style={{ fontSize: 12, color: '#8B87AD', margin: '0 0 12px', lineHeight: 1.5 }}>
                   These classes don't share a clock — early dispersal or class-wise breaks give them
-                  their own bells. Each list below rings only for the classes named above it.
+                  their own bells. A blank cell means that column has nothing running then.
                 </p>
               )}
-              {groups.map((g, i) => {
-                const toNext = nowMin != null ? minutesToNextRing(g.rings, nowMin) : undefined
-                return (
-                  <div key={i} style={{ border: '1px solid #ECE9FB', borderRadius: 12, overflow: 'hidden' }}>
-                    <div style={{ padding: '10px 14px', background: '#FBFAFF', borderBottom: '1px solid #ECE9FB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#2E2A4A' }}>{g.sections.join(', ')}</span>
-                      {toNext != null && (
-                        <span style={{ fontSize: 11.5, fontWeight: 700, color: ACCENT, background: '#EDE9FF', padding: '3px 9px', borderRadius: 20 }}>
-                          Next bell in {toNext} min
-                        </span>
-                      )}
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <tbody>
-                        {g.rings.map((r, j) => (
-                          <tr key={j} style={{ borderTop: j ? '1px solid #F3F1FB' : 'none' }}>
-                            <td style={{ padding: '8px 14px', fontSize: 13, fontWeight: 800, color: '#13111E', whiteSpace: 'nowrap', width: 110 }}>
-                              {fmtRingTime(r.at, h24)}
-                            </td>
-                            <td style={{ padding: '8px 14px', fontSize: 12.5, color: '#4B5275' }}>{describeRing(r)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              })}
-            </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'inherit' }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...th, width: 1, whiteSpace: 'nowrap' }}>Time</th>
+                    {columns.map((c, i) => (
+                      <th key={i} style={th}>{c.sections.join(', ')}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, ri) => (
+                    <tr key={ri}>
+                      <td style={{ ...td, fontWeight: 800, color: '#13111E', whiteSpace: 'nowrap', background: '#FBFAFF' }}>
+                        {band(r.startMin, r.endMin)}
+                      </td>
+                      {r.cells.map((c, ci) => (
+                        <td key={ci} style={{
+                          ...td,
+                          color: c.label ? '#2E2A4A' : '#C9C3EC',
+                          fontWeight: c.isStart ? 700 : 400,
+                          background: c.label ? '#fff' : '#FCFCFE',
+                        }}>
+                          {c.isStart ? c.label : ''}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
       </div>
     </div>
   )
+}
+
+const th: React.CSSProperties = {
+  textAlign: 'left', padding: '9px 12px', fontSize: 11, fontWeight: 800,
+  letterSpacing: 0.4, textTransform: 'uppercase', color: ACCENT,
+  background: '#F4F2FF', border: '1px solid #ECE9FB',
+}
+const td: React.CSSProperties = {
+  padding: '9px 12px', fontSize: 13, border: '1px solid #ECE9FB',
 }

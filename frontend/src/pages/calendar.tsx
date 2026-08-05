@@ -1372,7 +1372,6 @@ export function CalendarPage() {
             periods: b.periods ?? [],
           }))}
           schoolName={orgName}
-          nowMin={viewingToday ? nowMin : undefined}
           onClose={() => setBellOpen(false)}
         />
       )}

@@ -87,6 +87,19 @@ export function ringsForSection(section: string, config: any, periods: Period[])
   return [...byMinute.values()].sort((a, b) => a.at - b.at)
 }
 
+/** A block of the day, with a name — "Period 1", "Break", "Assembly". */
+export interface BellSlot { startMin: number; endMin: number; label: string }
+
+/** Every block of one section's day, in order. */
+export function slotsForSection(section: string, config: any, periods: Period[]): BellSlot[] {
+  const out: BellSlot[] = []
+  for (const [key, slot] of sectionPeriodTimes(section, config, periods)) {
+    if (!slot || slot.endMin <= slot.startMin) continue
+    out.push({ startMin: slot.startMin, endMin: slot.endMin, label: slotLabel(key, slot, periods) })
+  }
+  return out.sort((a, b) => a.startMin - b.startMin)
+}
+
 /** Two ring lists are the same bell schedule when every moment and meaning matches. */
 function signature(rings: Ring[]): string {
   return rings.map(r => `${r.at}|${r.ends ?? ''}|${r.starts ?? ''}`).join(';')
@@ -128,15 +141,90 @@ export function minutesToNextRing(rings: Ring[], nowMin: number): number | undef
   return r ? r.at - nowMin : undefined
 }
 
-/** One line describing what a bell means: "P1 ends · P2 begins". */
+/**
+ * What a bell means, in the fewest words that are true.
+ *
+ * Named for what STARTS: at 9:40 the useful fact is "Period 2", not "Period 1
+ * ends · Period 2 begins" — one moment described twice, which reads as two
+ * events. The last bell of the day starts nothing, so it says so.
+ */
 export function describeRing(r: Ring): string {
-  const parts: string[] = []
-  if (r.ends) parts.push(`${r.ends} ends`)
-  if (r.starts) parts.push(`${r.starts} begins`)
-  return parts.join(' · ') || 'Bell'
+  return r.starts || (r.ends ? 'End of day' : 'Bell')
 }
 
 /** Rows for the printed sheet / spreadsheet export. */
 export function bellRows(group: BellGroup, h24 = false): string[][] {
   return group.rings.map(r => [fmtRingTime(r.at, h24), describeRing(r)])
+}
+
+// ── The pinned-up chart: classes across, time down ────────────────────────
+
+/** One column: the classes that share a clock, and the day they share. */
+export interface BellColumn { sections: string[]; slots: BellSlot[] }
+
+/**
+ * Columns for the whole school, one per distinct daily pattern.
+ *
+ * Grouped by identical slots so a school on one clock gets a single column and
+ * a school with early dispersal gets one per group — never one merged column
+ * showing times that ring for nobody.
+ */
+export function bellColumns(
+  schedules: Array<{ sections: string[]; config: any; periods: Period[] }>,
+): BellColumn[] {
+  const groups = new Map<string, BellColumn>()
+  for (const { sections, config, periods } of schedules) {
+    for (const s of sections) {
+      const slots = slotsForSection(s, config, periods)
+      if (!slots.length) continue
+      const sig = slots.map(x => `${x.startMin}-${x.endMin}:${x.label}`).join(';')
+      const g = groups.get(sig)
+      if (g) g.sections.push(s)
+      else groups.set(sig, { sections: [s], slots })
+    }
+  }
+  return [...groups.values()].sort((a, b) => (a.slots[0]?.startMin ?? 0) - (b.slots[0]?.startMin ?? 0))
+}
+
+export interface BellCell {
+  /** The block running at this row, when one is. */
+  label?: string
+  /** True only on the row where the block STARTS, so a block spanning several
+   *  rows is named once instead of repeating down the column. */
+  isStart: boolean
+  /** Minutes this block runs, for a rowspan-style presentation. */
+  endMin?: number
+}
+export interface BellGridRow {
+  startMin: number
+  /** When this row's band ends — the next boundary anywhere in the school. */
+  endMin: number
+  cells: BellCell[]
+}
+
+/**
+ * The chart itself: one row per band of time, one cell per column.
+ *
+ * Row boundaries are every moment ANY column changes, so columns on different
+ * clocks stay aligned against a single time axis — which is the only way a
+ * reader can compare them. A column with nothing running in a band gets an
+ * empty cell rather than a borrowed neighbour's block.
+ */
+export function bellGrid(columns: BellColumn[]): BellGridRow[] {
+  const marks = new Set<number>()
+  for (const c of columns) for (const s of c.slots) { marks.add(s.startMin); marks.add(s.endMin) }
+  const points = [...marks].sort((a, b) => a - b)
+
+  const rows: BellGridRow[] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const startMin = points[i], endMin = points[i + 1]
+    const cells = columns.map(c => {
+      const slot = c.slots.find(s => s.startMin <= startMin && s.endMin > startMin)
+      if (!slot) return { isStart: false }
+      return { label: slot.label, isStart: slot.startMin === startMin, endMin: slot.endMin }
+    })
+    // A band where every column is empty is a gap in nobody's day — drop it.
+    if (cells.some(c => c.label)) rows.push({ startMin, endMin, cells })
+  }
+  return rows
 }
