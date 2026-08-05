@@ -30,14 +30,14 @@ import {
   AlertTriangle, Bell, Monitor,
 } from 'lucide-react'
 import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
-import { loadTerms, plural, type Terms } from '@/lib/terms'
+import { useNamingTerms, plural, type Terms } from '@/lib/terms'
 import {
-  loadAssignments, saveAssignments, assignmentAt, TASK_PRESETS,
+  useFreeAssignments, assignmentAt, TASK_PRESETS,
   type FreeAssignment, type AssignKind,
 } from '@/lib/freeAssignments'
 import { loadActiveBundles, patchBundleSubstitutions, type ScheduleBundle } from '@/lib/activeSchedules'
 import {
-  loadPullouts, savePullouts, coverFor, pulloutsForEntity,
+  useUrgentPullouts, coverFor, pulloutsForEntity,
   type UrgentPullout, type PullKind,
 } from '@/lib/urgentReassignments'
 import { sectionPeriodTimes, schedulePeriodTimes } from '@/lib/bellTimes'
@@ -227,21 +227,17 @@ export function CalendarPage() {
   const [addOpen, setAddOpen] = useState<string | null>(null)
 
   // ── institution naming (admin-set in Settings; live-updates on save) ──
-  const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
-  useEffect(() => {
-    const h = () => setTerms(loadTerms(uid))
-    window.addEventListener('schedu-terms-changed', h)
-    return () => window.removeEventListener('schedu-terms-changed', h)
-  }, [uid])
+  const terms = useNamingTerms(s => s.terms)
 
   // ── free-slot assignments (tasks for idle teachers / venues / classes) ──
-  const [assignments, setAssignments] = useState<FreeAssignment[]>(() => loadAssignments(uid))
-  const updateAssignments = (next: FreeAssignment[]) => { setAssignments(next); saveAssignments(uid, next) }
+  // School-scoped: an invigilation rota is not personal to whoever typed it.
+  const assignments = useFreeAssignments(s => s.assignments)
+  const updateAssignments = useFreeAssignments(s => s.setAssignments)
   const [taskFor, setTaskFor] = useState<{ sid: string; sname: string; kind: AssignKind; entity: string; periodId: string; periodName: string } | null>(null)
 
   // ── urgent pull-outs (in-session faculty/venue → one-off task, auto-covered) ──
-  const [pullouts, setPullouts] = useState<UrgentPullout[]>(() => loadPullouts(uid))
-  const updatePullouts = (next: UrgentPullout[]) => { setPullouts(next); savePullouts(uid, next) }
+  const pullouts = useUrgentPullouts(s => s.pullouts)
+  const updatePullouts = useUrgentPullouts(s => s.setPullouts)
   const [pullFor, setPullFor] = useState<
     | { kind: PullKind; sid: string; sname: string; periodId: string; periodName: string
         section: string; subject: string; original: string; suggestions: string[] }

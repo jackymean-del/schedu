@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { meApi } from '@/api/client'
-import { loadTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKey } from '@/lib/terms'
+import { useNamingTerms, saveTerms, plural, TERM_SUGGESTIONS, type Terms, type TermKey } from '@/lib/terms'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import { HolidayManager } from '@/components/HolidayManager'
@@ -114,8 +114,8 @@ const TERM_ROWS: { key: TermKey; label: string; hint: string }[] = [
 ]
 
 function NamingCard({ onSaved }: { onSaved: () => void }) {
-  const uid = useAuthStore.getState().user?.id ?? ''
-  const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
+  const saved = useNamingTerms(s => s.terms)
+  const [terms, setTerms] = useState<Terms>(() => ({ ...saved }))
   const [dirty, setDirty] = useState(false)
 
   const update = (key: TermKey, value: string) => {
@@ -126,7 +126,7 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
     const clean = { ...terms }
     ;(Object.keys(clean) as TermKey[]).forEach(k => { clean[k] = clean[k].trim() || TERM_SUGGESTIONS[k][0] })
     setTerms(clean)
-    saveTerms(uid, clean)
+    saveTerms(clean)
     setDirty(false)
     onSaved()
   }

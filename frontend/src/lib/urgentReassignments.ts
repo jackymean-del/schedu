@@ -17,6 +17,10 @@
  *     through `coverFor` below.
  */
 
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { migrateLegacyLists } from './schoolScope'
+
 export type PullKind = 'teacher' | 'room'
 
 export interface UrgentPullout {
@@ -32,14 +36,45 @@ export interface UrgentPullout {
   note?: string
 }
 
-const KEY = 'schedu-urgent-pullout'
+/**
+ * SCOPE: the school. These used to live under `schedu-urgent-pullout:<uid>`.
+ * A pull-out is the most time-critical record in the app — a teacher has left
+ * a lesson and somebody else is covering it right now — and it was visible
+ * only to the account that entered it. See lib/schoolScope.
+ */
+export const PULLOUT_KEY = 'schedu-urgent-pullout'
 
-export function loadPullouts(uid: string): UrgentPullout[] {
-  try { return JSON.parse(localStorage.getItem(`${KEY}:${uid}`) || '[]') } catch { return [] }
+interface PulloutState {
+  pullouts: UrgentPullout[]
+  setPullouts: (next: UrgentPullout[]) => void
+  reset: () => void
 }
 
-export function savePullouts(uid: string, list: UrgentPullout[]): void {
-  try { localStorage.setItem(`${KEY}:${uid}`, JSON.stringify(list)) } catch { /* quota */ }
+export const useUrgentPullouts = create<PulloutState>()(
+  persist(
+    (set) => ({
+      pullouts: [],
+      setPullouts: (next) => set({ pullouts: next }),
+      reset: () => set({ pullouts: [] }),
+    }),
+    { name: PULLOUT_KEY },
+  ),
+)
+
+/** The same pull-out is the same vacated slot, whoever recorded it. */
+export const pulloutIdentity = (p: UrgentPullout) =>
+  `${p.date}|${p.sid ?? ''}|${p.section}|${p.periodId}|${p.kind}`
+
+/** Fold any per-account pull-outs into the school's, once. */
+export function migrateLegacyPullouts(storage: Storage = localStorage): number {
+  return migrateLegacyLists<UrgentPullout>({
+    baseKey: PULLOUT_KEY,
+    storage,
+    current: useUrgentPullouts.getState().pullouts,
+    identity: pulloutIdentity,
+    commit: (merged) => useUrgentPullouts.getState().setPullouts(merged),
+    sort: (a, b) => a.date.localeCompare(b.date),
+  })
 }
 
 /**

@@ -14,7 +14,15 @@
  * Records created before this field existed have no `sid`; `assignmentAt`
  * treats a missing `sid` on either side as a wildcard so old single-schedule
  * assignments keep matching exactly as before.
+ *
+ * SCOPE: the school. These used to live under `schedu-free-tasks:<uid>`, so an
+ * invigilation rota entered by the principal was invisible to everyone else —
+ * including the Live board and the corridor display, which exist precisely to
+ * tell a passer-by who is where. See lib/schoolScope.
  */
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { migrateLegacyLists } from './schoolScope'
 
 export type AssignKind = 'teacher' | 'room' | 'class'
 
@@ -29,14 +37,40 @@ export interface FreeAssignment {
   note?: string
 }
 
-const KEY = 'schedu-free-tasks'
+export const FREE_TASKS_KEY = 'schedu-free-tasks'
 
-export function loadAssignments(uid: string): FreeAssignment[] {
-  try { return JSON.parse(localStorage.getItem(`${KEY}:${uid}`) || '[]') } catch { return [] }
+interface FreeAssignmentState {
+  assignments: FreeAssignment[]
+  setAssignments: (next: FreeAssignment[]) => void
+  reset: () => void
 }
 
-export function saveAssignments(uid: string, list: FreeAssignment[]): void {
-  try { localStorage.setItem(`${KEY}:${uid}`, JSON.stringify(list)) } catch { /* quota */ }
+export const useFreeAssignments = create<FreeAssignmentState>()(
+  persist(
+    (set) => ({
+      assignments: [],
+      setAssignments: (next) => set({ assignments: next }),
+      reset: () => set({ assignments: [] }),
+    }),
+    { name: FREE_TASKS_KEY },
+  ),
+)
+
+/** What makes two assignment records the same job — the slot and the resource,
+ *  not the random id two administrators would each have generated. */
+export const assignmentIdentity = (a: FreeAssignment) =>
+  `${a.date}|${a.sid ?? ''}|${a.periodId}|${a.kind}|${a.entity}`
+
+/** Fold any per-account rotas into the school's, once. */
+export function migrateLegacyAssignments(storage: Storage = localStorage): number {
+  return migrateLegacyLists<FreeAssignment>({
+    baseKey: FREE_TASKS_KEY,
+    storage,
+    current: useFreeAssignments.getState().assignments,
+    identity: assignmentIdentity,
+    commit: (merged) => useFreeAssignments.getState().setAssignments(merged),
+    sort: (a, b) => a.date.localeCompare(b.date),
+  })
 }
 
 export function assignmentAt(

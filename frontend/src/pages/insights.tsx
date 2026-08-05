@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { useLeaves } from '@/lib/leaveUtils'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
-import { loadAssignments, type FreeAssignment } from '@/lib/freeAssignments'
+import { useFreeAssignments, type FreeAssignment } from '@/lib/freeAssignments'
 import { loadActiveBundles } from '@/lib/activeSchedules'
 import { ExportControls } from '@/components/ExportControls'
 import type { ExportSheet } from '@/lib/exportData'
@@ -33,6 +33,7 @@ export function InsightsPage() {
   const store = useTimetableStore() as any
   const uid = useAuthStore.getState().user?.id ?? ''
   const leaves = useLeaves(s => s.leaves)
+  const freeAssignments = useFreeAssignments(s => s.assignments)
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
   const [tab, setTab] = useState<Tab>('summary')
@@ -66,11 +67,11 @@ export function InsightsPage() {
       const ownPeriods = a.sid ? bundles.find(b => b.id === a.sid)?.periods : undefined
       return (ownPeriods ?? allPeriods).find((p: any) => p.id === a.periodId)?.name ?? a.periodId
     }
-    return loadAssignments(uid)
+    return freeAssignments
       .filter(a => a.date >= range.start && a.date <= range.end)
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(a => ({ ...a, periodName: periodName(a) }))
-  }, [uid, rangeKey, sources, bundles])
+  }, [freeAssignments, rangeKey, sources, bundles])
 
   const buildSheets = (): ExportSheet[] => [
     { name: 'Extra Duties', rows: [['Date','Period','Resource Type','Assigned To','Task','Note'],

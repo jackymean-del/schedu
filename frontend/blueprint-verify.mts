@@ -1547,6 +1547,70 @@ const shared = mergedRings.find(r => r.at === 9 * 60 + 55)!
 ok(shared.ends === 'Break' && shared.starts === 'Period 3',
   'and it keeps both meanings rather than letting one group overwrite the other')
 
+// ── School facts must not live in one account's storage ──
+// The failure is quiet and identical every time: the principal records it, the
+// vice principal signs in and the school looks untouched.
+const { useFreeAssignments, migrateLegacyAssignments, assignmentIdentity } =
+  await import('./src/lib/freeAssignments')
+const { useUrgentPullouts, migrateLegacyPullouts } = await import('./src/lib/urgentReassignments')
+const { useNamingTerms, migrateLegacyNaming, loadTerms, TERM_DEFAULTS } = await import('./src/lib/terms')
+
+// Free-slot assignments — invigilation rotas, club bookings. These feed the
+// Live board and the corridor display, which exist to tell a passer-by who is
+// where, so one admin's private copy is the worst possible place for them.
+const fa = new MemStorage() as unknown as Storage
+fa.setItem('schedu-free-tasks:admin-1', JSON.stringify([
+  { id: 'a1', date: '2026-03-02', periodId: 'p1', kind: 'teacher', entity: 'Anita', title: 'Exam invigilation' },
+]))
+fa.setItem('schedu-free-tasks:admin-2', JSON.stringify([
+  // The same duty, entered independently — one job, not two.
+  { id: 'b1', date: '2026-03-02', periodId: 'p1', kind: 'teacher', entity: 'Anita', title: 'Invigilation' },
+  { id: 'b2', date: '2026-03-03', periodId: 'p2', kind: 'room', entity: 'Hall', title: 'Club activity' },
+]))
+migrateLegacyAssignments(fa)
+const duties = useFreeAssignments.getState().assignments
+ok(duties.length === 2, 'the same duty entered by two admins becomes one')
+ok(duties.some(d => d.entity === 'Hall'),
+  "and the booking only one of them knew about is now on the school's board")
+ok(fa.length === 0, 'the per-account keys are gone, so a later deletion cannot resurrect them')
+ok(assignmentIdentity(duties[0]).includes('2026-03-02'),
+  'identity is the slot and the resource, not the random id each admin generated')
+
+migrateLegacyAssignments(fa)
+ok(useFreeAssignments.getState().assignments.length === 2, 'running it again changes nothing')
+
+// Urgent pull-outs — the most time-critical record in the app: a teacher has
+// left a lesson and somebody else is covering it right now.
+const up = new MemStorage() as unknown as Storage
+up.setItem('schedu-urgent-pullout:admin-1', JSON.stringify([
+  { id: 'u1', date: '2026-03-02', sid: 's1', periodId: 'p1', section: 'I-A',
+    kind: 'teacher', original: 'Anita', replacement: 'Meera', task: 'Called to office' },
+]))
+migrateLegacyPullouts(up)
+ok(useUrgentPullouts.getState().pullouts.length === 1,
+  'a pull-out recorded by one admin is visible to the whole school')
+ok(up.length === 0, 'and its old key is removed')
+
+// Institution naming — the words the school calls things. Renaming Class to
+// Batch for yourself alone is the exact opposite of the feature's purpose.
+const nm = new MemStorage() as unknown as Storage
+nm.setItem('schedu-terms:admin-1', JSON.stringify({ class: 'Batch', teacher: 'Faculty' }))
+ok(useNamingTerms.getState().customised === false, 'a fresh school has chosen no words yet')
+migrateLegacyNaming(nm)
+ok(loadTerms().class === 'Batch', "one admin's renaming becomes the school's")
+ok(loadTerms().subject === TERM_DEFAULTS.subject,
+  'words that account never set fall back to the defaults, not to blank')
+ok(nm.length === 0, 'the per-account key is removed')
+
+// Where two admins disagree there is no honest merge, so the rule is stated:
+// a school that has already chosen keeps what it chose.
+const nm2 = new MemStorage() as unknown as Storage
+nm2.setItem('schedu-terms:admin-9', JSON.stringify({ class: 'Cohort' }))
+migrateLegacyNaming(nm2)
+ok(loadTerms().class === 'Batch',
+  'a school that has already chosen its words is never overwritten by a stray account')
+ok(nm2.length === 0, 'but the stray key is still cleaned up')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

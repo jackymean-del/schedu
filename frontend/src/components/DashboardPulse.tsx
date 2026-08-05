@@ -12,7 +12,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { loadTerms, plural, type Terms } from '@/lib/terms'
+import { useNamingTerms, plural, type Terms } from '@/lib/terms'
 
 type PulseState = 'setup' | 'rest' | 'attention' | 'covered' | 'clear'
 
@@ -44,12 +44,7 @@ const TONE: Record<PulseState, { dot: string; glow: string; wash: string }> = {
 export function DashboardPulse(p: Props) {
   // Institution naming (admin-set in Settings) for the quiet-facts labels.
   const uid = useAuthStore.getState().user?.id ?? ''
-  const [terms, setTerms] = useState<Terms>(() => loadTerms(uid))
-  useEffect(() => {
-    const h = () => setTerms(loadTerms(uid))
-    window.addEventListener('schedu-terms-changed', h)
-    return () => window.removeEventListener('schedu-terms-changed', h)
-  }, [uid])
+  const terms = useNamingTerms(s => s.terms)
   const noun = (word: string, n: number) => (n === 1 ? word : plural(word)).toLowerCase()
   const s = (n: number) => (n === 1 ? '' : 's')
   const hasCover = p.uncovered > 0

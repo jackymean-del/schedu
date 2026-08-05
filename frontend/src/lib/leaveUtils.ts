@@ -19,6 +19,7 @@
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { migrateLegacyLists, legacyKeysFor, mergeById } from './schoolScope'
 
 export interface CalLeave {
   id: string; teacher: string; date: string
@@ -50,61 +51,20 @@ export const useLeaves = create<LeaveState>()(
 
 // ── Migration off the per-account keys ────────────────────────────────────
 
-/**
- * Merge every `schedu-cal-leave:<uid>` record into one school-wide list.
- *
- * Deduped by id, then by (teacher, date, duration) — two administrators who
- * each marked the same teacher absent on the same day produced two records
- * with different random ids, and the school should see that day once.
- */
-export function mergeLeaves(...lists: CalLeave[][]): CalLeave[] {
-  const out: CalLeave[] = []
-  const seenId = new Set<string>()
-  const seenSlot = new Set<string>()
-  for (const list of lists) {
-    for (const l of list ?? []) {
-      if (!l?.teacher || !l?.date) continue
-      const slot = `${l.teacher}|${l.date}|${l.duration}|${l.endDate ?? ''}`
-      if (seenId.has(l.id) || seenSlot.has(slot)) continue
-      seenId.add(l.id); seenSlot.add(slot)
-      out.push(l)
-    }
-  }
-  return out.sort((a, b) => a.date.localeCompare(b.date))
-}
+/** What makes two leave records the same absence, whoever recorded it. */
+export const leaveIdentity = (l: CalLeave) =>
+  `${l.teacher}|${l.date}|${l.duration}|${l.endDate ?? ''}`
 
-/** Per-account leave keys still present in storage, oldest-written first. */
-export function legacyLeaveKeys(storage: Storage): string[] {
-  const keys: string[] = []
-  for (let i = 0; i < storage.length; i++) {
-    const k = storage.key(i)
-    if (k && k.startsWith(`${LEAVE_KEY}:`)) keys.push(k)
-  }
-  return keys.sort()
-}
-
-/**
- * Fold the old per-account records into the school store, once.
- *
- * The legacy keys are removed afterwards — leaving them would mean a later
- * deletion in the app silently reappears the next time this ran. Called from
- * the app root before anything reads leave.
- */
+/** Fold the old per-account records into the school store, once. */
 export function migrateLegacyLeaves(storage: Storage = localStorage): number {
-  let moved = 0
-  try {
-    const keys = legacyLeaveKeys(storage)
-    if (!keys.length) return 0
-    const lists: CalLeave[][] = []
-    for (const k of keys) {
-      try { lists.push(JSON.parse(storage.getItem(k) || '[]')) } catch { /* unreadable */ }
-    }
-    const merged = mergeLeaves(useLeaves.getState().leaves, ...lists)
-    moved = merged.length - useLeaves.getState().leaves.length
-    useLeaves.getState().setLeaves(merged)
-    for (const k of keys) storage.removeItem(k)
-  } catch { /* private mode / quota — the app still works, just without history */ }
-  return moved
+  return migrateLegacyLists<CalLeave>({
+    baseKey: LEAVE_KEY,
+    storage,
+    current: useLeaves.getState().leaves,
+    identity: leaveIdentity,
+    commit: (merged) => useLeaves.getState().setLeaves(merged),
+    sort: (a, b) => a.date.localeCompare(b.date),
+  })
 }
 
 // ── Pure helpers ──────────────────────────────────────────────────────────
@@ -126,3 +86,10 @@ export function isOnLeaveOn(leaves: CalLeave[], teacher: string, isoDate: string
 export function teachersOnLeaveOn(leaves: CalLeave[], isoDate: string): string[] {
   return Array.from(new Set(leaves.filter(l => leaveCoversDate(l, isoDate)).map(l => l.teacher)))
 }
+
+/** Per-account leave keys still in storage. */
+export const legacyLeaveKeys = (storage: Storage) => legacyKeysFor(LEAVE_KEY, storage)
+
+/** Merge leave lists, collapsing the same absence recorded twice. */
+export const mergeLeaves = (...lists: CalLeave[][]) =>
+  mergeById(leaveIdentity, undefined, ...lists).sort((a, b) => a.date.localeCompare(b.date))

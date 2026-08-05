@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
-import { loadTerms, plural, type Terms } from "@/lib/terms"
+import { useNamingTerms, plural, type Terms } from "@/lib/terms"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
@@ -1221,12 +1221,7 @@ export function TimetablePage() {
 
   // Institution naming (admin-set in Settings) — live-updates on save.
   const termsUid = useAuthStore.getState().user?.id ?? ''
-  const [terms, setTerms] = useState<Terms>(() => loadTerms(termsUid))
-  useEffect(() => {
-    const h = () => setTerms(loadTerms(termsUid))
-    window.addEventListener('schedu-terms-changed', h)
-    return () => window.removeEventListener('schedu-terms-changed', h)
-  }, [termsUid])
+  const terms = useNamingTerms(s => s.terms)
 
   // ── Block-wise (per-shift) view ────────────────────────────
   // When the timetable was generated block-wise, config.blockMeta holds each block's

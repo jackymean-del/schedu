@@ -8,11 +8,18 @@ import { useAuthStore } from "@/store/authStore"
 import { useMembers } from "@/store/members"
 import { migrateLegacyLeaves } from "@/lib/leaveUtils"
 import { migrateLegacyEvents } from "@/lib/schoolEvents"
+import { migrateLegacyAssignments } from "@/lib/freeAssignments"
+import { migrateLegacyPullouts } from "@/lib/urgentReassignments"
+import { migrateLegacyNaming } from "@/lib/terms"
 
-// Leave and calendar events used to be stored per signed-in account. Fold any
-// such records into the school-wide stores once, before anything reads them.
+// These were all stored per signed-in account and are all facts about the
+// SCHOOL — see lib/schoolScope. Fold any such records into the school-wide
+// stores once, before anything reads them.
 migrateLegacyLeaves()
 migrateLegacyEvents()
+migrateLegacyAssignments()
+migrateLegacyPullouts()
+migrateLegacyNaming()
 
 // Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).

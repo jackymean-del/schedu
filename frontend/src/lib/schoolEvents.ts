@@ -28,6 +28,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Holiday } from './holidays'
+import { migrateLegacyLists, legacyKeysFor, mergeById } from './schoolScope'
 
 export interface SchoolEvent {
   id: string
@@ -152,54 +153,30 @@ export function eventsAsHolidays(events: SchoolEvent[]): Holiday[] {
 
 // ── Migration off the per-account keys ────────────────────────────────────
 
-/** Per-account event keys still present in storage. */
-export function legacyEventKeys(storage: Storage): string[] {
-  const keys: string[] = []
-  for (let i = 0; i < storage.length; i++) {
-    const k = storage.key(i)
-    if (k && k.startsWith(`${EVENTS_KEY}:`)) keys.push(k)
-  }
-  return keys.sort()
-}
+/** Per-account event keys still in storage. */
+export const legacyEventKeys = (storage: Storage) => legacyKeysFor(EVENTS_KEY, storage)
 
-/** Deduped by id, then by (title, first date) so two admins who entered the
- *  same sports day don't produce two chips on it. */
-export function mergeEvents(...lists: SchoolEvent[][]): SchoolEvent[] {
-  const out: SchoolEvent[] = []
-  const seenId = new Set<string>()
-  const seenSlot = new Set<string>()
-  for (const list of lists) {
-    for (const e of list ?? []) {
-      if (!e?.date) continue
-      const slot = `${(e.title ?? '').trim().toLowerCase()}|${day(e.date)}|${day(e.endDate)}`
-      if (seenId.has(e.id) || seenSlot.has(slot)) continue
-      seenId.add(e.id); seenSlot.add(slot)
-      // Anything recorded before events had consequences kept none.
-      out.push({ ...e, suspendsTeaching: e.suspendsTeaching ?? false })
-    }
-  }
-  return out.sort((a, b) => day(a.date).localeCompare(day(b.date)))
-}
+/** The same event is the same title over the same dates, whoever entered it. */
+export const eventIdentity = (e: SchoolEvent) =>
+  `${(e.title ?? '').trim().toLowerCase()}|${day(e.date)}|${day(e.endDate)}`
 
-/**
- * Fold the old per-account records into the school store, once, then remove
- * the legacy keys — left in place, an event deleted in the app would reappear
- * on the next load.
- */
+/** Anything recorded before events had consequences kept none — adopting it as
+ *  suspending would silently rewrite a school's hours. */
+const adoptEvent = (e: SchoolEvent): SchoolEvent => ({ ...e, suspendsTeaching: e.suspendsTeaching ?? false })
+
+export const mergeEvents = (...lists: SchoolEvent[][]) =>
+  mergeById(eventIdentity, adoptEvent, ...lists.map(l => (l ?? []).filter(e => e?.date)))
+    .sort((a, b) => day(a.date).localeCompare(day(b.date)))
+
+/** Fold the old per-account records into the school store, once. */
 export function migrateLegacyEvents(storage: Storage = localStorage): number {
-  let moved = 0
-  try {
-    const keys = legacyEventKeys(storage)
-    if (!keys.length) return 0
-    const lists: SchoolEvent[][] = []
-    for (const k of keys) {
-      try { lists.push(JSON.parse(storage.getItem(k) || '[]')) } catch { /* unreadable */ }
-    }
-    const before = useSchoolEvents.getState().events.length
-    const merged = mergeEvents(useSchoolEvents.getState().events, ...lists)
-    moved = merged.length - before
-    useSchoolEvents.getState().setEvents(merged)
-    for (const k of keys) storage.removeItem(k)
-  } catch { /* private mode / quota — the app still works, just without history */ }
-  return moved
+  return migrateLegacyLists<SchoolEvent>({
+    baseKey: EVENTS_KEY,
+    storage,
+    current: useSchoolEvents.getState().events,
+    identity: eventIdentity,
+    adopt: adoptEvent,
+    commit: (merged) => useSchoolEvents.getState().setEvents(merged),
+    sort: (a, b) => day(a.date).localeCompare(day(b.date)),
+  })
 }
