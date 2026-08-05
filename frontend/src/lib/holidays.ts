@@ -31,6 +31,9 @@ interface HolidayState {
   holidays: Holiday[]
   addHoliday: (h: Omit<Holiday, 'id'>) => void
   removeHoliday: (id: string) => void
+  /** Swap the whole list — used when a class-section is renamed and holidays
+   *  scoped to it must follow (lib/renameCascade). */
+  replaceHolidays: (holidays: Holiday[]) => void
   reset: () => void
 }
 
@@ -48,6 +51,7 @@ export const useHolidays = create<HolidayState>()(
           }
         }),
       removeHoliday: (id) => set(s => ({ holidays: s.holidays.filter(h => h.id !== id) })),
+      replaceHolidays: (holidays) => set({ holidays }),
       reset: () => set({ holidays: [] }),
     }),
     { name: 'schedu-holidays' },

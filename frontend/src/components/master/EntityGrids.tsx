@@ -16,6 +16,8 @@ import { useNamingMemory } from '@/hooks/useNamingMemory'
 import { useDirectoryStore } from '@/store/directoryStore'
 import { useTimetableStore } from '@/store/timetableStore'
 import { usageOf, deleteWarning, type ResourceKind } from '@/lib/resourceUsage'
+import { applyRename } from '@/lib/renameCascade'
+import type { RenameKind } from '@/lib/resourceRename'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
 
@@ -215,6 +217,24 @@ export function makeId() {
  * than to cascade the delete (which would punch holes in a published
  * timetable) or ignore it (which leaves lessons naming somebody who is gone).
  */
+
+/**
+ * Cascade a rename into every schedule and record that names this resource.
+ *
+ * Generated cells store names, not ids, so without this a renamed teacher
+ * becomes two people: the roster says the new name and the timetable still
+ * says the old one. See lib/renameCascade for the full list of places a name
+ * appears — it is longer than it looks.
+ *
+ * Called from the name column's setValue, which is the commit point (blur /
+ * Enter / Tab), not a per-keystroke handler.
+ */
+function useRenameCascade(kind: RenameKind) {
+  return useCallback((oldName: string, newName: string) => {
+    applyRename(kind, oldName, newName)
+  }, [kind])
+}
+
 function useDeleteWarning(kind: ResourceKind, nameOf: (row: any) => string) {
   const classTT = useTimetableStore(s => (s as any).classTT)
   return useCallback((going: any[]): string | null => {
@@ -242,11 +262,13 @@ export function ClassesGrid({
 }) {
   const staffOptions = useMemo(() => ['', ...staff.map((s: any) => s.name)], [staff])
   const confirmDelete = useDeleteWarning('section', (r: Section) => r.name)
+  const cascadeRename = useRenameCascade('section')
   const columns: DataGridColumn<Section>[] = [
     {
       key: 'name', label: 'Section', type: 'text', sticky: true, width: 120, placeholder: 'e.g. 10-A',
       setValue: (row, v) => {
         const s = String(v)
+        cascadeRename((row as any).name, s)
         const grade  = extractGradeFromSection(s)
         const stream = inferStreamFromSection(s)
         return {
@@ -300,12 +322,14 @@ export function SubjectsGrid({
 }) {
   const { rememberSubjectShort, suggestShort } = useNamingMemory()
   const confirmDelete = useDeleteWarning('subject', (r: Subject) => r.name)
+  const cascadeRename = useRenameCascade('subject')
 
   const columns: DataGridColumn<Subject>[] = [
     {
       key: 'name', label: 'Subject', type: 'text', sticky: true, width: 200, placeholder: 'e.g. Mathematics',
       setValue: (row, v) => {
         const name = String(v)
+        cascadeRename((row as any).name, name)
         // Priority: 1) user's own memory  2) built-in table  3) algorithm
         const learnedShort = suggestShort(name)
         const builtinShort = SUBJECT_ABBR[name.trim().toLowerCase()]
@@ -446,6 +470,7 @@ export function TeachersGrid({
   const [linked, setLinked] = useState<{ rowId: string; name: string } | null>(null)
 
   const confirmDelete = useDeleteWarning('teacher', (r: Staff) => r.name)
+  const cascadeRename = useRenameCascade('teacher')
 
   useDirectoryAutoRegister(staff, setStaff, /^Teacher \d+$/,
     (name) => useDirectoryStore.getState().findStaffByName(name),
@@ -464,6 +489,7 @@ export function TeachersGrid({
       // like the wizard's Add row, rather than requiring a separate click.
       setValue: (row, v) => {
         const trimmed = String(v).trim()
+        cascadeRename((row as any).name, trimmed)
         const match = trimmed ? directoryStaff.find(s => s.name.toLowerCase() === trimmed.toLowerCase()) : undefined
         if (match && (row as any).directoryId !== match.id) {
           setLinked({ rowId: row.id, name: match.name })
@@ -528,6 +554,7 @@ export function RoomsGrid({
   const [linked, setLinked] = useState<{ rowId: string; name: string } | null>(null)
 
   const confirmDelete = useDeleteWarning('room', (r: RoomRow) => r.name)
+  const cascadeRename = useRenameCascade('room')
 
   useDirectoryAutoRegister(rooms, setRooms, /^Room \d+$/,
     (name) => useDirectoryStore.getState().findVenueByName(name),
@@ -545,6 +572,7 @@ export function RoomsGrid({
       // click) is the right match for this grid's commit-on-blur/Enter/Tab model.
       setValue: (row, v) => {
         const trimmed = String(v).trim()
+        cascadeRename((row as any).name, trimmed)
         const match = trimmed ? directoryVenues.find(x => x.name.toLowerCase() === trimmed.toLowerCase()) : undefined
         if (match && (row as any).directoryId !== match.id) {
           setLinked({ rowId: row.id, name: match.name })

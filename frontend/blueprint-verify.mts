@@ -1687,6 +1687,118 @@ for (const s of ['A', 'B', 'C', 'D', 'E']) wide[s] = { MONDAY: { p1: { subject: 
 ok(deleteWarning('teacher', 'Anita', usageOf(wide, 'teacher', 'Anita'))!.includes('and 2 more'),
   'a long list of classes is summarised')
 
+// ── Renaming a resource a timetable already names ──
+// Cells store NAMES, not ids. Renaming a teacher in Master Data changed her
+// roster row and nothing else, so she quietly became two people: the roster
+// said "Anita Rao" and the timetable still said "Anita".
+import {
+  renameInClassTT, renameInSubstitutions, renameInPlans,
+  renameInRecords, renameInStringLists, renameIsValid,
+} from './src/lib/resourceRename'
+
+const baseTT: any = {
+  'I-A': {
+    MONDAY: { p1: { subject: 'English', teacher: 'Anita', room: 'R1' },
+              p2: { subject: 'Maths',   teacher: 'Ravi',  room: 'R1' } },
+  },
+  'I-B': { MONDAY: { p1: { subject: 'English', teacher: 'Anita', room: 'R2' } } },
+}
+
+ok(!renameIsValid('Anita', 'Anita'), 'renaming to the same name is a no-op')
+ok(!renameIsValid('Anita', '  '), 'renaming to blank is refused — that erases the link, not moves it')
+ok(!renameIsValid('', 'Anita'), 'and there is nothing to rename from')
+
+const teacherRenamed = renameInClassTT(baseTT, 'teacher', 'Anita', 'Anita Rao')
+ok(teacherRenamed['I-A'].MONDAY.p1.teacher === 'Anita Rao', 'the lesson follows the teacher')
+ok(teacherRenamed['I-B'].MONDAY.p1.teacher === 'Anita Rao', 'in every class she takes')
+ok(teacherRenamed['I-A'].MONDAY.p2.teacher === 'Ravi', 'and nobody else moves')
+ok(renameInClassTT(baseTT, 'teacher', 'Nobody', 'Someone') === baseTT,
+  'a rename that matches nothing returns the SAME object, so untouched schedules are never rewritten')
+
+ok(renameInClassTT(baseTT, 'subject', 'English', 'English Lit')['I-A'].MONDAY.p1.subject === 'English Lit',
+  'subjects rename too')
+ok(renameInClassTT(baseTT, 'room', 'R1', 'Room 101')['I-A'].MONDAY.p1.room === 'Room 101', 'so do venues')
+
+// classTT is KEYED by section name, so a section rename moves the key itself.
+const sectionRenamed = renameInClassTT(baseTT, 'section', 'I-A', 'I-Alpha')
+ok(!!sectionRenamed['I-Alpha'] && !sectionRenamed['I-A'], 'a class rename moves its whole timetable')
+ok(sectionRenamed['I-Alpha'].MONDAY.p1.subject === 'English', 'carrying its lessons with it')
+ok(!!sectionRenamed['I-B'], 'other classes are untouched')
+
+// Renaming onto a class that already exists would silently merge two
+// timetables — keep the incumbent instead of destroying it.
+const collide = renameInClassTT(baseTT, 'section', 'I-A', 'I-B')
+ok(collide['I-B'].MONDAY.p1.room === 'R2',
+  "renaming a class onto an existing one does not overwrite the existing class's timetable")
+ok(!!collide['I-A'], 'and the class being renamed keeps its own timetable rather than losing it')
+
+// Parallel OR/AND slots carry a teacher and subject per group.
+const parallel: any = { 'IX-A': { MONDAY: { p1: {
+  subject: 'Elective',
+  groupAssignments: [{ subject: 'French', teacher: 'Meera' }, { subject: 'German', teacher: 'Anita' }],
+} } } }
+const pRenamed = renameInClassTT(parallel, 'teacher', 'Anita', 'Anita Rao')
+ok(pRenamed['IX-A'].MONDAY.p1.groupAssignments[1].teacher === 'Anita Rao',
+  'a teacher inside a parallel group is renamed too')
+ok(pRenamed['IX-A'].MONDAY.p1.groupAssignments[0].teacher === 'Meera', 'and her co-teacher is left alone')
+
+// Substitutions are keyed section|day|period and VALUED by teacher name.
+const subs = { 'I-A|MONDAY|p1': 'Anita', 'I-B|MONDAY|p1': 'Ravi' }
+ok(renameInSubstitutions(subs, 'teacher', 'Anita', 'Anita Rao')!['I-A|MONDAY|p1'] === 'Anita Rao',
+  'a covering teacher is renamed in the substitution map')
+const subsSec = renameInSubstitutions(subs, 'section', 'I-A', 'I-Alpha')!
+ok(!!subsSec['I-Alpha|MONDAY|p1'] && !subsSec['I-A|MONDAY|p1'],
+  'a class rename moves the substitution KEY, or its cover would be lost')
+ok(renameInSubstitutions(subs, 'room', 'R1', 'R9') === subs, 'venues never appear in substitutions')
+
+// Syllabus plans are keyed subject||section AND carry the names as fields.
+const renamePlans: any = {
+  'English||I-A': { subject: 'English', section: 'I-A', chapters: [{ id: 'c1' }] },
+  'Maths||I-A':   { subject: 'Maths',   section: 'I-A', chapters: [] },
+}
+const planRenamed = renameInPlans(renamePlans, 'subject', 'English', 'English Lit')!
+ok(!!planRenamed['English Lit||I-A'] && !planRenamed['English||I-A'],
+  'a subject rename moves its syllabus plan key, or a term of recorded coverage stops being found')
+ok(planRenamed['English Lit||I-A'].subject === 'English Lit', 'and the plan says the new name')
+ok(planRenamed['English Lit||I-A'].chapters.length === 1, 'with its chapters intact')
+const secPlans = renameInPlans(renamePlans, 'section', 'I-A', 'I-Alpha')!
+ok(!!secPlans['English||I-Alpha'] && !!secPlans['Maths||I-Alpha'], 'a class rename moves every plan for it')
+
+// A rename onto an existing plan must not overwrite real recorded progress.
+const dupPlans: any = {
+  'English||I-A': { subject: 'English', section: 'I-A', loggedHours: 0 },
+  'Eng||I-A':     { subject: 'Eng',     section: 'I-A', loggedHours: 12 },
+}
+ok(renameInPlans(dupPlans, 'subject', 'Eng', 'English')!['English||I-A'].loggedHours === 0,
+  'renaming a subject onto one that already has a plan keeps the existing plan, not the incoming one')
+// Declared in the OTHER order: the outcome must come from the rule, not from
+// which key JavaScript happens to iterate first.
+const dupSwapped: any = {
+  'Eng||I-A':     { subject: 'Eng',     section: 'I-A', loggedHours: 12 },
+  'English||I-A': { subject: 'English', section: 'I-A', loggedHours: 0 },
+}
+const dupOut = renameInPlans(dupSwapped, 'subject', 'Eng', 'English')!
+ok(dupOut['English||I-A'].loggedHours === 0, 'the incumbent wins whichever plan is seen first')
+ok(dupOut['Eng||I-A']?.loggedHours === 12,
+  "and the plan that could not move keeps its own recorded hours rather than vanishing")
+
+// Dated records that name people and classes.
+const leaves: any[] = [{ id: 'l1', teacher: 'Anita', date: '2026-03-02' }, { id: 'l2', teacher: 'Ravi', date: '2026-03-02' }]
+ok(renameInRecords(leaves, ['teacher'], 'Anita', 'Anita Rao')![0].teacher === 'Anita Rao',
+  'leave follows the teacher, or she cannot be shown absent for her own lessons')
+const pulls: any[] = [{ id: 'u1', original: 'Anita', replacement: 'Meera' }]
+const pullsRenamed = renameInRecords(pulls, ['original', 'replacement'], 'Meera', 'Meera S')!
+ok(pullsRenamed[0].replacement === 'Meera S' && pullsRenamed[0].original === 'Anita',
+  'a pull-out renames whichever side matches')
+ok(renameInRecords(leaves, ['teacher'], 'Nobody', 'Someone') === leaves, 'and untouched lists keep their identity')
+
+// Section scopes on holidays and events are arrays of names.
+const scopedHols: any[] = [{ id: 'h1', sections: ['I-A', 'I-B'] }, { id: 'h2' }]
+ok(renameInStringLists(scopedHols, 'sections', 'I-A', 'I-Alpha')![0].sections.join() === 'I-Alpha,I-B',
+  'a holiday scoped to a class follows the rename')
+ok(renameInStringLists(scopedHols, 'sections', 'I-A', 'I-B')![0].sections.join() === 'I-B',
+  'renaming onto a class already in the list does not list it twice')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

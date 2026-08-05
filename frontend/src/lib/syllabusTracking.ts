@@ -560,6 +560,9 @@ interface SyllabusState {
   logLostSession: (subject: string, section: string, s: Omit<LostSession, 'id'>) => void
   removeLostSession: (subject: string, section: string, id: string) => void
   removePlan: (subject: string, section: string) => void
+  /** Swap the whole map — used when a subject or section is renamed and every
+   *  plan key has to move with it (lib/renameCascade). */
+  replacePlans: (plans: Record<string, SyllabusPlan>) => void
   reset: () => void
 }
 
@@ -578,6 +581,7 @@ export const useSyllabus = create<SyllabusState>()(
         })
       return {
         plans: {},
+        replacePlans: (plans: Record<string, SyllabusPlan>) => set({ plans }),
         setRequiredHours: (subject, section, hours) =>
           edit(subject, section, p => ({ ...p, requiredHours: hours && hours > 0 ? hours : undefined })),
         setTeacher: (subject, section, teacher) =>
