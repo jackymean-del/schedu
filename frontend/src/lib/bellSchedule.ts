@@ -22,6 +22,7 @@
  */
 import type { Period } from '@/types'
 import { sectionPeriodTimes, type SlotMins } from './bellTimes'
+import { compareSection } from './scheduleAllocation'
 
 export interface Ring {
   /** Minutes from midnight. */
@@ -155,6 +156,22 @@ export function describeRing(r: Ring): string {
 /** Rows for the printed sheet / spreadsheet export. */
 export function bellRows(group: BellGroup, h24 = false): string[][] {
   return group.rings.map(r => [fmtRingTime(r.at, h24), describeRing(r)])
+}
+
+/**
+ * A column heading compressed to a from–to range: "I-A – II-C".
+ *
+ * A school with thirty sections sharing one bell would otherwise print all
+ * thirty names across the top of the sheet, which no longer fits a column and
+ * tells the reader nothing they didn't know. Sorted in SCHOOL order (Nursery
+ * before I before X) via compareSection, not alphabetically, or the range ends
+ * would be meaningless.
+ */
+export function rangeLabel(sections: string[]): string {
+  const sorted = [...sections].sort(compareSection)
+  if (sorted.length === 0) return ''
+  if (sorted.length === 1) return sorted[0]
+  return `${sorted[0]} – ${sorted[sorted.length - 1]}`
 }
 
 // ── The pinned-up chart: classes across, time down ────────────────────────

@@ -2,35 +2,82 @@
  * The bell schedule, as a sheet you can pin up.
  *
  * Laid out the way a bell chart is read on a wall: time down the left, classes
- * across the top, and each cell naming the block that is running. A block that
- * spans several time bands is named once, on the row it starts.
+ * across the top, each cell naming the block that is running. A block spanning
+ * several bands is named once, on the row it starts.
  *
- * Everything is derived — nobody types a bell time. See lib/bellSchedule for
- * why classes on different clocks get their own column rather than being
- * flattened into one list that would ring for nobody.
+ * Only the START time is shown per row. A bell chart is a list of the moments
+ * something changes; printing "8:00 – 8:15" as well says the same thing twice,
+ * because the next row already states when the band ends.
+ *
+ * Three ways to head the columns, because schools describe themselves
+ * differently — see VIEWS below. Everything is derived; nobody types a time.
  */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Bell, X, Printer } from 'lucide-react'
-import { bellColumns, bellGrid, fmtRingTime } from '@/lib/bellSchedule'
+import { bellColumns, bellGrid, fmtRingTime, rangeLabel, type BellColumn } from '@/lib/bellSchedule'
 import type { Period } from '@/types'
 
 const ACCENT = '#7C6FE0'
 
+/** A block-wise (per-shift) timetable: each block has its own clock. */
+export interface BellBlock {
+  id: string
+  name: string
+  startTime: string
+  sectionNames: string[]
+  periods: Period[]
+}
+
+type View = 'classes' | 'range' | 'block'
+
+const VIEWS: Array<{ key: View; label: string; hint: string }> = [
+  { key: 'classes', label: 'By class',   hint: 'Every class-section named' },
+  { key: 'range',   label: 'Class range', hint: 'Headed by the first and last class, in school order' },
+  { key: 'block',   label: 'Block-wise',  hint: "One column per block, on that block's own clock" },
+]
+
 export function BellScheduleModal({
-  schedules, schoolName, h24 = false, onClose,
+  schedules, blocks, schoolName, h24 = false, onClose,
 }: {
   /** Every ACTIVE schedule with its OWN bell. Passing one schedule's config
    *  for another's classes would print ring times that never happen. */
   schedules: Array<{ sections: string[]; config: any; periods: Period[] }>
+  /** Present only when the timetable was generated block-wise. */
+  blocks?: BellBlock[]
   schoolName?: string
   h24?: boolean
   onClose: () => void
 }) {
-  const columns = useMemo(() => bellColumns(schedules), [schedules])
-  const rows = useMemo(() => bellGrid(columns), [columns])
+  const hasBlocks = (blocks?.length ?? 0) > 1
+  const [view, setView] = useState<View>('classes')
+  const active: View = view === 'block' && !hasBlocks ? 'classes' : view
 
-  const band = (startMin: number, endMin: number) =>
-    `${fmtRingTime(startMin, h24)} – ${fmtRingTime(endMin, h24)}`
+  const columns = useMemo<BellColumn[]>(() => {
+    if (active === 'block' && blocks) {
+      // A block runs on its own start time and its own period grid, so it is
+      // resolved against those rather than the school-wide bell.
+      return blocks.flatMap(b => {
+        // Deliberately WITHOUT the school-wide bellSchedules: a block-wise
+        // timetable means the block defines the clock, and its own start time
+        // plus its own period grid are the whole answer. Leaving them in let
+        // the school rows split one block into two identically-named columns.
+        const cols = bellColumns([{
+          sections: b.sectionNames ?? [],
+          config: { startTime: b.startTime },
+          periods: b.periods ?? [],
+        }])
+        // One heading per block. Sections inside a block share its clock, so
+        // this collapses to a single column; take the first defensively.
+        return cols.slice(0, 1).map(c => ({ ...c, sections: [b.name] }))
+      })
+    }
+    const cols = bellColumns(schedules)
+    return active === 'range'
+      ? cols.map(c => ({ ...c, sections: [rangeLabel(c.sections)] }))
+      : cols
+  }, [active, schedules, blocks])
+
+  const rows = useMemo(() => bellGrid(columns), [columns])
 
   const print = () => {
     const win = window.open('', '_blank')
@@ -38,7 +85,7 @@ export function BellScheduleModal({
     const esc = (s: string) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
     const head = columns.map(c => `<th>${esc(c.sections.join(', '))}</th>`).join('')
     const body = rows.map(r => `<tr>
-      <td class="t">${esc(band(r.startMin, r.endMin))}</td>
+      <td class="t">${esc(fmtRingTime(r.startMin, h24))}</td>
       ${r.cells.map(c => `<td>${c.isStart ? esc(c.label!) : ''}</td>`).join('')}
     </tr>`).join('')
     win.document.write(`<!DOCTYPE html><html><head><title>Bell schedule</title><style>
@@ -61,6 +108,8 @@ export function BellScheduleModal({
     win.print()
   }
 
+  const shown = VIEWS.filter(v => v.key !== 'block' || hasBlocks)
+
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -81,6 +130,23 @@ export function BellScheduleModal({
         </div>
 
         <div style={{ padding: 20, flex: 1, minHeight: 0, overflow: 'auto' }}>
+          {/* Only offered when there is more than one way to read the sheet. */}
+          {shown.length > 1 && (
+            <div style={{ display: 'inline-flex', background: '#F4F2FF', border: '1px solid #ECE9FB', borderRadius: 10, padding: 3, marginBottom: 14 }}>
+              {shown.map(v => (
+                <button key={v.key} onClick={() => setView(v.key)} title={v.hint}
+                  style={{
+                    padding: '6px 13px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
+                    background: active === v.key ? ACCENT : 'transparent',
+                    color: active === v.key ? '#fff' : '#4B5275',
+                  }}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {rows.length === 0 ? (
             <p style={{ fontSize: 13, color: '#8B87AD', margin: 0 }}>
               No bell times yet — generate a schedule and the bells come from its own timings, with nothing to type.
@@ -89,24 +155,23 @@ export function BellScheduleModal({
             <>
               {columns.length > 1 && (
                 <p style={{ fontSize: 12, color: '#8B87AD', margin: '0 0 12px', lineHeight: 1.5 }}>
-                  These classes don't share a clock — early dispersal or class-wise breaks give them
-                  their own bells. A blank cell means that column has nothing running then.
+                  {active === 'block'
+                    ? 'Each block runs on its own clock. A blank cell means that block has nothing running then.'
+                    : "These classes don't share a clock — early dispersal or class-wise breaks give them their own bells. A blank cell means that column has nothing running then."}
                 </p>
               )}
               <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'inherit' }}>
                 <thead>
                   <tr>
                     <th style={{ ...th, width: 1, whiteSpace: 'nowrap' }}>Time</th>
-                    {columns.map((c, i) => (
-                      <th key={i} style={th}>{c.sections.join(', ')}</th>
-                    ))}
+                    {columns.map((c, i) => <th key={i} style={th}>{c.sections.join(', ')}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r, ri) => (
                     <tr key={ri}>
                       <td style={{ ...td, fontWeight: 800, color: '#13111E', whiteSpace: 'nowrap', background: '#FBFAFF' }}>
-                        {band(r.startMin, r.endMin)}
+                        {fmtRingTime(r.startMin, h24)}
                       </td>
                       {r.cells.map((c, ci) => (
                         <td key={ci} style={{
@@ -122,6 +187,11 @@ export function BellScheduleModal({
                   ))}
                 </tbody>
               </table>
+              {/* The chart's last row starts a block; without this the reader
+                  has no idea when the day actually finishes. */}
+              <p style={{ fontSize: 12, color: '#8B87AD', margin: '10px 0 0' }}>
+                Day ends at <strong>{fmtRingTime(rows[rows.length - 1].endMin, h24)}</strong>.
+              </p>
             </>
           )}
         </div>

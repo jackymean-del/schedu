@@ -1371,6 +1371,7 @@ export function CalendarPage() {
             config: b.config ?? {},
             periods: b.periods ?? [],
           }))}
+          blocks={(sources[0]?.config ?? store.config ?? {}).blockMeta}
           schoolName={orgName}
           onClose={() => setBellOpen(false)}
         />

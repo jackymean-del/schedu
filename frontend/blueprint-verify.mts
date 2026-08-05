@@ -1867,6 +1867,22 @@ ok(p1Rows.filter(r => r.cells.some(c => c.label === 'Period 1' && c.isStart)).le
 // No row where every column is empty — that is a gap in nobody's day.
 ok(grid.every(r => r.cells.some(c => c.label)), 'no empty bands are printed')
 
+// ── Column headings compressed to a from–to range ──
+// A school with thirty sections on one bell would otherwise print all thirty
+// names across the top of the sheet.
+import { rangeLabel } from './src/lib/bellSchedule'
+
+ok(rangeLabel(['I-A']) === 'I-A', 'a single class is its own heading, not a range to itself')
+ok(rangeLabel([]) === '', 'no classes, no heading')
+ok(rangeLabel(['I-A', 'I-B', 'I-C']) === 'I-A – I-C', 'a run of sections becomes first – last')
+
+// School order, not alphabetical — the whole point of the range ends.
+ok(rangeLabel(['X-A', 'II-A', 'I-A']) === 'I-A – X-A',
+  'sorted in SCHOOL order: I before II before X, which alphabetical sorting gets wrong')
+ok(rangeLabel(['I-A', 'Nursery-A']) === 'Nursery-A – I-A',
+  'Nursery comes before Class I, as a school lists them')
+ok(rangeLabel(['V-B', 'V-A']) === 'V-A – V-B', 'and sections within a class order too')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
