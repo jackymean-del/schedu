@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useTimetableStore } from '@/store/timetableStore'
 import { getActiveTimetableId, saveActiveTimetableSnapshot } from './ttRegistry'
 import { loadActiveBundles, snapKeyFor } from './activeSchedules'
+import { applyRename } from './renameCascade'
 
 export type DirectoryKind = 'staff' | 'venue'
 
@@ -51,10 +52,37 @@ function cascade(field: 'staff' | 'rooms', mutate: (rows: any[]) => any[]): void
   }
 }
 
+/**
+ * The name a linked row currently carries, from whichever schedule has one.
+ *
+ * Needed because generated timetables reference resources by NAME, and the
+ * directory only knows the id — so a rename cannot reach the cells without
+ * first asking what the old name was.
+ */
+function currentLinkedName(directoryId: string, kind: DirectoryKind): string | undefined {
+  const field = fieldFor(kind)
+  const store = useTimetableStore.getState() as any
+  const fromOpen = (store[field] ?? []).find((r: any) => r.directoryId === directoryId)
+  if (fromOpen?.name) return fromOpen.name
+  const uid = useAuthStore.getState().user?.id ?? ''
+  for (const b of loadActiveBundles(uid)) {
+    const hit = ((b as any)[field] ?? []).find((r: any) => r.directoryId === directoryId)
+    if (hit?.name) return hit.name
+  }
+  return undefined
+}
+
 /** Renames every schedule-local row linked to `directoryId` across every
  *  active schedule (not just the open one). Call alongside
- *  `useDirectoryStore.renameStaff/renameVenue` to update the entry itself. */
+ *  `useDirectoryStore.renameStaff/renameVenue` to update the entry itself.
+ *
+ *  Also cascades into the generated timetables, substitutions, leave, cover
+ *  and syllabus plans — renaming the roster alone left every lesson naming
+ *  the old person (see lib/renameCascade). */
 export function renameLinkedEntries(directoryId: string, newName: string, kind: DirectoryKind): void {
+  const oldName = currentLinkedName(directoryId, kind)
+  if (oldName) applyRename(kind === 'staff' ? 'teacher' : 'room', oldName, newName)
+
   const field = fieldFor(kind)
   cascade(field, (rows) => {
     if (!rows.some(r => r.directoryId === directoryId)) return rows
@@ -66,6 +94,11 @@ export function renameLinkedEntries(directoryId: string, newName: string, kind: 
  *  renames it to `keepName` for consistency). Caller removes the `mergeId`
  *  directory entry afterward via `useDirectoryStore.removeStaff/removeVenue`. */
 export function mergeLinkedEntries(keepId: string, keepName: string, mergeId: string, kind: DirectoryKind): void {
+  // Merging is a rename of the absorbed entry onto the one being kept, so the
+  // lessons it holds have to move with it.
+  const mergedName = currentLinkedName(mergeId, kind)
+  if (mergedName) applyRename(kind === 'staff' ? 'teacher' : 'room', mergedName, keepName)
+
   const field = fieldFor(kind)
   cascade(field, (rows) => {
     if (!rows.some(r => r.directoryId === mergeId)) return rows
