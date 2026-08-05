@@ -8,12 +8,14 @@
  * One source of truth. Identical UX everywhere.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Subject, Section, Staff, ScopeMatrix } from '@/types'
 import { DataGrid, DataGridColumn } from '@/components/DataGrid/DataGrid'
 import { GraduationCap, BookOpen, Users, Building2, X } from 'lucide-react'
 import { useNamingMemory } from '@/hooks/useNamingMemory'
 import { useDirectoryStore } from '@/store/directoryStore'
+import { useTimetableStore } from '@/store/timetableStore'
+import { usageOf, deleteWarning, type ResourceKind } from '@/lib/resourceUsage'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
 
@@ -200,6 +202,35 @@ export function makeId() {
 // ═════════════════════════════════════════════════════════════
 // CLASSES GRID
 // ═════════════════════════════════════════════════════════════
+
+/**
+ * Warn before deleting a row a generated timetable still depends on.
+ *
+ * Reads the OPEN schedule's timetable — which for Master Data is the active
+ * one, since the page hydrates it on mount. A resource used only by a
+ * different active schedule is therefore not counted; that is a known limit,
+ * not a claim of completeness.
+ *
+ * See lib/resourceUsage for why the answer is to state the consequence rather
+ * than to cascade the delete (which would punch holes in a published
+ * timetable) or ignore it (which leaves lessons naming somebody who is gone).
+ */
+function useDeleteWarning(kind: ResourceKind, nameOf: (row: any) => string) {
+  const classTT = useTimetableStore(s => (s as any).classTT)
+  return useCallback((going: any[]): string | null => {
+    for (const row of going) {
+      const name = nameOf(row)
+      const warning = deleteWarning(kind, name, usageOf(classTT, kind, name))
+      if (warning) {
+        return going.length > 1
+          ? `${warning} (${going.length} rows selected — this check reports the first one still in use.)`
+          : warning
+      }
+    }
+    return null
+  }, [classTT, kind, nameOf])
+}
+
 export function ClassesGrid({
   sections, setSections, staff, onScope, onBulkScope,
 }: {
@@ -210,6 +241,7 @@ export function ClassesGrid({
   onBulkScope?: (rect?: DOMRect) => void
 }) {
   const staffOptions = useMemo(() => ['', ...staff.map((s: any) => s.name)], [staff])
+  const confirmDelete = useDeleteWarning('section', (r: Section) => r.name)
   const columns: DataGridColumn<Section>[] = [
     {
       key: 'name', label: 'Section', type: 'text', sticky: true, width: 120, placeholder: 'e.g. 10-A',
@@ -236,6 +268,7 @@ export function ClassesGrid({
   ]
   return (
     <DataGrid<Section>
+      confirmDelete={confirmDelete}
       title="Classes & Sections"
       description="One row per section. Stream is optional for Grade XI–XII."
       icon={<GraduationCap size={16} />}
@@ -266,6 +299,7 @@ export function SubjectsGrid({
   onBulkScope?: (rect?: DOMRect) => void
 }) {
   const { rememberSubjectShort, suggestShort } = useNamingMemory()
+  const confirmDelete = useDeleteWarning('subject', (r: Subject) => r.name)
 
   const columns: DataGridColumn<Subject>[] = [
     {
@@ -304,6 +338,7 @@ export function SubjectsGrid({
   ]
   return (
     <DataGrid<Subject>
+      confirmDelete={confirmDelete}
       title="Subjects"
       description="Core, optional, lab — toggle as needed. The engine uses these flags to plan."
       icon={<BookOpen size={16} />}
@@ -410,6 +445,8 @@ export function TeachersGrid({
   const directoryStaff = useDirectoryStore(s => s.staff)
   const [linked, setLinked] = useState<{ rowId: string; name: string } | null>(null)
 
+  const confirmDelete = useDeleteWarning('teacher', (r: Staff) => r.name)
+
   useDirectoryAutoRegister(staff, setStaff, /^Teacher \d+$/,
     (name) => useDirectoryStore.getState().findStaffByName(name),
     (name) => useDirectoryStore.getState().addStaff({ name }))
@@ -455,6 +492,7 @@ export function TeachersGrid({
         <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
       <DataGrid<Staff>
+        confirmDelete={confirmDelete}
         title="Teachers"
         description="Subjects = comma-separated list. Click Scope to set per-teacher availability."
         icon={<Users size={16} />}
@@ -488,6 +526,8 @@ export function RoomsGrid({
 }) {
   const directoryVenues = useDirectoryStore(s => s.venues)
   const [linked, setLinked] = useState<{ rowId: string; name: string } | null>(null)
+
+  const confirmDelete = useDeleteWarning('room', (r: RoomRow) => r.name)
 
   useDirectoryAutoRegister(rooms, setRooms, /^Room \d+$/,
     (name) => useDirectoryStore.getState().findVenueByName(name),
@@ -528,6 +568,7 @@ export function RoomsGrid({
         <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
       <DataGrid<RoomRow>
+        confirmDelete={confirmDelete}
         title="Venues"
         description="Any teaching place — classrooms, labs, halls, playgrounds, grounds. Scope a venue to time-window its availability."
         icon={<Building2 size={16} />}

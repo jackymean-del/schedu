@@ -1611,6 +1611,82 @@ ok(loadTerms().class === 'Batch',
   'a school that has already chosen its words is never overwritten by a stray account')
 ok(nm2.length === 0, 'but the stray key is still cleaned up')
 
+// ── Deleting a resource a timetable still depends on ──
+// Deleting a row in Master Data removes it from the roster and nothing else.
+// A teacher deleted while timetabled leaves her name in every cell she held —
+// and those lessons can then never be covered, because the absence picker
+// lists the roster.
+import { usageOf, usageAcross, deleteWarning } from './src/lib/resourceUsage'
+
+const usedTT: any = {
+  'I-A': {
+    MONDAY:  { p1: { subject: 'English', teacher: 'Anita', room: 'R1' },
+               p2: { subject: 'Maths',   teacher: 'Ravi',  room: 'R1' } },
+    TUESDAY: { p1: { subject: 'English', teacher: 'Anita', room: 'R1' } },
+  },
+  'I-B': {
+    MONDAY:  { p1: { subject: 'English', teacher: 'Anita', room: 'R2' } },
+  },
+}
+
+const anita = usageOf(usedTT, 'teacher', 'Anita')
+ok(anita.periods === 3, 'a teacher\'s periods are counted across every day and section')
+ok(anita.sections.join() === 'I-A,I-B', 'and the classes affected are named')
+ok(usageOf(usedTT, 'teacher', 'Ravi').periods === 1, 'each teacher is counted separately')
+ok(usageOf(usedTT, 'teacher', 'Nobody').periods === 0, 'somebody who teaches nothing is free to delete')
+ok(usageOf(usedTT, 'teacher', '').periods === 0, 'a blank name matches nothing rather than everything')
+
+ok(usageOf(usedTT, 'subject', 'English').periods === 3, 'subjects are counted the same way')
+ok(usageOf(usedTT, 'room', 'R1').periods === 3, 'so are venues')
+ok(usageOf(usedTT, 'section', 'I-A').periods === 3, 'a class counts its own booked periods')
+ok(usageOf(usedTT, 'section', 'I-Z').periods === 0, 'a class with no timetable is free to delete')
+
+// Parallel (OR/AND) slots carry several subjects and teachers in one cell —
+// counting only cell.subject would under-report and wave a delete through.
+const parallelTT: any = {
+  'IX-A': {
+    MONDAY: { p1: {
+      subject: 'Elective',
+      groupAssignments: [
+        { subject: 'French', teacher: 'Meera' },
+        { subject: 'German', teacher: 'Anita' },
+      ],
+    } },
+  },
+}
+ok(usageOf(parallelTT, 'teacher', 'Anita').periods === 1,
+  'a teacher inside a parallel group is still in use')
+ok(usageOf(parallelTT, 'subject', 'German').periods === 1,
+  'and so is a subject that only exists inside one')
+
+// Two active schedules can share a teacher; the warning must see both.
+const secondTT: any = { 'X-A': { FRIDAY: { p1: { subject: 'Physics', teacher: 'Anita' } } } }
+const both = usageAcross([{ classTT: usedTT }, { classTT: secondTT }], 'teacher', 'Anita')
+ok(both.periods === 4, 'usage spans every schedule given, not just the open one')
+ok(both.sections.join() === 'I-A,I-B,X-A', 'listing each affected class once')
+
+// The message is the point: a count and a consequence, not "are you sure?".
+const warn = deleteWarning('teacher', 'Anita', anita)!
+ok(warn.includes('3 periods'), 'the warning states how much is at stake')
+ok(warn.includes('I-A') && warn.includes('I-B'), 'and which classes')
+ok(/nobody can be marked absent/i.test(warn),
+  'and the specific consequence — those lessons can never be covered')
+ok(!deleteWarning('section', 'I-A', usageOf(usedTT, 'section', 'I-A'))!.includes('(I-A)'),
+  'a class does not list itself as the class it affects')
+
+ok(deleteWarning('teacher', 'Nobody', usageOf(usedTT, 'teacher', 'Nobody')) === null,
+  'an unused resource deletes with no interruption at all')
+
+// Singular reads correctly; nobody should see "1 periods".
+ok(deleteWarning('teacher', 'Ravi', usageOf(usedTT, 'teacher', 'Ravi'))!.includes('1 period a week'),
+  'one period is not "1 periods"')
+
+// More than three affected classes summarises rather than running on.
+const wide: any = {}
+for (const s of ['A', 'B', 'C', 'D', 'E']) wide[s] = { MONDAY: { p1: { subject: 'X', teacher: 'Anita' } } }
+ok(deleteWarning('teacher', 'Anita', usageOf(wide, 'teacher', 'Anita'))!.includes('and 2 more'),
+  'a long list of classes is summarised')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

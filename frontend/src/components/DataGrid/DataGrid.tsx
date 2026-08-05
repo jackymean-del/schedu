@@ -77,6 +77,16 @@ export interface DataGridProps<T> {
   /** Build a fresh row for the +Add button. */
   newRow?: () => T
 
+  /**
+   * Warn before deleting. Return a sentence to make the user confirm, or null
+   * to delete straight away.
+   *
+   * Exists because a roster row can be depended on by a generated timetable
+   * that this grid does not own — see lib/resourceUsage for why the right
+   * answer is to state the consequence rather than either cascade or ignore it.
+   */
+  confirmDelete?: (rows: T[]) => string | null
+
   /** Per-row Scope button — rect is the button's bounding rect for popover anchoring. */
   onScope?: (row: T, rect?: DOMRect) => void
 
@@ -250,7 +260,7 @@ function extrapolateStringSeries(series: StringSeries, srcLen: number, offset: n
 // ─────────────────────────────────────────────────────────────
 
 export function DataGrid<T>({
-  columns, rows, rowKey, onChange,
+  columns, rows, rowKey, onChange, confirmDelete,
   title, description, icon,
   newRow, onScope, onBulkScope, stickyHeaderTop = 0, onAISuggestions,
   toolbar = {}, emptyState, maxHeight, density = 'normal', toolbarExtra,
@@ -267,6 +277,8 @@ export function DataGrid<T>({
   const [transposed, setTransposed] = useState(false)
   const [search, setSearch] = useState('')
   const [selection, setSelection] = useState<{ r: number; c: number } | null>(null)
+  // Rows awaiting an explicit "yes" because confirmDelete had something to say.
+  const [pendingDelete, setPendingDelete] = useState<{ keys: Set<string>; message: string } | null>(null)
   const [selectionEnd, setSelectionEnd] = useState<{ r: number; c: number } | null>(null)
   const [editing, setEditing] = useState<{ r: number; c: number } | null>(null)
   // v3: drag-fill state — source cell + current drag target
@@ -959,6 +971,17 @@ export function DataGrid<T>({
     onChange([...rows, newRow()])
     setSelection({ r: filteredRows.length, c: 0 })
   }
+  /** Delete now, or ask first when the caller has a warning to give. */
+  const requestDelete = (keys: Set<string>) => {
+    const going = rows.filter(r => keys.has(rowKey(r)))
+    const message = confirmDelete?.(going) ?? null
+    if (message) { setPendingDelete({ keys, message }); return }
+    commitDelete(keys)
+  }
+  const commitDelete = (keys: Set<string>) => {
+    onChange(rows.filter(r => !keys.has(rowKey(r))))
+    setSelection(null); setSelectionEnd(null); setPendingDelete(null)
+  }
   const deleteSelectedRows = () => {
     if (!selection) return
     const end = selectionEnd ?? selection
@@ -967,8 +990,7 @@ export function DataGrid<T>({
     for (let r = r0; r <= r1; r++) {
       if (filteredRows[r]) keys.add(rowKey(filteredRows[r]))
     }
-    onChange(rows.filter(r => !keys.has(rowKey(r))))
-    setSelection(null); setSelectionEnd(null)
+    requestDelete(keys)
   }
   const duplicateSelectedRows = () => {
     if (!selection) return
@@ -985,9 +1007,12 @@ export function DataGrid<T>({
   const deleteRowByIndex = useCallback((filteredRi: number) => {
     const origR = originalIndex(filteredRi)
     if (origR < 0) return
+    const going = rows[origR]
+    const message = confirmDelete?.([going]) ?? null
+    if (message) { setPendingDelete({ keys: new Set([rowKey(going)]), message }); return }
     onChange(rows.filter((_, i) => i !== origR))
     setSelection(null); setSelectionEnd(null)
-  }, [rows, originalIndex, onChange])
+  }, [rows, originalIndex, onChange, confirmDelete, rowKey])
 
   const duplicateRowByIndex = useCallback((filteredRi: number) => {
     const origR = originalIndex(filteredRi)
@@ -1041,7 +1066,7 @@ export function DataGrid<T>({
           onAI={onAISuggestions}
           canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
         />
-        <input type="file" ref={fileRef} accept=".csv,.tsv,text/csv,text/tab-separated-values" style={{ display: 'none' }}
+      <input type="file" ref={fileRef} accept=".csv,.tsv,text/csv,text/tab-separated-values" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) importCSV(f); e.target.value = '' }} />
         <input type="file" ref={xlsxRef} accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) importXLSX(f); e.target.value = '' }} />
@@ -1267,6 +1292,36 @@ export function DataGrid<T>({
         onClearFilters={activeFilterCount > 0 ? () => setFilters({}) : undefined}
         toolbarExtra={toolbarExtra}
       />
+      {/* Deleting a roster row can orphan lessons in a generated timetable this
+          grid does not own. State the number and the consequence rather than
+          asking "are you sure?" — a bare confirmation teaches people to click
+          through, and the count is the whole reason to hesitate. */}
+      {pendingDelete && (
+        <div style={{
+          background: '#FFF7ED', border: '1px solid #FED7AA',
+          borderRadius: 10, padding: '12px 16px', margin: '0 0 10px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 13, color: '#92400E', lineHeight: 1.5, flex: 1, minWidth: 240 }}>
+            {pendingDelete.message}
+          </span>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={() => setPendingDelete(null)} style={{
+              padding: '5px 14px', borderRadius: 7, border: '1px solid #D1D5DB',
+              background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              Keep it
+            </button>
+            <button onClick={() => commitDelete(pendingDelete.keys)} style={{
+              padding: '5px 14px', borderRadius: 7, border: 'none',
+              background: '#EF4444', color: '#fff', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              Delete anyway
+            </button>
+          </div>
+        </div>
+      )}
       <input type="file" ref={fileRef} accept=".csv,.tsv,text/csv,text/tab-separated-values" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) importCSV(f); e.target.value = '' }} />
       <input type="file" ref={xlsxRef} accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }}
