@@ -16,6 +16,7 @@ import {
 } from '@/lib/ttRegistry'
 import { type CalLeave, useLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
 import { useSchoolEvents, eventCoversDate, eventDates, teachingSuspendedOn, type SchoolEvent as CalEvent } from '@/lib/schoolEvents'
+import { DAY_NAMES as DAY_KEY } from '@/lib/days'
 import {
   type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
   overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
@@ -51,7 +52,7 @@ import { useCan } from '@/lib/permissions'
 const DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
-const DAY_KEY = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']
+
 
 // Colour encodes SUBJECT only (see lib/subjectColors): one deterministic
 // colour per subject everywhere; teachers/venues are identified by text.

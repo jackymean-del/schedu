@@ -17,6 +17,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ClassTimetable } from '@/types'
 import { planKey } from './syllabusTracking'
+import { DAY_NAMES, sameDay, weekdayOf } from './days'
+
+export { weekdayOf }
 
 export interface Holiday {
   id: string
@@ -60,17 +63,8 @@ export const useHolidays = create<HolidayState>()(
 
 // ── Impact on syllabus coverage ───────────────────────────────────────────
 
-const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
 
-/** Weekday name for an ISO date, or '' when the date can't be parsed. */
-export function weekdayOf(isoDate: string): string {
-  const d = new Date(`${(isoDate ?? '').slice(0, 10)}T00:00:00`)
-  return isNaN(d.getTime()) ? '' : DAY_NAMES[d.getDay()]
-}
 
-/** Timetable day keys vary ('MONDAY' / 'Mon' / 'monday') — compare loosely. */
-const sameDay = (a: string, b: string) =>
-  (a ?? '').slice(0, 3).toUpperCase() === (b ?? '').slice(0, 3).toUpperCase()
 
 export interface HolidayLoss { hours: number; dates: string[] }
 

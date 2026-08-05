@@ -41,10 +41,8 @@ import type { ClassTimetable } from '@/types'
 import type { SyllabusPlan } from './syllabusTracking'
 import { requiredHours, planKey, contentFraction, hasContentSignal as planHasContent } from './syllabusTracking'
 import type { Holiday } from './holidays'
+import { DAY_NAMES, sameDay } from './days'
 
-const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
-const sameDay = (a: string, b: string) =>
-  (a ?? '').slice(0, 3).toUpperCase() === (b ?? '').slice(0, 3).toUpperCase()
 
 const toDate = (s: string) => new Date(`${(s ?? '').slice(0, 10)}T00:00:00`)
 

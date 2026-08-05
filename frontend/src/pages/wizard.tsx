@@ -65,13 +65,9 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
 // afterwards meant mapping against rules that didn't exist yet.
 const STEPS = [StepResourcesV2, StepBell, StepStudentGroups, StepAllocation, Step6Generate]
 
-const STEP_META = [
-  { label: 'Resources',         sub: 'Classes, subjects, teachers & rooms'  },
-  { label: 'Shift & timing',    sub: 'Days, periods & breaks'               },
-  { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules' },
-  { label: 'Mapping',           sub: 'Subject → class-section → teacher mapping' },
-  { label: 'Review & generate', sub: 'HI builds your schedule'              },
-]
+// Names live in lib/wizardSteps — see the note there on why they are not here.
+import { WIZARD_STEPS as STEP_META } from '@/lib/wizardSteps'
+
 
 // ── Error boundary ────────────────────────────────────────────
 class StepErrorBoundary extends Component<

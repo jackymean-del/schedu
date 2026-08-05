@@ -10,6 +10,12 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { wizardStepLabel } from '@/lib/wizardSteps'
+
+/** Step names come from lib/wizardSteps. Step 0 ("named, nothing entered yet")
+ *  and the past-the-end state are not wizard steps, so they say so. */
+const stepLabelFor = (n: number): string =>
+  n === 0 ? 'Named' : (wizardStepLabel(n) || 'Complete')
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { CLERK_ENABLED } from '@/lib/clerk'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -197,14 +203,6 @@ interface TTEntry {
   toGrade?:        string
 }
 
-const WIZARD_STEP_LABELS: Record<number, string> = {
-  0: 'Named',
-  1: 'Resources',
-  2: 'Shift & timing',
-  3: 'Student groups',
-  4: 'Mapping',
-  5: 'Complete',
-}
 
 const TTLIST_KEY     = 'schedu-tt-list'
 const ACTIVE_TT_KEY  = 'schedu-active-tt'
@@ -397,7 +395,7 @@ function ttMeta(t: TTEntry): string {
   const tch = `${t.approxTeachers} teachers`
   if (t.status === 'active')   return `${cls} · ${tch} · Generated`
   if (t.status === 'archived') return `${cls} · ${tch} · Archived`
-  const stepLabel = WIZARD_STEP_LABELS[t.wizardStep] ?? `Step ${t.wizardStep}`
+  const stepLabel = stepLabelFor(t.wizardStep)
   if (t.wizardStep === 0) return `${cls} · ${tch} · Just created`
   return `${cls} · ${tch} · Step ${t.wizardStep}: ${stepLabel}`
 }
@@ -1678,7 +1676,7 @@ export function DashboardPage() {
                             fontSize: 11, fontWeight: 600, color: '#7C6FE0',
                             flexShrink: 0,
                           }}>
-                            Step {tt.wizardStep} · {WIZARD_STEP_LABELS[tt.wizardStep]}
+                            Step {tt.wizardStep} · {stepLabelFor(tt.wizardStep)}
                           </span>
                         )}
                         {tt.status === 'draft' && tt.wizardStep === 0 && (

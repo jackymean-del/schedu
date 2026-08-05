@@ -20,8 +20,9 @@ import { useHolidays } from '@/lib/holidays'
 import { useSchoolEvents, teachingSuspendedOn } from '@/lib/schoolEvents'
 import { boardNow, boardRows, uncoveredRows, soonestRings } from '@/lib/smartboard'
 import { fmtRingTime } from '@/lib/bellSchedule'
+import { DAY_NAMES as DAY_KEY } from '@/lib/days'
 
-const DAY_KEY = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+
 const toISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 

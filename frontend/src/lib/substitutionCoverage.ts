@@ -43,6 +43,7 @@
  * syllabusTracking.withLostImpact.
  */
 import { create } from 'zustand'
+import { DAY_NAMES, sameDay } from './days'
 import { persist } from 'zustand/middleware'
 import type { ClassTimetable } from '@/types'
 import { planKey } from './syllabusTracking'
@@ -214,9 +215,6 @@ export function bonusSessions(records: SubCoverageRecord[]): Record<string, Bonu
   return out
 }
 
-const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
-const sameDay = (a: string, b: string) =>
-  (a ?? '').slice(0, 3).toUpperCase() === (b ?? '').slice(0, 3).toUpperCase()
 const isoOf = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 

@@ -13,6 +13,7 @@
  */
 
 import type { Section, Staff, Subject, Period, ClassTimetable } from '@/types'
+import { subjectColor } from './subjectColors'
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -162,14 +163,6 @@ export function buildFlatSheet(options: ExportOptions): (string | number)[][] {
 // ─── Print HTML ──────────────────────────────────────────
 
 /** Colour palette for subjects — cycles through a set of pastels. */
-const SUBJECT_PALETTE = [
-  '#EDE9FF', '#FEF3C7', '#DCFCE7', '#E0F2FE', '#FCE7F3',
-  '#FFF7ED', '#F0FDF4', '#F5F3FF', '#FEF9C3', '#E0F7FA',
-]
-function subjectColor(name: string, allSubjects: string[]): string {
-  const idx = allSubjects.indexOf(name)
-  return SUBJECT_PALETTE[Math.abs(idx) % SUBJECT_PALETTE.length]
-}
 
 /**
  * Generate a complete, self-contained HTML document for all class timetables.
@@ -179,7 +172,6 @@ function subjectColor(name: string, allSubjects: string[]): string {
  */
 export function buildPrintHTML(options: ExportOptions): string {
   const { classTT, sections, subjects, periods, workDays } = options
-  const allSubjectNames = subjects.map(s => s.name)
   const classPeriods = periods.filter(p => p.type !== 'break')
 
   const sectionTables = sections.map(sec => {
@@ -193,9 +185,9 @@ export function buildPrintHTML(options: ExportOptions): string {
       const cells = workDays.map(day => {
         const cell: any = classTT[sec.name]?.[day]?.[period.id]
         if (!cell?.subject) return `<td class="empty-cell"></td>`
-        const bg = subjectColor(cell.subject, allSubjectNames)
+        const { accent, bg } = subjectColor(cell.subject)
         return `
-          <td class="timetable-cell" style="background:${bg}">
+          <td class="timetable-cell" style="background:${bg};border-left:3px solid ${accent}">
             <div class="subject">${cell.subject}</div>
             ${cell.teacher ? `<div class="teacher">${cell.teacher}</div>` : ''}
             ${cell.room    ? `<div class="room">${cell.room}</div>` : ''}

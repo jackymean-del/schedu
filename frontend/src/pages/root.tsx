@@ -6,6 +6,7 @@ import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layout/AppShell"
 import { useAuthStore } from "@/store/authStore"
 import { useMembers } from "@/store/members"
+import { wizardStepLabel, WIZARD_STEP_COUNT } from "@/lib/wizardSteps"
 import { migrateLegacyLeaves } from "@/lib/leaveUtils"
 import { migrateLegacyEvents } from "@/lib/schoolEvents"
 import { migrateLegacyAssignments } from "@/lib/freeAssignments"
@@ -80,8 +81,8 @@ export function RootLayout() {
       <div style={{ minHeight:'100vh', background:'#F9F8FF', display:'flex', flexDirection:'column' }}>
         <Topbar
           step={isWizard ? step : undefined}
-          totalSteps={isWizard ? 5 : undefined}
-          stepLabel={isWizard ? STEP_LABELS[step - 1] : undefined}
+          totalSteps={isWizard ? WIZARD_STEP_COUNT : undefined}
+          stepLabel={isWizard ? wizardStepLabel(step) : undefined}
         />
         <Outlet />
       </div>

@@ -6,7 +6,9 @@
  */
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
 
-export const DAY_KEY = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+import { DAY_NAMES } from './days'
+export { DAY_NAMES as DAY_KEY } from './days'
+const DAY_KEY = DAY_NAMES
 
 export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
