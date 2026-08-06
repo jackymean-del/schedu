@@ -51,6 +51,11 @@ import { Search, ChevronDown, Minus, Plus, Check } from 'lucide-react'
 // every render and ignored them, so they never worked; those props are gone.
 // Restoring them means adding ag-grid-enterprise (a paid licence) and
 // registering RowNumbersModule + CellSelectionModule here.
+//
+// The matching API calls went with them. `api.clearCellSelection()` is also
+// enterprise: the method EXISTS on the api object, so an optional call does
+// not guard it — it logged error #200 on every Escape press and cleared
+// nothing. `clearFocusedCell` is community and does the part that mattered.
 ModuleRegistry.registerModules([AllCommunityModule])
 
 // ─────────────────────────────────────────────────────────────────
@@ -962,7 +967,6 @@ export function AllocationGridAG({
         if (stateRef.current.copied) {
           dispatchRef.current({ type: 'CLEAR_COPY' })
         } else {
-          ;(params.api as any).clearCellSelection?.()
           ;(params.api as any).clearFocusedCell?.()
           ;(document.activeElement as HTMLElement)?.blur?.()
         }
@@ -987,7 +991,6 @@ export function AllocationGridAG({
         if (stateRef.current.copied) {
           dispatchRef.current({ type: 'CLEAR_COPY' })
         } else {
-          ;(params.api as any).clearCellSelection?.()
           ;(params.api as any).clearFocusedCell?.()
           ;(document.activeElement as HTMLElement)?.blur?.()
         }
@@ -1295,7 +1298,6 @@ export function AllocationGridAG({
       const api = gridRef.current?.api
       ;(document.activeElement as HTMLElement)?.blur?.()
       if (api) {
-        ;(api as any).clearCellSelection?.()
         ;(api as any).clearFocusedCell?.()
       }
       dispatchRef.current({ type: 'CLEAR_SELECTION' })
