@@ -1883,6 +1883,116 @@ ok(rangeLabel(['I-A', 'Nursery-A']) === 'Nursery-A – I-A',
   'Nursery comes before Class I, as a school lists them')
 ok(rangeLabel(['V-B', 'V-A']) === 'V-A – V-B', 'and sections within a class order too')
 
+// ── THE ENGINE, ON A REAL-SIZED SCHOOL ──
+// 2,000 lines of solver had exactly one end-to-end assertion (the daily cap).
+// These are the invariants a timetable must satisfy to be usable at all — if
+// any breaks, the product ships a schedule that cannot be taught.
+const engDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+const engPeriods = Array.from({ length: 8 }, (_, i) => ({
+  id: `ep${i + 1}`, name: `P${i + 1}`, type: 'class',
+  startTime: '09:00', endTime: '09:40', duration: 40, shiftable: false,
+})) as any[]
+const ENG_SUBS = [
+  { name: 'English', ppw: 6 }, { name: 'Maths', ppw: 6 }, { name: 'Science', ppw: 6 },
+  { name: 'History', ppw: 4 }, { name: 'Geography', ppw: 4 }, { name: 'Hindi', ppw: 5 },
+  { name: 'Computer', ppw: 4 }, { name: 'PE', ppw: 3 },
+]
+const engSections = ['VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'V', 'IV', 'III']
+  .flatMap(c => ['A', 'B', 'C', 'D'].map(x => ({ id: `${c}${x}`, name: `${c}-${x}`, grade: c }))) as any[]
+const engSubjects = ENG_SUBS.map((s, i) => ({ id: `es${i}`, name: s.name, periodsPerWeek: s.ppw, maxPeriodsPerDay: 2 })) as any[]
+const engStaff = Array.from({ length: 60 }, (_, i) => ({
+  id: `et${i}`, name: `Teacher ${i + 1}`, shortName: `T${i + 1}`,
+  subjects: [ENG_SUBS[i % ENG_SUBS.length].name, ENG_SUBS[(i + 3) % ENG_SUBS.length].name],
+  classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30,
+})) as any[]
+
+const engInput: any = {
+  sections: engSections, staff: engStaff, subjects: engSubjects,
+  periods: engPeriods, workDays: engDays, requirements: [],
+}
+const engStart = Date.now()
+const engOut = solveTimetable(engInput)
+const engMs = Date.now() - engStart
+
+const engCanTeach = new Map(engStaff.map((s: any) => [s.name, new Set<string>(s.subjects)]))
+let engPlaced = 0, engClashes = 0, engIneligible = 0
+const engSeen = new Set<string>()
+const engWeek = new Map<string, number>()
+const engPerSubject = new Map<string, number>()
+for (const sec of Object.keys(engOut.classTT ?? {})) {
+  for (const d of Object.keys(engOut.classTT[sec] ?? {})) {
+    for (const p of Object.keys(engOut.classTT[sec][d] ?? {})) {
+      const c: any = engOut.classTT[sec][d][p]
+      if (!c?.subject) continue
+      engPlaced++
+      engPerSubject.set(`${sec}|${c.subject}`, (engPerSubject.get(`${sec}|${c.subject}`) ?? 0) + 1)
+      if (!c.teacher) continue
+      const k = `${d}|${p}|${c.teacher}`
+      if (engSeen.has(k)) engClashes++
+      engSeen.add(k)
+      engWeek.set(c.teacher, (engWeek.get(c.teacher) ?? 0) + 1)
+      if (!engCanTeach.get(c.teacher)?.has(c.subject)) engIneligible++
+    }
+  }
+}
+const engDemand = engSections.length * ENG_SUBS.reduce((a, s) => a + s.ppw, 0)
+const engShort = engSections.flatMap((sec: any) =>
+  ENG_SUBS.filter(s => (engPerSubject.get(`${sec.name}|${s.name}`) ?? 0) !== s.ppw))
+
+ok(engClashes === 0,
+  `no teacher is in two rooms at once across ${engSections.length} sections (${engPlaced} lessons placed)`)
+ok(engIneligible === 0, 'nobody is assigned a subject they cannot teach')
+ok([...engWeek.values()].every(v => v <= 30), 'no teacher exceeds their weekly cap')
+ok(engShort.length === 0, 'every subject gets exactly the periods per week it asked for')
+ok(engPlaced === engDemand, `the whole curriculum is placed when it fits — ${engPlaced}/${engDemand}`)
+ok(engMs < 5000, `a 40-section school solves in well under 5s (took ${engMs}ms)`)
+
+// Regenerating must not reshuffle a published week.
+ok(JSON.stringify(solveTimetable(engInput).classTT) === JSON.stringify(engOut.classTT),
+  'the solver is deterministic — same input, same timetable, so "regenerate" is safe')
+
+// ── IMPOSSIBLE SCHOOLS MUST STILL PRODUCE A LEGAL TIMETABLE ──
+// Far too few teachers: 4 staff capped at 30 cannot cover 160 periods.
+const shortSections = Array.from({ length: 8 }, (_, i) => ({ id: `ss${i}`, name: `Z-${String.fromCharCode(65 + i)}`, grade: 'Z' })) as any[]
+const shortSubs = Array.from({ length: 5 }, (_, i) => ({ id: `zs${i}`, name: `Sub${i + 1}`, periodsPerWeek: 4, maxPeriodsPerDay: 3 })) as any[]
+const shortStaff = Array.from({ length: 4 }, (_, i) => ({
+  id: `zt${i}`, name: `Z${i + 1}`, shortName: `Z${i + 1}`,
+  subjects: shortSubs.map((s: any) => s.name), classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30,
+})) as any[]
+const shortOut = solveTimetable({
+  sections: shortSections, staff: shortStaff, subjects: shortSubs,
+  periods: engPeriods, workDays: engDays, requirements: [],
+} as any)
+
+let shortClashes = 0, shortPlaced = 0
+const shortSeen = new Set<string>()
+const shortLoad = new Map<string, number>()
+for (const sec of Object.keys(shortOut.classTT ?? {}))
+  for (const d of Object.keys(shortOut.classTT[sec] ?? {}))
+    for (const p of Object.keys(shortOut.classTT[sec][d] ?? {})) {
+      const c: any = shortOut.classTT[sec][d][p]
+      if (!c?.subject) continue
+      shortPlaced++
+      if (!c.teacher) continue
+      const k = `${d}|${p}|${c.teacher}`
+      if (shortSeen.has(k)) shortClashes++
+      shortSeen.add(k)
+      shortLoad.set(c.teacher, (shortLoad.get(c.teacher) ?? 0) + 1)
+    }
+
+ok(shortClashes === 0,
+  'an understaffed school still gets a LEGAL timetable — the engine leaves slots empty rather than double-booking')
+ok([...shortLoad.values()].every(v => v <= 30),
+  'and never solves the shortage by pushing a teacher past their cap')
+
+// The empty slots must say WHY, and name the real cause.
+const shortTally = new Map<string, number>()
+for (const b of ((shortOut as any).blockedSlots ?? [])) for (const r of b.reasons) shortTally.set(r.category, (shortTally.get(r.category) ?? 0) + 1)
+ok((shortTally.get('no-eligible-teachers') ?? 0) > 0,
+  'empty slots blame the teacher shortage that actually caused them')
+ok((shortTally.get('no-eligible-teachers') ?? 0) > (shortTally.get('subject-quota-met') ?? 0),
+  'and that is the DOMINANT reason, not an afterthought behind "quota met"')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
