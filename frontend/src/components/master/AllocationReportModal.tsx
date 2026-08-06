@@ -98,6 +98,41 @@ const tdNum: React.CSSProperties = { ...tdStyle, textAlign: 'right', fontFamily:
 
 // ── Filter chip bar ───────────────────────────────────────────────────────────
 
+/**
+ * Group key for an item: everything before the last hyphen.
+ *
+ * "I-A" → "I", "Nursery-B" → "Nursery", "XI-Sci-A" → "XI-Sci". A school with
+ * forty sections almost always wants a whole class at once, not one section,
+ * and this is the only structure their names reliably carry.
+ *
+ * Returns null for names with no hyphen — teachers, subjects and most venues —
+ * so no group chips appear where they would mean nothing.
+ */
+function groupOf(item: string): string | null {
+  const i = item.lastIndexOf('-')
+  return i > 0 ? item.slice(0, i) : null
+}
+
+/** Above this many items, chips alone stop being findable and search appears. */
+const SEARCHABLE_FROM = 12
+/** Never render more than this many chips at once; the rest need narrowing. */
+const MAX_CHIPS = 40
+
+/**
+ * Filter chips that survive a real school.
+ *
+ * With two sections a row of chips is perfect. With forty it was a horizontal
+ * scroll strip — you could not see what was available, let alone find "VIII-C"
+ * without dragging through the whole alphabet. So above a threshold this adds:
+ *
+ *   · a search box, which is the actual answer to "how do I find one class";
+ *   · group chips (Class I, Class VIII) that take every section at once,
+ *     because that is what someone filtering forty sections usually means;
+ *   · a cap on how many chips render, with an honest count of what is hidden.
+ *
+ * Selected items are always shown first and never hidden by the search, or you
+ * could filter to something and then be unable to switch it off.
+ */
 function FilterBar({
   label, items, filter, setFilter,
 }: {
@@ -106,56 +141,127 @@ function FilterBar({
   filter: Set<string>
   setFilter: React.Dispatch<React.SetStateAction<Set<string>>>
 }) {
+  const [q, setQ] = useState('')
+
+  const groups = useMemo(() => {
+    const m = new Map<string, string[]>()
+    for (const it of items) {
+      const g = groupOf(it)
+      if (!g) continue
+      const list = m.get(g) ?? []
+      list.push(it)
+      m.set(g, list)
+    }
+    // A "group" of one is just the item again — no use as a shortcut.
+    return [...m.entries()].filter(([, v]) => v.length > 1)
+  }, [items])
+
+  // AFTER every hook: an early return above them would change the hook count
+  // between renders the moment a filter list emptied, and React throws.
   if (items.length === 0) return null
+
+  const searchable = items.length > SEARCHABLE_FROM
+  const needle = q.trim().toLowerCase()
+
+  const matching = needle ? items.filter(i => i.toLowerCase().includes(needle)) : items
+  // Selected first, so a chosen filter is always reachable to switch off.
+  const ordered = [...matching].sort((a, b) => Number(filter.has(b)) - Number(filter.has(a)))
+  const shown = ordered.slice(0, MAX_CHIPS)
+  const hidden = ordered.length - shown.length
+
   const chipBase: React.CSSProperties = {
     padding: '3px 9px', borderRadius: 20, fontSize: 9.5, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
     border: '1px solid transparent',
   }
+  const toggle = (item: string) => setFilter(prev => {
+    const next = new Set(prev)
+    next.has(item) ? next.delete(item) : next.add(item)
+    return next
+  })
+  const toggleGroup = (members: string[]) => setFilter(prev => {
+    const next = new Set(prev)
+    const allOn = members.every(m => next.has(m))
+    members.forEach(m => allOn ? next.delete(m) : next.add(m))
+    return next
+  })
+
   return (
-    <div className="no-print" style={{
-      display: 'flex', alignItems: 'center', gap: 4,
-      padding: '6px 0 10px', marginBottom: 8,
-      borderBottom: '1px solid #F0EDFF',
-      overflowX: 'auto', scrollbarWidth: 'none' as any,
-    }}>
-      <span style={{
-        fontSize: 9.5, fontWeight: 800, color: '#8B87AD',
-        textTransform: 'uppercase', letterSpacing: '0.06em',
-        whiteSpace: 'nowrap', flexShrink: 0, marginRight: 2,
-      }}>{label}:</span>
+    <div className="no-print" style={{ padding: '6px 0 10px', marginBottom: 8, borderBottom: '1px solid #F0EDFF' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{
+          fontSize: 9.5, fontWeight: 800, color: '#8B87AD',
+          textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+        }}>{label}:</span>
 
-      {/* All button */}
-      <button onClick={() => setFilter(new Set())} style={{
-        ...chipBase,
-        background: filter.size === 0 ? '#7C6FE0' : '#F8F7FF',
-        color:      filter.size === 0 ? '#fff'    : '#8B87AD',
-        borderColor: filter.size === 0 ? '#7C6FE0' : '#E8E4FF',
-      }}>All</button>
+        <button onClick={() => setFilter(new Set())} style={{
+          ...chipBase,
+          background: filter.size === 0 ? '#7C6FE0' : '#F8F7FF',
+          color:      filter.size === 0 ? '#fff'    : '#8B87AD',
+          borderColor: filter.size === 0 ? '#7C6FE0' : '#E8E4FF',
+        }}>All</button>
 
-      {/* Per-item chips */}
-      {items.map(item => (
-        <button key={item}
-          onClick={() => setFilter(prev => {
-            const next = new Set(prev)
-            next.has(item) ? next.delete(item) : next.add(item)
-            return next
+        {searchable && (
+          <input
+            value={q} onChange={e => setQ(e.target.value)}
+            placeholder={`Search ${items.length}…`}
+            style={{
+              padding: '3px 9px', borderRadius: 20, fontSize: 10, fontFamily: 'inherit',
+              border: '1px solid #E8E4FF', background: '#fff', color: '#2E2A4A',
+              outline: 'none', width: 130,
+            }}
+          />
+        )}
+
+        {filter.size > 0 && (
+          <>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#7C6FE0' }}>
+              {filter.size} selected
+            </span>
+            <button onClick={() => setFilter(new Set())} style={{
+              ...chipBase, background: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA',
+            }}>✕ Clear</button>
+          </>
+        )}
+      </div>
+
+      {/* Whole-class shortcuts, only where the names actually form groups. */}
+      {searchable && groups.length > 0 && !needle && (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+          {groups.map(([g, members]) => {
+            const on = members.every(m => filter.has(m))
+            return (
+              <button key={g} onClick={() => toggleGroup(members)} title={members.join(', ')} style={{
+                ...chipBase,
+                background:  on ? '#7C6FE0' : '#F4F2FF',
+                color:       on ? '#fff'    : '#7C6FE0',
+                borderColor: on ? '#7C6FE0' : '#D8D2FF',
+              }}>{g} · {members.length}</button>
+            )
           })}
-          style={{
+        </div>
+      )}
+
+      {/* Wraps rather than scrolling sideways: with many items you need to SEE
+          what is on offer, not drag through it. */}
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+        {shown.map(item => (
+          <button key={item} onClick={() => toggle(item)} style={{
             ...chipBase,
             background:  filter.has(item) ? '#EDE9FF' : '#F8F7FF',
             color:       filter.has(item) ? '#7C6FE0' : '#8B87AD',
             borderColor: filter.has(item) ? '#7C6FE0' : '#E8E4FF',
-          }}
-        >{item}</button>
-      ))}
-
-      {filter.size > 0 && (
-        <button onClick={() => setFilter(new Set())} style={{
-          ...chipBase, marginLeft: 4,
-          background: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA',
-        }}>✕ Clear</button>
-      )}
+          }}>{item}</button>
+        ))}
+        {hidden > 0 && (
+          <span style={{ fontSize: 9.5, color: '#8B87AD', alignSelf: 'center' }}>
+            +{hidden} more — type to narrow
+          </span>
+        )}
+        {needle && shown.length === 0 && (
+          <span style={{ fontSize: 9.5, color: '#8B87AD' }}>Nothing matches “{q}”.</span>
+        )}
+      </div>
     </div>
   )
 }
@@ -408,7 +514,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E' }}>{title}</div>
             <div style={{ fontSize: 11, color: '#8B87AD', marginTop: 2 }}>
-              {displayMode === 'hours' ? `Hours (1 period = ${periodMinutes} min)` : 'Periods per week'} · Click column headers to sort · Use filter chips to narrow view
+              {displayMode === 'hours' ? `Hours (1 period = ${periodMinutes} min)` : 'Periods per week'} · Click column headers to sort · Search or pick a whole class to narrow view
             </div>
           </div>
           <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #DDD8FF' }}>
