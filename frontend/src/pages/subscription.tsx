@@ -11,6 +11,7 @@
  *   disabled, no dead-end).
  */
 import { useEffect, useMemo, useState } from 'react'
+import { useBillingConfig } from '@/lib/billingConfig'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { CheckCircle2, Zap, Check, Loader2, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -21,14 +22,6 @@ declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void }
   }
-}
-
-interface BillingConfig {
-  enabled: boolean
-  keyId: string
-  currency: string
-  monthly: { amount: number }
-  yearly: { amount: number; discountPct: number }
 }
 
 const FREE_FEATURES = [
@@ -72,7 +65,8 @@ function loadRazorpay(): Promise<boolean> {
 export function SubscriptionPage() {
   const user = useAuthStore(s => s.user)
 
-  const [cfg, setCfg] = useState<BillingConfig | null>(null)
+  const cfg = useBillingConfig(s => s.cfg)
+  const loadBillingCfg = useBillingConfig(s => s.load)
   const [status, setStatus] = useState<BillingStatus | null>(null)
   const [interval, setPlanInterval] = useState<'monthly' | 'yearly'>('yearly')
   const [busy, setBusy] = useState(false)
@@ -86,9 +80,9 @@ export function SubscriptionPage() {
   const isPro = plan === 'pro' || plan === 'enterprise'
 
   // Prices (from server config, with sane fallbacks so the page always renders).
-  const monthly = cfg?.monthly.amount ?? 333
-  const yearly = cfg?.yearly.amount ?? 3333
-  const discountPct = cfg?.yearly.discountPct ?? Math.round((1 - yearly / (monthly * 12)) * 100)
+  const monthly = cfg?.monthly?.amount ?? 333
+  const yearly = cfg?.yearly?.amount ?? 3333
+  const discountPct = cfg?.yearly?.discountPct ?? Math.round((1 - yearly / (monthly * 12)) * 100)
   const yearlyPerMonth = Math.round(yearly / 12)
   const billingEnabled = cfg?.enabled ?? false
 
@@ -103,11 +97,8 @@ export function SubscriptionPage() {
   const money = (inr: number) => india ? formatINR(inr) : roundedUSD(inr, rate)
 
   useEffect(() => {
-    // Public config (prices + whether billing is live) — plain fetch, no auth.
-    fetch('/api/billing/config')
-      .then(r => (r.ok ? r.json() : null))
-      .then((d: BillingConfig | null) => d && setCfg(d))
-      .catch(() => { /* fall back to defaults */ })
+    // Prices + whether billing is live — shared with the sidebar, fetched once.
+    loadBillingCfg()
     // Authoritative billing status for the signed-in user.
     billingApi.status().then(r => setStatus(r.data)).catch(() => { /* fall back to auth store */ })
   }, [])
@@ -180,7 +171,7 @@ export function SubscriptionPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
-      <PageHeader icon="⚡" title="Subscription" description="Your current plan and available upgrades." />
+      <PageHeader icon="⚡" title="Subscription" description={billingEnabled ? "Your current plan and available upgrades." : "Your current plan. Everything is free while schedU is in early access."} />
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Current plan — real account state */}
@@ -239,8 +230,28 @@ export function SubscriptionPage() {
           </div>
         )}
 
+        {/* No way to take money yet (no Razorpay keys) means there is nothing
+            to sell, so the page says exactly that instead of showing prices
+            behind a dead button. Driven by the backend's own `enabled` flag, so
+            it reverts to the paid pitch the moment keys are configured — no
+            code change needed then. */}
+        {!isPro && !billingEnabled && (
+          <div style={{
+            background: 'linear-gradient(135deg,#EDE9FF,#F8F7FF)',
+            border: '2px solid #7C6FE0', borderRadius: 14, padding: '22px 24px', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 19, fontWeight: 900, color: '#13111E', marginBottom: 6 }}>
+              Free for a limited time
+            </div>
+            <div style={{ fontSize: 14, color: '#4B5275', lineHeight: 1.55 }}>
+              You can use schedU free right now — every feature, no card, no limits to worry about.
+              We&rsquo;ll give you plenty of notice before anything becomes paid.
+            </div>
+          </div>
+        )}
+
         {/* Plan comparison — hidden once the user is Pro (nothing to upsell) */}
-        {!isPro && (
+        {!isPro && billingEnabled && (
           <>
             {/* Billing-interval toggle */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -334,7 +345,7 @@ export function SubscriptionPage() {
           </>
         )}
 
-        {!isPro && (
+        {!isPro && billingEnabled && (
           <p style={{ fontSize: 12, color: '#8B87AD', textAlign: 'center', margin: 0 }}>
             Need <strong style={{ color: '#4B5275' }}>more than 70 sections</strong> or multiple campuses?{' '}
             <a href="mailto:hello@bhusku.com" style={{ color: '#7C6FE0', fontWeight: 600 }}>Talk to us about a Custom plan</a>.

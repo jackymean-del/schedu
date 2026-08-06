@@ -7,6 +7,17 @@ import { appHref } from '@/lib/appUrl'
 // or ₹3,333/yr, and the Free caps match what the app actually enforces. If these
 // numbers change, update the backend billing config + the app subscription page
 // (frontend/src/pages/subscription.tsx) to match.
+/**
+ * Payments are not live yet — there is no company bank account, so no Razorpay
+ * keys, so nothing can actually be charged. Advertising ₹333/mo while nobody
+ * can pay it is a promise the product cannot keep, so every price reads "Free"
+ * and the tiers explain what each one WILL include.
+ *
+ * Flip this to true the day keys are configured; the prices below are already
+ * correct and come straight back.
+ */
+const BILLING_LIVE = false
+
 const TIERS = [
   {
     name: 'Free', price: '₹0', period: '/mo', sub: '',
@@ -43,7 +54,7 @@ const TIERS = [
 
 const FAQ = [
   { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — up to 10 sections, with full Human-Intelligence auto-scheduling. No credit card required.' },
-  { q: 'How much is Pro, and what does it add?', a: 'Pro is ₹333/month or ₹3,333/year (save ~17%) — shown in USD outside India, billed in INR. It raises the limit to 70 sections and adds live task assignment, team collaboration, workload analytics, and priority support. Beyond 70 sections or multiple campuses is a Custom plan.' },
+  { q: 'How much is Pro, and what does it add?', a: 'Everything is free for a limited time — Pro included, with no card required. When paid plans begin, Pro will be ₹333/month or ₹3,333/year (save ~17%), shown in USD outside India and billed in INR. It raises the limit to 70 sections and adds live task assignment, team collaboration, workload analytics, and priority support. Beyond 70 sections or multiple campuses is a Custom plan. We will give plenty of notice before anything becomes payable.' },
   { q: 'What payment methods do you accept?', a: 'Payments are processed securely via Razorpay in INR — UPI, cards, and netbanking. International cards are supported too. You can cancel anytime and keep access until the end of your billing period.' },
   { q: 'Do you support any curriculum?', a: 'schedU has no built-in board restrictions. Enter your own period counts, subject names, and grading labels — it adapts to you.' },
 ]
@@ -53,7 +64,7 @@ const cardHover =
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'Simple, transparent pricing for schedU. Free up to 10 sections, Pro (₹333/mo, shown in USD outside India) up to 70 sections with multi-stream electives and team collaboration, Custom beyond 70 or multi-campus.',
+  description: 'schedU is free for a limited time — every plan, no card required. Planned pricing: Free up to 10 sections, Pro (₹333/mo) up to 70 sections with multi-stream electives and team collaboration, Custom beyond 70 or multi-campus.',
   alternates: { canonical: '/pricing' },
 }
 
@@ -80,13 +91,15 @@ export default function PricingPage() {
       <section className="flex flex-col items-center bg-gradient-to-b from-[#F8F7FF] to-white px-6 pb-12 pt-[72px] text-center">
         <p className="mb-[18px] text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Pricing</p>
         <h1 className="mb-3.5 max-w-[640px] text-[clamp(30px,5vw,46px)] font-normal leading-[1.15] tracking-[-1px] text-[#13111E]">
-          Pricing that grows with your{' '}
-          <span className="italic text-[#7C6FE0]">institution.</span>
+          {BILLING_LIVE ? <>Pricing that grows with your{' '}<span className="italic text-[#7C6FE0]">institution.</span></>
+                        : <>Free for a{' '}<span className="italic text-[#7C6FE0]">limited time.</span></>}
         </h1>
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
-          Start free up to 10 sections. Upgrade to Pro for up to 70 sections, electives, live task assignment, and team collaboration.
+          {BILLING_LIVE
+            ? 'Start free up to 10 sections. Upgrade to Pro for up to 70 sections, electives, live task assignment, and team collaboration.'
+            : 'You can use schedU for free now — every plan below, no card required. These are the prices when paid plans begin, and we will give plenty of notice first.'}
         </p>
-        <LocalBillingNote className="mt-4 max-w-[520px] text-[12px] leading-[1.5] text-[#A5A1C0]" />
+        {BILLING_LIVE && <LocalBillingNote className="mt-4 max-w-[520px] text-[12px] leading-[1.5] text-[#A5A1C0]" />}
       </section>
 
       {/* Tiers */}
@@ -108,10 +121,20 @@ export default function PricingPage() {
               )}
               <h2 className="text-base font-bold text-[#13111E]">{t.name}</h2>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]"><LocalPrice>{t.price}</LocalPrice></span>
-                {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
+                {BILLING_LIVE ? (
+                  <>
+                    <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]"><LocalPrice>{t.price}</LocalPrice></span>
+                    {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
+                  </>
+                ) : (
+                  <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">Free</span>
+                )}
               </div>
-              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">{t.sub ? <LocalMoney>{t.sub}</LocalMoney> : ''}</p>
+              <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">
+                {BILLING_LIVE
+                  ? (t.sub ? <LocalMoney>{t.sub}</LocalMoney> : '')
+                  : (t.price === '₹0' ? '' : <>Normally <LocalPrice>{t.price}</LocalPrice>{t.period} — free for now</>)}
+              </p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href} className="no-underline">
                 <button

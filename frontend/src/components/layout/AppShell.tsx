@@ -11,6 +11,7 @@
  * Collapsed state persists across navigations (localStorage).
  */
 import { useState } from 'react'
+import { useBillingLive } from '@/lib/billingConfig'
 import {
   Home, CalendarDays, Calendar, BarChart2, Users, Database, Settings,
   LifeBuoy, BookOpen, Video, ChevronLeft, ChevronRight, Zap, LogOut,
@@ -68,6 +69,7 @@ function activeHref(path: string): string {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const billingLive = useBillingLive()
   const { user, logout } = useAuthStore()
   const [open, setOpen] = useState(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) !== '1' } catch { return true }
@@ -178,12 +180,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
           {open && (
-            <a href="/subscription" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F9F8FF', borderRadius: 9, border: '1px solid #EDE9FF', padding: '7px 10px', textDecoration: 'none' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <a href="/subscription" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F9F8FF', borderRadius: 9, border: '1px solid #EDE9FF', padding: '7px 10px', textDecoration: 'none', gap: 8 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <Zap size={13} color="#7C6FE0" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#7C6FE0' }}>Free Plan</span>
+                {/* An "Upgrade" button that leads to a page with nothing to buy
+                    is a dead end, so it only appears once payments are live. */}
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#7C6FE0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {billingLive ? 'Free Plan' : 'Free for now'}
+                </span>
               </span>
-              <span className="as-upgrade" style={{ padding: '4px 12px', borderRadius: 6, background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700 }}>Upgrade</span>
+              {billingLive && (
+                <span className="as-upgrade" style={{ padding: '4px 12px', borderRadius: 6, background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700 }}>Upgrade</span>
+              )}
             </a>
           )}
         </div>
