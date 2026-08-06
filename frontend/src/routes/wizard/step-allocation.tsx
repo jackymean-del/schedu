@@ -8,11 +8,17 @@
  * Tabs: Period allocation · Teacher allocation · Validation
  */
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 // xlsx is loaded on demand (export click) — keeps it out of the main bundle
 import { useTimetableStore } from '@/store/timetableStore'
-import { AllocationGridAG } from '@/components/master/AllocationGridAG'
+/**
+ * AG Grid is ~21 MB unpacked and dominated the wizard's chunk — every person
+ * who opened the wizard downloaded it, including the many who never open this
+ * one sub-tab. Split out so it arrives when the tab does.
+ */
+const AllocationGridAG = lazy(() =>
+  import('@/components/master/AllocationGridAG').then(m => ({ default: m.AllocationGridAG })))
 import { TeacherAllocationSummary } from '@/components/master/TeacherAllocationSummary'
 import { TeacherAvailabilityEditor } from '@/components/master/TeacherAvailabilityEditor'
 import { AllocationReportModal } from '@/components/master/AllocationReportModal'
@@ -966,7 +972,11 @@ export function StepAllocation() {
           )}
 
           {/* Tab content */}
-          {sub === 'periods'    && <AllocationGridAG displayMode={displayMode} periodMinutes={periodMinutes} toolbarExtra={periodsToolbarExtra} sortRowsAZ={sortRowsAZ} sortColsAZ={sortColsAZ} />}
+          {sub === 'periods'    && (
+            <Suspense fallback={<div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: '#8B87AD' }}>Loading the allocation grid…</div>}>
+              <AllocationGridAG displayMode={displayMode} periodMinutes={periodMinutes} toolbarExtra={periodsToolbarExtra} sortRowsAZ={sortRowsAZ} sortColsAZ={sortColsAZ} />
+            </Suspense>
+          )}
           {sub === 'teachers'   && <TeacherAllocationSummary displayMode={displayMode} periodMinutes={periodMinutes}
             toolbarExtra={
               <div style={{ display: 'inline-flex', borderRadius: 7, overflow: 'hidden', border: '1px solid #D8D2FF' }}>

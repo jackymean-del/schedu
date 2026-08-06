@@ -67,11 +67,6 @@ export function BoardPage() {
   const dayKey = DAY_KEY[now.getDay()]
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  const allSections = useMemo(
-    () => bundles.flatMap(b => (b.sections ?? []).map((s: any) => s.name)).filter(Boolean),
-    [bundles],
-  )
-
   // Why there might be no lessons — three different sources, one answer.
   const holidayToday = holidays.find(h => h.date === isoDate && !h.sections?.length)
   const suspended = teachingSuspendedOn(events, isoDate)
