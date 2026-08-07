@@ -293,7 +293,7 @@ function GroupModal({
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#13111E' }}>
             {initial ? 'Edit Subject Combo' : 'New Subject Combo'}
           </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 4 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#727780', padding: 4 }}>
             <X size={16} />
           </button>
         </div>
@@ -364,7 +364,7 @@ function GroupModal({
         {/* ── Group name (optional) ── */}
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Combo name <span style={{ color: '#C4C0DC', fontWeight: 400 }}>(optional)</span>
+            Combo name <span style={{ color: '#767384', fontWeight: 400 }}>(optional)</span>
           </label>
           <input
             value={name} onChange={e => setName(e.target.value)}
@@ -381,14 +381,14 @@ function GroupModal({
         {logic === 'OR' && (
           <div style={{ marginBottom: 14 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Slot label <span style={{ color: '#C4C0DC', fontWeight: 400 }}>(optional — for regional-language slots)</span>
+              Slot label <span style={{ color: '#767384', fontWeight: 400 }}>(optional — for regional-language slots)</span>
             </label>
             <input
               value={slotLabel} onChange={e => setSlotLabel(e.target.value)}
               placeholder="e.g. R1, R2, R3"
               style={{ width: 120, boxSizing: 'border-box', padding: '6px 10px', borderRadius: 7, border: '1.5px solid #E4E0FF', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
             />
-            <span style={{ fontSize: 10, color: '#9CA3AF', marginLeft: 10 }}>
+            <span style={{ fontSize: 10, color: '#727780', marginLeft: 10 }}>
               The same subject in different slots = independent teaching groups
             </span>
           </div>
@@ -398,7 +398,7 @@ function GroupModal({
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Subjects <span style={{ color: '#EF4444' }}>*</span>
-            <span style={{ color: '#C4C0DC', fontWeight: 400, marginLeft: 4 }}>select 2+</span>
+            <span style={{ color: '#767384', fontWeight: 400, marginLeft: 4 }}>select 2+</span>
           </label>
 
           {/* Selected subject chips */}
@@ -466,7 +466,7 @@ function GroupModal({
         {/* ── Slots / week ── */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Slots / week <span style={{ color: '#C4C0DC', fontWeight: 400 }}>(optional)</span>
+            Slots / week <span style={{ color: '#767384', fontWeight: 400 }}>(optional)</span>
           </label>
           <input
             type="number" min={1} value={ppw} onChange={e => setPpw(e.target.value)}
@@ -483,7 +483,7 @@ function GroupModal({
         {logic === 'AND' && (
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Room / Location <span style={{ color: '#C4C0DC', fontWeight: 400 }}>(optional)</span>
+              Room / Location <span style={{ color: '#767384', fontWeight: 400 }}>(optional)</span>
             </label>
             <input
               value={location} onChange={e => setLocation(e.target.value)}
@@ -504,13 +504,13 @@ function GroupModal({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Applies to sections
-                <span style={{ color: '#C4C0DC', fontWeight: 400, marginLeft: 5 }}>
+                <span style={{ color: '#767384', fontWeight: 400, marginLeft: 5 }}>
                   {sections.length === 0 ? '— all sections' : `(${sections.length} selected)`}
                 </span>
               </label>
               {sections.length > 0 && (
                 <button onClick={() => setSections([])} style={{
-                  fontSize: 10, color: '#9CA3AF', background: 'none', border: 'none',
+                  fontSize: 10, color: '#727780', background: 'none', border: 'none',
                   cursor: 'pointer', fontFamily: 'inherit', padding: '0 2px',
                 }}>
                   Clear all
@@ -595,13 +595,13 @@ function GroupModal({
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 11, color: '#C4C0DC', padding: '6px 0', fontStyle: 'italic' }}>
+              <div style={{ fontSize: 11, color: '#767384', padding: '6px 0', fontStyle: 'italic' }}>
                 {sections.length > 0 ? 'All relevant sections selected.' : 'No sections match your search.'}
               </div>
             )}
 
             {sections.length === 0 && (
-              <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 5 }}>
+              <div style={{ fontSize: 10, color: '#727780', marginTop: 5 }}>
                 Tip: leaving all unselected means this combo applies to every section.
               </div>
             )}
@@ -633,7 +633,7 @@ function GroupModal({
             style={{
               padding: '8px 22px', borderRadius: 7, border: 'none',
               background: canSave ? '#7C6FE0' : '#E5E7EB',
-              color: canSave ? '#fff' : '#9CA3AF',
+              color: canSave ? '#fff' : '#727780',
               fontSize: 13, fontWeight: 700,
               cursor: canSave ? 'pointer' : 'default',
               fontFamily: 'inherit',
@@ -737,7 +737,7 @@ export function SubjectGroupsSection({
               background: '#EDE9FF', color: '#7C6FE0',
             }}>{groups.length}</span>
           )}
-          {open ? <ChevronUp size={13} color="#9CA3AF" /> : <ChevronDown size={13} color="#9CA3AF" />}
+          {open ? <ChevronUp size={13} color="#727780" /> : <ChevronDown size={13} color="#727780" />}
         </button>
 
         {open && (
@@ -866,7 +866,7 @@ export function SubjectGroupsSection({
 
             {/* ── Existing combos ── */}
             {groups.length === 0 && suggestions.length === 0 ? (
-              <p style={{ fontSize: 12, color: '#C4C0DC', margin: '0 0 12px', fontStyle: 'italic' }}>
+              <p style={{ fontSize: 12, color: '#767384', margin: '0 0 12px', fontStyle: 'italic' }}>
                 No combos yet — add one below.
               </p>
             ) : groups.length === 0 ? null : (
@@ -880,13 +880,13 @@ export function SubjectGroupsSection({
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {g.name && (
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#727780', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {g.name}
                         </div>
                       )}
                       <GroupDisplay group={g} />
                       {(g.sections?.length || g.periodsPerWeek || g.location) ? (
-                        <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+                        <div style={{ fontSize: 10, color: '#727780', marginTop: 3 }}>
                           {g.periodsPerWeek ? `${g.periodsPerWeek} slots/wk` : ''}
                           {g.periodsPerWeek && (g.location || g.sections?.length) ? ' · ' : ''}
                           {g.location ? `📍 ${g.location}` : ''}
@@ -895,7 +895,7 @@ export function SubjectGroupsSection({
                         </div>
                       ) : null}
                     </div>
-                    <button onClick={() => openEdit(g)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 3 }} title="Edit">
+                    <button onClick={() => openEdit(g)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#727780', padding: 3 }} title="Edit">
                       <Pencil size={12} />
                     </button>
                     <button onClick={() => remove(g.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 3 }} title="Remove">

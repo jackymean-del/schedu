@@ -56,7 +56,7 @@ export function SyllabusAlert({ limit = 4, compact = false }: { limit?: number; 
           }}>
             <span style={{ fontSize: 12.5, fontWeight: 700, color: '#13111E' }}>{r.subject}</span>
             <span style={{ fontSize: 11.5, color: '#4B5275' }}>{r.section}</span>
-            {r.teacher && <span style={{ fontSize: 11, color: '#8B87AD' }}>· {r.teacher}</span>}
+            {r.teacher && <span style={{ fontSize: 11, color: '#767393' }}>· {r.teacher}</span>}
             <div style={{ flex: 1, minWidth: 40 }} />
             {r.lost > 0 && (
               <span style={{ fontSize: 10.5, fontWeight: 700, color: '#B45309', background: '#FEF3C7', borderRadius: 999, padding: '2px 8px' }}>

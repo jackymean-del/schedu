@@ -97,7 +97,7 @@ export function ScopePicker({ sections, value, onChange, label = 'Applies to' }:
           maxHeight: 190, overflowY: 'auto',
         }}>
           {sections.length === 0 && (
-            <span style={{ fontSize: 11.5, color: '#9A95BC' }}>
+            <span style={{ fontSize: 11.5, color: '#777391' }}>
               No classes in this schedule yet — it will apply school-wide.
             </span>
           )}
@@ -124,7 +124,7 @@ export function ScopePicker({ sections, value, onChange, label = 'Applies to' }:
               </div>
             )
           })}
-          <div style={{ fontSize: 11, color: '#9A95BC' }}>
+          <div style={{ fontSize: 11, color: '#777391' }}>
             {value.length === 0
               ? 'Nothing selected — it will apply to the whole school.'
               : `Applies to ${describeScope(value, sections)}. Everyone else keeps their normal day.`}
@@ -142,5 +142,5 @@ const chip = (active: boolean, small = false): React.CSSProperties => ({
   fontSize: small ? 11.5 : 12.5, fontWeight: 700,
   border: `1px solid ${active ? ACCENT : '#E4E0FF'}`,
   background: active ? '#EDE9FF' : '#fff',
-  color: active ? '#4B41C4' : '#8B87AD',
+  color: active ? '#4B41C4' : '#767393',
 })

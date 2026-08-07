@@ -973,7 +973,7 @@ export function StepAllocation() {
 
           {/* Tab content */}
           {sub === 'periods'    && (
-            <Suspense fallback={<div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: '#8B87AD' }}>Loading the allocation grid…</div>}>
+            <Suspense fallback={<div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: '#767393' }}>Loading the allocation grid…</div>}>
               <AllocationGridAG displayMode={displayMode} periodMinutes={periodMinutes} toolbarExtra={periodsToolbarExtra} sortRowsAZ={sortRowsAZ} sortColsAZ={sortColsAZ} />
             </Suspense>
           )}
@@ -1175,7 +1175,7 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
       <div style={{
         marginTop: 10, padding: '6px 10px', borderRadius: 6,
         background: '#F8F7FF', border: '1px solid #ECEAFB',
-        fontSize: 9.5, color: '#8B87AD',
+        fontSize: 9.5, color: '#767393',
       }}>
         1 period = {periodMinutes} min
       </div>
@@ -1328,7 +1328,7 @@ function CapacityEnginePanel({
         })}
       </div>
       <div style={{
-        marginTop: 10, fontSize: 9.5, color: '#8B87AD',
+        marginTop: 10, fontSize: 9.5, color: '#767393',
         borderTop: '1px solid #F0EDFF', paddingTop: 8,
       }}>
         Avg periods/wk · Max shown in periods
@@ -1597,7 +1597,7 @@ function ValidationView({
       <div style={{
         padding: 32, textAlign: 'center' as const,
         background: '#F8F7FF', borderRadius: 12, border: '1px dashed #D8D2FF',
-        color: '#8B87AD', fontSize: 13,
+        color: '#767393', fontSize: 13,
       }}>
         Complete Period Allocation and Teacher Allocation first, then run validation.
       </div>

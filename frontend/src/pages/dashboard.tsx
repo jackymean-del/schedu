@@ -521,7 +521,7 @@ function CreateTimetableModal({
         .ct-cancel {
           transition: background 0.13s, border-color 0.13s;
         }
-        .ct-cancel:hover { background: #F9FAFB !important; border-color: #9CA3AF !important; }
+        .ct-cancel:hover { background: #F9FAFB !important; border-color: #727780 !important; }
         .ct-open {
           transition: background 0.13s;
         }
@@ -550,7 +550,7 @@ function CreateTimetableModal({
           </div>
           <button onClick={onClose} style={{
             width: 28, height: 28, borderRadius: 6, border: 'none',
-            background: 'none', cursor: 'pointer', color: '#9CA3AF',
+            background: 'none', cursor: 'pointer', color: '#727780',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginLeft: 12,
           }}>
@@ -584,7 +584,7 @@ function CreateTimetableModal({
                 onChange={e => setStartDate(e.target.value)}
               />
             </div>
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{fmt(startDate)}</div>
+            <div style={{ fontSize: 12, color: '#727780', marginTop: 4 }}>{fmt(startDate)}</div>
           </div>
           <div>
             <label style={lbl}>End date <span style={{ color: '#EF4444' }}>*</span></label>
@@ -594,7 +594,7 @@ function CreateTimetableModal({
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
             />
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{fmt(endDate)}</div>
+            <div style={{ fontSize: 12, color: '#727780', marginTop: 4 }}>{fmt(endDate)}</div>
           </div>
         </div>
 
@@ -708,7 +708,7 @@ function CreateTimetableModal({
             Cancel
           </button>
 
-          <span style={{ fontSize: 12, color: '#9CA3AF', flex: 1, textAlign: 'center' }}>
+          <span style={{ fontSize: 12, color: '#727780', flex: 1, textAlign: 'center' }}>
             You'll refine everything in the wizard →
           </span>
 
@@ -859,7 +859,7 @@ function EditTimetableModal({
           </div>
           <button onClick={onClose} style={{
             width: 28, height: 28, borderRadius: 6, border: 'none',
-            background: 'none', cursor: 'pointer', color: '#9CA3AF',
+            background: 'none', cursor: 'pointer', color: '#727780',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 12,
           }}><X size={16} /></button>
         </div>
@@ -894,7 +894,7 @@ function EditTimetableModal({
                 onFocus={e => (e.currentTarget.style.borderColor = '#7C6FE0')}
                 onBlur={e => (e.currentTarget.style.borderColor = '#D1D5DB')}
               />
-              <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{fmt(f.val)}</div>
+              <div style={{ fontSize: 12, color: '#727780', marginTop: 4 }}>{fmt(f.val)}</div>
             </div>
           ))}
         </div>
@@ -924,7 +924,7 @@ function EditTimetableModal({
               { label: 'To',   val: toGrade,   set: setToGrade,   ph: 'e.g. Class XII' },
             ] as const).map(f => (
               <div key={f.label}>
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>{f.label}</div>
+                <div style={{ fontSize: 11, color: '#727780', marginBottom: 4 }}>{f.label}</div>
                 <GradeInput value={f.val} onChange={f.set} style={selectStyle} placeholder={f.ph} />
               </div>
             ))}
@@ -968,7 +968,7 @@ function EditTimetableModal({
                   onChange={e => f.set(e.target.value)}
                   style={{
                     ...numInp,
-                    color: f.value ? '#13111E' : '#C4C0DC',
+                    color: f.value ? '#13111E' : '#767384',
                     borderColor: f.value ? '#E5E7EB' : '#EDE9FF',
                   }}
                   onFocus={e => (e.currentTarget.style.borderColor = '#7C6FE0')}
@@ -992,7 +992,7 @@ function EditTimetableModal({
             background: '#fff', fontSize: 14, fontWeight: 600, color: '#374151',
             cursor: 'pointer', fontFamily: 'inherit',
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.borderColor = '#9CA3AF' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.borderColor = '#727780' }}
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#D1D5DB' }}
           >Cancel</button>
           <button onClick={handleSave} style={{
@@ -1582,7 +1582,7 @@ export function DashboardPage() {
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E' }}>Your schedules</h2>
-              <span style={{ fontSize: 12, color: '#9CA3AF' }}>{ttList.length} total</span>
+              <span style={{ fontSize: 12, color: '#727780' }}>{ttList.length} total</span>
             </div>
 
             {syncIssue && (
@@ -1634,7 +1634,7 @@ export function DashboardPage() {
                 }}>
                   <CalendarDays size={28} color="#D1D5DB" style={{ margin: '0 auto 10px' }} />
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#6B7280', marginBottom: 4 }}>No schedules yet</div>
-                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>Click "+ New schedule" to create one</div>
+                  <div style={{ fontSize: 12, color: '#727780' }}>Click "+ New schedule" to create one</div>
                 </div>
               )}
               {ttList.map(tt => {
@@ -1669,7 +1669,7 @@ export function DashboardPage() {
                         {tt.name}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, color: '#9CA3AF' }}>{ttMeta(tt)}</span>
+                        <span style={{ fontSize: 12, color: '#727780' }}>{ttMeta(tt)}</span>
                         {tt.status === 'draft' && tt.wizardStep > 0 && (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -1732,7 +1732,7 @@ export function DashboardPage() {
                     {/* Edit button — all rows */}
                     <button
                       onClick={() => setEditingTT(tt)}
-                      title="Edit schedule settings"
+                      title="Edit schedule settings" aria-label="Edit schedule settings"
                       style={{
                         width: 28, height: 28, borderRadius: 6, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1748,7 +1748,7 @@ export function DashboardPage() {
                     {/* Duplicate button — all rows */}
                     <button
                       onClick={() => handleDuplicate(tt)}
-                      title="Duplicate schedule"
+                      title="Duplicate schedule" aria-label="Duplicate schedule"
                       style={{
                         width: 28, height: 28, borderRadius: 6, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1764,7 +1764,7 @@ export function DashboardPage() {
                     {/* Delete button — all rows */}
                     <button
                       onClick={() => setConfirmDelete(confirmDelete === tt.id ? null : tt.id)}
-                      title="Delete schedule"
+                      title="Delete schedule" aria-label="Delete schedule"
                       style={{
                         width: 28, height: 28, borderRadius: 6, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1813,7 +1813,7 @@ export function DashboardPage() {
                   }}>
                     <div style={{ marginBottom: 12 }}>{qa.icon}</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E', marginBottom: 4 }}>{qa.title}</div>
-                    <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.55 }}>{qa.desc}</div>
+                    <div style={{ fontSize: 12, color: '#727780', lineHeight: 1.55 }}>{qa.desc}</div>
                   </div>
                 </a>
               ))}

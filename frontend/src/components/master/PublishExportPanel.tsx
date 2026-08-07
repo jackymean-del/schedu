@@ -262,7 +262,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             <div style={{ fontSize: 14, fontWeight: 800, color: '#13111E', letterSpacing: '-0.2px' }}>
               Publish &amp; Export
             </div>
-            <div style={{ fontSize: 10.5, color: '#8B87AD', marginTop: 1 }}>
+            <div style={{ fontSize: 10.5, color: '#767393', marginTop: 1 }}>
               Choose formats, then click Export
             </div>
           </div>
@@ -271,7 +271,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             style={{
               width: 28, height: 28, borderRadius: 7,
               border: '1px solid #ECEAFB', background: '#FAFAFE',
-              color: '#8B87AD', cursor: 'pointer',
+              color: '#767393', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
             title="Close"
@@ -286,7 +286,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
           {/* Format selector grid */}
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: '#8B87AD', marginBottom: 10,
+            textTransform: 'uppercase', color: '#767393', marginBottom: 10,
           }}>
             Export formats
           </div>
@@ -315,7 +315,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
                   <div style={{
                     width: 36, height: 36, borderRadius: 9, flexShrink: 0,
                     background: active ? `${fmt.accent}22` : '#F0EEF8',
-                    color: active ? fmt.accent : '#8B87AD',
+                    color: active ? fmt.accent : '#767393',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {isDone
@@ -334,7 +334,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
                       {fmt.label}
                     </div>
                     <div style={{
-                      fontSize: 10, color: active ? fmt.accent : '#8B87AD',
+                      fontSize: 10, color: active ? fmt.accent : '#767393',
                       marginTop: 2, fontWeight: 500,
                     }}>
                       {fmt.sublabel}
@@ -362,7 +362,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
           {/* ─── Cell options ─── */}
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: '#8B87AD', marginBottom: 10,
+            textTransform: 'uppercase', color: '#767393', marginBottom: 10,
           }}>
             Cell content
           </div>
@@ -389,7 +389,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, width: '100%',
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 10, fontWeight: 700, color: '#8B87AD', padding: 0, marginBottom: 8,
+              fontSize: 10, fontWeight: 700, color: '#767393', padding: 0, marginBottom: 8,
               fontFamily: 'inherit',
             }}
           >
@@ -451,7 +451,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
           display: 'flex', alignItems: 'center', gap: 10,
           flexShrink: 0, background: '#FAFAFE',
         }}>
-          <span style={{ flex: 1, fontSize: 10.5, color: '#8B87AD' }}>
+          <span style={{ flex: 1, fontSize: 10.5, color: '#767393' }}>
             {selected.size === 0
               ? 'Select at least one format'
               : `${selected.size} format${selected.size !== 1 ? 's' : ''} selected`}
@@ -505,7 +505,7 @@ function ToggleChip({
         padding: '6px 12px', borderRadius: 20,
         border: `1.5px solid ${value ? '#7C6FE0' : '#D8D2FF'}`,
         background: value ? '#EDE9FF' : '#FAFAFE',
-        color: value ? '#5B4FBA' : '#8B87AD',
+        color: value ? '#5B4FBA' : '#767393',
         fontSize: 11, fontWeight: 600,
         cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit',
@@ -534,7 +534,7 @@ function SummaryRow({ label, value, note }: { label: string; value: number; note
         fontFamily: "'DM Mono', monospace", fontWeight: 700, color: '#13111E',
         minWidth: 32, textAlign: 'right',
       }}>{value}</span>
-      <span style={{ color: '#8B87AD', minWidth: 160 }}>{note}</span>
+      <span style={{ color: '#767393', minWidth: 160 }}>{note}</span>
     </div>
   )
 }

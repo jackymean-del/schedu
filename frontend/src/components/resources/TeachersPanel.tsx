@@ -227,7 +227,7 @@ function SubjectAssignmentCell({ teacher, subjects, classOpts, onUpdateMappings 
   return (
     <div style={{ minWidth: 0 }}>
       {mappings.length === 0 && (
-        <span style={{ fontSize: 11, color: '#C4C0DC', fontStyle: 'italic', paddingLeft: 2 }}>— not assigned —</span>
+        <span style={{ fontSize: 11, color: '#767384', fontStyle: 'italic', paddingLeft: 2 }}>— not assigned —</span>
       )}
       {mappings.map((m, i) => (
         <SubjectLine key={m.subject + i} mapping={m}
@@ -778,7 +778,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#8B87AD',
+            color: sortAZ ? '#7C6FE0' : '#767393',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
@@ -788,11 +788,11 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             title={allRoleExpanded ? 'Collapse all roles' : 'Expand all roles'}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
-              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#8B87AD',
+              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#767393',
               fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#8B87AD' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#767393' }}
           >
             {allRoleExpanded ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
             {allRoleExpanded ? 'Collapse' : 'Expand'}
@@ -949,7 +949,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
               ))}
               {filtered.length === 0 && search && (
                 <tr>
-                  <td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>
+                  <td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#767384', padding: '22px 12px' }}>
                     No teachers match "{search}"
                   </td>
                 </tr>

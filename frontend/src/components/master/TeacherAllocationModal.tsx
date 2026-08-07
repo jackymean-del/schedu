@@ -174,7 +174,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
             </div>
           </div>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#8B87AD', display: 'flex',
+            background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#767393', display: 'flex',
           }}>
             <X size={18} />
           </button>
@@ -211,7 +211,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#8B87AD' }}>No sections defined.</td></tr>
+                <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#767393' }}>No sections defined.</td></tr>
               )}
               {Array.from(gradeGroups.entries()).map(([grade, gradeRows]) => {
                 // Grade-level aggregates
@@ -250,7 +250,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                       </td>
                       {/* Grade others total */}
                       <td style={{ padding: '6px', textAlign: 'center', fontFamily: "'DM Mono', monospace",
-                        fontSize: 11, color: '#8B87AD' }}>
+                        fontSize: 11, color: '#767393' }}>
                         {gradeOthers || '—'}
                       </td>
                       {/* Grade batch input */}
@@ -278,7 +278,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                           <span style={{
                             fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                            color: gradeOver ? '#DC2626' : gradeMatch ? '#16A34A' : '#8B87AD',
+                            color: gradeOver ? '#DC2626' : gradeMatch ? '#16A34A' : '#767393',
                             display: 'inline-flex', alignItems: 'center', gap: 3,
                           }}>
                             {gradeOver  && <AlertTriangle size={10} />}
@@ -338,7 +338,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                         <td style={{ padding: '8px 6px', textAlign: 'center', fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>
                           {r.target || '—'}
                         </td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontFamily: "'DM Mono', monospace", color: '#8B87AD' }}>
+                        <td style={{ padding: '8px 6px', textAlign: 'center', fontFamily: "'DM Mono', monospace", color: '#767393' }}>
                           {r.otherTeachers || '—'}
                         </td>
                         <td style={{ padding: '4px 6px', textAlign: 'center' }}>
@@ -367,7 +367,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                               color: status === 'over' ? '#DC2626'
                                 : status === 'match' ? '#16A34A'
                                 : status === 'partial' ? '#D4920E'
-                                : '#8B87AD',
+                                : '#767393',
                             }}>
                               {status === 'over'    && <AlertTriangle size={11} />}
                               {status === 'match'   && <CheckCircle2 size={11} />}
@@ -405,7 +405,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
           padding: '12px 20px', borderTop: '1px solid #ECEAFB',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         }}>
-          <div style={{ fontSize: 11, color: '#8B87AD' }}>
+          <div style={{ fontSize: 11, color: '#767393' }}>
             {hasUnsaved
               ? <span style={{ color: '#D4920E', fontWeight: 700 }}>Unsaved changes</span>
               : 'No changes'}

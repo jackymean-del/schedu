@@ -142,7 +142,7 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
         }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>{row.label}</div>
-            <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>{row.hint}</div>
+            <div style={{ fontSize: 11.5, color: '#777391', marginTop: 1 }}>{row.hint}</div>
           </div>
           <div>
             <input
@@ -156,7 +156,7 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
               {TERM_SUGGESTIONS[row.key].map(s => <option key={s} value={s} />)}
             </datalist>
           </div>
-          <div style={{ fontSize: 12, color: '#8B87AD' }}>
+          <div style={{ fontSize: 12, color: '#767393' }}>
             plural: <strong style={{ color: '#4B5275' }}>{plural(terms[row.key] || TERM_SUGGESTIONS[row.key][0])}</strong>
           </div>
         </div>
@@ -236,7 +236,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
             </option>
           ))}
         </select>
-        <div style={{ fontSize: 11, color: '#9A95BC', marginTop: 4 }}>
+        <div style={{ fontSize: 11, color: '#777391', marginTop: 4 }}>
           {autoDetected
             ? `Detected from your device’s timezone — confirm or change it. Nothing is sent anywhere to work this out.`
             : `Taken from your sign-up details. Change it here if your school follows a different system.`}
@@ -291,10 +291,10 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
                   <tr key={band}>
                     <td style={{ ...td, textAlign: 'left' }}>{BAND_LABELS[band]}</td>
                     <td style={td}>{sHrs}</td>
-                    <td style={{ ...td, color: t?.usable ? '#13111E' : '#9A95BC' }}>
+                    <td style={{ ...td, color: t?.usable ? '#13111E' : '#777391' }}>
                       {t ? t.hours : '—'}
                     </td>
-                    <td style={{ ...td, textAlign: 'left', fontSize: 11, color: '#8B87AD' }}>
+                    <td style={{ ...td, textAlign: 'left', fontSize: 11, color: '#767393' }}>
                       {t?.usable ? 'Net teaching time' : 'Total incl. prep — not a teaching cap'}
                     </td>
                   </tr>
@@ -303,7 +303,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
             </tbody>
           </table>
         </div>
-        <p style={{ fontSize: 11, color: '#9A95BC', margin: '6px 0 0' }}>
+        <p style={{ fontSize: 11, color: '#777391', margin: '6px 0 0' }}>
           Term-time averages (annual hours ÷ {ref?.weeksPerYear ?? 38} teaching weeks). Source: {ref?.sourceNote ?? 'OECD Education at a Glance'}.
           {' '}These are the policy defaults — the planner uses them unless you set a custom norm below.
         </p>
@@ -320,7 +320,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4' }}>In effect — your school</div>
-          <span style={{ fontSize: 11, color: '#8B87AD' }}>A custom value always wins over the national figure.</span>
+          <span style={{ fontSize: 11, color: '#767393' }}>A custom value always wins over the national figure.</span>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
@@ -343,7 +343,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
                     <td style={{ ...td, fontWeight: isCustom ? 700 : 400, color: isCustom ? '#4B41C4' : '#13111E' }}>
                       {isCustom ? custom : def}
                     </td>
-                    <td style={{ ...td, textAlign: 'left', color: isCustom ? '#4B41C4' : '#8B87AD' }}>
+                    <td style={{ ...td, textAlign: 'left', color: isCustom ? '#4B41C4' : '#767393' }}>
                       {isCustom ? 'Custom' : 'National'}
                     </td>
                   </tr>
@@ -354,7 +354,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
                 <td style={{ ...td, fontWeight: teacherMaxHoursWeek != null ? 700 : 400, color: teacherMaxHoursWeek != null ? '#4B41C4' : '#13111E' }}>
                   {teacherMaxHoursWeek ?? teacherDefault}
                 </td>
-                <td style={{ ...td, textAlign: 'left', color: teacherMaxHoursWeek != null ? '#4B41C4' : '#8B87AD' }}>
+                <td style={{ ...td, textAlign: 'left', color: teacherMaxHoursWeek != null ? '#4B41C4' : '#767393' }}>
                   {teacherMaxHoursWeek != null ? 'Custom' : 'National'} · ≈ {teacherPeriods} periods
                   {' '}({Math.round((teacherPeriods / daysPerWeek) * 10) / 10}/day)
                 </td>
@@ -365,7 +365,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
-        <span style={{ fontSize: 11.5, color: '#9A95BC', marginRight: 'auto' }}>
+        <span style={{ fontSize: 11.5, color: '#777391', marginRight: 'auto' }}>
           Applied to every schedule. Teacher hours convert to periods using your {periodMinutes}-min period length.
         </span>
         <button onClick={() => setWorkloadOpen(true)}
@@ -396,7 +396,7 @@ function Card({ title, subtitle, children }: { title: string; subtitle?: string;
   return (
     <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #ECE9FB', padding: 20 }}>
       <h2 style={{ fontSize: 15, fontWeight: 800, color: '#13111E', margin: 0 }}>{title}</h2>
-      {subtitle && <p style={{ fontSize: 12.5, color: '#8B87AD', margin: '4px 0 16px' }}>{subtitle}</p>}
+      {subtitle && <p style={{ fontSize: 12.5, color: '#767393', margin: '4px 0 16px' }}>{subtitle}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
     </section>
   )
@@ -405,7 +405,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label style={{ display: 'block' }}><div style={{ fontSize: 12, fontWeight: 600, color: '#4B5275', marginBottom: 5 }}>{label}</div>{children}</label>
 }
 function Row({ label, value }: { label: string; value: string }) {
-  return <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, padding: '6px 0', borderBottom: '1px solid #F3F1FB' }}><span style={{ color: '#8B87AD' }}>{label}</span><span style={{ color: '#13111E', fontWeight: 600 }}>{value}</span></div>
+  return <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, padding: '6px 0', borderBottom: '1px solid #F3F1FB' }}><span style={{ color: '#767393' }}>{label}</span><span style={{ color: '#13111E', fontWeight: 600 }}>{value}</span></div>
 }
 const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 11px', borderRadius: 9, border: '1px solid #E5E7EB', fontSize: 13.5, fontFamily: 'inherit', color: '#13111E', outline: 'none', background: '#fff' }
 const btnSecondary: React.CSSProperties = { padding: '9px 16px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', color: '#13111E', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }

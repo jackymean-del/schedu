@@ -165,9 +165,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </a>
           )}
-          <button onClick={toggle} title={open ? 'Collapse' : 'Expand'} className="as-icon" style={{
+          <button onClick={toggle} title={open ? 'Collapse' : 'Expand'} aria-label={open ? 'Collapse menu' : 'Expand menu'} aria-expanded={open} className="as-icon" style={{
             width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: 'none', border: 'none',
-            cursor: 'pointer', color: '#8B87AD', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: '#767393', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {open ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
@@ -178,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {SECTIONS.map((section, si) => (
             <div key={section.heading} style={{ marginBottom: si < SECTIONS.length - 1 ? 10 : 0 }}>
               {open
-                ? <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: '#B5B0CF', padding: '10px 10px 4px', userSelect: 'none' }}>{section.heading}</div>
+                ? <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: '#777489', padding: '10px 10px 4px', userSelect: 'none' }}>{section.heading}</div>
                 : si > 0 && <div style={{ height: 1, background: '#F3F1FB', margin: '8px 10px' }} />}
               {section.items.map(item => {
                 const isActive = active === item.href
@@ -195,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       background: isActive ? '#EDE9FF' : 'none', color: isActive ? '#7C6FE0' : '#4B5563',
                       overflow: 'hidden', minWidth: 0,
                     }}>
-                    <Icon size={18} style={{ flexShrink: 0, color: isActive ? '#7C6FE0' : '#8B87AD' }} />
+                    <Icon size={18} style={{ flexShrink: 0, color: isActive ? '#7C6FE0' : '#767393' }} />
                     {open && <span style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, whiteSpace: 'nowrap' }}>{item.label}</span>}
                   </a>
                 )
@@ -215,12 +215,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {open && (
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name ?? 'User'}</div>
-                <div style={{ fontSize: 11, color: '#9CA3AF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email ?? ''}</div>
+                <div style={{ fontSize: 11, color: '#727780', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email ?? ''}</div>
               </div>
             )}
             {open && (
-              <button onClick={() => { logout(); window.location.href = '/login' }} title="Log out" className="as-icon"
-                style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => { logout(); window.location.href = '/login' }} title="Log out" aria-label="Log out" className="as-icon"
+                style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#727780', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <LogOut size={15} />
               </button>
             )}

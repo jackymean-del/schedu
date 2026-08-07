@@ -69,7 +69,7 @@ export function OrPrioritySuggestion({
         <Shuffle size={14} color="#7C6FE0" />
         <div style={{ fontSize: 13, fontWeight: 800, color: '#13111E' }}>Which subject needs the slot?</div>
       </div>
-      <p style={{ fontSize: 11.5, color: '#8B87AD', margin: '0 0 10px' }}>
+      <p style={{ fontSize: 11.5, color: '#767393', margin: '0 0 10px' }}>
         Based on live syllabus coverage — the subject furthest from finishing is listed first.
         This is a recommendation, not a rule: you still choose what runs.
       </p>
@@ -81,7 +81,7 @@ export function OrPrioritySuggestion({
             <div key={r.key} style={{ border: '1px solid #ECE9FB', borderRadius: 9, padding: '9px 11px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#4B41C4' }}>{r.group}</span>
-                <span style={{ fontSize: 11.5, color: '#8B87AD' }}>· {r.section}</span>
+                <span style={{ fontSize: 11.5, color: '#767393' }}>· {r.section}</span>
                 <div style={{ flex: 1 }} />
                 <span style={{ fontSize: 11, color: '#067647', fontWeight: 700 }}>
                   Suggest: {top.subject}
@@ -95,7 +95,7 @@ export function OrPrioritySuggestion({
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 10, fontWeight: 800,
                       background: i === 0 ? '#DCFCE7' : '#F5F2FF',
-                      color: i === 0 ? '#067647' : '#8B87AD',
+                      color: i === 0 ? '#067647' : '#767393',
                     }}>{i + 1}</span>
                     <span style={{ fontWeight: i === 0 ? 700 : 500, color: '#13111E', minWidth: 120 }}>{s.subject}</span>
                     {s.hasPlan ? (
@@ -108,7 +108,7 @@ export function OrPrioritySuggestion({
                         </span>
                       </>
                     ) : (
-                      <span style={{ color: '#9A95BC', fontStyle: 'italic' }}>no syllabus recorded — not ranked</span>
+                      <span style={{ color: '#777391', fontStyle: 'italic' }}>no syllabus recorded — not ranked</span>
                     )}
                   </div>
                 ))}
@@ -118,7 +118,7 @@ export function OrPrioritySuggestion({
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 10, fontSize: 11, color: '#8B87AD' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 10, fontSize: 11, color: '#767393' }}>
         <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
         <span>
           Record required hours or chapters on the <a href="/syllabus" style={{ color: '#7C6FE0', fontWeight: 700 }}>Syllabus</a> page

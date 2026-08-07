@@ -306,7 +306,7 @@ export function ConflictResolutionWizard({
     <Backdrop onClose={onClose}>
       {/* Progress bar */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10.5, color: '#8B87AD' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10.5, color: '#767393' }}>
           <span style={{ fontWeight: 700, color: '#7C6FE0' }}>
             Conflict {currentIdx + 1} of {conflicts.length}
           </span>
@@ -502,7 +502,7 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
           style={{
             position: 'absolute' as const, top: 14, right: 14,
             background: 'none', border: 'none', cursor: 'pointer',
-            color: '#8B87AD', padding: 4, borderRadius: 6, lineHeight: 1,
+            color: '#767393', padding: 4, borderRadius: 6, lineHeight: 1,
           }}
           title="Close wizard"
         >

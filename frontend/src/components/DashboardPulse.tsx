@@ -35,7 +35,7 @@ interface Props {
 
 const TONE: Record<PulseState, { dot: string; glow: string; wash: string }> = {
   setup:     { dot: '#7C6FE0', glow: 'rgba(124,111,224,0.28)', wash: 'linear-gradient(120deg,#FBFAFF,#F3F0FF)' },
-  rest:      { dot: '#9CA3AF', glow: 'rgba(156,163,175,0.22)', wash: 'linear-gradient(120deg,#FBFBFC,#F4F5F7)' },
+  rest:      { dot: '#727780', glow: 'rgba(156,163,175,0.22)', wash: 'linear-gradient(120deg,#FBFBFC,#F4F5F7)' },
   attention: { dot: '#EA580C', glow: 'rgba(234,88,12,0.26)',   wash: 'linear-gradient(120deg,#FFFDFB,#FFF4EC)' },
   covered:   { dot: '#2563EB', glow: 'rgba(37,99,235,0.22)',   wash: 'linear-gradient(120deg,#FBFCFF,#EEF4FF)' },
   clear:     { dot: '#16A34A', glow: 'rgba(22,163,74,0.22)',   wash: 'linear-gradient(120deg,#FBFEFC,#EEFBF2)' },
@@ -148,7 +148,7 @@ export function DashboardPulse(p: Props) {
                 {p.conflicts} conflict{s(p.conflicts)} <ArrowRight size={12} />
               </a>
             ) : (
-              <span style={{ fontSize: 12.5, color: '#9CA3AF', fontWeight: 600 }}>No conflicts</span>
+              <span style={{ fontSize: 12.5, color: '#727780', fontWeight: 600 }}>No conflicts</span>
             )}
             {p.liveNow && (
               <>

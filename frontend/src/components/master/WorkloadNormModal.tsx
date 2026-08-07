@@ -271,14 +271,14 @@ export function WorkloadNormModal({
                   all: 'unset', cursor: 'pointer', padding: '5px 13px', borderRadius: 7,
                   fontSize: 12, fontWeight: 700,
                   background: scope === s ? '#fff' : 'transparent',
-                  color: scope === s ? '#4B41C4' : '#8B87AD',
+                  color: scope === s ? '#4B41C4' : '#767393',
                   boxShadow: scope === s ? '0 1px 3px rgba(76,65,196,0.14)' : 'none',
                 }}>
                 {SCOPE_LABELS[s]}
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: '#9A95BC', marginBottom: 12 }}>{SCOPE_HINTS[scope]}</div>
+          <div style={{ fontSize: 11, color: '#777391', marginBottom: 12 }}>{SCOPE_HINTS[scope]}</div>
 
           {/* Unit + span switches — the same four ways of stating a load the
               per-teacher caps accept, so nobody converts by hand. Subject rows
@@ -286,7 +286,7 @@ export function WorkloadNormModal({
           <div style={{ display: 'flex', gap: 14, marginBottom: 13, flexWrap: 'wrap', alignItems: 'center' }}>
             {scope === 'subject' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#8B87AD' }}>Class</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#767393' }}>Class</span>
                 <select
                   value={activeClass}
                   onChange={e => { setSubjectClass(e.target.value); setDraft({}) }}
@@ -306,7 +306,7 @@ export function WorkloadNormModal({
               </>
             )}
             <div style={{ flex: 1 }} />
-            <span style={{ fontSize: 10.5, color: '#9A95BC' }}>
+            <span style={{ fontSize: 10.5, color: '#777391' }}>
               1 period = {periodMinutes} min · {workDays}-day week
             </span>
           </div>
@@ -329,7 +329,7 @@ export function WorkloadNormModal({
                 return (
                   <tr key={r.key} style={{ borderTop: '1px solid #F1EFFA' }}>
                     <td style={{ ...td, fontWeight: 600, color: '#13111E' }}>{r.label}</td>
-                    <td style={{ ...td, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: '#8B87AD' }}>
+                    <td style={{ ...td, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: '#767393' }}>
                       {r.isSubject ? (r.normPeriods ? `${r.normPeriods}p` : '—') : show(r.norm)}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
@@ -355,7 +355,7 @@ export function WorkloadNormModal({
                         <button
                           onClick={() => setDraft(d => ({ ...d, [r.key]: '' }))}
                           title="Follow the national norm again"
-                          style={{ all: 'unset', cursor: 'pointer', color: '#9A95BC', display: 'inline-flex' }}>
+                          style={{ all: 'unset', cursor: 'pointer', color: '#777391', display: 'inline-flex' }}>
                           <RotateCcw size={12} />
                         </button>
                       )}
@@ -366,7 +366,7 @@ export function WorkloadNormModal({
             </tbody>
           </table>
 
-          <p style={{ fontSize: 11.5, color: '#8B87AD', margin: '12px 0 0', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11.5, color: '#767393', margin: '12px 0 0', lineHeight: 1.5 }}>
             Leave a field blank to follow {scope === 'band' ? 'the national norm'
               : scope === 'class' ? "its stage's figure"
               : 'the curriculum norm'}.
@@ -404,7 +404,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
 }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#8B87AD' }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#767393' }}>{label}</span>
       <span style={{ display: 'inline-flex', border: '1px solid #E0DBF2', borderRadius: 7, overflow: 'hidden' }}>
         {options.map(([v, text]) => (
           <button key={v} onClick={() => onChange(v)}
@@ -412,7 +412,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
               all: 'unset', cursor: 'pointer', padding: '3px 11px',
               fontSize: 11, fontWeight: 700,
               background: value === v ? P : '#fff',
-              color: value === v ? '#fff' : '#8B87AD',
+              color: value === v ? '#fff' : '#767393',
             }}>
             {text}
           </button>
@@ -423,7 +423,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
 }
 
 const th: React.CSSProperties = {
-  padding: '7px 10px', fontSize: 10, fontWeight: 800, color: '#8B87AD',
+  padding: '7px 10px', fontSize: 10, fontWeight: 800, color: '#767393',
   textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left',
   // Sticky within the scrolling body — a long subject list otherwise scrolls
   // its own column headings away, leaving three unlabelled numbers.

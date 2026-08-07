@@ -407,7 +407,7 @@ export function ReviewDashboard({
             return (
               <div key={b.band} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ width: 90, fontSize: 11, fontWeight: 700, color: '#13111E', textTransform: 'capitalize' as const }}>
-                  {b.band} <span style={{ color: '#8B87AD', fontWeight: 500 }}>({b.sectionsCount})</span>
+                  {b.band} <span style={{ color: '#767393', fontWeight: 500 }}>({b.sectionsCount})</span>
                 </span>
                 <div style={{ flex: 1, height: 14, background: '#F5F2FF', borderRadius: 4, overflow: 'hidden', position: 'relative' as const }}>
                   <div style={{
@@ -506,7 +506,7 @@ export function ReviewDashboard({
                 <span style={{ color: '#4B5275' }}>
                   {reoptimizeResult.reassignedCount} slot{reoptimizeResult.reassignedCount !== 1 ? 's' : ''} reassigned
                 </span>
-                <span style={{ color: '#8B87AD', fontFamily: "'DM Mono', monospace" }}>
+                <span style={{ color: '#767393', fontFamily: "'DM Mono', monospace" }}>
                   stddev: {reoptimizeResult.stddevBefore.toFixed(2)} → {reoptimizeResult.stddevAfter.toFixed(2)}
                 </span>
               </>
@@ -517,7 +517,7 @@ export function ReviewDashboard({
             )}
             <button
               onClick={() => { setReoptimizeResult(null) }}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#8B87AD', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: '0 2px' }}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#767393', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: '0 2px' }}
               title="Dismiss"
             >×</button>
           </div>
@@ -671,7 +671,7 @@ export function ReviewDashboard({
               <IssueRow key={`p${i}`} severity="soft" label={p.constraint} desc={p.details} weight={p.penalty} />
             ))}
             {softPenalties.length > 30 && (
-              <div style={{ fontSize: 10.5, color: '#8B87AD', padding: '4px 8px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: 10.5, color: '#767393', padding: '4px 8px', textAlign: 'center' as const }}>
                 … +{softPenalties.length - 30} more
               </div>
             )}
@@ -709,7 +709,7 @@ export function ReviewDashboard({
           <Card
             title="Schedule Gaps"
             icon={<Ban size={14} />}
-            accent={hardSlots.length > 0 ? '#D4920E' : '#8B87AD'}
+            accent={hardSlots.length > 0 ? '#D4920E' : '#767393'}
           >
             {/* Summary row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' as const }}>
@@ -739,7 +739,7 @@ export function ReviewDashboard({
                   <BlockedRow key={`h${i}`} slot={slot} periods={periods} />
                 ))}
                 {hardSlots.length > 40 && (
-                  <div style={{ fontSize: 10.5, color: '#8B87AD', padding: '4px 8px', textAlign: 'center' as const }}>
+                  <div style={{ fontSize: 10.5, color: '#767393', padding: '4px 8px', textAlign: 'center' as const }}>
                     … +{hardSlots.length - 40} more
                   </div>
                 )}
@@ -893,7 +893,7 @@ function BlockedRow({ slot, periods }: { slot: BlockedSlot; periods: Period[] })
           💡 {blockedRemedy(primary.category)}
         </div>
         {slot.reasons.length > 1 && (
-          <div style={{ fontSize: 10, color: '#8B87AD', marginTop: 3 }}>
+          <div style={{ fontSize: 10, color: '#767393', marginTop: 3 }}>
             +{slot.reasons.length - 1} additional reason{slot.reasons.length - 1 !== 1 ? 's' : ''}
           </div>
         )}
@@ -948,7 +948,7 @@ function Stat({ icon, color, label, value }: { icon: React.ReactNode; color: str
       </div>
       <div>
         <div style={{ fontSize: 18, fontWeight: 800, color: '#13111E', lineHeight: 1, fontFamily: "'DM Mono', monospace" }}>{value}</div>
-        <div style={{ fontSize: 9.5, color: '#8B87AD', marginTop: 3, fontWeight: 600, letterSpacing: '0.04em' }}>{label}</div>
+        <div style={{ fontSize: 9.5, color: '#767393', marginTop: 3, fontWeight: 600, letterSpacing: '0.04em' }}>{label}</div>
       </div>
     </div>
   )
@@ -1044,7 +1044,7 @@ function IssueRow({ severity, label, desc, weight }: {
         }}>{severity.toUpperCase()}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>
-            {label} {weight ? <span style={{ color: '#8B87AD', fontWeight: 500 }}>(+{weight})</span> : null}
+            {label} {weight ? <span style={{ color: '#767393', fontWeight: 500 }}>(+{weight})</span> : null}
           </div>
           <div style={{ fontSize: 11, color: colors.fg, marginTop: 1 }}>{desc}</div>
         </div>
@@ -1070,14 +1070,14 @@ function IssueRow({ severity, label, desc, weight }: {
           padding: '8px 10px', borderTop: `1px dashed ${colors.border}`,
           background: '#fff',
         }}>
-          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#8B87AD', marginBottom: 6 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#767393', marginBottom: 6 }}>
             Suggested fixes
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
             {fixes.map(f => <FixCard key={f.id} fix={f} />)}
           </div>
           {!hasApplyableFix && (
-            <div style={{ fontSize: 10, color: '#8B87AD', fontStyle: 'italic' as const, marginTop: 6 }}>
+            <div style={{ fontSize: 10, color: '#767393', fontStyle: 'italic' as const, marginTop: 6 }}>
               No auto-fix available — guidance only.
             </div>
           )}
@@ -1117,7 +1117,7 @@ function FixCard({ fix }: { fix: FixSuggestion }) {
   const hasPreview = preview != null
   const scoreDelta = preview?.scoreDelta ?? 0
   const previewTone = !preview
-    ? '#8B87AD'
+    ? '#767393'
     : scoreDelta < 0 ? '#16A34A'
     : scoreDelta > 0 ? '#DC2626'
     : '#4B5275'
@@ -1193,7 +1193,7 @@ function FixCard({ fix }: { fix: FixSuggestion }) {
         }}>
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
-            textTransform: 'uppercase' as const, color: '#8B87AD', marginBottom: 6,
+            textTransform: 'uppercase' as const, color: '#767393', marginBottom: 6,
           }}>
             If applied · projected impact
           </div>
@@ -1223,7 +1223,7 @@ function FixCard({ fix }: { fix: FixSuggestion }) {
             <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px dashed #ECEAFB' }}>
               <div style={{
                 fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-                textTransform: 'uppercase' as const, color: '#8B87AD', marginBottom: 4,
+                textTransform: 'uppercase' as const, color: '#767393', marginBottom: 4,
               }}>
                 Teacher load changes
               </div>
@@ -1241,7 +1241,7 @@ function FixCard({ fix }: { fix: FixSuggestion }) {
                   }}>
                     <span style={{ flex: 1 }}>{d.teacher}</span>
                     <span>{d.before} → {d.after}</span>
-                    <span style={{ color: '#8B87AD' }}>/ {d.max}</span>
+                    <span style={{ color: '#767393' }}>/ {d.max}</span>
                   </div>
                 )
               })}
@@ -1273,5 +1273,5 @@ function FixCard({ fix }: { fix: FixSuggestion }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <div style={{ fontSize: 11, color: '#8B87AD', fontStyle: 'italic' as const, padding: '8px 0' }}>{text}</div>
+  return <div style={{ fontSize: 11, color: '#767393', fontStyle: 'italic' as const, padding: '8px 0' }}>{text}</div>
 }

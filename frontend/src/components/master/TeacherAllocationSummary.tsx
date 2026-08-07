@@ -209,7 +209,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 10, color: '#8B87AD' }}>
+        <span style={{ fontSize: 10, color: '#767393' }}>
           {rows.filter((r: any) => r.load > 0).length} active · {overloaded.length > 0
             ? <span style={{ color: '#DC2626', fontWeight: 700 }}>{overloaded.length} overloaded</span>
             : <span style={{ color: '#16A34A', fontWeight: 700 }}>No overloads</span>}
@@ -275,7 +275,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           gridTemplateColumns: '220px 170px 1fr',
           padding: '8px 16px', gap: 12,
           background: '#F8F7FF', borderBottom: '2px solid #E8E4FF',
-          fontSize: 10, fontWeight: 800, color: '#8B87AD',
+          fontSize: 10, fontWeight: 800, color: '#767393',
           letterSpacing: '0.1em', textTransform: 'uppercase' as const,
         }}>
           <button onClick={() => toggleSort('name')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'name' ? '#7C6FE0' : 'inherit' }}>
@@ -396,9 +396,9 @@ function NormDefaultsBar({
       <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 800, color: '#4B41C4' }}>
         {normCaps.perDay}p / day
       </span>
-      <span style={{ color: '#8B87AD' }}>over {workingDays} days</span>
+      <span style={{ color: '#767393' }}>over {workingDays} days</span>
       {hours != null && (
-        <span style={{ color: '#8B87AD' }}>≈ {hours} h/wk at {periodMinutes} min</span>
+        <span style={{ color: '#767393' }}>≈ {hours} h/wk at {periodMinutes} min</span>
       )}
       {/* Enter caps in whichever unit this school speaks. */}
       <span style={{ display: 'inline-flex', border: '1px solid #E0DBF2', borderRadius: 6, overflow: 'hidden' }}>
@@ -409,7 +409,7 @@ function NormDefaultsBar({
               all: 'unset', cursor: 'pointer', padding: '2px 9px',
               fontSize: 10, fontWeight: 700,
               background: unit === u ? '#7C6FE0' : '#fff',
-              color: unit === u ? '#fff' : '#8B87AD',
+              color: unit === u ? '#fff' : '#767393',
             }}>
             {u === 'periods' ? 'Periods' : 'Hours'}
           </button>
@@ -576,7 +576,7 @@ function TeacherRow({
               title="Reset both caps to the workload norm"
               style={{
                 all: 'unset', cursor: 'pointer', display: 'inline-flex',
-                alignItems: 'center', color: '#9A95BC', flexShrink: 0,
+                alignItems: 'center', color: '#777391', flexShrink: 0,
               }}>
               <RotateCcw size={10} />
             </button>

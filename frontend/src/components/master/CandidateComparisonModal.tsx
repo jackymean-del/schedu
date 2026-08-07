@@ -84,7 +84,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
             </div>
           </div>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#8B87AD', display: 'flex',
+            background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#767393', display: 'flex',
           }}>
             <X size={18} />
           </button>
@@ -94,7 +94,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
         <div style={{ flex: 1, overflowY: 'auto' as const, padding: '16px 20px', background: '#FAFAFE' }}>
 
           {ranked.length === 0 && (
-            <div style={{ padding: 40, textAlign: 'center', color: '#8B87AD' }}>
+            <div style={{ padding: 40, textAlign: 'center', color: '#767393' }}>
               No teachers available.
             </div>
           )}
@@ -107,7 +107,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
           {others.length > 0 && (
             <div style={{
               fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-              textTransform: 'uppercase' as const, color: '#8B87AD',
+              textTransform: 'uppercase' as const, color: '#767393',
               margin: '18px 0 8px',
             }}>
               Other candidates ({others.length})
@@ -126,7 +126,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
           padding: '12px 20px', borderTop: '1px solid #ECEAFB',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         }}>
-          <div style={{ fontSize: 11, color: '#8B87AD' }}>
+          <div style={{ fontSize: 11, color: '#767393' }}>
             Engine ranks by: <strong style={{ color: '#13111E' }}>Expertise + Continuity + Load fairness</strong>
           </div>
           <button onClick={onClose} style={{
@@ -185,7 +185,7 @@ function CandidateRow({
           width: isTop ? 36 : 28, height: isTop ? 36 : 28, borderRadius: '50%',
           background: isTop ? tone : '#F5F2FF',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: isTop ? '#fff' : '#8B87AD',
+          color: isTop ? '#fff' : '#767393',
           marginTop: isTop ? 2 : 0,
         }}>
           {isTop ? <Trophy size={16} /> : <Users size={14} />}
@@ -228,7 +228,7 @@ function CandidateRow({
                     {f.reason}
                   </span>
                 ))
-              : <em style={{ color: '#8B87AD' }}>{cand.explanation.summary}</em>}
+              : <em style={{ color: '#767393' }}>{cand.explanation.summary}</em>}
           </div>
 
           {/* Load bar + numbers */}
@@ -248,10 +248,10 @@ function CandidateRow({
               }} />
             </div>
             <span style={{ fontSize: 10.5, color: '#4B5275', fontFamily: "'DM Mono', monospace", minWidth: 100, textAlign: 'right' as const }}>
-              <span style={{ color: '#8B87AD' }}>{cand.currentLoad}</span>
+              <span style={{ color: '#767393' }}>{cand.currentLoad}</span>
               {' → '}
               <strong style={{ color: loadColor }}>{cand.projectedLoad}</strong>
-              <span style={{ color: '#8B87AD' }}> / {max}</span>
+              <span style={{ color: '#767393' }}> / {max}</span>
             </span>
           </div>
 

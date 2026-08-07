@@ -65,7 +65,7 @@ export function TermManager({ onSaved }: { onSaved?: () => void }) {
         <CalendarRange size={16} color={ACCENT} />
         <h3 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: '#2E2A4A' }}>Academic terms</h3>
       </div>
-      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#8B87AD', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#767393', lineHeight: 1.5 }}>
         Split the year into the periods you report on. The Syllabus page can then measure hours,
         pace and time remaining per term instead of across the whole schedule. Timetables are not
         affected — this only changes what the figures are measured over.
@@ -169,9 +169,9 @@ function TermRow({ term, isCurrent, onChange, onRemove }: {
         style={{ ...input, width: 130, fontWeight: 700 }}
       />
       <input type="date" value={term.start} onChange={e => onChange({ start: e.target.value })} style={input} />
-      <span style={{ color: '#8B87AD', fontSize: 12 }}>→</span>
+      <span style={{ color: '#767393', fontSize: 12 }}>→</span>
       <input type="date" value={term.end} onChange={e => onChange({ end: e.target.value })} style={input} />
-      <span style={{ fontSize: 11.5, color: '#8B87AD' }}>
+      <span style={{ fontSize: 11.5, color: '#767393' }}>
         {fmt(term.start)} – {fmt(term.end)} · {days} weekday{days === 1 ? '' : 's'}
       </span>
       {isCurrent && (
@@ -201,9 +201,9 @@ const input: React.CSSProperties = {
   fontSize: 12.5, fontFamily: 'inherit', color: '#2E2A4A', background: '#fff',
 }
 const fieldWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 }
-const fieldLabel: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8B87AD' }
+const fieldLabel: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#767393' }
 const emptyBox: React.CSSProperties = {
-  fontSize: 12, color: '#8B87AD', padding: '10px 12px', borderRadius: 10,
+  fontSize: 12, color: '#767393', padding: '10px 12px', borderRadius: 10,
   background: '#FBFAFF', border: '1px solid #ECE9FB', marginBottom: 14, lineHeight: 1.5,
 }
 const warnBox: React.CSSProperties = {
@@ -212,7 +212,7 @@ const warnBox: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.5,
 }
 const noteBox: React.CSSProperties = {
-  fontSize: 11.5, color: '#8B87AD', padding: '9px 12px', borderRadius: 10,
+  fontSize: 11.5, color: '#767393', padding: '9px 12px', borderRadius: 10,
   background: '#FBFAFF', border: '1px solid #ECE9FB', marginBottom: 12,
   display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.5,
 }

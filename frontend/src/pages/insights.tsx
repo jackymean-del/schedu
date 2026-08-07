@@ -136,7 +136,7 @@ export function InsightsPage() {
                   style={{ padding: '8px 15px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     background: tab === t.key ? '#7C6FE0' : 'transparent', color: tab === t.key ? '#fff' : '#4B5275' }}>
-                  <span style={{ color: tab === t.key ? '#fff' : '#8B87AD' }}>{t.icon}</span>{t.label}
+                  <span style={{ color: tab === t.key ? '#fff' : '#767393' }}>{t.icon}</span>{t.label}
                 </button>
               ))}
             </div>
@@ -224,7 +224,7 @@ function TrendsChart({ points, tall }: { points: TrendPoint[]; tall?: boolean })
         {[0, 0.25, 0.5, 0.75, 1].map(f => (
           <g key={f}>
             <line x1={PAD} x2={W - PAD} y1={PAD + f * (H - PAD * 2)} y2={PAD + f * (H - PAD * 2)} stroke="#F0EEFA" strokeWidth={1} />
-            <text x={PAD - 8} y={PAD + f * (H - PAD * 2) + 3} textAnchor="end" fontSize={9} fill="#B5B0CF">{Math.round(maxY * (1 - f))}</text>
+            <text x={PAD - 8} y={PAD + f * (H - PAD * 2) + 3} textAnchor="end" fontSize={9} fill="#777489">{Math.round(maxY * (1 - f))}</text>
           </g>
         ))}
         <path d={path('leaves')} fill="none" stroke="#EA580C" strokeWidth={2} strokeLinejoin="round" />
@@ -236,7 +236,7 @@ function TrendsChart({ points, tall }: { points: TrendPoint[]; tall?: boolean })
           </g>
         ))}
         {labelIdx.map(i => (
-          <text key={i} x={x(i)} y={H - PAD + 16} textAnchor="middle" fontSize={9} fill="#9A95BC">{fmtDate(points[i].date)}</text>
+          <text key={i} x={x(i)} y={H - PAD + 16} textAnchor="middle" fontSize={9} fill="#777391">{fmtDate(points[i].date)}</text>
         ))}
       </svg>
     </div>
@@ -263,9 +263,9 @@ function Stat({ icon, label, value, tint, red }: { icon: React.ReactNode; label:
 function Highlight({ label, value, sub, tint }: { label: string; value: string; sub: string; tint: string }) {
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16 }}>
-      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#9A95BC', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#777391', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 800, color: tint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: '#9A95BC', marginTop: 3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 12, color: '#777391', marginTop: 3 }}>{sub}</div>}
     </div>
   )
 }
@@ -284,7 +284,7 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
         <thead>
           <tr>{head.map((h, i) => (
-            <th key={h} style={{ textAlign: i === 0 ? 'left' : 'center', padding: '8px 10px', fontSize: 11, fontWeight: 800, color: '#9A95BC', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #F0EEFA', whiteSpace: 'nowrap' }}>{h}</th>
+            <th key={h} style={{ textAlign: i === 0 ? 'left' : 'center', padding: '8px 10px', fontSize: 11, fontWeight: 800, color: '#777391', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #F0EEFA', whiteSpace: 'nowrap' }}>{h}</th>
           ))}</tr>
         </thead>
         <tbody>
@@ -331,7 +331,7 @@ function Empty() {
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '52px 24px', textAlign: 'center' }}>
       <BarChart3 size={30} color="#C9C3EC" />
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '12px 0 6px' }}>No data yet</h3>
-      <p style={{ fontSize: 13, color: '#8B87AD', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar — analytics will build from there.</p>
+      <p style={{ fontSize: 13, color: '#767393', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar — analytics will build from there.</p>
       <a href="/calendar" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#7C6FE0', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>Go to Calendar</a>
     </div>
   )

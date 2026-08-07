@@ -120,7 +120,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
         .reg-input:focus { border-color: #7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
         .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; cursor: pointer; appearance: auto; transition: border-color 0.15s; }
         .reg-select:focus { border-color: #7C6FE0; }
-        .reg-google:hover { border-color: #9CA3AF !important; background: #F9FAFB !important; }
+        .reg-google:hover { border-color: #727780 !important; background: #F9FAFB !important; }
       `}</style>
 
       {/* LEFT SIDEBAR */}
@@ -256,7 +256,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
                 </button>
               </form>
 
-              <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12, color: '#727780', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
                 By signing up you agree to the{' '}
                 <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
                 <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Privacy Policy</a>.
@@ -264,7 +264,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
                 <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
-                <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 500 }}>or</span>
+                <span style={{ fontSize: 12, color: '#727780', fontWeight: 500 }}>or</span>
                 <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
               </div>
 

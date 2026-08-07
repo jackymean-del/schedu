@@ -34,7 +34,7 @@ export function ProfilePage() {
                 {user?.email ?? '—'}
               </div>
               {orgName && (
-                <div style={{ fontSize: 12.5, color: '#8B87AD', marginTop: 2 }}>{orgName}</div>
+                <div style={{ fontSize: 12.5, color: '#767393', marginTop: 2 }}>{orgName}</div>
               )}
             </div>
           </div>
@@ -49,7 +49,7 @@ export function ProfilePage() {
         {/* Manage via Clerk */}
         <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', marginBottom: 6 }}>Account management</div>
-          <p style={{ fontSize: 12.5, color: '#8B87AD', margin: '0 0 14px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 12.5, color: '#767393', margin: '0 0 14px', lineHeight: 1.6 }}>
             Change your password, manage connected accounts and security settings through your Clerk account portal.
           </p>
           <button
@@ -84,8 +84,8 @@ export function ProfilePage() {
 function Row({ icon, label, value, mono }: { icon: React.ReactNode; label: string; value: string; mono?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#FAF9FF', borderRadius: 8 }}>
-      <span style={{ color: '#8B87AD', flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: 12, color: '#8B87AD', width: 80, flexShrink: 0 }}>{label}</span>
+      <span style={{ color: '#767393', flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 12, color: '#767393', width: 80, flexShrink: 0 }}>{label}</span>
       <span style={{ fontSize: 12.5, color: '#13111E', fontWeight: 600, fontFamily: mono ? "'DM Mono', monospace" : 'inherit' }}>
         {value}
       </span>

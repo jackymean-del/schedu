@@ -245,7 +245,7 @@ export function ScopeMatrixModal({
               Where in the week is this {entityKind.toLowerCase()} <em style={{ color: '#7C6FE0' }}>structurally allowed</em>?
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#8B87AD', display: 'flex' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#767393', display: 'flex' }}>
             <X size={18} />
           </button>
         </div>
@@ -285,7 +285,7 @@ export function ScopeMatrixModal({
             <div ref={pickerRef} style={{ marginBottom: 14 }}>
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#8B87AD' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#767393' }}>
                   Apply to &nbsp;
                   <span style={{
                     fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 700,
@@ -300,7 +300,7 @@ export function ScopeMatrixModal({
                     All
                   </button>
                   <button onClick={() => setSelectedIds(new Set())}
-                    style={{ fontSize: 10.5, fontWeight: 700, color: '#8B87AD', border: '1px solid #ECEAFB', background: '#fff', borderRadius: 5, cursor: 'pointer', padding: '2px 8px' }}>
+                    style={{ fontSize: 10.5, fontWeight: 700, color: '#767393', border: '1px solid #ECEAFB', background: '#fff', borderRadius: 5, cursor: 'pointer', padding: '2px 8px' }}>
                     None
                   </button>
                 </div>
@@ -316,7 +316,7 @@ export function ScopeMatrixModal({
                   <label key={ent.id} style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '6px 10px', cursor: 'pointer', fontSize: 12,
-                    color: selectedIds.has(ent.id) ? '#13111E' : '#8B87AD',
+                    color: selectedIds.has(ent.id) ? '#13111E' : '#767393',
                     background: selectedIds.has(ent.id) ? '#F5F2FF' : 'transparent',
                     borderBottom: i < entities.length - 1 ? '1px solid #F5F2FF' : 'none',
                     transition: 'background 0.1s',
@@ -427,7 +427,7 @@ export function ScopeMatrixModal({
 
           {/* Note */}
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8B87AD', marginBottom: 5 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767393', marginBottom: 5 }}>
               Note (optional)
             </div>
             <input
@@ -448,7 +448,7 @@ export function ScopeMatrixModal({
           padding: '12px 20px', borderTop: '1px solid #ECEAFB',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         }}>
-          <div style={{ fontSize: 11, color: '#8B87AD' }}>
+          <div style={{ fontSize: 11, color: '#767393' }}>
             {Object.keys(cells).length === 0
               ? 'Unscoped — all slots allowed (default)'
               : <>Saving as <strong style={{ color: '#13111E' }}>scoped</strong> constraint set.</>}

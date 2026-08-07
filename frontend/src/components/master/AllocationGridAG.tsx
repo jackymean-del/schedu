@@ -266,7 +266,7 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
         color: value > 0 ? '#6358C4' : '#D5D0F0', cursor: value > 0 ? 'pointer' : 'default',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
       }}><Minus size={11} strokeWidth={2.5} /></button>
-      <span style={{ width: 18, textAlign: 'center', fontSize: 12, fontWeight: 700, color: value > 0 ? '#13111E' : '#C4C0DC', fontFamily: "'DM Mono', monospace" }}>
+      <span style={{ width: 18, textAlign: 'center', fontSize: 12, fontWeight: 700, color: value > 0 ? '#13111E' : '#767384', fontFamily: "'DM Mono', monospace" }}>
         {value}
       </span>
       <button onClick={() => bump(kind, +1)} style={{
@@ -323,7 +323,7 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
         ) : parsed.valid ? (
           <span style={{ color: '#15803D', fontWeight: 600 }}>
             {desc}
-            <span style={{ color: over ? '#DC2626' : '#8B87AD', fontWeight: 600 }}>
+            <span style={{ color: over ? '#DC2626' : '#767393', fontWeight: 600 }}>
               {' '}· class {newTotal}/{cap}{over ? ' — over capacity' : ''}
             </span>
           </span>
@@ -380,7 +380,7 @@ function ExportDropdown({ onCsv, onExcel }: { onCsv: () => void; onExcel: () => 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA', background: 'transparent', color: '#8B87AD', fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA', background: 'transparent', color: '#767393', fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
         Export <ChevronDown size={9} />
       </button>
       {open && (

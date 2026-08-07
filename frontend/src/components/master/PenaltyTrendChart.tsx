@@ -57,7 +57,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '4px 10px', borderRadius: 6,
         background: '#F8F7FF', border: '1px solid #ECEAFB',
-        fontSize: 10, color: '#8B87AD',
+        fontSize: 10, color: '#767393',
       }}>
         <Minus size={11} />
         <span>Trend appears after first fix</span>
@@ -188,7 +188,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
         </svg>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#4B5275' }}>
-          <span style={{ fontFamily: "'DM Mono', monospace", color: '#8B87AD' }}>{first}</span>
+          <span style={{ fontFamily: "'DM Mono', monospace", color: '#767393' }}>{first}</span>
           <span>→</span>
           <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 700, color: trendTone }}>{last}</span>
         </div>
@@ -222,7 +222,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
             }}>
               {hoveredPoint.score}
             </span>
-            <span style={{ fontSize: 9, color: '#8B87AD', fontWeight: 600 }}>pts</span>
+            <span style={{ fontSize: 9, color: '#767393', fontWeight: 600 }}>pts</span>
             {pointDelta !== null && (
               <span style={{
                 marginLeft: 'auto',

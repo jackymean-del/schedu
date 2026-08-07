@@ -2058,12 +2058,12 @@ function Toolbar({
         {tb.undoRedo && onUndo && (
           <button onClick={onUndo} disabled={!canUndo}
             style={{ ...btnGhost, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'not-allowed' }}
-            title="Undo (Ctrl+Z)"><Undo2 size={12} /></button>
+            title="Undo (Ctrl+Z)" aria-label="Undo"><Undo2 size={12} /></button>
         )}
         {tb.undoRedo && onRedo && (
           <button onClick={onRedo} disabled={!canRedo}
             style={{ ...btnGhost, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }}
-            title="Redo (Ctrl+Y)"><Redo2 size={12} /></button>
+            title="Redo (Ctrl+Y)" aria-label="Redo"><Redo2 size={12} /></button>
         )}
 
         {/* Import dropdown */}

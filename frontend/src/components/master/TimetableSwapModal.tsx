@@ -255,7 +255,7 @@ export function TimetableSwapModal({
             <div style={{ fontSize: 14, fontWeight: 800, color: '#13111E', letterSpacing: '-0.2px' }}>
               Edit Timetable
             </div>
-            <div style={{ fontSize: 10.5, color: '#8B87AD', marginTop: 1 }}>
+            <div style={{ fontSize: 10.5, color: '#767393', marginTop: 1 }}>
               Click a cell to pick it up, then click a target to swap or move
             </div>
           </div>
@@ -281,7 +281,7 @@ export function TimetableSwapModal({
             style={{
               width: 30, height: 30, borderRadius: 8,
               border: '1px solid #ECEAFB', background: '#FAFAFE',
-              color: '#8B87AD', cursor: 'pointer',
+              color: '#767393', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -303,7 +303,7 @@ export function TimetableSwapModal({
             </span>
             <LegendDot color="#DCFCE7" border="#86EFAC" label="Safe to place" />
             <LegendDot color="#FEF3C7" border="#FCD34D" label="Teacher clash" />
-            <span style={{ color: '#8B87AD' }}>Click same cell to deselect</span>
+            <span style={{ color: '#767393' }}>Click same cell to deselect</span>
             <button
               onClick={() => setHeld(null)}
               style={{
@@ -401,7 +401,7 @@ export function TimetableSwapModal({
           }}>
             <div style={{
               fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-              textTransform: 'uppercase', color: '#8B87AD', marginBottom: 6,
+              textTransform: 'uppercase', color: '#767393', marginBottom: 6,
             }}>
               Pending changes ({changes.length})
             </div>
@@ -420,7 +420,7 @@ export function TimetableSwapModal({
           display: 'flex', alignItems: 'center', gap: 8,
           flexShrink: 0, background: '#fff',
         }}>
-          <span style={{ flex: 1, fontSize: 10.5, color: '#8B87AD' }}>
+          <span style={{ flex: 1, fontSize: 10.5, color: '#767393' }}>
             {hasChanges
               ? `${changes.length} pending change${changes.length !== 1 ? 's' : ''}`
               : 'No changes yet — click a cell to begin'}
@@ -586,14 +586,14 @@ function ChangeRow({ change, index }: { change: PendingChange; index: number }) 
       <span style={{ fontWeight: 700, color: '#13111E' }}>{change.fromSubject}</span>
       {change.kind === 'swap' && (
         <>
-          <ArrowLeftRight size={10} color="#8B87AD" />
+          <ArrowLeftRight size={10} color="#767393" />
           <span style={{ fontWeight: 700, color: '#13111E' }}>{change.toSubject}</span>
         </>
       )}
       {change.kind === 'move' && (
-        <span style={{ color: '#8B87AD' }}>→</span>
+        <span style={{ color: '#767393' }}>→</span>
       )}
-      <span style={{ color: '#8B87AD', marginLeft: 'auto', fontFamily: "'DM Mono', monospace", fontSize: 10 }}>
+      <span style={{ color: '#767393', marginLeft: 'auto', fontFamily: "'DM Mono', monospace", fontSize: 10 }}>
         {fromLabel} ⟷ {toLabel}
       </span>
     </div>

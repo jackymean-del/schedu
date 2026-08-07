@@ -42,7 +42,7 @@ const STATUS_STYLE: Record<SlotStatus, { bg: string; border: string; text: strin
   available: {
     bg: '#FAFAFE',
     border: '#ECEAFB',
-    text: '#8B87AD',
+    text: '#767393',
     icon: <Circle size={10} />,
   },
   preferred: {
@@ -199,7 +199,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
             <div style={{ fontSize: 14, fontWeight: 800, color: '#13111E', letterSpacing: '-0.2px' }}>
               Teacher Availability
             </div>
-            <div style={{ fontSize: 10.5, color: '#8B87AD', marginTop: 1 }}>
+            <div style={{ fontSize: 10.5, color: '#767393', marginTop: 1 }}>
               Click to cycle: available → preferred → blocked  ·  Shift+click header/label to toggle entire column or row
             </div>
           </div>
@@ -221,7 +221,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
             style={{
               width: 30, height: 30, borderRadius: 8,
               border: '1px solid #ECEAFB', background: '#FAFAFE',
-              color: '#8B87AD', cursor: 'pointer',
+              color: '#767393', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -242,7 +242,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
           }}>
             <div style={{
               fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-              textTransform: 'uppercase', color: '#8B87AD',
+              textTransform: 'uppercase', color: '#767393',
               padding: '0 4px 8px',
             }}>
               Teachers ({staff.length})
@@ -312,7 +312,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
                 style={{
                   width: 26, height: 26, borderRadius: 6,
                   border: '1px solid #ECEAFB', background: '#fff',
-                  color: '#8B87AD', cursor: selectedTeacherIdx === 0 ? 'default' : 'pointer',
+                  color: '#767393', cursor: selectedTeacherIdx === 0 ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   opacity: selectedTeacherIdx === 0 ? 0.4 : 1,
                 }}
@@ -330,7 +330,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
                 style={{
                   width: 26, height: 26, borderRadius: 6,
                   border: '1px solid #ECEAFB', background: '#fff',
-                  color: '#8B87AD', cursor: selectedTeacherIdx === staff.length - 1 ? 'default' : 'pointer',
+                  color: '#767393', cursor: selectedTeacherIdx === staff.length - 1 ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   opacity: selectedTeacherIdx === staff.length - 1 ? 0.4 : 1,
                 }}
@@ -361,7 +361,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '5px 10px', borderRadius: 7,
                     border: '1px solid #ECEAFB', background: '#FAFAFE',
-                    color: '#8B87AD', fontSize: 10.5, fontWeight: 700,
+                    color: '#767393', fontSize: 10.5, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
@@ -472,7 +472,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
             <div style={{
               display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14,
             }}>
-              <span style={{ fontSize: 9.5, color: '#8B87AD', alignSelf: 'center', marginRight: 4 }}>
+              <span style={{ fontSize: 9.5, color: '#767393', alignSelf: 'center', marginRight: 4 }}>
                 Quick actions:
               </span>
               <BulkBtn label="Prefer all" onClick={() => {
@@ -517,7 +517,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
           display: 'flex', alignItems: 'center', gap: 10,
           flexShrink: 0, background: '#FAFAFE',
         }}>
-          <span style={{ flex: 1, fontSize: 10.5, color: '#8B87AD' }}>
+          <span style={{ flex: 1, fontSize: 10.5, color: '#767393' }}>
             Changes are saved automatically. Blocked slots are enforced by the solver on the next solve.
           </span>
           <button

@@ -68,7 +68,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
             <CalendarClock size={16} color="#7C6FE0" />
             <div>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', margin: 0 }}>Today</h2>
-              <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 1 }}>
+              <div style={{ fontSize: 12, color: '#727780', marginTop: 1 }}>
                 {DOW[today.getDay()]}, {MONTHS[today.getMonth()]} {today.getDate()}
               </div>
             </div>
@@ -93,7 +93,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
             <div style={{ fontSize: 13.5, fontWeight: 600, color: '#13111E', marginTop: 8 }}>
               All clear — {summary.periodsToday} period{summary.periodsToday !== 1 ? 's' : ''} running as scheduled
             </div>
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>No absences today.</div>
+            <div style={{ fontSize: 12, color: '#727780', marginTop: 3 }}>No absences today.</div>
           </div>
         ) : (
           <div style={{ padding: '10px 16px 14px' }}>
@@ -149,7 +149,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
             )}
             {summary.teachersOnLeave.length > 0 && (
               <div style={{ marginTop: summary.uncoveredSlots.length || summary.coveredSlots.length ? 14 : 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#727780', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   On leave today
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

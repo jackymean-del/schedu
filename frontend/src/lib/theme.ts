@@ -32,7 +32,7 @@ export const GRAY = {
   text:      '#111028',  // primary text
   textSoft:  '#374151',  // headings on cards
   textMuted: '#6B7280',  // secondary text
-  textFaint: '#9CA3AF',  // hints, placeholders
+  textFaint: '#727780',  // hints, placeholders
   border:    '#E5E7EB',
   borderSoft:'#F3F4F6',
   bg:        '#FAFAFA',

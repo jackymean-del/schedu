@@ -37,9 +37,9 @@ function EntryRow<T extends { id: string; name: string }>({
         <InlineEdit value={entry.name} onSave={(v) => v.trim() && v.trim() !== entry.name && onRename(v.trim())}
           style={{ fontWeight: 700, fontSize: 13 }} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, fontSize: 11, color: '#8B87AD' }}>
+      <div style={{ flex: 1, minWidth: 0, fontSize: 11, color: '#767393' }}>
         {usage.length === 0
-          ? <span style={{ fontStyle: 'italic', color: '#C4C0DC' }}>Not used by any active schedule</span>
+          ? <span style={{ fontStyle: 'italic', color: '#767384' }}>Not used by any active schedule</span>
           : <>Used in: {usage.join(', ')}</>}
       </div>
       <select value={mergePick} onChange={e => setMergePick(e.target.value)}
@@ -55,7 +55,7 @@ function EntryRow<T extends { id: string; name: string }>({
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6,
           border: `1.5px solid ${mergePick ? P_B : '#E4E0FF'}`, background: mergePick ? P_L : '#fff',
-          color: mergePick ? P_D : '#C4C0DC', fontSize: 11, fontWeight: 700,
+          color: mergePick ? P_D : '#767384', fontSize: 11, fontWeight: 700,
           cursor: mergePick ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
         }}>
         <Merge size={12} /> Merge
@@ -101,7 +101,7 @@ function DirectorySection<T extends { id: string; name: string }>({
         </span>
       </div>
       {entries.length === 0 ? (
-        <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 12, color: '#C4C0DC' }}>
+        <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 12, color: '#767384' }}>
           Nothing here yet — entries are added automatically as schedules use them.
         </div>
       ) : entries.map(entry => (
@@ -125,7 +125,7 @@ export function DirectoryPanel() {
 
   return (
     <div>
-      <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: 14, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 11.5, color: '#767393', marginBottom: 14, lineHeight: 1.6 }}>
         The single roster every schedule's Faculty/Venues tabs check against, so the same real
         teacher or room is recognized across schedules instead of guessed from a matching name.
         Renaming or merging here updates every active schedule that uses it.

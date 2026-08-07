@@ -175,7 +175,7 @@ export function MasterDataPage() {
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   transition: 'all 0.12s',
                 }}>
-                <span style={{ color: active ? '#fff' : '#8B87AD' }}>{t.icon}</span>
+                <span style={{ color: active ? '#fff' : '#767393' }}>{t.icon}</span>
                 {t.label}
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,

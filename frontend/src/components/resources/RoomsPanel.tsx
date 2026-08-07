@@ -647,7 +647,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#8B87AD',
+            color: sortAZ ? '#7C6FE0' : '#767393',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
@@ -719,7 +719,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
       </div>
 
       {/* Helper hint */}
-      <div style={{ flexShrink: 0, fontSize: 11, color: '#8B87AD', margin: '0 0 7px 2px', lineHeight: 1.5 }}>
+      <div style={{ flexShrink: 0, fontSize: 11, color: '#767393', margin: '0 0 7px 2px', lineHeight: 1.5 }}>
         Group rooms by <strong style={{ color: P_D }}>block / building / area</strong> so timetabling knows which classes share a location.
         Click a block name to rename it; use the pill beside a room to move it. Skipping this is fine — everything stays in “{DEFAULT_BLOCK}”.
       </div>
@@ -843,7 +843,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
                 )
               })}
               {grouped.size === 0 && search && (
-                <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '22px 12px' }}>No rooms match "{search}"</td></tr>
+                <tr><td colSpan={6} style={{ ...TD, textAlign: 'center', color: '#767384', padding: '22px 12px' }}>No rooms match "{search}"</td></tr>
               )}
             </tbody>
           </table>

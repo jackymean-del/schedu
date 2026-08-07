@@ -242,7 +242,7 @@ export function WizardPage() {
                   }}>
                     {done
                       ? <CheckCircle2 size={14} color="#fff" />
-                      : <span style={{ fontSize: 12, fontWeight: 700, color: active ? '#fff' : '#9CA3AF' }}>{n}</span>
+                      : <span style={{ fontSize: 12, fontWeight: 700, color: active ? '#fff' : '#727780' }}>{n}</span>
                     }
                   </div>
 
@@ -250,7 +250,7 @@ export function WizardPage() {
                   <div style={{
                     fontSize: 11,
                     fontWeight: active ? 600 : 400,
-                    color: active ? '#13111E' : done ? '#7C6FE0' : '#9CA3AF',
+                    color: active ? '#13111E' : done ? '#7C6FE0' : '#727780',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
                   }}>

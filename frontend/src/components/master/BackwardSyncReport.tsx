@@ -149,9 +149,9 @@ export function BackwardSyncReport({
           <ArrowLeftRight size={17} color="#7C6FE0" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E' }}>Backward Sync &amp; Allocation Report</div>
-            <div style={{ fontSize: 11.5, color: '#8B87AD' }}>What the current timetable implies for your Class &amp; Faculty allocation.</div>
+            <div style={{ fontSize: 11.5, color: '#767393' }}>What the current timetable implies for your Class &amp; Faculty allocation.</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B87AD' }}><X size={18} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#767393' }}><X size={18} /></button>
         </div>
 
         <div style={{ padding: '16px 20px' }}>

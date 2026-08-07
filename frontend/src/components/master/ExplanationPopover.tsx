@@ -143,7 +143,7 @@ export function ExplanationCard({
       }}>
         <div style={{
           fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
-          textTransform: 'uppercase' as const, color: '#8B87AD', marginBottom: 8,
+          textTransform: 'uppercase' as const, color: '#767393', marginBottom: 8,
         }}>
           Reasoning factors ({factors.length})
         </div>

@@ -211,7 +211,7 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
                 <span style={{ fontSize: 24, fontWeight: 900, color: '#13111E', fontFamily: "'DM Mono', monospace", letterSpacing: '-0.5px' }}>
                   {liveScore}
                 </span>
-                <span style={{ fontSize: 11, color: '#8B87AD' }}>
+                <span style={{ fontSize: 11, color: '#767393' }}>
                   total penalty points
                 </span>
                 {liveScore !== originalScore && (
@@ -255,7 +255,7 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
                             <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', background: c.bg, color: c.fg }}>
                               {label}
                             </span>
-                            <span style={{ fontSize: 10, color: '#8B87AD' }}>
+                            <span style={{ fontSize: 10, color: '#767393' }}>
                               {b.count} occurrence{b.count !== 1 ? 's' : ''}
                             </span>
                             <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, fontFamily: "'DM Mono', monospace", color: c.fg }}>
@@ -275,12 +275,12 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
               {/* ── TREND tab ── */}
               {tab === 'trend' && (
                 !trendData || trendData.length === 0 ? (
-                  <div style={{ padding: '20px 0', textAlign: 'center' as const, color: '#8B87AD', fontSize: 12 }}>
+                  <div style={{ padding: '20px 0', textAlign: 'center' as const, color: '#767393', fontSize: 12 }}>
                     Apply at least one fix to see constraint trends.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-                    <div style={{ fontSize: 10, color: '#8B87AD', marginBottom: 2 }}>
+                    <div style={{ fontSize: 10, color: '#767393', marginBottom: 2 }}>
                       Each row shows how a constraint's penalty changed across {history.filter(h => h.breakdown).length} snapshots.
                     </div>
                     {trendData.map(row => {
@@ -312,11 +312,11 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
 
                           {/* First → Last */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, flexShrink: 0 }}>
-                            <span style={{ fontFamily: "'DM Mono', monospace", color: '#8B87AD' }}>{row.first}</span>
+                            <span style={{ fontFamily: "'DM Mono', monospace", color: '#767393' }}>{row.first}</span>
                             <span style={{ color: '#D8D2FF' }}>→</span>
                             <span style={{
                               fontFamily: "'DM Mono', monospace", fontWeight: 800,
-                              color: resolved ? '#15803D' : improved ? '#16A34A' : worsened ? '#DC2626' : '#8B87AD',
+                              color: resolved ? '#15803D' : improved ? '#16A34A' : worsened ? '#DC2626' : '#767393',
                             }}>{row.last}</span>
                           </div>
 
@@ -340,7 +340,7 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
 
               {/* Footer hint */}
               <div style={{
-                fontSize: 10, color: '#8B87AD', marginTop: 12,
+                fontSize: 10, color: '#767393', marginTop: 12,
                 padding: '6px 8px', background: '#FAFAFE', borderRadius: 6, lineHeight: 1.5,
               }}>
                 {tab === 'now'

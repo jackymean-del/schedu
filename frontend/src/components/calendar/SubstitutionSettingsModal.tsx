@@ -58,7 +58,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
             <span style={{ width: 38, height: 38, borderRadius: 10, background: '#EDE9FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Settings2 size={18} color="#7C6FE0" /></span>
             <div>
               <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E' }}>Substitution Settings</div>
-              <div style={{ fontSize: 12.5, color: '#8B87AD' }}>Controls how Calendar ranks and auto-picks substitutes</div>
+              <div style={{ fontSize: 12.5, color: '#767393' }}>Controls how Calendar ranks and auto-picks substitutes</div>
             </div>
           </div>
           <button onClick={onClose} style={{ width: 38, height: 38, borderRadius: 11, border: '1px solid #E7E3F6', background: '#fff', color: '#6B6890', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><X size={17} /></button>
@@ -80,7 +80,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
                   onChange={e => setDefault('maxSuggestionsToShow', e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
                   style={inp}
                 />
-                <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 5 }}>Leave empty to show all available substitutes</div>
+                <div style={{ fontSize: 11.5, color: '#777391', marginTop: 5 }}>Leave empty to show all available substitutes</div>
               </div>
             )}
           </Section>
@@ -130,7 +130,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
               Configure which faculty can be assigned as substitutes and set individual limits. Blank cells use the defaults above.
             </div>
             <div style={{ border: '1px solid #ECE9FB', borderRadius: 10, overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 0.8fr 0.7fr 0.7fr 0.8fr', gap: 0, background: '#FAF9FF', padding: '8px 12px', fontSize: 10.5, fontWeight: 800, color: '#9A95BC', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 0.8fr 0.7fr 0.7fr 0.8fr', gap: 0, background: '#FAF9FF', padding: '8px 12px', fontSize: 10.5, fontWeight: 800, color: '#777391', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 <div>Faculty</div><div style={{ textAlign: 'center' }}>Can Sub</div><div style={{ textAlign: 'center' }}>Max/Day</div><div style={{ textAlign: 'center' }}>Max/Week</div><div style={{ textAlign: 'center' }}>Auto-Assign</div>
               </div>
               {staff.map(st => {
@@ -164,7 +164,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
                         style={{
                           padding: '3px 10px', borderRadius: 6, border: 'none', cursor: ov.canSub ? 'pointer' : 'not-allowed',
                           fontSize: 10.5, fontWeight: 700, opacity: ov.canSub ? 1 : 0.4,
-                          background: ov.autoAssign ? '#EDE9FF' : '#F1F1F4', color: ov.autoAssign ? '#7C6FE0' : '#9CA3AF',
+                          background: ov.autoAssign ? '#EDE9FF' : '#F1F1F4', color: ov.autoAssign ? '#7C6FE0' : '#727780',
                         }}>
                         {ov.autoAssign ? 'Auto' : 'Manual'}
                       </button>
@@ -173,7 +173,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
                 )
               })}
               {staff.length === 0 && (
-                <div style={{ padding: '20px', textAlign: 'center', fontSize: 12.5, color: '#9A95BC' }}>No faculty configured yet.</div>
+                <div style={{ padding: '20px', textAlign: 'center', fontSize: 12.5, color: '#777391' }}>No faculty configured yet.</div>
               )}
             </div>
           </Section>
@@ -198,7 +198,7 @@ function Section({ title, icon, open, onToggle, badge, children }: {
           <span style={{ fontSize: 14.5, fontWeight: 800, color: '#13111E' }}>{title}</span>
           {badge && <span style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', background: '#EDE9FF', padding: '2px 9px', borderRadius: 20 }}>{badge}</span>}
         </div>
-        {open ? <ChevronUp size={16} color="#9A95BC" /> : <ChevronDown size={16} color="#9A95BC" />}
+        {open ? <ChevronUp size={16} color="#777391" /> : <ChevronDown size={16} color="#777391" />}
       </button>
       {open && <div style={{ padding: '0 16px 16px' }}>{children}</div>}
     </div>
@@ -210,7 +210,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <div>
         <div style={{ fontSize: 13.5, fontWeight: 700, color: '#13111E' }}>{label}</div>
-        {hint && <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 2 }}>{hint}</div>}
+        {hint && <div style={{ fontSize: 11.5, color: '#777391', marginTop: 2 }}>{hint}</div>}
       </div>
       {children}
     </div>
@@ -254,7 +254,7 @@ function WeightField({ label, hint, value, onChange, compact }: {
           </button>
         ))}
       </div>
-      <div style={{ fontSize: 11, color: '#9A95BC', marginTop: 5 }}>{hint}</div>
+      <div style={{ fontSize: 11, color: '#777391', marginTop: 5 }}>{hint}</div>
     </div>
   )
 }
@@ -270,7 +270,7 @@ function Stepper({ label, hint, value, onChange }: {
         <input type="number" value={value} onChange={e => onChange(Math.max(0, Number(e.target.value) || 0))} style={{ ...inp, textAlign: 'center', width: 56, padding: '8px 4px' }} />
         <button onClick={() => onChange(value + 1)} style={stepBtn}><Plus size={13} /></button>
       </div>
-      <div style={{ fontSize: 11, color: '#9A95BC', marginTop: 5 }}>{hint}</div>
+      <div style={{ fontSize: 11, color: '#777391', marginTop: 5 }}>{hint}</div>
     </div>
   )
 }

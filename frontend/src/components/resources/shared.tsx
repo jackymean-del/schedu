@@ -156,7 +156,7 @@ export function SmartEmptyState({
         {icon}
       </div>
       <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 5 }}>{title}</div>
-      <div style={{ fontSize: 12.5, color: '#8B87AD', maxWidth: 440, lineHeight: 1.55, marginBottom: 24 }}>{subtitle}</div>
+      <div style={{ fontSize: 12.5, color: '#767393', maxWidth: 440, lineHeight: 1.55, marginBottom: 24 }}>{subtitle}</div>
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'stretch' }}>
         {/* Smart create — primary, prominent */}
@@ -197,7 +197,7 @@ export function SmartEmptyState({
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.background = '#fff' }}
         >
           <span style={{ fontSize: 14.5, fontWeight: 800, color: '#13111E' }}>✏️ {manualLabel}</span>
-          {manualSubtext && <span style={{ fontSize: 11, fontWeight: 500, color: '#8B87AD' }}>{manualSubtext}</span>}
+          {manualSubtext && <span style={{ fontSize: 11, fontWeight: 500, color: '#767393' }}>{manualSubtext}</span>}
         </button>
       </div>
 
@@ -413,7 +413,7 @@ export function InlineEdit({
   )
   return (
     <span onClick={() => setEditing(true)} title="Click to edit"
-      style={{ cursor: 'text', borderRadius: 3, padding: '2px 4px', color: value ? '#111028' : '#C4C0DC', display: 'inline-block', minWidth: 40, transition: 'background 0.08s', ...extra }}
+      style={{ cursor: 'text', borderRadius: 3, padding: '2px 4px', color: value ? '#111028' : '#767384', display: 'inline-block', minWidth: 40, transition: 'background 0.08s', ...extra }}
       onMouseEnter={e => (e.currentTarget.style.background = '#F0ECFE')}
       onMouseLeave={e => (e.currentTarget.style.background = '')}
     >{value || placeholder}</span>
@@ -545,7 +545,7 @@ export function InlineChipSelect({
           </span>
         )}
         {!disabled && selected.length > 0 && (
-          <span style={{ fontSize: 10, color: '#C4C0DC', padding: '0 2px', lineHeight: 1, userSelect: 'none' }}>✎</span>
+          <span style={{ fontSize: 10, color: '#767384', padding: '0 2px', lineHeight: 1, userSelect: 'none' }}>✎</span>
         )}
       </div>
 

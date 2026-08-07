@@ -43,14 +43,18 @@ export function PageHeader({
         minHeight: 48, display: 'flex', alignItems: 'center',
         padding: '8px 16px', gap: 10, flexWrap: 'wrap',
       }}>
-        {icon && <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>}
+        {/* Decorative — the page's name is in the heading beside it, so a
+            screen reader announcing the emoji would just add noise. */}
+        {icon && <span aria-hidden="true" style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>}
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1, minWidth: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', whiteSpace: 'nowrap' }}>
+          {/* A real <h1>: Master Data, Syllabus, Settings and Users each had NO
+              heading at all, so "jump to the main heading" landed nowhere. */}
+          <h1 style={{ fontSize: 14, fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', margin: 0 }}>
             {title}
-          </span>
+          </h1>
           {description && (
-            <span style={{ fontSize: 12, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12, color: '#727780', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               — {description}
             </span>
           )}

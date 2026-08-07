@@ -116,7 +116,7 @@ function EditCell({ value, onSave, placeholder = '…', style: extra }: {
   )
   return (
     <span onClick={() => setE(true)} title="Click to edit"
-      style={{ cursor: 'text', padding: '2px 4px', borderRadius: 3, display: 'inline-block', minWidth: 28, color: value ? '#111028' : '#C4C0DC', ...extra }}
+      style={{ cursor: 'text', padding: '2px 4px', borderRadius: 3, display: 'inline-block', minWidth: 28, color: value ? '#111028' : '#767384', ...extra }}
       onMouseEnter={ev => (ev.currentTarget.style.background = '#EDE9FF')}
       onMouseLeave={ev => (ev.currentTarget.style.background = '')}
     >{value || placeholder}</span>
@@ -230,11 +230,11 @@ function CategoryManager({
 
       {/* Built-in (read-only) */}
       <div style={{ padding: '7px 12px 6px', borderBottom: '1px solid #F5F3FF' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: '#C4C0DC', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Built-in</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: '#767384', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Built-in</div>
         <div style={{ fontSize: 9.5, color: '#9896B5', marginBottom: 5, lineHeight: 1.4 }}>Scholastic = academic subjects. Co-scholastic = PE, Arts, CCA, Library, etc. Click a category header to rename it.</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {BUILTIN_CATS.map(cat => (
-            <span key={cat} style={{ fontSize: 10, padding: '1px 6px', background: '#F0EDFF', color: '#8B87AD', borderRadius: 3, border: '1px solid #E8E4FF' }}>{cat}</span>
+            <span key={cat} style={{ fontSize: 10, padding: '1px 6px', background: '#F0EDFF', color: '#767393', borderRadius: 3, border: '1px solid #E8E4FF' }}>{cat}</span>
           ))}
         </div>
       </div>
@@ -242,7 +242,7 @@ function CategoryManager({
       {/* User-added */}
       {extraCats.length > 0 && (
         <div style={{ padding: '7px 12px 6px', borderBottom: '1px solid #F5F3FF' }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: '#C4C0DC', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Custom</div>
+          <div style={{ fontSize: 9, fontWeight: 700, color: '#767384', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Custom</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {extraCats.map(cat => (
               <div key={cat} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 10, padding: '1px 4px 1px 6px', background: P_L, color: P_D, borderRadius: 3, border: `1px solid ${P_B}` }}>
@@ -257,7 +257,7 @@ function CategoryManager({
       )}
       {extraCats.length === 0 && (
         <div style={{ padding: '5px 12px 4px', borderBottom: '1px solid #F5F3FF' }}>
-          <span style={{ fontSize: 10.5, color: '#C4C0DC', fontStyle: 'italic' }}>No custom categories yet.</span>
+          <span style={{ fontSize: 10.5, color: '#767384', fontStyle: 'italic' }}>No custom categories yet.</span>
         </div>
       )}
 
@@ -658,7 +658,7 @@ function ClassSlotsExpanded({
 
   if (classes.length === 0) {
     return (
-      <div style={{ padding: '8px 16px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', fontSize: 11.5, color: '#C4C0DC', fontStyle: 'italic' }}>
+      <div style={{ padding: '8px 16px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', fontSize: 11.5, color: '#767384', fontStyle: 'italic' }}>
         No classes assigned — use the Applicable Classes column above to assign.
       </div>
     )
@@ -684,7 +684,7 @@ function ClassSlotsExpanded({
         <span style={{ fontSize: 9.5, fontWeight: 800, color: '#9896B5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
           Slots per Grade
         </span>
-        <span style={{ fontWeight: 500, textTransform: 'none', fontSize: 9.5, color: '#C4C0DC' }}>
+        <span style={{ fontWeight: 500, textTransform: 'none', fontSize: 9.5, color: '#767384' }}>
           · {ALLOCATION_LABELS[unit]}
         </span>
         {/* Say where these numbers come from, so a read-only field reads as
@@ -792,7 +792,7 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
         </span>
       </td>
       <td style={TD}>
-        <span style={{ fontSize: 10.5, color: '#C4C0DC', fontStyle: 'italic' }}>Assign after saving</span>
+        <span style={{ fontSize: 10.5, color: '#767384', fontStyle: 'italic' }}>Assign after saving</span>
       </td>
       <td style={{ ...TD, whiteSpace: 'nowrap' }}>
         <button onClick={commit} style={{ background: P, color: '#fff', border: 'none', borderRadius: 5, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 5, fontFamily: 'inherit' }}>✓ Add</button>
@@ -846,7 +846,7 @@ function CategoryHeaderRow({ cat, count, collapsed, onToggle, onRename }: {
           )}
           <span style={{ fontSize: 10.5, fontWeight: 800, color: P, background: '#fff', borderRadius: 10, padding: '0 7px', border: `1.5px solid ${P_B}`, lineHeight: '18px' }}>{count}</span>
           {onRename && !editing && (
-            <span style={{ marginLeft: 2, fontSize: 9, color: '#C4C0DC', fontStyle: 'italic' }}>click name to rename</span>
+            <span style={{ marginLeft: 2, fontSize: 9, color: '#767384', fontStyle: 'italic' }}>click name to rename</span>
           )}
         </div>
       </td>
@@ -1529,7 +1529,7 @@ export function SubjectsPanel({
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#8B87AD',
+            color: sortAZ ? '#7C6FE0' : '#767393',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >
@@ -1720,7 +1720,7 @@ export function SubjectsPanel({
                 </Fragment>
               ))}
               {filtered.length === 0 && search && (
-                <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#C4C0DC', padding: '18px 10px' }}>No subjects match "{search}"</td></tr>
+                <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: '#767384', padding: '18px 10px' }}>No subjects match "{search}"</td></tr>
               )}
               <AddRow onAdd={add} />
             </tbody>
