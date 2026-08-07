@@ -105,7 +105,7 @@ export function BoardPage() {
   const longDate = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <div style={{
+    <div data-surface="dark" style={{
       minHeight: '100vh', background: INK, color: '#F4F2FF',
       fontFamily: 'inherit', padding: 'clamp(18px, 2.6vw, 40px)',
       display: 'flex', flexDirection: 'column', gap: 'clamp(14px, 1.8vw, 26px)',

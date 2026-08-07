@@ -385,3 +385,26 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   /* Tiny screens — hide all-systems badge, condense further */
   [data-mobile-hide="true"] { display: none !important; }
 }
+
+/* ── Keyboard focus ───────────────────────────────────────────────────────
+   Every focusable control in this app sets `outline: none` inline — 109 of
+   them — so a keyboard user saw NOTHING marking where they were. Measured: 12
+   of the first 12 tab stops on the dashboard had no visible focus indicator of
+   any kind. That is WCAG 2.4.7 (AA), and it makes the app unusable without a
+   mouse.
+
+   `:focus-visible` is the reason those `outline: none` declarations were
+   written in the first place — it matches keyboard focus but NOT a mouse
+   click, so this restores the ring for people who need it without putting the
+   old click-outline back for everyone else.
+
+   `!important` because the declarations it has to beat are inline styles. */
+:focus-visible {
+  outline: 2px solid #7C6FE0 !important;
+  outline-offset: 2px !important;
+}
+
+/* On the dark corridor display a purple ring on near-black is hard to see. */
+[data-surface="dark"] :focus-visible {
+  outline-color: #C4B5FD !important;
+}
