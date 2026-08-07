@@ -97,7 +97,7 @@ export default function PricingPage() {
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
           {BILLING_LIVE
             ? 'Start free up to 10 sections. Upgrade to Pro for up to 70 sections, electives, live task assignment, and team collaboration.'
-            : 'You can use schedU for free now — every plan below, no card required. These are the prices when paid plans begin, and we will give plenty of notice first.'}
+            : 'Free for a limited time, for a limited number of first users — every plan below, no card required. The prices shown are what they return to; we will give plenty of notice before anything becomes payable.'}
         </p>
         {BILLING_LIVE && <LocalBillingNote className="mt-4 max-w-[520px] text-[12px] leading-[1.5] text-[#A5A1C0]" />}
       </section>
@@ -120,20 +120,29 @@ export default function PricingPage() {
                 </span>
               )}
               <h2 className="text-base font-bold text-[#13111E]">{t.name}</h2>
-              <div className="mt-3.5 flex items-baseline gap-1">
-                {BILLING_LIVE ? (
+              {/* The price stays on show, struck through: it is the anchor that
+                  makes "free" mean something. A tier that is already ₹0 has
+                  nothing to strike. */}
+              <div className="mt-3.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                {BILLING_LIVE || t.price === '₹0' ? (
                   <>
                     <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]"><LocalPrice>{t.price}</LocalPrice></span>
                     {t.period && <span className="text-[13px] text-[#8B87AD]">{t.period}</span>}
                   </>
                 ) : (
-                  <span className="font-mono text-[34px] font-bold leading-none text-[#13111E]">Free</span>
+                  <>
+                    <span className="font-mono text-[26px] font-bold leading-none text-[#A5A1C0] line-through decoration-[#D9D5EE] decoration-2">
+                      <LocalPrice>{t.price}</LocalPrice>
+                    </span>
+                    {t.period && <span className="text-[13px] text-[#A5A1C0] line-through decoration-[#D9D5EE]">{t.period}</span>}
+                    <span className="font-mono text-[34px] font-bold leading-none text-[#7C6FE0]">Free</span>
+                  </>
                 )}
               </div>
               <p className="mb-1.5 mt-1 min-h-[16px] text-[11.5px] font-semibold text-[#7C6FE0]">
                 {BILLING_LIVE
                   ? (t.sub ? <LocalMoney>{t.sub}</LocalMoney> : '')
-                  : (t.price === '₹0' ? '' : <>Normally <LocalPrice>{t.price}</LocalPrice>{t.period} — free for now</>)}
+                  : 'Free for a limited time, for our first users'}
               </p>
               <p className="mb-[18px] min-h-[42px] text-[13px] leading-[1.6] text-[#4B5275]">{t.desc}</p>
               <a href={t.href} className="no-underline">

@@ -186,7 +186,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {/* An "Upgrade" button that leads to a page with nothing to buy
                     is a dead end, so it only appears once payments are live. */}
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#7C6FE0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {billingLive ? 'Free Plan' : 'Free for now'}
+                  {billingLive ? 'Free Plan' : 'Free — early access'}
                 </span>
               </span>
               {billingLive && (

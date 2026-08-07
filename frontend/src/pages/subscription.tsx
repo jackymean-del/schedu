@@ -244,14 +244,16 @@ export function SubscriptionPage() {
               Free for a limited time
             </div>
             <div style={{ fontSize: 14, color: '#4B5275', lineHeight: 1.55 }}>
-              You can use schedU free right now — every feature, no card, no limits to worry about.
-              We&rsquo;ll give you plenty of notice before anything becomes paid.
+              Free for a limited time, for a limited number of first users — every feature, no card.
+              The prices below are what they return to, and we&rsquo;ll give plenty of notice first.
             </div>
           </div>
         )}
 
-        {/* Plan comparison — hidden once the user is Pro (nothing to upsell) */}
-        {!isPro && billingEnabled && (
+        {/* Plan comparison — hidden once the user is Pro (nothing to upsell).
+            Shown even when billing is off: the price is what makes "free"
+            mean something, so it stays on screen, struck through. */}
+        {!isPro && (
           <>
             {/* Billing-interval toggle */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -294,16 +296,29 @@ export function SubscriptionPage() {
               {/* Pro */}
               <div style={{ background: '#13111E', border: '2px solid #7C6FE0', borderRadius: 14, padding: 20, position: 'relative' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Pro</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontSize: 24, fontWeight: 900, color: '#A78BFA' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: billingEnabled ? 24 : 19, fontWeight: 900,
+                    color: billingEnabled ? '#A78BFA' : '#6B6891',
+                    textDecoration: billingEnabled ? 'none' : 'line-through',
+                    textDecorationThickness: 2,
+                  }}>
                     {interval === 'monthly' ? money(monthly) : money(yearly)}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: 500, color: '#8B87AD',
+                    textDecoration: billingEnabled ? 'none' : 'line-through',
+                  }}>
                     {interval === 'monthly' ? '/ month' : '/ year'}
                   </span>
+                  {!billingEnabled && (
+                    <span style={{ fontSize: 24, fontWeight: 900, color: '#A78BFA' }}>Free</span>
+                  )}
                 </div>
-                <div style={{ fontSize: 11.5, color: '#8B87AD', marginBottom: !india ? 4 : 16, minHeight: 16 }}>
-                  {interval === 'yearly' ? `${money(yearlyPerMonth)}/mo · save ${discountPct}% vs monthly` : `or ${money(yearly)}/yr — save ${discountPct}%`}
+                <div style={{ fontSize: 11.5, color: billingEnabled ? '#8B87AD' : '#A78BFA', fontWeight: billingEnabled ? 400 : 700, marginBottom: !india ? 4 : 16, minHeight: 16 }}>
+                  {billingEnabled
+                    ? (interval === 'yearly' ? `${money(yearlyPerMonth)}/mo · save ${discountPct}% vs monthly` : `or ${money(yearly)}/yr — save ${discountPct}%`)
+                    : 'Free for a limited time, for our first users'}
                 </div>
                 {!india && (
                   <div style={{ fontSize: 10.5, color: '#8B87AD', marginBottom: 16, minHeight: 14 }}>
@@ -329,15 +344,17 @@ export function SubscriptionPage() {
                     cursor: busy ? 'wait' : billingEnabled ? 'pointer' : 'not-allowed',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}>
-                  {busy ? <><Loader2 size={14} className="spin" /> Opening checkout…</> : billingEnabled ? 'Upgrade to Pro' : 'Online payment coming soon'}
+                  {busy ? <><Loader2 size={14} className="spin" /> Opening checkout…</> : billingEnabled ? 'Upgrade to Pro' : 'Included free right now'}
                 </button>
 
-                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 10.5, color: '#8B87AD' }}>
+                {billingEnabled && (
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 10.5, color: '#8B87AD' }}>
                   <ShieldCheck size={12} /> Secure payment via Razorpay · UPI, cards &amp; netbanking
                 </div>
+                )}
                 {!billingEnabled && (
                   <div style={{ marginTop: 8, fontSize: 11, color: '#8B87AD', textAlign: 'center' }}>
-                    We&rsquo;re finalising online payments — this will be live shortly.
+                    Nothing to pay while you&rsquo;re one of our first users. This is the price it returns to.
                   </div>
                 )}
               </div>
@@ -345,7 +362,7 @@ export function SubscriptionPage() {
           </>
         )}
 
-        {!isPro && billingEnabled && (
+        {!isPro && (
           <p style={{ fontSize: 12, color: '#8B87AD', textAlign: 'center', margin: 0 }}>
             Need <strong style={{ color: '#4B5275' }}>more than 70 sections</strong> or multiple campuses?{' '}
             <a href="mailto:hello@bhusku.com" style={{ color: '#7C6FE0', fontWeight: 600 }}>Talk to us about a Custom plan</a>.
