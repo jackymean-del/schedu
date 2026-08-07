@@ -1645,7 +1645,9 @@ export function DashboardPage() {
                     background: '#fff', borderRadius: 10,
                     border: `1px solid ${isActive && tt.status === 'draft' ? '#C4B5FD' : '#E5E7EB'}`,
                     padding: '13px 16px',
-                    display: 'flex', alignItems: 'center', gap: 12,
+                    // Wraps on a phone: the action buttons ran to 540px on a
+                    // 375px screen and were clipped out of reach.
+                    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                     boxShadow: isActive && tt.status === 'draft' ? '0 0 0 3px rgba(124,111,224,0.08)' : 'none',
                   }}>
                     {/* Icon */}

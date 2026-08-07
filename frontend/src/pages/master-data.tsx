@@ -141,7 +141,7 @@ export function MasterDataPage() {
         description="Live-edit every reference entity. Autosaves on each change."
         status="saved"
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <div style={{
               padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600,
               background: '#EDE9FF', color: '#7C6FE0', border: '1px solid #D8D2FF',

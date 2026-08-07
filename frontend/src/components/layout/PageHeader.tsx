@@ -36,9 +36,12 @@ export function PageHeader({
       flexShrink: 0,
     }}>
       {/* ── Main header row ── */}
+      {/* Wraps below a fixed height on narrow screens: the title plus an action
+          cluster needs ~500px, and on a phone the actions were pushed off the
+          right edge with no way to reach them. */}
       <div style={{
-        height: 48, display: 'flex', alignItems: 'center',
-        padding: '0 24px', gap: 10,
+        minHeight: 48, display: 'flex', alignItems: 'center',
+        padding: '8px 16px', gap: 10, flexWrap: 'wrap',
       }}>
         {icon && <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>}
 

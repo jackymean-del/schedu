@@ -134,7 +134,12 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
   return (
     <Card title="Institution naming" subtitle="Call things what your institution calls them — the words update across the whole app, even on generated timetables.">
       {TERM_ROWS.map(row => (
-        <div key={row.key} style={{ display: 'grid', gridTemplateColumns: '1fr 180px 120px', gap: 12, alignItems: 'center' }}>
+        <div key={row.key} style={{
+          display: 'grid', gap: 12, alignItems: 'center',
+          // 1fr + 180 + 120 + gaps needs ~330px of fixed width alone, so on a
+          // phone the columns stack instead of overflowing.
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
+        }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>{row.label}</div>
             <div style={{ fontSize: 11.5, color: '#9A95BC', marginTop: 1 }}>{row.hint}</div>

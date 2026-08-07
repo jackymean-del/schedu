@@ -10,11 +10,11 @@
  *
  * Collapsed state persists across navigations (localStorage).
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useBillingLive } from '@/lib/billingConfig'
 import {
   Home, CalendarDays, Calendar, BarChart2, Users, Database, Settings,
-  LifeBuoy, BookOpen, Video, ChevronLeft, ChevronRight, Zap, LogOut,
+  LifeBuoy, BookOpen, Video, ChevronLeft, ChevronRight, Zap, LogOut, Menu, X,
 } from 'lucide-react'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { CLERK_ENABLED } from '@/lib/clerk'
@@ -56,6 +56,15 @@ const SECTIONS: NavSection[] = [
 
 const W_OPEN = 224
 const W_SHUT = 64
+/**
+ * Below this the sidebar stops being a column and becomes an overlay.
+ *
+ * At 375px it was taking 224px — sixty percent of the screen — leaving 151px
+ * for content that needed 540, clipped with no way to scroll to it. The
+ * dashboard's own "Fix venues" button was off-screen and unreachable. A phone
+ * has no room for a permanent nav rail.
+ */
+const OVERLAY_BELOW = 900
 const TRANSITION = 'width 0.2s cubic-bezier(0.4,0,0.2,1)'
 const COLLAPSE_KEY = 'schedu-sidebar-collapsed'
 
@@ -71,18 +80,39 @@ function activeHref(path: string): string {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const billingLive = useBillingLive()
   const { user, logout } = useAuthStore()
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < OVERLAY_BELOW)
+  useEffect(() => {
+    const onResize = () => setNarrow(window.innerWidth < OVERLAY_BELOW)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // On a phone the nav starts out of the way; on a desktop it remembers what
+  // the person chose last time.
   const [open, setOpen] = useState(() => {
-    try { return localStorage.getItem(COLLAPSE_KEY) !== '1' } catch { return true }
+    try {
+      if (typeof window !== 'undefined' && window.innerWidth < OVERLAY_BELOW) return false
+      return localStorage.getItem(COLLAPSE_KEY) !== '1'
+    } catch { return true }
   })
   const toggle = () => setOpen(o => {
     const next = !o
-    try { localStorage.setItem(COLLAPSE_KEY, next ? '0' : '1') } catch { /* ignore */ }
+    // Only remember the choice where it is a layout preference. On a phone it
+    // is a transient "show me the menu", and persisting it would reopen the
+    // overlay over the content on every page load.
+    if (!narrow) { try { localStorage.setItem(COLLAPSE_KEY, next ? '0' : '1') } catch { /* ignore */ } }
     return next
   })
+  // Following a link on a phone should put the menu away again.
+  const closeIfNarrow = () => { if (narrow) setOpen(false) }
 
   const path = typeof window !== 'undefined' ? window.location.pathname : ''
   const active = activeHref(path)
+  // Overlaid, the sidebar takes no layout width at all — content gets the
+  // whole screen and the nav floats above it.
   const W = open ? W_OPEN : W_SHUT
+  const asideW = narrow ? W_OPEN : W
   const initials = (user?.name ?? 'U').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
 
   return (
@@ -96,8 +126,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         .as-icon:hover { background: #F0EDFF; }
       `}</style>
 
+      {/* Backdrop — tapping away closes the menu, the behaviour every phone
+          user already expects. */}
+      {narrow && open && (
+        <div onClick={() => setOpen(false)} style={{
+          position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(19,17,30,0.45)',
+        }} />
+      )}
+
       <aside style={{
-        width: W, flexShrink: 0, background: '#fff', borderRight: '1px solid #ECE9FB',
+        width: asideW, flexShrink: 0, background: '#fff', borderRight: '1px solid #ECE9FB',
+        // Overlaid and fully off-screen when closed: a phone has no room for
+        // even an icon rail once a timetable grid is on screen.
+        ...(narrow ? {
+          position: 'fixed', insetBlock: 0, left: 0, zIndex: 50,
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform .22s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: open ? '0 0 40px rgba(0,0,0,0.28)' : 'none',
+        } : null),
         display: 'flex', flexDirection: 'column', transition: TRANSITION, overflow: 'hidden',
       }}>
         {/* Brand + collapse */}
@@ -138,7 +184,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const isActive = active === item.href
                 const Icon = item.icon
                 return (
-                  <a key={item.href} href={item.href} className="as-item"
+                  <a key={item.href} href={item.href} className="as-item" onClick={closeIfNarrow}
                     title={!open ? item.label : undefined}
                     target={item.external ? '_blank' : undefined}
                     rel={item.external ? 'noopener noreferrer' : undefined}
@@ -196,6 +242,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </aside>
+
+      {/* Without this a phone has NO navigation at all once the rail is
+          hidden. Floats over the page rather than pushing content, so it costs
+          no layout width. */}
+      {narrow && !open && (
+        <button onClick={() => setOpen(true)} aria-label="Open menu" style={{
+          position: 'fixed', top: 10, left: 10, zIndex: 45,
+          width: 40, height: 40, borderRadius: 11,
+          background: '#fff', border: '1px solid #ECE9FB',
+          boxShadow: '0 4px 14px rgba(19,17,30,0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', color: '#4B5275',
+        }}>
+          <Menu size={19} />
+        </button>
+      )}
 
       <main style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto' }}>
         {children}

@@ -1040,7 +1040,12 @@ function LostSessionsCard({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '130px 140px 80px 1fr 110px', gap: 8, alignItems: 'end' }}>
+      {/* 130+140+80+110 of fixed columns plus gaps needs ~500px — on a phone
+          the last fields fell off the right edge. Stacks instead. */}
+      <div style={{
+        display: 'grid', gap: 8, alignItems: 'end',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))',
+      }}>
         <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} /></Field>
         <Field label="Reason">
           <select value={reason} onChange={e => setReason(e.target.value as LostSession['reason'])} style={inputStyle}>
@@ -1235,8 +1240,11 @@ function CoverageDashboard({
                     {g.covered}/{g.required} h · <strong style={{ color: g.remaining > 0 ? '#B45309' : '#067647' }}>{g.remaining} h left</strong>
                   </span>
                 </div>
-                {/* Detail rows */}
-                <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11.5 }}>
+                {/* Detail rows — a six-column table cannot shrink below its
+                    content, so on a phone it scrolls inside its own box rather
+                    than pushing the page wider than the screen. */}
+                <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+                <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 440, fontSize: 11.5 }}>
                   <thead>
                     <tr style={{ color: '#8B87AD' }}>
                       {showSubject && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Subject</th>}
@@ -1273,6 +1281,7 @@ function CoverageDashboard({
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             )
           })}

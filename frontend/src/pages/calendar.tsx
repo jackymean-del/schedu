@@ -962,7 +962,9 @@ export function CalendarPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          {/* Wraps on a phone — this row ran to 500px on a 375px screen and the
+              icon actions were clipped out of reach. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             {canManageEvents && (
               <button
                 className="cal-primary"
@@ -1014,7 +1016,13 @@ export function CalendarPage() {
             <button onClick={() => setDate(new Date())} style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 12.5, fontWeight: 700 }}>Today</button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Segmented controls scroll rather than wrap: splitting a pill group
+              across two lines reads as two separate controls. On a phone this
+              strip is 431px against a 375px screen. */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            maxWidth: '100%', overflowX: 'auto', scrollbarWidth: 'none' as any,
+          }}>
             {/* Live / Day / Month */}
             <div style={pillGroup}>
               {(['live','day','month'] as View[]).map(v => (
