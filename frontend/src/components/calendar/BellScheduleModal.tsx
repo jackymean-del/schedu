@@ -13,6 +13,7 @@
  * differently — see VIEWS below. Everything is derived; nobody types a time.
  */
 import { useMemo, useState } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import { Bell, X, Printer } from 'lucide-react'
 import { bellColumns, bellGrid, fmtRingTime, rangeLabel, type BellColumn } from '@/lib/bellSchedule'
 import type { Period } from '@/types'
@@ -51,6 +52,8 @@ export function BellScheduleModal({
   const hasBlocks = (blocks?.length ?? 0) > 1
   const [view, setView] = useState<View>('classes')
   const active: View = view === 'block' && !hasBlocks ? 'classes' : view
+
+  const { dialogProps } = useDialog({ onClose, label: 'Bell schedule' })
 
   const columns = useMemo<BellColumn[]>(() => {
     if (active === 'block' && blocks) {
@@ -113,7 +116,10 @@ export function BellScheduleModal({
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 760, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+      {/* The PANEL carries the dialog role, not the full-screen backdrop —
+          giving it to the backdrop would tell a screen reader the dialog
+          covers the whole viewport. */}
+      <div {...dialogProps} style={{ width: '100%', maxWidth: 760, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)', outline: 'none' }}>
         <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
             <Bell size={20} />

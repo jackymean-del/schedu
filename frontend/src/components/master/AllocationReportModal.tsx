@@ -14,6 +14,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
+import { useDialog } from '@/hooks/useDialog'
 // xlsx is loaded on demand (export click) — keeps it out of the main bundle
 import { useTimetableStore } from '@/store/timetableStore'
 import type { Section, Subject, Staff } from '@/types'
@@ -505,6 +506,8 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
     window.print()
   }, [])
 
+  const { dialogProps } = useDialog({ onClose, label: 'Period allocation report' })
+
   return (
     <div className="print-report-overlay" style={{
       position: 'fixed', inset: 0, zIndex: 1000,
@@ -512,7 +515,8 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
       display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
       padding: '24px 16px', overflowY: 'auto',
     }}>
-      <div className="print-content" style={{
+      <div {...dialogProps} className="print-content" style={{
+        outline: 'none',
         background: '#fff', borderRadius: 16, width: '100%', maxWidth: 960,
         boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
         maxHeight: 'calc(100vh - 48px)', overflow: 'auto',

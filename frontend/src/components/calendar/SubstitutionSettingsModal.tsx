@@ -5,6 +5,7 @@
  * Limits, and Faculty Settings (the long one — collapsed by default).
  */
 import { useState } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import {
   X, Settings2, SlidersHorizontal, Scale, Users, ChevronDown, ChevronUp, Minus, Plus, Check,
 } from 'lucide-react'
@@ -47,10 +48,12 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
     })
   }
 
+  const { dialogProps } = useDialog({ onClose, label: 'Substitution settings' })
+
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
-      <div style={{ width: 'min(760px, 96vw)', background: '#F7F6FC', display: 'flex', flexDirection: 'column', boxShadow: '-20px 0 60px rgba(0,0,0,0.25)' }}>
+      <div {...dialogProps} style={{ width: 'min(760px, 96vw)', background: '#F7F6FC', display: 'flex', flexDirection: 'column', boxShadow: '-20px 0 60px rgba(0,0,0,0.25)', outline: 'none' }}>
 
         {/* Header */}
         <div style={{ background: '#fff', borderBottom: '1px solid #ECE9FB', padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>

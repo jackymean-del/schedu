@@ -17,6 +17,7 @@ import {
 import { type CalLeave, useLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
 import { useSchoolEvents, eventCoversDate, eventDates, teachingSuspendedOn, type SchoolEvent as CalEvent } from '@/lib/schoolEvents'
 import { DAY_NAMES as DAY_KEY } from '@/lib/days'
+import { useDialog } from '@/hooks/useDialog'
 import {
   type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
   overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
@@ -2407,6 +2408,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   onDeclareHoliday: (iso: string, name: string, scope?: string[]) => void
   hoursLostOn: (iso: string, scope?: string[]) => number
 }) {
+  const { dialogProps } = useDialog({ onClose, label: 'Add event' })
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [type, setType] = useState('other')
@@ -2450,7 +2452,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
+      <div {...dialogProps} style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)', outline: 'none' }}>
         {/* header */}
         <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
@@ -2663,13 +2665,14 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
   /** Title of the event suspending lessons today, when one is. */
   suspendedBy?: string
 }) {
+  const subDialog = useDialog({ onClose, label: `Arrange cover for ${teacher}` })
   const showRanking = settings.defaults.autoSuggestionsEnabled
   const maxShow = settings.defaults.maxSuggestionsToShow ?? Infinity
   const covered = slots.filter(s => subAt(s.sid, s.section, s.periodId)).length
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
-      <div style={{ width: 'min(960px, 96vw)', background: '#F7F6FC', display: 'flex', flexDirection: 'column', boxShadow: '-20px 0 60px rgba(0,0,0,0.25)' }}>
+      <div {...subDialog.dialogProps} style={{ width: 'min(960px, 96vw)', background: '#F7F6FC', display: 'flex', flexDirection: 'column', boxShadow: '-20px 0 60px rgba(0,0,0,0.25)', outline: 'none' }}>
         {/* header */}
         <div style={{ background: '#fff', borderBottom: '1px solid #ECE9FB', padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
