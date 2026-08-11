@@ -17,6 +17,7 @@ import { useDirectoryStore } from '@/store/directoryStore'
 import { useTimetableStore } from '@/store/timetableStore'
 import { usageOf, deleteWarning, type ResourceKind } from '@/lib/resourceUsage'
 import { applyRename } from '@/lib/renameCascade'
+import { findNameConflicts, conflictWarning } from '@/lib/nameConflicts'
 import type { RenameKind } from '@/lib/resourceRename'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
@@ -235,6 +236,29 @@ function useRenameCascade(kind: RenameKind) {
   }, [kind])
 }
 
+/**
+ * Says so when two rows share a name.
+ *
+ * Not a blocker — see lib/nameConflicts for why a school may genuinely have two
+ * "Anita Sharma" and has to be the one to disambiguate them.
+ */
+function NameConflictBanner<T>({ rows, nameOf, kind }: {
+  rows: T[]; nameOf: (row: T) => string | undefined; kind: string
+}) {
+  const msg = conflictWarning(kind, findNameConflicts(rows, nameOf))
+  if (!msg) return null
+  return (
+    <div role="status" style={{
+      display: 'flex', gap: 8, alignItems: 'flex-start',
+      background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
+      borderRadius: 10, padding: '9px 12px', margin: '0 0 10px',
+      fontSize: 12, lineHeight: 1.5,
+    }}>
+      <span aria-hidden="true">⚠</span><span>{msg}</span>
+    </div>
+  )
+}
+
 function useDeleteWarning(kind: ResourceKind, nameOf: (row: any) => string) {
   const classTT = useTimetableStore(s => (s as any).classTT)
   return useCallback((going: any[]): string | null => {
@@ -289,6 +313,8 @@ export function ClassesGrid({
     { key: 'classTeacher', label: 'Class Teacher', type: 'select', options: staffOptions, width: 180, placeholder: 'Assign...' },
   ]
   return (
+    <div>
+    <NameConflictBanner rows={sections} nameOf={(r: Section) => r.name} kind="section" />
     <DataGrid<Section>
       confirmDelete={confirmDelete}
       title="Classes & Sections"
@@ -306,6 +332,7 @@ export function ClassesGrid({
       } as Section)}
       toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}
     />
+    </div>
   )
 }
 
@@ -361,6 +388,8 @@ export function SubjectsGrid({
     },
   ]
   return (
+    <div>
+    <NameConflictBanner rows={subjects} nameOf={(r: Subject) => r.name} kind="subject" />
     <DataGrid<Subject>
       confirmDelete={confirmDelete}
       title="Subjects"
@@ -381,6 +410,7 @@ export function SubjectsGrid({
       } as any)}
       toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}
     />
+    </div>
   )
 }
 
@@ -517,6 +547,7 @@ export function TeachersGrid({
       {linked && (
         <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
+      <NameConflictBanner rows={staff} nameOf={(r: Staff) => r.name} kind="teacher" />
       <DataGrid<Staff>
         confirmDelete={confirmDelete}
         title="Teachers"
@@ -595,6 +626,7 @@ export function RoomsGrid({
       {linked && (
         <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
+      <NameConflictBanner rows={rooms} nameOf={(r: RoomRow) => r.name} kind="room" />
       <DataGrid<RoomRow>
         confirmDelete={confirmDelete}
         title="Venues"

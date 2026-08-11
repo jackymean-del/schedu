@@ -1993,6 +1993,48 @@ ok((shortTally.get('no-eligible-teachers') ?? 0) > 0,
 ok((shortTally.get('no-eligible-teachers') ?? 0) > (shortTally.get('subject-quota-met') ?? 0),
   'and that is the DOMINANT reason, not an afterthought behind "quota met"')
 
+// ── Two people with the same name are one person to this app ──
+// Cells reference teachers, subjects and venues by NAME. That model works, but
+// it has one requirement nothing was enforcing: names must be unique.
+import { findNameConflicts, isDuplicateName, conflictWarning } from './src/lib/nameConflicts'
+
+const staffRows = [
+  { name: 'Anita Sharma' }, { name: 'Ravi Kumar' }, { name: 'Anita Sharma' },
+]
+const conflicts = findNameConflicts(staffRows, r => r.name)
+ok(conflicts.length === 1, 'a name used twice is one conflict, not two')
+ok(conflicts[0].name === 'Anita Sharma' && conflicts[0].count === 2, 'reported with its count')
+ok(findNameConflicts([{ name: 'A' }, { name: 'B' }], r => r.name).length === 0, 'distinct names are fine')
+
+// Matched the way the rest of the app matches: trimmed and case-insensitive.
+// Colliding in SOME code paths and not others is worse than colliding in all.
+ok(findNameConflicts([{ name: 'Anita' }, { name: 'anita ' }], r => r.name).length === 1,
+  'case and trailing space do not make two people')
+
+// A half-typed new row is not a conflict; flagging every blank would make the
+// warning meaningless.
+ok(findNameConflicts([{ name: '' }, { name: '' }, { name: 'X' }], r => r.name).length === 0,
+  'blank names are ignored')
+
+ok(isDuplicateName(staffRows, r => r.name, 'Anita Sharma'), 'a specific row can ask if it clashes')
+ok(!isDuplicateName(staffRows, r => r.name, 'Ravi Kumar'), 'and be told when it does not')
+ok(!isDuplicateName(staffRows, r => r.name, ''), 'a blank name never clashes')
+
+// The message has to name the cost, not just say "duplicate".
+const nameWarn = conflictWarning('teacher', conflicts)!
+ok(nameWarn.includes('Anita Sharma'), 'the warning names the clash')
+ok(/marking one absent marks both/.test(nameWarn) && /\. [A-Z]/.test(nameWarn),
+  'and states what it actually costs, as a sentence — leave, cover and workload are name-matched')
+ok(/syllabus coverage/i.test(conflictWarning('subject', conflicts)!),
+  'each kind gets its own consequence, in the school\'s terms')
+ok(/double-booked/.test(conflictWarning('room', conflicts)!), 'venues clash-detect by name')
+ok(conflictWarning('teacher', []) === null, 'no conflicts, no warning')
+
+// Many conflicts summarise rather than listing forever.
+const many = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D'].map(n => ({ name: n }))
+ok(/and 1 more/.test(conflictWarning('teacher', findNameConflicts(many, r => r.name))!),
+  'a long list of clashes is summarised')
+
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
