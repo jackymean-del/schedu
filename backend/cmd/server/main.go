@@ -47,9 +47,13 @@ func main() {
 	// Non-fatal: log and continue if it fails, so a schema hiccup can't take the
 	// whole API down; the billing endpoints degrade to "free" until it succeeds.
 	if err := db.EnsureSchema(ctx, pool); err != nil {
+		// Still non-fatal, but note that the share half fails CLOSED: without the
+		// attempts column VerifyShareCode errors rather than falling back to an
+		// unbudgeted check, so a restricted share stops opening instead of
+		// quietly losing its brute-force cap.
 		slog.Error("schema ensure failed", "err", err)
 	} else {
-		slog.Info("schema ensured (billing)")
+		slog.Info("schema ensured (billing, share codes)")
 	}
 
 	// ---------------------------------------------------------------------------
@@ -120,8 +124,10 @@ func main() {
 
 	// Public endpoints (no auth)
 	app.Post("/api/contact", h.SubmitContact)
-	app.Get("/api/share/:token", h.GetShare)                       // public read-only timetable shares
-	app.Post("/api/share/:token/access", h.AccessShare)            // unlock a restricted share by email (no verification)
+	app.Get("/api/share/:token", h.GetShare) // public read-only timetable shares
+	// NOTE: there is deliberately no /access route. It used to hand over a
+	// restricted share to anyone who posted an allow-listed email, which made
+	// the two routes below — the actual proof of mailbox control — optional.
 	app.Post("/api/share/:token/request-code", h.RequestShareCode) // email a one-time code (magic-link)
 	app.Post("/api/share/:token/verify", h.VerifyShareCode)        // verify the code, return the timetable
 	app.Get("/api/billing/config", h.BillingConfig)                // public: prices + whether billing is live

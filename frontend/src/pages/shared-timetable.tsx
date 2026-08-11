@@ -79,6 +79,14 @@ export function SharedTimetablePage() {
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
+        // 429 means the code is spent — the server has deleted it, so staying
+        // on this step would leave the viewer typing into a code that can no
+        // longer work. Send them back to the step that issues a new one, since
+        // that is exactly what the message tells them to do.
+        if (res.status === 429) {
+          setGateStep('email')
+          setCode('')
+        }
         throw new Error(d.error || 'That code is invalid or has expired.')
       }
       const json = await res.json()
