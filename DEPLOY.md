@@ -80,4 +80,10 @@ in). That lands in a follow-up once this backend URL returns 401 above.
 
 `docker compose up --build -d` runs Postgres + the API locally (see `Makefile`:
 `make up`, `make migrate`, `make logs`). Set `SKIP_AUTH=true` to bypass Clerk in
-local dev.
+local dev — `docker-compose.yml` already does.
+
+The bypass has to be asked for by name. If `CLERK_SECRET_KEY` is missing in a
+deployed environment, authenticated routes return **503** and the boot log says
+`auth: no CLERK_SECRET_KEY and no JWT_SECRET`; they do not fall back to
+accepting any token. If signed-in users get 503s after a deploy, that log line
+is the first place to look.
