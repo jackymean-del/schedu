@@ -39,6 +39,7 @@ in `database/migrations/` in order (001 → 006).
    | `CLERK_SECRET_KEY` | Your Clerk **Secret** key (`sk_test_…` / `sk_live_…`)        |
    | `ALLOWED_ORIGINS`  | `https://schedu.bhusku.com`                                  |
    | `PORT`             | `8080` (Railway may inject its own — the app honors `PORT`)  |
+   | `ADMIN_CLERK_IDS`  | Optional. Comma-separated Clerk user ids allowed to call the curriculum mutation endpoints. Leave unset and nobody can — they return 403. |
 
    > The **secret** key is backend-only — never put it in the frontend or Vercel.
    > It must be from the **same Clerk instance** as the frontend's publishable key.

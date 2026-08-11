@@ -168,11 +168,18 @@ func (h *CurriculumHandler) ReviewChanges(c fiber.Ctx) error {
 	if req.Action != curriculum.StatusApproved && req.Action != curriculum.StatusRejected {
 		return fiber.NewError(fiber.StatusBadRequest, "action must be 'approved' or 'rejected'")
 	}
+	// The reviewer is who the request was authenticated as, never who the body
+	// says. This used to accept a client-supplied reviewer_id and only fall back
+	// to the session, so the record of who approved a curriculum change was
+	// written by whoever asked for the change — an audit trail that attests to
+	// nothing. Any value sent in the body is discarded.
+	if uid, ok := c.Locals("user_id").(string); ok {
+		req.ReviewerID = uid
+	} else {
+		req.ReviewerID = ""
+	}
 	if req.ReviewerID == "" {
-		// Fall back to JWT user if available
-		if uid, ok := c.Locals("user_id").(string); ok {
-			req.ReviewerID = uid
-		}
+		return fiber.NewError(fiber.StatusUnauthorized, "no user")
 	}
 
 	var updated []string
@@ -260,10 +267,11 @@ func (h *CurriculumHandler) UpsertOverride(c fiber.Ctx) error {
 	if o.SchoolID == "" || o.SubjectName == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "school_id and subject_name required")
 	}
+	// Same rule as ReviewChanges: authorship comes from the session, not the
+	// body, or "created_by" records whatever the caller preferred to be true.
+	o.CreatedBy, _ = c.Locals("user_id").(string)
 	if o.CreatedBy == "" {
-		if uid, ok := c.Locals("user_id").(string); ok {
-			o.CreatedBy = uid
-		}
+		return fiber.NewError(fiber.StatusUnauthorized, "no user")
 	}
 	id, err := h.ovrSvc.Upsert(c.Context(), &o)
 	if err != nil {

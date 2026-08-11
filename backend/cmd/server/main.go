@@ -164,21 +164,33 @@ func main() {
 	api.Get("/curriculum/changes", cur.GetChanges)
 	api.Get("/curriculum/versions", cur.GetVersions)
 
-	// School overrides — per-school read/write
-	api.Get("/curriculum/overrides", cur.GetOverrides)
-	api.Post("/curriculum/overrides", cur.UpsertOverride)
-	api.Delete("/curriculum/overrides/:id", cur.DeleteOverride)
+	// Everything below writes or reads data that is not the caller's own, and
+	// every one of these routes carried a comment saying "admin-only" while
+	// being enforced by nothing but Auth(). requireAdmin is that enforcement.
+	// Reads above stay open to any signed-in user: they are shared, published
+	// reference data (boards, templates, versions), not anyone's tenant data.
+	requireAdmin := middleware.RequireAdmin()
 
-	// Admin-only mutation endpoints
+	// School overrides. Admin-gated rather than school-scoped, because there is
+	// nothing to scope BY: users has no school or organisation column, so the
+	// server cannot tell which school a caller belongs to. Until it can, these
+	// took school_id straight from the request — meaning any signed-in account
+	// could read or overwrite any school's overrides, and DeleteOverride took an
+	// id and deleted it with no ownership check whatsoever. Closed for now; the
+	// correct fix is per-school authorization once schools exist server-side.
+	api.Get("/curriculum/overrides", cur.GetOverrides, requireAdmin)
+	api.Post("/curriculum/overrides", cur.UpsertOverride, requireAdmin)
+	api.Delete("/curriculum/overrides/:id", cur.DeleteOverride, requireAdmin)
+
 	// POST /curriculum/review — approve or reject pending changes
 	// CRITICAL: Changes are NEVER auto-applied; this is the only path.
-	api.Post("/curriculum/review", cur.ReviewChanges)
+	api.Post("/curriculum/review", cur.ReviewChanges, requireAdmin)
 
 	// POST /curriculum/apply — actually write approved changes to templates
-	api.Post("/curriculum/apply", cur.ApplyApproved)
+	api.Post("/curriculum/apply", cur.ApplyApproved, requireAdmin)
 
 	// POST /curriculum/reset — restore built-in seed templates
-	api.Post("/curriculum/reset", cur.ResetTemplates)
+	api.Post("/curriculum/reset", cur.ResetTemplates, requireAdmin)
 
 	// Serve built frontend LAST so it only catches paths not handled by an
 	// explicit route above (otherwise this greedy wildcard shadows the API).
