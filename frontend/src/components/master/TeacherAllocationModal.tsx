@@ -11,6 +11,7 @@
  */
 
 import { useMemo, useState, useEffect } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import type { Section, Staff } from '@/types'
 import { useTimetableStore } from '@/store/timetableStore'
 import { parseAllocation } from '@/lib/allocationSyntax'
@@ -135,13 +136,16 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
     onClose()
   }
 
+
+  const { dialogProps } = useDialog({ onClose, label: 'Teacher allocation' })
+
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(19,17,30,0.6)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 9999, padding: 20, backdropFilter: 'blur(4px)',
     }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div {...dialogProps} onClick={e => e.stopPropagation()} style={{
         background: '#fff', borderRadius: 16, width: '100%', maxWidth: 760,
         maxHeight: '92vh', display: 'flex', flexDirection: 'column' as const,
         boxShadow: '0 24px 60px rgba(19,17,30,0.35)',

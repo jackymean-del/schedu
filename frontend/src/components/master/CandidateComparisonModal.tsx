@@ -10,6 +10,7 @@
  */
 
 import { useMemo } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { useTimetableStore } from '@/store/timetableStore'
 import type { Section, Subject } from '@/types'
@@ -46,13 +47,16 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
   const top = ranked[0]
   const others = ranked.slice(1)
 
+
+  const { dialogProps } = useDialog({ onClose, label: 'Compare candidates' })
+
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(19,17,30,0.6)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 9999, padding: 20, backdropFilter: 'blur(4px)',
     }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div {...dialogProps} onClick={e => e.stopPropagation()} style={{
         background: '#fff', borderRadius: 16, width: '100%', maxWidth: 880,
         maxHeight: '92vh', display: 'flex', flexDirection: 'column' as const,
         boxShadow: '0 24px 60px rgba(19,17,30,0.35)',

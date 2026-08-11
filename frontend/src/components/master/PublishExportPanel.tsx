@@ -16,6 +16,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import {
   X, Download, FileSpreadsheet, FileText, Printer,
   Users2, CheckCircle2, Loader2, ChevronDown, ChevronRight,
@@ -216,6 +217,9 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
 
   const allDone = done.length === selected.size && selected.size > 0
 
+
+  const { dialogProps } = useDialog({ onClose, label: 'Publish and export' })
+
   return (
     <>
       {/* Backdrop */}
@@ -229,7 +233,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
       />
 
       {/* Panel */}
-      <div style={{
+      <div {...dialogProps} style={{
         position: 'fixed',
         top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',

@@ -23,6 +23,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import type { ClassTimetable, Section, Staff, Period } from '@/types'
 import { X, ArrowLeftRight, CornerUpLeft, RotateCcw, CheckCircle2, AlertTriangle } from 'lucide-react'
 
@@ -84,6 +85,7 @@ export function TimetableSwapModal({
   classTT, sections, staff, periods, workDays,
   initialSection, onClose, onApplyFixes,
 }: Props) {
+  const { dialogProps } = useDialog({ onClose, label: 'Swap periods' })
   const [selectedSection, setSelectedSection] = useState(
     initialSection ?? sections[0]?.name ?? '',
   )
@@ -222,7 +224,7 @@ export function TimetableSwapModal({
       />
 
       {/* Panel */}
-      <div style={{
+      <div {...dialogProps} style={{
         position: 'fixed',
         top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',

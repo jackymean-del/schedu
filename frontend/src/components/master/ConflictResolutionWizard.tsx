@@ -16,6 +16,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import type { Conflict, Section, Staff, Subject, Period, ClassTimetable } from '@/types'
 import {
@@ -473,7 +474,12 @@ export function ConflictResolutionWizard({
 
 // ── Sub-components ───────────────────────────────────────
 
-function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function Backdrop({ children, onClose, label = 'Resolve conflicts' }: {
+  children: React.ReactNode; onClose: () => void; label?: string
+}) {
+  // Backdrop owns the panel, so the dialog semantics belong here rather than
+  // in the wizard that renders it.
+  const { dialogProps } = useDialog({ onClose, label })
   return (
     <div
       onClick={onClose}
@@ -485,6 +491,7 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
       }}
     >
       <div
+        {...dialogProps}
         onClick={e => e.stopPropagation()}
         style={{
           background: '#fff', borderRadius: 16,

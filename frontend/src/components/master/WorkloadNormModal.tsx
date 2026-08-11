@@ -17,6 +17,7 @@
  * keystroke.
  */
 import { useMemo, useState } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import { X, RotateCcw, ShieldCheck } from 'lucide-react'
 import type { Section } from '@/types'
 import { bandForSection, BAND_LABELS, normTeacherHoursWeek, type GradeBand } from '@/lib/educationNorms'
@@ -223,6 +224,9 @@ export function WorkloadNormModal({
 
   const dirty = Object.keys(draft).length > 0
 
+
+  const { dialogProps } = useDialog({ onClose, label: 'Workload norms' })
+
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -234,7 +238,7 @@ export function WorkloadNormModal({
       {/* Height-bounded flex column: header and footer stay put and only the
           table scrolls. Without the bound, a school with a dozen subjects grew
           the card past the viewport and lost both the close button and Save. */}
-      <div style={{
+      <div {...dialogProps} style={{
         width: '100%', maxWidth: 640, maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
         background: '#fff', borderRadius: 16, overflow: 'hidden',

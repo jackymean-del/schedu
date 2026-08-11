@@ -19,6 +19,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
+import { useDialog } from '@/hooks/useDialog'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import type { Staff, Period, TeacherAvailability, SlotStatus } from '@/types'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -151,6 +152,9 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
   const maxWeeklyLoad = teacherWeeklyCap(selectedTeacher as any)
   const loadOk = availableCount >= maxWeeklyLoad
 
+
+  const { dialogProps } = useDialog({ onClose, label: 'Teacher availability' })
+
   return (
     <>
       {/* Backdrop */}
@@ -165,6 +169,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
 
       {/* Modal */}
       <div
+        {...dialogProps}
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed',
