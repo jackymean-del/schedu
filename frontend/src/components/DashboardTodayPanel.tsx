@@ -68,7 +68,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
             <CalendarClock size={16} color="#7C6FE0" />
             <div>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', margin: 0 }}>Today</h2>
-              <div style={{ fontSize: 12, color: '#727780', marginTop: 1 }}>
+              <div style={{ fontSize: 12, color: '#6B7079', marginTop: 1 }}>
                 {DOW[today.getDay()]}, {MONTHS[today.getMonth()]} {today.getDate()}
               </div>
             </div>
@@ -85,15 +85,15 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
         {!summary.isWorkDay ? (
           <div style={{ padding: '28px 20px', textAlign: 'center' }}>
             <Coffee size={22} color="#C9C3EC" />
-            <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: 8 }}>No classes today — enjoy the day off.</div>
+            <div style={{ fontSize: 13.5, color: '#69707E', marginTop: 8 }}>No classes today — enjoy the day off.</div>
           </div>
         ) : allClear ? (
           <div style={{ padding: '24px 20px', textAlign: 'center' }}>
-            <CheckCircle2 size={22} color="#16A34A" />
+            <CheckCircle2 size={22} color="#0A8136" />
             <div style={{ fontSize: 13.5, fontWeight: 600, color: '#13111E', marginTop: 8 }}>
               All clear — {summary.periodsToday} period{summary.periodsToday !== 1 ? 's' : ''} running as scheduled
             </div>
-            <div style={{ fontSize: 12, color: '#727780', marginTop: 3 }}>No absences today.</div>
+            <div style={{ fontSize: 12, color: '#6B7079', marginTop: 3 }}>No absences today.</div>
           </div>
         ) : (
           <div style={{ padding: '10px 16px 14px' }}>
@@ -126,7 +126,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {rc.room} double-booked
                         </div>
-                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 1 }}>
+                        <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 1 }}>
                           {rc.sections.join(' & ')} share this room
                         </div>
                       </div>
@@ -149,7 +149,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
             )}
             {summary.teachersOnLeave.length > 0 && (
               <div style={{ marginTop: summary.uncoveredSlots.length || summary.coveredSlots.length ? 14 : 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#727780', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7079', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   On leave today
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -177,7 +177,7 @@ function SlotSection({ icon, title, tone, slots, h24, cta }: {
   icon: React.ReactNode; title: string; tone: 'warn' | 'ok'
   slots: AffectedSlot[]; h24: boolean; cta?: string
 }) {
-  const color = tone === 'warn' ? '#DC2626' : '#16A34A'
+  const color = tone === 'warn' ? '#DC2626' : '#0A8136'
   const bg    = tone === 'warn' ? '#FEF2F2' : '#F0FDF4'
   const border = tone === 'warn' ? '#FECACA' : '#BBF7D0'
   return (
@@ -199,7 +199,7 @@ function SlotSection({ icon, title, tone, slots, h24, cta }: {
               <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.subject} · {s.section}
               </div>
-              <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 1 }}>
+              <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 1 }}>
                 {s.coveredBy ? <>{s.teacher} → covered by <strong>{s.coveredBy}</strong></> : <>{s.teacher} is on leave</>}
               </div>
             </div>

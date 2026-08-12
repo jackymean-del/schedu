@@ -67,7 +67,7 @@ export function UsersPage() {
 
         <section style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px', color: '#13111E' }}>Members</h2>
-          <p style={{ fontSize: 12.5, color: '#767393', margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: '0 0 14px' }}>
             {members.length === 0
               ? 'Nobody has signed in yet. The first person to do so becomes the administrator.'
               : `${members.length} ${members.length === 1 ? 'person' : 'people'} · a role change takes effect the moment they reload.`}
@@ -84,7 +84,7 @@ export function UsersPage() {
                 <div style={{
                   width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
                   background: m.status === 'active' ? ACCENT : '#E5E7EB',
-                  color: m.status === 'active' ? '#fff' : '#6B7280',
+                  color: m.status === 'active' ? '#fff' : '#69707E',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
                 }}>
                   {(m.name ?? m.email)[0].toUpperCase()}
@@ -94,7 +94,7 @@ export function UsersPage() {
                     {m.name ?? m.email.split('@')[0]}
                     {isSelf(m) && <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, marginLeft: 7 }}>you</span>}
                   </div>
-                  <div style={{ fontSize: 12, color: '#767393', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
+                  <div style={{ fontSize: 12, color: '#6D6A8A', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
                 </div>
 
                 {m.status === 'invited' && (
@@ -156,7 +156,7 @@ export function UsersPage() {
         {canManage && (
           <section style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
             <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px', color: '#13111E' }}>Add a teammate</h2>
-            <p style={{ fontSize: 12.5, color: '#767393', margin: '0 0 14px' }}>
+            <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: '0 0 14px' }}>
               Set their role now; it applies the first time they sign in with this address.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

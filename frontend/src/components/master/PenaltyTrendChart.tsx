@@ -57,7 +57,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '4px 10px', borderRadius: 6,
         background: '#F8F7FF', border: '1px solid #ECEAFB',
-        fontSize: 10, color: '#767393',
+        fontSize: 10, color: '#6D6A8A',
       }}>
         <Minus size={11} />
         <span>Trend appears after first fix</span>
@@ -89,9 +89,9 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
   const first = history[0].score
   const last  = history[history.length - 1].score
   const delta = last - first
-  const trendTone = delta < 0 ? '#16A34A' : delta > 0 ? '#DC2626' : '#7C6FE0'
+  const trendTone = delta < 0 ? '#0A8136' : delta > 0 ? '#DC2626' : '#7C6FE0'
   const trendIcon = delta < 0
-    ? <TrendingDown size={12} color="#16A34A" />
+    ? <TrendingDown size={12} color="#0A8136" />
     : delta > 0
       ? <TrendingUp size={12} color="#DC2626" />
       : <Minus size={12} color="#7C6FE0" />
@@ -188,7 +188,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
         </svg>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#4B5275' }}>
-          <span style={{ fontFamily: "'DM Mono', monospace", color: '#767393' }}>{first}</span>
+          <span style={{ fontFamily: "'DM Mono', monospace", color: '#6D6A8A' }}>{first}</span>
           <span>→</span>
           <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 700, color: trendTone }}>{last}</span>
         </div>
@@ -222,7 +222,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
             }}>
               {hoveredPoint.score}
             </span>
-            <span style={{ fontSize: 9, color: '#767393', fontWeight: 600 }}>pts</span>
+            <span style={{ fontSize: 9, color: '#6D6A8A', fontWeight: 600 }}>pts</span>
             {pointDelta !== null && (
               <span style={{
                 marginLeft: 'auto',

@@ -131,7 +131,7 @@ export function SharedTimetablePage() {
       </header>
 
       <main className="flex-1 px-6 py-8">
-        {status === 'loading' && <p className="py-20 text-center text-[#767393]">Loading schedule…</p>}
+        {status === 'loading' && <p className="py-20 text-center text-[#6D6A8A]">Loading schedule…</p>}
 
         {status === 'restricted' && (
           <div className="mx-auto max-w-[420px] py-20 text-center">
@@ -140,7 +140,7 @@ export function SharedTimetablePage() {
 
             {gateStep === 'email' ? (
               <>
-                <p className="mt-2 text-[15px] leading-[1.7] text-[#767393]">
+                <p className="mt-2 text-[15px] leading-[1.7] text-[#6D6A8A]">
                   This timetable is shared privately. Enter your email and we’ll send you a one-time code.
                 </p>
                 <form onSubmit={requestCode} className="mx-auto mt-6 flex max-w-[360px] flex-col gap-3">
@@ -164,7 +164,7 @@ export function SharedTimetablePage() {
               </>
             ) : (
               <>
-                <p className="mt-2 text-[15px] leading-[1.7] text-[#767393]">
+                <p className="mt-2 text-[15px] leading-[1.7] text-[#6D6A8A]">
                   We sent a 6-digit code to <span className="font-semibold text-[#13111E]">{email}</span>. Enter it below.
                 </p>
                 <form onSubmit={verifyCode} className="mx-auto mt-6 flex max-w-[360px] flex-col gap-3">
@@ -201,7 +201,7 @@ export function SharedTimetablePage() {
           <div className="mx-auto max-w-[480px] py-20 text-center">
             <div className="text-4xl">🔗</div>
             <h1 className="mt-4 text-[24px] font-normal text-[#13111E]">Link not found</h1>
-            <p className="mt-2 text-[15px] leading-[1.7] text-[#767393]">
+            <p className="mt-2 text-[15px] leading-[1.7] text-[#6D6A8A]">
               This share link is invalid or has expired.
             </p>
             <a href="/" className="mt-6 inline-block rounded-[9px] bg-[#7C6FE0] px-6 py-3 text-sm font-bold text-white no-underline">
@@ -213,13 +213,13 @@ export function SharedTimetablePage() {
         {status === 'ready' && data && (
           <div className="mx-auto max-w-[1100px]">
             <h1 className="text-[26px] font-normal tracking-[-0.5px] text-[#13111E]">{data.title}</h1>
-            <p className="mt-1 text-[12px] text-[#767393]">
+            <p className="mt-1 text-[12px] text-[#6D6A8A]">
               {data.orgName ? `${data.orgName} · ` : ''}
               Generated {new Date(data.generatedAt).toLocaleDateString()} · view-only snapshot
             </p>
 
             {data.sections.length === 0 && (
-              <p className="mt-10 text-[#767393]">This shared schedule has no sections.</p>
+              <p className="mt-10 text-[#6D6A8A]">This shared schedule has no sections.</p>
             )}
 
             {data.sections.map(sec => (
@@ -233,7 +233,7 @@ export function SharedTimetablePage() {
                         {data.periods.map(p => (
                           <th
                             key={p.id}
-                            className={`border-b border-[#E8E4FF] px-3 py-2 text-center font-bold ${p.isBreak ? 'text-[#767393]' : 'text-[#4B5275]'}`}
+                            className={`border-b border-[#E8E4FF] px-3 py-2 text-center font-bold ${p.isBreak ? 'text-[#6D6A8A]' : 'text-[#4B5275]'}`}
                           >
                             {p.name}
                           </th>
@@ -249,7 +249,7 @@ export function SharedTimetablePage() {
                           {data.periods.map(p => {
                             if (p.isBreak)
                               return (
-                                <td key={p.id} className="border-t border-[#E8E4FF] bg-[#F8F7FF] px-2 py-2 text-center text-[10px] text-[#767393]">
+                                <td key={p.id} className="border-t border-[#E8E4FF] bg-[#F8F7FF] px-2 py-2 text-center text-[10px] text-[#6D6A8A]">
                                   {p.name}
                                 </td>
                               )
@@ -260,7 +260,7 @@ export function SharedTimetablePage() {
                                   <>
                                     <div className="font-bold text-[#13111E]">{cell.subject}</div>
                                     {cell.teacher && <div className="text-[10px] text-[#7C6FE0]">{cell.teacher}</div>}
-                                    {cell.room && <div className="text-[10px] text-[#767393]">{cell.room}</div>}
+                                    {cell.room && <div className="text-[10px] text-[#6D6A8A]">{cell.room}</div>}
                                   </>
                                 ) : (
                                   <span className="text-[#CBC6EC]">—</span>
@@ -279,7 +279,7 @@ export function SharedTimetablePage() {
         )}
       </main>
 
-      <footer className="border-t border-[#F0EDFF] px-6 py-4 text-center text-[12px] text-[#767393]">
+      <footer className="border-t border-[#F0EDFF] px-6 py-4 text-center text-[12px] text-[#6D6A8A]">
         Shared via{' '}
         <a href="/" className="font-semibold text-[#7C6FE0] no-underline">schedU</a> — human-intelligence timetable scheduling
       </footer>

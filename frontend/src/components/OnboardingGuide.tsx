@@ -71,7 +71,7 @@ export function OnboardingGuide() {
           </button>
         </a>
         <button onClick={() => setDismissed(true)}
-          style={{ padding: '10px 14px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ padding: '10px 14px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', color: '#69707E', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
           Later
         </button>
       </div>

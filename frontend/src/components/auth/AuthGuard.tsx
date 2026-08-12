@@ -12,7 +12,7 @@ function ClerkGuard({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
   if (!isLoaded) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#767393', fontSize: 14 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6D6A8A', fontSize: 14 }}>
         Loading…
       </div>
     )

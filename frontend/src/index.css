@@ -181,7 +181,7 @@ select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
 .schedu-data-table th, .schedu-data-table td { border: 1px solid #C9C3EE; padding: 4px 6px; text-align: left; vertical-align: top; }
 .schedu-data-table thead th { background: #EDE9FF; color: #13111E; font-weight: 700; }
 .schedu-data-table tbody tr:nth-child(even) { background: #FAFAFE; }
-.schedu-data-empty { text-align: center; color: #8B87AD; font-style: italic; }
+.schedu-data-empty { text-align: center; color: #6D6A8A; font-style: italic; }
 /* The "N days/week · N periods/day" meta is hidden in the print document. */
 .schedu-print-root .tt-section-meta { display: none !important; }
 /* Teacher period load is internal — never shown in the print document. */

@@ -120,7 +120,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
         .reg-input:focus { border-color: #7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
         .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; cursor: pointer; appearance: auto; transition: border-color 0.15s; }
         .reg-select:focus { border-color: #7C6FE0; }
-        .reg-google:hover { border-color: #727780 !important; background: #F9FAFB !important; }
+        .reg-google:hover { border-color: #6B7079 !important; background: #F9FAFB !important; }
       `}</style>
 
       {/* LEFT SIDEBAR */}
@@ -142,12 +142,12 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
               <div style={{ width: 28, height: 28, borderRadius: 7, background: f.bg, color: f.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{f.icon}</div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', marginBottom: 3, lineHeight: 1.3 }}>{f.title}</div>
-                <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.55 }}>{f.desc}</div>
+                <div style={{ fontSize: 12, color: '#69707E', lineHeight: 1.55 }}>{f.desc}</div>
               </div>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.5, marginTop: 32 }}>
+        <div style={{ fontSize: 12, color: '#69707E', lineHeight: 1.5, marginTop: 32 }}>
           Trusted by <strong style={{ color: '#13111E' }}>1,200+</strong> schools worldwide
         </div>
       </aside>
@@ -159,7 +159,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
           {phase === 'verify' ? (
             <>
               <h1 style={{ fontSize: 26, fontWeight: 700, color: '#13111E', marginBottom: 6, letterSpacing: '-0.3px' }}>Verify your email</h1>
-              <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>
+              <p style={{ fontSize: 14, color: '#69707E', marginBottom: 28 }}>
                 Enter the 6-digit code we sent to <strong style={{ color: '#13111E' }}>{pendingEmail}</strong>.
               </p>
               <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -175,7 +175,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
                   {verifying ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Verifying…</> : 'Verify & continue'}
                 </button>
               </form>
-              <p style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginTop: 18 }}>
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#69707E', marginTop: 18 }}>
                 Didn’t get it?{' '}
                 <button type="button" onClick={() => { setError(''); onResend().catch(err => setError(authErrorMessage(err))) }}
                   style={{ color: '#7C6FE0', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
@@ -186,7 +186,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
           ) : (
             <>
               <h1 style={{ fontSize: 26, fontWeight: 700, color: '#13111E', marginBottom: 6, letterSpacing: '-0.3px' }}>Create your account</h1>
-              <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>Set up your institution in under 2 minutes.</p>
+              <p style={{ fontSize: 14, color: '#69707E', marginBottom: 28 }}>Set up your institution in under 2 minutes.</p>
 
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -256,15 +256,15 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
                 </button>
               </form>
 
-              <p style={{ fontSize: 12, color: '#727780', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12, color: '#6B7079', textAlign: 'center', marginTop: 14, lineHeight: 1.6 }}>
                 By signing up you agree to the{' '}
-                <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
-                <a href="#" style={{ color: '#6B7280', textDecoration: 'underline' }}>Privacy Policy</a>.
+                <a href="#" style={{ color: '#69707E', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
+                <a href="#" style={{ color: '#69707E', textDecoration: 'underline' }}>Privacy Policy</a>.
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
                 <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
-                <span style={{ fontSize: 12, color: '#727780', fontWeight: 500 }}>or</span>
+                <span style={{ fontSize: 12, color: '#6B7079', fontWeight: 500 }}>or</span>
                 <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
               </div>
 
@@ -273,7 +273,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
                 {googleLoading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Connecting…</> : <><GoogleMark /> Continue with Google</>}
               </button>
 
-              <p style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginTop: 20 }}>
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#69707E', marginTop: 20 }}>
                 Already have an account?{' '}
                 <a href="/login" style={{ color: '#7C6FE0', fontWeight: 600, textDecoration: 'none' }}>Sign in</a>
               </p>

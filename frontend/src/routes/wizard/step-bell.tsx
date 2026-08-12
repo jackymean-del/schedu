@@ -1330,7 +1330,7 @@ function ClasswiseBreaksPanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#7C6FE0', marginBottom: 4 }}>
             <Sparkles size={13} color="#7C6FE0" /> Class-wise Breaks
           </div>
-          <p style={{ fontSize: 12, color: '#6B7280', margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: '#69707E', margin: 0, lineHeight: 1.5 }}>
             Choose <strong>which classes</strong> have a break and set its <strong>break timing</strong> —
             pick a period, chain it after another break, or enter a custom time.
             Click <strong>Generate bell timing</strong> when ready.
@@ -1338,7 +1338,7 @@ function ClasswiseBreaksPanel({
         </div>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          color: '#727780', padding: 4, display: 'flex', flexShrink: 0, marginLeft: 10,
+          color: '#6B7079', padding: 4, display: 'flex', flexShrink: 0, marginLeft: 10,
         }}>
           <X size={14} />
         </button>
@@ -1348,7 +1348,7 @@ function ClasswiseBreaksPanel({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
         background: '#EDE9FF', borderRadius: 7, padding: '6px 10px',
-        marginBottom: 14, fontSize: 11, color: '#6B7280',
+        marginBottom: 14, fontSize: 11, color: '#69707E',
       }}>
         <span style={{ fontSize: 13 }}>💡</span>
         <span>
@@ -1365,7 +1365,7 @@ function ClasswiseBreaksPanel({
           gap: 10, padding: '0 12px 6px',
         }}>
           {['Break name', 'Applies to', 'Break timing', 'Duration', ''].map((h, i) => (
-            <div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#727780', letterSpacing: '0.05em' }}>{h}</div>
+            <div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#6B7079', letterSpacing: '0.05em' }}>{h}</div>
           ))}
         </div>
       )}
@@ -1432,7 +1432,7 @@ function ClasswiseBreaksPanel({
                   classStreamMap={classStreamMap}
                 />
                 {row.classes.length > 0 && row.classes.length < allClassKeys.length && (
-                  <div style={{ fontSize: 10, color: '#727780', marginTop: 4 }}>
+                  <div style={{ fontSize: 10, color: '#6B7079', marginTop: 4 }}>
                     {row.classes.length} of {allClassKeys.length} classes
                   </div>
                 )}
@@ -1506,7 +1506,7 @@ function ClasswiseBreaksPanel({
                       onChange={e => updateBreak(row.id, { customStartTime: e.target.value })}
                       style={{ flex: 1, padding: '3px 5px', border: '1px solid #C4B5FD', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#F8F7FF', color: '#7C6FE0' }}
                     />
-                    <span style={{ fontSize: 10, color: '#727780' }}>start</span>
+                    <span style={{ fontSize: 10, color: '#6B7079' }}>start</span>
                   </div>
                 )}
 
@@ -1529,7 +1529,7 @@ function ClasswiseBreaksPanel({
                       fontWeight: 700, outline: 'none', background: '#fff',
                     }}
                   />
-                  <span style={{ fontSize: 10, color: '#727780', whiteSpace: 'nowrap' }}>min</span>
+                  <span style={{ fontSize: 10, color: '#6B7079', whiteSpace: 'nowrap' }}>min</span>
                 </div>
               </div>
 
@@ -1547,7 +1547,7 @@ function ClasswiseBreaksPanel({
         {/* Empty state */}
         {cwRows.length === 0 && (
           <div style={{
-            textAlign: 'center', padding: '20px 0', color: '#727780', fontSize: 12,
+            textAlign: 'center', padding: '20px 0', color: '#6B7079', fontSize: 12,
           }}>
             No breaks added yet. Click <strong>+ Add break</strong> to get started.
           </div>
@@ -1582,7 +1582,7 @@ function ClasswiseBreaksPanel({
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '7px 18px', borderRadius: 7, border: 'none',
           background: cwRows.length > 0 ? '#7C6FE0' : '#E5E7EB',
-          color: cwRows.length > 0 ? '#fff' : '#727780',
+          color: cwRows.length > 0 ? '#fff' : '#6B7079',
           fontSize: 12, fontWeight: 700,
           cursor: cwRows.length > 0 ? 'pointer' : 'default', fontFamily: 'inherit',
         }}>
@@ -1724,7 +1724,7 @@ function ClassPicker({
                     }}
                     style={{ accentColor: gm.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 11, fontWeight: 700, color: gm.color, letterSpacing: '0.04em' }}>{gm.group.toUpperCase()}</span>
-                  <span style={{ fontSize: 10, color: '#727780', marginLeft: 'auto' }}>{gm.desc}</span>
+                  <span style={{ fontSize: 10, color: '#6B7079', marginLeft: 'auto' }}>{gm.desc}</span>
                 </div>
 
                 {/* Per-class rows — expanded into per-stream sub-checkboxes when composite keys exist */}
@@ -1764,7 +1764,7 @@ function ClassPicker({
                                 padding: '1px 9px', borderRadius: 8, fontSize: 10, fontWeight: 700,
                                 border: checked ? `1.5px solid ${sd?.color ?? gm.color}` : '1px solid #E5E7EB',
                                 background: checked ? (sd?.bg ?? gm.bg) : '#F9FAFB',
-                                color: checked ? (sd?.color ?? gm.color) : '#727780',
+                                color: checked ? (sd?.color ?? gm.color) : '#6B7079',
                               }}>{stream}</span>
                             </label>
                           )
@@ -1843,7 +1843,7 @@ function GapRow({
             style={{ width: 160, padding: '2px 7px', borderRadius: 5, border: '1px solid #FDE68A', fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff' }}
           />
           <button onClick={confirmBreak} style={{ padding: '2px 10px', borderRadius: 5, border: 'none', background: '#D97706', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Add</button>
-          <button onClick={() => { setMode('idle'); setBreakName('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#727780', padding: 2, display: 'flex' }}><X size={10} /></button>
+          <button onClick={() => { setMode('idle'); setBreakName('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7079', padding: 2, display: 'flex' }}><X size={10} /></button>
         </div>
       </div>
     )
@@ -1950,11 +1950,11 @@ function LiveBellTimeline({
           }}>
             <div style={{ fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#374151' }}>{fmt12(start, use12h)}</div>
-              <div style={{ fontSize: 9, color: '#727780' }}>{fmt12(end, use12h)}</div>
+              <div style={{ fontSize: 9, color: '#6B7079' }}>{fmt12(end, use12h)}</div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</div>
-              <div style={{ fontSize: 9, color: '#727780' }}>{row.duration} min · {grp}</div>
+              <div style={{ fontSize: 9, color: '#6B7079' }}>{row.duration} min · {grp}</div>
             </div>
           </div>
         )
@@ -3664,7 +3664,7 @@ export function StepBell() {
                 <span style={{ fontSize: 18 }}>🔔</span>
                 <span style={{ fontSize: 15, fontWeight: 800, color: '#1F2937' }}>Set up your bell timing</span>
               </div>
-              <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 14, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: '#69707E', marginBottom: 14, lineHeight: 1.6 }}>
                 Pick how you'd like to start — you can fine-tune everything afterwards.
               </div>
 
@@ -3673,7 +3673,7 @@ export function StepBell() {
                 <span style={{ fontSize: 14 }}>🧠</span>
                 <div style={{ fontSize: 11.5, color: '#4B5563', lineHeight: 1.6 }}>
                   {distinctBlocks.length === 0
-                    ? <>No room blocks set yet — I'll treat all classes as one location. <span style={{ color: '#727780' }}>Add blocks in Resources → Rooms to plan by building.</span></>
+                    ? <>No room blocks set yet — I'll treat all classes as one location. <span style={{ color: '#6B7079' }}>Add blocks in Resources → Rooms to plan by building.</span></>
                     : distinctBlocks.length === 1
                       ? <>All classes are in <strong style={{ color: '#6358C4' }}>{distinctBlocks[0]}</strong> — a single shared schedule fits best.</>
                       : <>Detected <strong style={{ color: '#6358C4' }}>{distinctBlocks.length} blocks</strong>: {distinctBlocks.join(', ')}. You can give each its own timing.</>}
@@ -3683,7 +3683,7 @@ export function StepBell() {
               {/* Area question — only when more than one block exists */}
               {distinctBlocks.length > 1 && (
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 6 }}>How should blocks be timed?</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#69707E', marginBottom: 6 }}>How should blocks be timed?</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {([['one', 'One schedule for all', 'Same bells across every block'], ['per-block', 'Different timing per block', 'One shift per block — set each separately']] as const).map(([val, label, desc]) => {
                       const active = areaMode === val
@@ -3693,7 +3693,7 @@ export function StepBell() {
                           border: active ? '2px solid #7C6FE0' : '1.5px solid #E5E7EB', background: active ? '#F5F3FF' : '#fff',
                         }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#6358C4' : '#374151' }}>{label}</div>
-                          <div style={{ fontSize: 10, color: '#727780', marginTop: 2 }}>{desc}</div>
+                          <div style={{ fontSize: 10, color: '#6B7079', marginTop: 2 }}>{desc}</div>
                         </button>
                       )
                     })}
@@ -3709,11 +3709,11 @@ export function StepBell() {
                 </button>
                 <button onClick={() => setSetupChoice('manual')} style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1.5px solid #E5E7EB', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                   🛠 I'll configure manually
-                  <div style={{ fontSize: 10, fontWeight: 500, color: '#727780', marginTop: 2 }}>Set hours, breaks &amp; periods yourself</div>
+                  <div style={{ fontSize: 10, fontWeight: 500, color: '#6B7079', marginTop: 2 }}>Set hours, breaks &amp; periods yourself</div>
                 </button>
               </div>
 
-              <div style={{ fontSize: 10.5, color: '#727780', marginTop: 12, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 10.5, color: '#6B7079', marginTop: 12, lineHeight: 1.5 }}>
                 ℹ️ All classes keep the same start &amp; end time. If lunch is staggered, classes that aren't eating run a matching-length period so the bells line up.
               </div>
             </div>
@@ -3721,7 +3721,7 @@ export function StepBell() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '8px 12px', borderRadius: 10, border: '1px solid #EDE9FE', background: '#FBFAFF' }}>
               <span style={{ fontSize: 13 }}>{setupChoice === 'guided' ? '✨' : '🛠'}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#4B5563' }}>{setupChoice === 'guided' ? 'Guided setup' : 'Manual setup'}</span>
-              {distinctBlocks.length > 1 && <span style={{ fontSize: 11, color: '#727780' }}>· {areaMode === 'per-block' ? `${distinctBlocks.length} blocks` : 'one schedule'}</span>}
+              {distinctBlocks.length > 1 && <span style={{ fontSize: 11, color: '#6B7079' }}>· {areaMode === 'per-block' ? `${distinctBlocks.length} blocks` : 'one schedule'}</span>}
               <div style={{ flex: 1 }} />
               <button onClick={() => setSetupChoice('choose')} style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Change</button>
             </div>
@@ -3743,7 +3743,7 @@ export function StepBell() {
                     padding: '7px 22px', borderRadius: 8, border: 'none',
                     background: active ? '#fff' : 'transparent',
                     boxShadow: active ? '0 1px 4px rgba(0,0,0,.10)' : 'none',
-                    color: active ? '#13111E' : '#727780',
+                    color: active ? '#13111E' : '#6B7079',
                     fontSize: 13, fontWeight: active ? 700 : 500,
                     cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
                     display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
@@ -3791,7 +3791,7 @@ export function StepBell() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                 {!useDayNames && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 12, color: '#6B7280' }}>Repeats every</span>
+                    <span style={{ fontSize: 12, color: '#69707E' }}>Repeats every</span>
                     {/* Stepper */}
                     <div style={{ display: 'inline-flex', alignItems: 'center', border: '1.5px solid #E5E7EB', borderRadius: 8, overflow: 'hidden' }}>
                       <button onClick={() => {
@@ -3804,7 +3804,7 @@ export function StepBell() {
                       <button onClick={() => setCycleWeeks(w => Math.min(12, w + 1))}
                         style={{ padding: '5px 11px', background: 'none', border: 'none', fontSize: 15, fontWeight: 700, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit' }}>+</button>
                     </div>
-                    <span style={{ fontSize: 12, color: '#6B7280' }}>{cycleWeeks === 1 ? 'week' : 'weeks'}</span>
+                    <span style={{ fontSize: 12, color: '#69707E' }}>{cycleWeeks === 1 ? 'week' : 'weeks'}</span>
                   </div>
                 )}
 
@@ -3822,14 +3822,14 @@ export function StepBell() {
                     <div style={{ position: 'absolute', inset: 0, borderRadius: 9, background: useDayNames ? '#7C6FE0' : '#E5E7EB', transition: 'background .2s' }} />
                     <div style={{ position: 'absolute', top: 2, left: useDayNames ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
                   </div>
-                  <span style={{ fontSize: 12, color: '#374151' }}>Use day names <span style={{ color: '#727780' }}>(A/B, 8-day…)</span></span>
+                  <span style={{ fontSize: 12, color: '#374151' }}>Use day names <span style={{ color: '#6B7079' }}>(A/B, 8-day…)</span></span>
                 </label>
               </div>
 
               {/* Cycle start date (when cycle > 1 week or day names on) */}
               {(cycleWeeks > 1 || useDayNames) && (
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: '#69707E', marginBottom: 6 }}>
                     {useDayNames ? 'Rotation starts on' : 'Week 1 starts on'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -3838,11 +3838,11 @@ export function StepBell() {
                     {cycleStartDate && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 7, background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
                         <span style={{ fontSize: 11, color: '#22C55E' }}>✓</span>
-                        <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, color: '#0A8136', fontWeight: 600 }}>
                           {useDayNames ? 'Rotation' : 'Week 1'} starts on {cycleStartHint(cycleStartDate)}
                         </span>
                         <button onClick={() => setCycleStartDate('')}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#727780', fontSize: 11, padding: 0, fontFamily: 'inherit' }}>Clear</button>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7079', fontSize: 11, padding: 0, fontFamily: 'inherit' }}>Clear</button>
                       </div>
                     )}
                   </div>
@@ -3852,7 +3852,7 @@ export function StepBell() {
                       <input type="checkbox" checked={fixedDuration} onChange={e => setFixedDuration(e.target.checked)}
                         style={{ accentColor: '#7C6FE0', width: 14, height: 14 }} />
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Fixed duration (non-repeating)</span>
-                      <span style={{ fontSize: 11, color: '#727780' }}>— runs once with a set start and end date</span>
+                      <span style={{ fontSize: 11, color: '#6B7079' }}>— runs once with a set start and end date</span>
                     </label>
                   )}
                   {fixedDuration && !useDayNames && cycleWeeks >= 3 && (
@@ -3866,7 +3866,7 @@ export function StepBell() {
                     <div style={{ marginTop: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Days per week</span>
-                        <span style={{ fontSize: 11, color: '#727780' }}>— each week can have different working days</span>
+                        <span style={{ fontSize: 11, color: '#6B7079' }}>— each week can have different working days</span>
                       </div>
                       {Array.from({ length: cycleWeeks }, (_, i) => {
                         const w = i + 1
@@ -3875,7 +3875,7 @@ export function StepBell() {
                         return (
                           <div key={w} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                             <span style={{
-                              fontSize: 11, fontWeight: 800, color: isCustom ? '#7C6FE0' : '#727780',
+                              fontSize: 11, fontWeight: 800, color: isCustom ? '#7C6FE0' : '#6B7079',
                               fontFamily: "'DM Mono',monospace", width: 24, flexShrink: 0,
                             }}>W{w}</span>
                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -3903,7 +3903,7 @@ export function StepBell() {
                               <button onClick={() => setWeekWorkDays(prev => {
                                 const next = { ...prev }; delete next[w]; return next
                               })} style={{
-                                fontSize: 10, color: '#727780', background: 'none', border: 'none',
+                                fontSize: 10, color: '#6B7079', background: 'none', border: 'none',
                                 cursor: 'pointer', padding: 0, fontFamily: 'inherit',
                               }}>Reset</button>
                             )}
@@ -3928,13 +3928,13 @@ export function StepBell() {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '14px 1fr 56px 20px', gap: '6px 10px', alignItems: 'center', marginBottom: 4 }}>
                     <span />
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#727780', letterSpacing: '0.06em' }}>FULL NAME</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#727780', letterSpacing: '0.06em' }}>SHORT</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#6B7079', letterSpacing: '0.06em' }}>FULL NAME</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#6B7079', letterSpacing: '0.06em' }}>SHORT</span>
                     <span />
                   </div>
                   {rotationDays.map((day, i) => (
                     <div key={i} style={{ display: 'grid', gridTemplateColumns: '14px 1fr 56px 20px', gap: '6px 10px', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, color: '#727780', textAlign: 'right' }}>{i + 1}.</span>
+                      <span style={{ fontSize: 11, color: '#6B7079', textAlign: 'right' }}>{i + 1}.</span>
                       <input value={day.full} onChange={e => setRotationDays(d => d.map((x, j) => j === i ? { ...x, full: e.target.value } : x))}
                         style={{ padding: '5px 9px', borderRadius: 6, border: '1px solid #E5E7EB', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
                       <input value={day.short} maxLength={4} onChange={e => setRotationDays(d => d.map((x, j) => j === i ? { ...x, short: e.target.value.toUpperCase() } : x))}
@@ -3974,7 +3974,7 @@ export function StepBell() {
               </div>
               <div style={{ padding: '14px 16px' }}>
 
-              <div style={{ fontSize: 11, color: '#767393', marginBottom: 10, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, color: '#6D6A8A', marginBottom: 10, lineHeight: 1.5 }}>
                 Set the school day's <strong>start</strong> &amp; <strong>end</strong>, the period length
                 (<strong>P.Min–P.Max</strong>), and periods per day (<strong>Max/day</strong>).
                 With Smart Timing on, the end time auto-fits the periods.
@@ -4066,7 +4066,7 @@ export function StepBell() {
                         style={{
                           flex: 1, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700,
                           background: periodDurationMode === m ? '#7C6FE0' : '#fff',
-                          color: periodDurationMode === m ? '#fff' : '#6B7280',
+                          color: periodDurationMode === m ? '#fff' : '#69707E',
                         }}>
                         {m === 'fixed' ? 'Fixed' : 'Range'}
                       </button>
@@ -4107,7 +4107,7 @@ export function StepBell() {
                 const totalHrs  = (endMins - startMins) / 60
                 return (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#69707E', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
                       Age-appropriate hours guide
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -4134,9 +4134,9 @@ export function StepBell() {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>
                                   {s.label}
-                                  <span style={{ fontWeight: 400, color: '#727780', marginLeft: 5 }}>({s.ages})</span>
+                                  <span style={{ fontWeight: 400, color: '#6B7079', marginLeft: 5 }}>({s.ages})</span>
                                 </div>
-                                <div style={{ fontSize: 10, color: '#6B7280' }}>
+                                <div style={{ fontSize: 10, color: '#69707E' }}>
                                   Recommended {s.minHours}–{s.maxHours} hrs · {fmt12(startTime, use12h)}–{fmt12(s.suggestedEnd, use12h)}
                                 </div>
                               </div>
@@ -4161,7 +4161,7 @@ export function StepBell() {
                           )
                         })}
                     </div>
-                    <div style={{ fontSize: 10, color: '#727780', marginTop: 4 }}>
+                    <div style={{ fontSize: 10, color: '#6B7079', marginTop: 4 }}>
                       Based on NEP 2020 · NCERT · RTE Act 2009 · CBSE · WHO/UNESCO standards
                     </div>
                   </div>
@@ -4172,7 +4172,7 @@ export function StepBell() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 {cycleWeeks === 1 && !useDayNames && (
                   <>
-                    <span style={{ fontSize: 12, color: '#6B7280', flexShrink: 0 }}>Working days:</span>
+                    <span style={{ fontSize: 12, color: '#69707E', flexShrink: 0 }}>Working days:</span>
                     {ALL_DAYS.map(d => {
                       const on = workDays.includes(d)
                       return (
@@ -4180,7 +4180,7 @@ export function StepBell() {
                           padding: '3px 11px', borderRadius: 20,
                           border: on ? '1px solid #10B981' : '1px solid #E5E7EB',
                           background: on ? '#10B981' : '#fff',
-                          color: on ? '#fff' : '#727780',
+                          color: on ? '#fff' : '#6B7079',
                           fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
                         }}>{d}</button>
                       )
@@ -4232,7 +4232,7 @@ export function StepBell() {
                               borderRadius: 8, padding: '1px 6px' }}>RECOMMENDED</span>
                           )}
                         </div>
-                        <p style={{ fontSize: 11, color: '#6B7280', margin: '0 0 9px', lineHeight: 1.6 }}>
+                        <p style={{ fontSize: 11, color: '#69707E', margin: '0 0 9px', lineHeight: 1.6 }}>
                           {sug.detail}
                         </p>
                         <button
@@ -4288,7 +4288,7 @@ export function StepBell() {
                           {ALL_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
 
-                        <span style={{ fontSize: 11, color: '#727780', flexShrink: 0 }}>off for</span>
+                        <span style={{ fontSize: 11, color: '#6B7079', flexShrink: 0 }}>off for</span>
 
                         {/* Class picker — reuse existing component */}
                         <ClassPicker
@@ -4319,7 +4319,7 @@ export function StepBell() {
                               )
                             })}
                             {rule.classes.length > 6 && (
-                              <span style={{ fontSize: 10, color: '#727780', alignSelf: 'center' }}>
+                              <span style={{ fontSize: 10, color: '#6B7079', alignSelf: 'center' }}>
                                 +{rule.classes.length - 6} more
                               </span>
                             )}
@@ -4359,7 +4359,7 @@ export function StepBell() {
                       padding: '4px 14px', borderRadius: 16, fontSize: 12, fontWeight: 700,
                       border: active ? '1.5px solid #7C6FE0' : '1px solid #E5E7EB',
                       background: active ? '#EDE9FF' : '#fff',
-                      color: active ? '#7C6FE0' : '#727780',
+                      color: active ? '#7C6FE0' : '#6B7079',
                       cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                     }}>
                       {s.name}
@@ -4371,7 +4371,7 @@ export function StepBell() {
                         }} style={{
                           marginLeft: 1, width: 13, height: 13, borderRadius: '50%',
                           background: active ? '#C4B5FD' : '#E5E7EB',
-                          color: active ? '#7C6FE0' : '#727780',
+                          color: active ? '#7C6FE0' : '#6B7079',
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 9, fontWeight: 900, lineHeight: 1, cursor: 'pointer',
                         }}>×</span>
@@ -4476,7 +4476,7 @@ export function StepBell() {
               {/* Class assignment */}
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12, color: '#6B7280', flexShrink: 0 }}>Assigned to:</span>
+                  <span style={{ fontSize: 12, color: '#69707E', flexShrink: 0 }}>Assigned to:</span>
                   {/* All toggle */}
                   <button onClick={() => {
                     const allOn = activeClassKeys.every(k => activeShift.classes.includes(k))
@@ -4485,7 +4485,7 @@ export function StepBell() {
                     padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
                     border: activeClassKeys.every(k => activeShift.classes.includes(k)) ? '1.5px solid #374151' : '1px solid #E5E7EB',
                     background: activeClassKeys.every(k => activeShift.classes.includes(k)) ? '#374151' : '#fff',
-                    color: activeClassKeys.every(k => activeShift.classes.includes(k)) ? '#fff' : '#727780',
+                    color: activeClassKeys.every(k => activeShift.classes.includes(k)) ? '#fff' : '#6B7079',
                     cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                   }}>All</button>
                   {/* Group toggles */}
@@ -4523,7 +4523,7 @@ export function StepBell() {
                         padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
                         border: on ? `1.5px solid ${gm.color}` : (someTaken || partial) ? `1px dashed ${gm.color}` : '1px solid #E5E7EB',
                         background: on ? gm.bg : '#fff',
-                        color: on ? gm.color : (partial || someTaken) ? gm.color : '#727780',
+                        color: on ? gm.color : (partial || someTaken) ? gm.color : '#6B7079',
                         cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                       }}>
                         {gm.group}
@@ -4564,7 +4564,7 @@ export function StepBell() {
                               padding: '2px 9px', borderRadius: 12, fontSize: 10, fontWeight: 700,
                               border: on ? `1px solid ${gm.color}` : disabled ? '1px dashed #D1D5DB' : '1px solid #E5E7EB',
                               background: on ? gm.bg : '#fff',
-                              color: on ? gm.color : disabled ? '#D1D5DB' : '#727780',
+                              color: on ? gm.color : disabled ? '#D1D5DB' : '#6B7079',
                               cursor: disabled ? 'not-allowed' : 'pointer',
                               fontFamily: 'inherit',
                               textDecoration: disabled ? 'line-through' : 'none',
@@ -4582,7 +4582,7 @@ export function StepBell() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   {cycleWeeks === 1 && !useDayNames && (
                     <>
-                      <span style={{ fontSize: 12, color: '#6B7280', flexShrink: 0 }}>Working days:</span>
+                      <span style={{ fontSize: 12, color: '#69707E', flexShrink: 0 }}>Working days:</span>
                       {ALL_DAYS.map(d => {
                         const on = workDays.includes(d)
                         return (
@@ -4590,7 +4590,7 @@ export function StepBell() {
                             padding: '3px 11px', borderRadius: 20,
                             border: on ? '1px solid #10B981' : '1px solid #E5E7EB',
                             background: on ? '#10B981' : '#fff',
-                            color: on ? '#fff' : '#727780',
+                            color: on ? '#fff' : '#6B7079',
                             fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
                           }}>{d}</button>
                         )
@@ -4637,7 +4637,7 @@ export function StepBell() {
                                 borderRadius: 8, padding: '1px 6px' }}>RECOMMENDED</span>
                             )}
                           </div>
-                          <p style={{ fontSize: 11, color: '#6B7280', margin: '0 0 9px', lineHeight: 1.6 }}>{sug.detail}</p>
+                          <p style={{ fontSize: 11, color: '#69707E', margin: '0 0 9px', lineHeight: 1.6 }}>{sug.detail}</p>
                           <button onClick={() => applyDaySuggestion(sug)} style={{
                             fontSize: 11, fontWeight: 700, color: '#fff', background: sug.color,
                             border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer',
@@ -4664,7 +4664,7 @@ export function StepBell() {
                           style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #FDE68A', fontSize: 12, fontFamily: 'inherit', outline: 'none', fontWeight: 700, color: '#B45309', background: '#FEF9EE', flexShrink: 0 }}>
                           {ALL_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
-                        <span style={{ fontSize: 11, color: '#727780', flexShrink: 0 }}>off for</span>
+                        <span style={{ fontSize: 11, color: '#6B7079', flexShrink: 0 }}>off for</span>
                         <ClassPicker classes={rule.classes}
                           onChange={cls => setDayOffRules(prev => prev.map(r => r.id === rule.id ? { ...r, classes: cls } : r))}
                           rowId={`dor2-${rule.id}`} openId={openPicker} setOpenId={setOpenPicker}
@@ -4698,8 +4698,8 @@ export function StepBell() {
                 background: autoBellMode ? '#EDE9FF' : '#F3F4F6',
                 borderBottom: autoBellMode ? '1px solid #C4B5FD' : '1px solid #E5E7EB',
               }}>
-                <Sparkles size={14} color={autoBellMode ? '#7C6FE0' : '#727780'} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: autoBellMode ? '#6358C4' : '#6B7280', flex: 1 }}>
+                <Sparkles size={14} color={autoBellMode ? '#7C6FE0' : '#6B7079'} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: autoBellMode ? '#6358C4' : '#69707E', flex: 1 }}>
                   Smart Timing
                 </span>
                 {/* Toggle */}
@@ -4732,7 +4732,7 @@ export function StepBell() {
                       <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>🍱</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 2 }}>Institution type</div>
-                        <div style={{ fontSize: 10, color: '#727780', lineHeight: 1.6 }}>
+                        <div style={{ fontSize: 10, color: '#6B7079', lineHeight: 1.6 }}>
                           Day-boarding serves snacks &amp; lunch on campus, so all classes stay nearly the full day — juniors leave only slightly earlier. Regular schools disperse younger classes noticeably earlier.
                         </div>
                       </div>
@@ -4746,7 +4746,7 @@ export function StepBell() {
                             border: active ? '2px solid #7C6FE0' : '1.5px solid #E5E7EB', background: active ? '#fff' : '#FAFAFA',
                           }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#6358C4' : '#374151' }}>{label}</div>
-                            <div style={{ fontSize: 10, color: '#727780', marginTop: 2 }}>{desc}</div>
+                            <div style={{ fontSize: 10, color: '#6B7079', marginTop: 2 }}>{desc}</div>
                           </button>
                         )
                       })}
@@ -4801,7 +4801,7 @@ export function StepBell() {
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: '#727780', lineHeight: 1.6 }}>
+                        <div style={{ fontSize: 10, color: '#6B7079', lineHeight: 1.6 }}>
                           An extra short pause anywhere in the day — for a snack, stretch, or settling-in time. Place it near the start or the end of the day, wherever it's needed.
                         </div>
                       </div>
@@ -4814,15 +4814,15 @@ export function StepBell() {
                         onClick={() => setMorningBreak(false)}
                         style={{
                           flex: 1, padding: '9px 12px', borderRadius: 8,
-                          border: !morningBreak ? '2px solid #727780' : '1.5px solid #E5E7EB',
+                          border: !morningBreak ? '2px solid #6B7079' : '1.5px solid #E5E7EB',
                           background: !morningBreak ? '#F3F4F6' : '#fff',
                           cursor: 'pointer', fontFamily: 'inherit',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                           transition: 'all .12s', outline: 'none',
                         }}>
                         <span style={{ fontSize: 13 }}>✗</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: !morningBreak ? '#374151' : '#727780' }}>No break</span>
-                        {!morningBreak && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6B7280', marginLeft: 2 }} />}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: !morningBreak ? '#374151' : '#6B7079' }}>No break</span>
+                        {!morningBreak && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#69707E', marginLeft: 2 }} />}
                       </button>
 
                       {/* After... */}
@@ -4837,7 +4837,7 @@ export function StepBell() {
                           transition: 'all .12s', outline: 'none',
                         }}>
                         <span style={{ fontSize: 13 }}>☕</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: morningBreak ? '#92400E' : '#727780' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: morningBreak ? '#92400E' : '#6B7079' }}>
                           {morningBreak ? `After ${morningBreakPos === 0 ? 'Assembly' : `Period ${morningBreakPos}`}` : 'After…'}
                         </span>
                         {morningBreak && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#D97706', marginLeft: 2 }} />}
@@ -4876,8 +4876,8 @@ export function StepBell() {
                                     display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
                                     transition: 'all .1s', outline: 'none', minWidth: 68,
                                   }}>
-                                  <span style={{ fontSize: 11, fontWeight: 700, color: active ? '#92400E' : '#6B7280' }}>{label}</span>
-                                  {sub && <span style={{ fontSize: 9, color: active ? '#B45309' : '#727780', marginTop: 1 }}>{sub}</span>}
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: active ? '#92400E' : '#69707E' }}>{label}</span>
+                                  {sub && <span style={{ fontSize: 9, color: active ? '#B45309' : '#6B7079', marginTop: 1 }}>{sub}</span>}
                                 </button>
                               )
                             })}
@@ -4953,7 +4953,7 @@ export function StepBell() {
                                     border: active ? '2px solid #F59E0B' : '1.5px solid #E5E7EB',
                                     background: active ? '#FEF3C7' : '#fff',
                                     cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 600,
-                                    color: active ? '#92400E' : '#6B7280',
+                                    color: active ? '#92400E' : '#69707E',
                                   }}>
                                   {label}
                                 </button>
@@ -4992,7 +4992,7 @@ export function StepBell() {
                               Add break
                             </button>
                             <button onClick={() => setAddingBreak(false)}
-                              style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #E5E7EB', background: '#fff', color: '#69707E', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Cancel
                             </button>
                           </div>
@@ -5017,17 +5017,17 @@ export function StepBell() {
                             style={{
                               flex: 1, textAlign: 'left' as const,
                               padding: '11px 13px', borderRadius: 9, cursor: 'pointer',
-                              border: active ? `2px solid ${isSmart ? '#7C6FE0' : '#6B7280'}` : '1.5px solid #E5E7EB',
+                              border: active ? `2px solid ${isSmart ? '#7C6FE0' : '#69707E'}` : '1.5px solid #E5E7EB',
                               background: active ? (isSmart ? '#F5F3FF' : '#F9FAFB') : '#fff',
                               fontFamily: 'inherit', transition: 'all .12s',
                             }}>
                             <div style={{ fontSize: 15, marginBottom: 4 }}>
                               {isSmart ? '🧠' : '🕐'}
                             </div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: active ? (isSmart ? '#6358C4' : '#111827') : '#6B7280', marginBottom: 3 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: active ? (isSmart ? '#6358C4' : '#111827') : '#69707E', marginBottom: 3 }}>
                               {isSmart ? 'Smart Lunch' : 'Single Lunch'}
                             </div>
-                            <div style={{ fontSize: 10, color: '#727780', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 10, color: '#6B7079', lineHeight: 1.5 }}>
                               {isSmart
                                 ? 'Each age group eats at a different time. Avoids canteen rush.'
                                 : 'All classes share one common lunch break slot.'}
@@ -5047,7 +5047,7 @@ export function StepBell() {
                       background: '#FAFAFE', border: '1px solid #EDE9FF',
                       borderRadius: 9, padding: '12px 14px',
                     }}>
-                      <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 10, lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 11, color: '#69707E', marginBottom: 10, lineHeight: 1.5 }}>
                         <strong style={{ color: '#6358C4' }}>How it works:</strong> Each age group gets lunch at a different period. Younger children eat earlier (they get hungry sooner), older classes eat later — the canteen serves one group at a time, no rush.
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -5107,9 +5107,9 @@ export function StepBell() {
                             }}>
                               <span style={{ fontSize: 16, flexShrink: 0 }}>{meta.emoji}</span>
                               <span style={{ fontSize: 12, fontWeight: 700, color: meta.color, minWidth: 100 }}>{gm.group}</span>
-                              <span style={{ fontSize: 10, color: '#727780', flex: 1 }}>{gm.desc}</span>
-                              <span style={{ fontSize: 10, color: '#727780', minWidth: 80 }}>≈ {approx}</span>
-                              <span style={{ fontSize: 11, color: '#6B7280' }}>After P</span>
+                              <span style={{ fontSize: 10, color: '#6B7079', flex: 1 }}>{gm.desc}</span>
+                              <span style={{ fontSize: 10, color: '#6B7079', minWidth: 80 }}>≈ {approx}</span>
+                              <span style={{ fontSize: 11, color: '#69707E' }}>After P</span>
                               {/* − / value / + stepper */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                 <button
@@ -5143,7 +5143,7 @@ export function StepBell() {
                         })()}
                       </div>
                       {/* Canteen tip */}
-                      <div style={{ marginTop: 10, fontSize: 10, color: '#727780', display: 'flex', gap: 5, alignItems: 'flex-start' }}>
+                      <div style={{ marginTop: 10, fontSize: 10, color: '#6B7079', display: 'flex', gap: 5, alignItems: 'flex-start' }}>
                         <span style={{ flexShrink: 0 }}>💡</span>
                         <span>A 30–45 min gap between groups is ideal for canteen throughput. The short break remains shared at the same time for all classes.</span>
                       </div>
@@ -5160,7 +5160,7 @@ export function StepBell() {
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6, letterSpacing: 0.3, textTransform: 'uppercase' as const }}>
                         While one group eats, others are in class
                       </div>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 10, lineHeight: 1.6 }}>
+                      <div style={{ fontSize: 10, color: '#69707E', marginBottom: 10, lineHeight: 1.6 }}>
                         When Pre-Primary is at lunch, Primary/Middle/Senior are still in a period. How long should that period be?
                       </div>
                       <div style={{ display: 'flex', gap: 7 }}>
@@ -5181,8 +5181,8 @@ export function StepBell() {
                                 cursor: 'pointer', fontFamily: 'inherit',
                                 textAlign: 'center' as const, transition: 'all .12s', outline: 'none',
                               }}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: active ? '#065F46' : '#6B7280' }}>{opt.label}</div>
-                              {opt.sub && <div style={{ fontSize: 9, color: active ? '#059669' : '#727780', marginTop: 2 }}>{opt.sub}</div>}
+                              <div style={{ fontSize: 11, fontWeight: 700, color: active ? '#065F46' : '#69707E' }}>{opt.label}</div>
+                              {opt.sub && <div style={{ fontSize: 9, color: active ? '#059669' : '#6B7079', marginTop: 2 }}>{opt.sub}</div>}
                               {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', margin: '4px auto 0' }} />}
                             </button>
                           )
@@ -5228,7 +5228,7 @@ export function StepBell() {
                                   color: lunchBreakDur >= 60 ? '#D1D5DB' : '#059669',
                                   fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
                             </div>
-                            <span style={{ fontSize: 10, color: '#727780' }}>15–60 min</span>
+                            <span style={{ fontSize: 10, color: '#6B7079' }}>15–60 min</span>
                           </div>
                           <div style={{ fontSize: 10, color: '#065F46', display: 'flex', gap: 5, alignItems: 'flex-start', lineHeight: 1.5 }}>
                             <span style={{ flexShrink: 0 }}>✓</span>
@@ -5241,8 +5241,8 @@ export function StepBell() {
 
                   {/* Auto-generate hint — shows once settings have produced a schedule */}
                   {smartGenDone && (
-                    <div style={{ fontSize: 11, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ color: '#16A34A', fontWeight: 700 }}>✓</span>
+                    <div style={{ fontSize: 11, color: '#69707E', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#0A8136', fontWeight: 700 }}>✓</span>
                       Bell schedule updates automatically as you change settings above.
                     </div>
                   )}
@@ -5251,7 +5251,7 @@ export function StepBell() {
 
               {/* Collapsed state hint */}
               {!autoBellMode && (
-                <div style={{ padding: '10px 16px', fontSize: 11, color: '#727780' }}>
+                <div style={{ padding: '10px 16px', fontSize: 11, color: '#6B7079' }}>
                   Enable to auto-generate an optimised bell schedule based on your school hours — with optional smart staggered lunches per age group.
                 </div>
               )}
@@ -5271,7 +5271,7 @@ export function StepBell() {
                       padding: '3px 14px', borderRadius: 16, fontSize: 11, fontWeight: 700,
                       border: active ? '1.5px solid #7C6FE0' : '1px solid #E5E7EB',
                       background: active ? '#EDE9FF' : '#fff',
-                      color: active ? '#7C6FE0' : '#727780',
+                      color: active ? '#7C6FE0' : '#6B7079',
                       cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                     }}>{s.name}</button>
                   )
@@ -5323,7 +5323,7 @@ export function StepBell() {
                     <div style={{ position: 'absolute', inset: 0, borderRadius: 8, background: varyByDay ? '#7C6FE0' : '#E5E7EB', transition: 'background .2s' }} />
                     <div style={{ position: 'absolute', top: 2, left: varyByDay ? 16 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: varyByDay ? '#7C6FE0' : '#727780', transition: 'color .15s' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: varyByDay ? '#7C6FE0' : '#6B7079', transition: 'color .15s' }}>
                     Vary by {useDayNames ? 'day' : 'weekday'}
                   </span>
                 </label>
@@ -5348,7 +5348,7 @@ export function StepBell() {
             </div>
 
             {displayRows.length > 0 && (
-              <div style={{ fontSize: 11, color: '#767393', marginBottom: 10, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, color: '#6D6A8A', marginBottom: 10, lineHeight: 1.5 }}>
                 Your day runs <strong>Assembly → Periods → Breaks → Dispersal</strong>. Click any time or
                 duration to edit a row, or use <strong>+ Period</strong> / <strong>+ Break</strong> to add one.
                 Manual edits mark the schedule “Customized” (use <strong>Regenerate</strong> to rebuild).
@@ -5374,7 +5374,7 @@ export function StepBell() {
                         <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{a.emoji}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#374151' }}>{a.title}</div>
-                          <div style={{ fontSize: 10.5, color: '#6B7280', lineHeight: 1.5, marginTop: 1 }}>{a.detail}</div>
+                          <div style={{ fontSize: 10.5, color: '#69707E', lineHeight: 1.5, marginTop: 1 }}>{a.detail}</div>
                         </div>
                         {a.fix && (
                           <button onClick={a.fix.run}
@@ -5392,7 +5392,7 @@ export function StepBell() {
             {/* ── Class / Group view filter chips ── */}
             {activeClassGroups.length > 1 && displayRows.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#727780', letterSpacing: '0.05em', marginRight: 2 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#6B7079', letterSpacing: '0.05em', marginRight: 2 }}>
                   VIEW
                 </span>
                 {/* All chip */}
@@ -5401,7 +5401,7 @@ export function StepBell() {
                   style={{
                     padding: '3px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700,
                     background: bellViewFilter === 'all' ? '#7C6FE0' : '#F3F4F6',
-                    color: bellViewFilter === 'all' ? '#fff' : '#6B7280',
+                    color: bellViewFilter === 'all' ? '#fff' : '#69707E',
                     border: bellViewFilter === 'all' ? '1.5px solid #7C6FE0' : '1.5px solid #E5E7EB',
                     cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                   }}>
@@ -5478,7 +5478,7 @@ export function StepBell() {
                       {/* Column headers */}
                       <div />
                       {ALL_DAYS.map(d => (
-                        <div key={d} style={{ fontSize: 10, fontWeight: 700, color: '#727780', textAlign: 'center' }}>{d}</div>
+                        <div key={d} style={{ fontSize: 10, fontWeight: 700, color: '#6B7079', textAlign: 'center' }}>{d}</div>
                       ))}
                       {/* Week rows */}
                       {Array.from({ length: cycleWeeks }, (_, i) => {
@@ -5525,7 +5525,7 @@ export function StepBell() {
                         ✎ Editing: <span style={{ fontFamily: "'DM Mono',monospace" }}>
                           {activeDayTab.replace(/^w(\d+)-(.+)$/, 'Week $1 · $2')}
                         </span>
-                        <span style={{ fontWeight: 400, color: '#727780', marginLeft: 6 }}>
+                        <span style={{ fontWeight: 400, color: '#6B7079', marginLeft: 6 }}>
                           {dayRows[activeDayTab] ? '(custom)' : '(using default — edit to customise)'}
                         </span>
                       </div>
@@ -5546,7 +5546,7 @@ export function StepBell() {
                             padding: '4px 14px', borderRadius: 6,
                             fontSize: 12, fontWeight: activeDayTab === k ? 700 : 500,
                             background: activeDayTab === k ? '#fff' : 'transparent',
-                            color: activeDayTab === k ? '#7C6FE0' : isCustom ? '#7C6FE0' : '#6B7280',
+                            color: activeDayTab === k ? '#7C6FE0' : isCustom ? '#7C6FE0' : '#69707E',
                             border: activeDayTab === k ? '1px solid #DDD6FE' : '1px solid transparent',
                             boxShadow: activeDayTab === k ? '0 1px 4px rgba(124,111,224,.13)' : 'none',
                             cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
@@ -5560,7 +5560,7 @@ export function StepBell() {
                         )
                       })}
                     </div>
-                    <span style={{ fontSize: 11, color: '#727780' }}>
+                    <span style={{ fontSize: 11, color: '#6B7079' }}>
                       {Object.keys(dayRows).filter(k => dayKeys.includes(k)).length} of {dayKeys.length} customised
                     </span>
                   </div>
@@ -5575,7 +5575,7 @@ export function StepBell() {
                 marginBottom: 6, padding: '7px 12px',
                 background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB',
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#727780', letterSpacing: '0.05em' }}>COPY</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#6B7079', letterSpacing: '0.05em' }}>COPY</span>
                 <select
                   value={copyFrom || (cycleWeeks > 1 && !useDayNames ? '1' : dayKeys[0])}
                   onChange={e => setCopyFrom(e.target.value)}
@@ -5635,7 +5635,7 @@ export function StepBell() {
 
                 {/* Start time */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 11, color: '#727780' }}>Starts</span>
+                  <span style={{ fontSize: 11, color: '#6B7079' }}>Starts</span>
                   <input type="time"
                     value={dayStartTimes[activeDayTab] ?? startTime}
                     onChange={e => setDayStartTimes(prev => ({ ...prev, [activeDayTab]: e.target.value }))}
@@ -5647,7 +5647,7 @@ export function StepBell() {
                     }} />
                   {dayStartTimes[activeDayTab] && (
                     <button onClick={() => setDayStartTimes(prev => { const n = { ...prev }; delete n[activeDayTab]; return n })}
-                      style={{ fontSize: 10, color: '#727780', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>reset</button>
+                      style={{ fontSize: 10, color: '#6B7079', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>reset</button>
                   )}
                 </div>
 
@@ -5655,7 +5655,7 @@ export function StepBell() {
 
                 {/* End time (derived) */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 11, color: '#727780' }}>Ends</span>
+                  <span style={{ fontSize: 11, color: '#6B7079' }}>Ends</span>
                   <span style={{ padding: '4px 8px', borderRadius: 6, background: '#fff', border: '1px solid #DDD6FE', fontSize: 12, fontFamily: "'DM Mono',monospace", fontWeight: 700, color: '#374151' }}>
                     {fmt12(endTime, use12h)}
                   </span>
@@ -5665,7 +5665,7 @@ export function StepBell() {
 
                 {/* Period duration — default for new rows; individual rows keep their own durations */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 11, color: '#727780' }}>Default period</span>
+                  <span style={{ fontSize: 11, color: '#6B7079' }}>Default period</span>
                   <NumInput className="b-dur" value={activePeriodDur} min={10} max={240}
                     onChange={handlePeriodDurChange}
                     style={{
@@ -5673,7 +5673,7 @@ export function StepBell() {
                       color: dayPeriodDurs[activeDayTab] ? '#7C6FE0' : '#13111E',
                       fontWeight: dayPeriodDurs[activeDayTab] ? 700 : 400,
                     }} />
-                  <span style={{ fontSize: 11, color: '#727780' }}>min</span>
+                  <span style={{ fontSize: 11, color: '#6B7079' }}>min</span>
                   <button onClick={applyDurToAll}
                     title="Set every period row to this duration"
                     style={{ fontSize: 10, color: '#7C6FE0', background: 'none', border: '1px solid #DDD6FE', borderRadius: 4, cursor: 'pointer', padding: '1px 6px', fontFamily: 'inherit', fontWeight: 600 }}>
@@ -5681,7 +5681,7 @@ export function StepBell() {
                   </button>
                   {dayPeriodDurs[activeDayTab] && (
                     <button onClick={() => setDayPeriodDurs(prev => { const n = { ...prev }; delete n[activeDayTab]; return n })}
-                      style={{ fontSize: 10, color: '#727780', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>reset</button>
+                      style={{ fontSize: 10, color: '#6B7079', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>reset</button>
                   )}
                 </div>
 
@@ -5707,7 +5707,7 @@ export function StepBell() {
                   <div key={i} title={i === 3 ? 'Each row\'s duration is independently editable — click the value to change it' : undefined}
                     style={{
                       fontSize: 11, fontWeight: 600, cursor: i === 3 ? 'help' : undefined,
-                      color: i === 3 ? '#7C6FE0' : (i === 5 && bellViewFilter !== 'all') ? '#7C6FE0' : '#6B7280',
+                      color: i === 3 ? '#7C6FE0' : (i === 5 && bellViewFilter !== 'all') ? '#7C6FE0' : '#69707E',
                     }}>
                     {h}
                   </div>
@@ -5720,7 +5720,7 @@ export function StepBell() {
                   padding: '8px 14px', borderBottom: '1px solid #F0EDFF',
                   background: '#FDFCFF', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#727780', letterSpacing: '0.05em', flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#6B7079', letterSpacing: '0.05em', flexShrink: 0 }}>
                     ATTENDING TODAY
                   </span>
                   {todayAttendance.map(({ group, color, bg, attending, gkeys }) => (
@@ -5902,7 +5902,7 @@ export function StepBell() {
                 <button
                   title="Wipes custom row durations and rebuilds with the default period duration"
                   onClick={() => { setBellCustomized(false); setDisplayRows(autoGenerateBellRows(startTime, schoolEndTime, maxPeriods, periodDur, activeClassKeys)) }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#69707E', cursor: 'pointer', fontFamily: 'inherit' }}>
                   Reset to default
                 </button>
               </div>
@@ -5959,11 +5959,11 @@ export function StepBell() {
                   }}>
                     <div style={{ fontFamily: "'DM Mono',monospace", flexShrink: 0, minWidth: 58 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>{fmt12(start, use12h)}</div>
-                      <div style={{ fontSize: 10, color: '#727780' }}>{fmt12(end, use12h)}</div>
+                      <div style={{ fontSize: 10, color: '#6B7079' }}>{fmt12(end, use12h)}</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: '#13111E' }}>{row.name}</div>
-                      <div style={{ fontSize: 10, color: '#727780' }}>{row.duration} min · {grp}</div>
+                      <div style={{ fontSize: 10, color: '#6B7079' }}>{row.duration} min · {grp}</div>
                     </div>
                   </div>
                 )
@@ -5982,11 +5982,11 @@ export function StepBell() {
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, display: 'inline-block', flexShrink: 0, marginTop: 3 }} />
                   <div>
                     <div style={{ fontSize: 12, color: '#374151' }}>{c.label}</div>
-                    <div style={{ fontSize: 10, color: '#727780' }}>{c.desc}</div>
+                    <div style={{ fontSize: 10, color: '#6B7079' }}>{c.desc}</div>
                   </div>
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#13111E' }}>
-                  {c.count}<span style={{ fontSize: 11, fontWeight: 400, color: '#727780' }}> /wk</span>
+                  {c.count}<span style={{ fontSize: 11, fontWeight: 400, color: '#6B7079' }}> /wk</span>
                 </span>
               </div>
             ))}
@@ -6015,7 +6015,7 @@ export function StepBell() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E', marginBottom: 6 }}>
                   Are you sure?
                 </div>
-                <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.55 }}>
+                <div style={{ fontSize: 13, color: '#69707E', lineHeight: 1.55 }}>
                   {confirmDialog.msg}
                 </div>
               </div>
@@ -6039,8 +6039,8 @@ export function StepBell() {
         <button className="b-nav-sec" onClick={() => setStep(1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>
           <ChevronLeft size={14} /> Resources
         </button>
-        <span style={{ fontSize: 13, color: '#727780' }}>Step 2 of 5</span>
-        <button className="b-nav-pri" onClick={handleNext} disabled={workDays.length === 0} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: workDays.length > 0 ? '#13111E' : '#E5E7EB', color: workDays.length > 0 ? '#fff' : '#727780', fontSize: 13, fontWeight: 700, cursor: workDays.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+        <span style={{ fontSize: 13, color: '#6B7079' }}>Step 2 of 5</span>
+        <button className="b-nav-pri" onClick={handleNext} disabled={workDays.length === 0} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: workDays.length > 0 ? '#13111E' : '#E5E7EB', color: workDays.length > 0 ? '#fff' : '#6B7079', fontSize: 13, fontWeight: 700, cursor: workDays.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
           Save & Continue <ChevronRight size={14} />
         </button>
       </div>
@@ -6050,10 +6050,10 @@ export function StepBell() {
 
 function SH({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#727780', marginBottom: 8 }}>
+    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#6B7079', marginBottom: 8 }}>
       {children}
     </div>
   )
 }
-const FL: CSSProperties = { fontSize: 12, color: '#6B7280', marginBottom: 5 }
-const FH: CSSProperties = { fontSize: 11, color: '#727780', marginTop: 3 }
+const FL: CSSProperties = { fontSize: 12, color: '#69707E', marginBottom: 5 }
+const FH: CSSProperties = { fontSize: 11, color: '#6B7079', marginTop: 3 }

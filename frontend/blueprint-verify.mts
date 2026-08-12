@@ -2035,6 +2035,41 @@ const many = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D'].map(n => ({ name: n }))
 ok(/and 1 more/.test(conflictWarning('teacher', findNameConflicts(many, r => r.name))!),
   'a long list of clashes is summarised')
 
+// ── Text has to be readable, and the palette is where that is decided ──
+// These colours were each measured against the backgrounds they actually sit
+// on in the app, then solved over integer hex values so the shipped colour is
+// the one that was tested. An earlier pass scaled a float and rounded after
+// testing, which shipped a green at 4.49 against a 4.5 requirement.
+const srgb = (v: number) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+const hexRgb = (h: string) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
+const relLum = (h: string) => { const [r, g, b] = hexRgb(h); return 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b) }
+export function contrast(a: string, b: string): number {
+  const [x, y] = [relLum(a), relLum(b)]
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+}
+
+const AA = 4.5
+// The tints these sit on: card white, page greys, and the lavender washes.
+const LIGHT = ['#FFFFFF', '#FAFAFA', '#F5F4F0', '#F3F4F6', '#F5F2FF', '#F6F4FD', '#FBFAFF', '#F1EEFB']
+
+for (const bg of LIGHT) {
+  ok(contrast('#6D6A8A', bg) >= AA, `muted text #6D6A8A meets AA on ${bg}`)
+}
+for (const bg of ['#FFFFFF', '#F5F4F0', '#F3F4F6']) {
+  ok(contrast('#69707E', bg) >= AA, `grey #69707E meets AA on ${bg}`)
+  ok(contrast('#0A8136', bg) >= AA, `success green #0A8136 meets AA on ${bg}`)
+}
+ok(contrast('#6B7079', '#F5F4F0') >= AA, 'secondary grey meets AA on the warm page background')
+
+// The predecessors, kept as the reason these values are what they are. If
+// someone "tidies" the palette back toward the lighter purples, this fails.
+ok(contrast('#767393', '#F5F2FF') < AA, 'the old muted purple did NOT meet AA on a lavender tint')
+ok(contrast('#16A34A', '#FFFFFF') < AA, 'the old success green did NOT meet AA on white')
+ok(contrast('#9B97B8', '#FFFFFF') < AA, 'the old grid dim text did NOT meet AA on white')
+
+// #8B87AD stays: on the dark Pro card and the corridor board it is correct,
+// and darkening it there would make it worse, not better.
+ok(contrast('#8B87AD', '#13111E') >= AA, 'the dim purple is fine where it belongs — on dark')
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

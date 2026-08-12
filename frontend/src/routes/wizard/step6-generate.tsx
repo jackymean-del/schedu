@@ -363,10 +363,10 @@ export function Step6Generate() {
            "Something went wrong"}
         </h2>
         {!job && !hasExistingTT && (
-          <p style={{ fontSize:13, color:"#767393", margin:0 }}>Review the briefing, name your {T.schedule.toLowerCase()}, and press the button — the solver does the rest.</p>
+          <p style={{ fontSize:13, color:"#6D6A8A", margin:0 }}>Review the briefing, name your {T.schedule.toLowerCase()}, and press the button — the solver does the rest.</p>
         )}
         {job?.status === "running" && (
-          <p style={{ fontSize:12, color:"#767393", margin:0, fontFamily:"'DM Mono',monospace" }}>{elapsed}s</p>
+          <p style={{ fontSize:12, color:"#6D6A8A", margin:0, fontFamily:"'DM Mono',monospace" }}>{elapsed}s</p>
         )}
       </div>
 
@@ -408,7 +408,7 @@ export function Step6Generate() {
                     {done ? "✓" : i + 1}
                   </div>
                   <span style={{ fontSize:11, fontWeight: isNow ? 800 : 600, color: isNow ? "#13111E" : done ? "#4B5275" : "#777489", marginTop:6 }}>{s.label}</span>
-                  <span style={{ fontSize:9, color: isNow ? "#767393" : "#767384", marginTop:1 }}>{s.sub}</span>
+                  <span style={{ fontSize:9, color: isNow ? "#6D6A8A" : "#767384", marginTop:1 }}>{s.sub}</span>
                 </div>
               )
             })}
@@ -463,7 +463,7 @@ export function Step6Generate() {
                 <span style={{ fontSize:30, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"#13111E", lineHeight:1 }}>
                   {progress}
                 </span>
-                <span style={{ fontSize:12, color:"#767393", fontWeight:600 }}>%</span>
+                <span style={{ fontSize:12, color:"#6D6A8A", fontWeight:600 }}>%</span>
               </>
             )}
           </div>
@@ -518,7 +518,7 @@ export function Step6Generate() {
 
           {/* LEFT · Briefing */}
           <div style={{ background:"#fff", borderRadius:16, border:`1.5px solid ${P_B}`, padding:"20px 22px", display:"flex", flexDirection:"column" as const, gap:14 }}>
-            <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#767393" }}>
+            <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#6D6A8A" }}>
               Briefing — what the solver will work with
             </div>
 
@@ -530,7 +530,7 @@ export function Step6Generate() {
                   <div key={s.label} style={{ background:"#FAFAFE", border:"1px solid #F0EEFA", borderRadius:12, padding:"10px 12px", display:"flex", flexDirection:"column" as const, gap:3 }}>
                     <Icon size={15} color={P} />
                     <span style={{ fontSize:21, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"#13111E", lineHeight:1.1 }}>{s.value}</span>
-                    <span style={{ fontSize:9.5, color:"#767393", fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.05em" }}>{s.label}</span>
+                    <span style={{ fontSize:9.5, color:"#6D6A8A", fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.05em" }}>{s.label}</span>
                   </div>
                 )
               })}
@@ -652,7 +652,7 @@ export function Step6Generate() {
             </div>
           ) : (
             <div style={{ background:"#fff", borderRadius:16, border:`1.5px solid ${P_B}`, padding:"20px 22px", display:"flex", flexDirection:"column" as const, gap:13 }}>
-              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#767393" }}>
+              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#6D6A8A" }}>
                 Identity &amp; launch
               </div>
 
@@ -693,7 +693,7 @@ export function Step6Generate() {
               </button>
 
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-                <div style={{ fontSize:10.5, color:"#767393", display:"flex", alignItems:"center", gap:6 }}>
+                <div style={{ fontSize:10.5, color:"#6D6A8A", display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ fontSize:13 }}>💡</span>
                   Saved as a <strong>Draft</strong> — review, then publish.
                 </div>
@@ -761,7 +761,7 @@ export function Step6Generate() {
                   }}>
                   <div style={{ fontSize:17, marginBottom:5 }}>{c.icon}</div>
                   <div style={{ fontSize:13, fontWeight:800, color: c.primary ? "#fff" : "#13111E" }}>{c.title} →</div>
-                  <div style={{ fontSize:11, lineHeight:1.5, marginTop:3, color: c.primary ? "rgba(255,255,255,0.85)" : "#767393" }}>{c.desc}</div>
+                  <div style={{ fontSize:11, lineHeight:1.5, marginTop:3, color: c.primary ? "rgba(255,255,255,0.85)" : "#6D6A8A" }}>{c.desc}</div>
                 </button>
               ))}
             </div>

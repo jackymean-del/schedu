@@ -28,7 +28,7 @@ export function ExplanationInfoIcon({
 
   const score = explanation.score
   const tone =
-    score >= 80 ? '#16A34A' :
+    score >= 80 ? '#0A8136' :
     score >= 40 ? '#7C6FE0' :
     score >= 0  ? '#D4920E' : '#DC2626'
 
@@ -84,7 +84,7 @@ export function ExplanationCard({
   const { teacher, section, subject, factors, summary, score, recommended } = explanation
 
   const tone =
-    score >= 80 ? '#16A34A' :
+    score >= 80 ? '#0A8136' :
     score >= 40 ? '#7C6FE0' :
     score >= 0  ? '#D4920E' : '#DC2626'
 
@@ -114,7 +114,7 @@ export function ExplanationCard({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
           {recommended ? (
-            <CheckCircle2 size={12} color="#16A34A" />
+            <CheckCircle2 size={12} color="#0A8136" />
           ) : (
             <XCircle size={12} color="#D4920E" />
           )}
@@ -143,7 +143,7 @@ export function ExplanationCard({
       }}>
         <div style={{
           fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
-          textTransform: 'uppercase' as const, color: '#767393', marginBottom: 8,
+          textTransform: 'uppercase' as const, color: '#6D6A8A', marginBottom: 8,
         }}>
           Reasoning factors ({factors.length})
         </div>
@@ -181,7 +181,7 @@ function FactorRow({ factor }: { factor: ExplanationFactor }) {
         flexShrink: 0,
         fontSize: 10, fontWeight: 700,
         fontFamily: "'DM Mono', monospace",
-        color: factor.positive ? '#16A34A' : '#DC2626',
+        color: factor.positive ? '#0A8136' : '#DC2626',
       }}>
         {factor.weight > 0 ? `+${factor.weight}` : factor.weight}
       </span>

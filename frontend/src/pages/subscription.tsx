@@ -278,7 +278,7 @@ export function SubscriptionPage() {
               <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 4 }}>Free</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#7C6FE0', marginBottom: 16 }}>
-                  {money(0)} <span style={{ fontSize: 13, fontWeight: 500, color: '#8B87AD' }}>/ month</span>
+                  {money(0)} <span style={{ fontSize: 13, fontWeight: 500, color: '#6D6A8A' }}>/ month</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {FREE_FEATURES.map(f => (
@@ -363,13 +363,13 @@ export function SubscriptionPage() {
         )}
 
         {!isPro && (
-          <p style={{ fontSize: 12, color: '#8B87AD', textAlign: 'center', margin: 0 }}>
+          <p style={{ fontSize: 12, color: '#6D6A8A', textAlign: 'center', margin: 0 }}>
             Need <strong style={{ color: '#4B5275' }}>more than 70 sections</strong> or multiple campuses?{' '}
             <a href="mailto:hello@bhusku.com" style={{ color: '#7C6FE0', fontWeight: 600 }}>Talk to us about a Custom plan</a>.
           </p>
         )}
 
-        <p style={{ fontSize: 12, color: '#8B87AD', textAlign: 'center', margin: 0 }}>
+        <p style={{ fontSize: 12, color: '#6D6A8A', textAlign: 'center', margin: 0 }}>
           Questions? Reach out via <a href="/support" style={{ color: '#7C6FE0', fontWeight: 600 }}>Help &amp; Support</a>.
         </p>
       </div>

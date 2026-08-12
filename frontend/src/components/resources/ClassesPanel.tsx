@@ -1197,7 +1197,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#767393',
+            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
@@ -1316,7 +1316,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 30, marginBottom: 8 }}>🎓</div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E', marginBottom: 6 }}>No classes yet</div>
-            <div style={{ fontSize: 12.5, color: '#767393', maxWidth: 420, lineHeight: 1.6, marginBottom: 20 }}>
+            <div style={{ fontSize: 12.5, color: '#6D6A8A', maxWidth: 420, lineHeight: 1.6, marginBottom: 20 }}>
               Let schedU create starter classes from your class range — pre-primary gets one section, other grades get A–D. Rename and tune afterwards.
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1328,7 +1328,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
               <button onClick={() => setManual(true)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '14px 22px', borderRadius: 12, border: '1px solid #E8E4FF', background: '#fff', color: '#13111E', cursor: 'pointer', fontFamily: 'inherit', minWidth: 200 }}>
                 <span style={{ fontSize: 14, fontWeight: 800 }}>✏️ Add manually</span>
-                <span style={{ fontSize: 11.5, color: '#767393' }}>Start with a blank table</span>
+                <span style={{ fontSize: 11.5, color: '#6D6A8A' }}>Start with a blank table</span>
               </button>
             </div>
           </div>

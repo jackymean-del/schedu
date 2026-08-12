@@ -2108,7 +2108,7 @@ export function TimetablePage() {
                 if (isDayOff) {
                   return (
                     <tr key={day} style={{ background: "#F9FAFB" }}>
-                      <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#727780", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
+                      <td style={{ padding:"6px 12px", fontWeight:700, fontSize:11, color:"#6B7079", border:"1px solid #E8E4FF", whiteSpace:"nowrap" as const }}>
                         {DAY_SHORT[day]??day.slice(0,3)}
                         <span style={{ fontSize:9, fontWeight:400, marginLeft:4, color:"#D1D5DB" }}>off</span>
                       </td>
@@ -2194,9 +2194,9 @@ export function TimetablePage() {
               {usedDays.map(day => {
                 const isOff = offDaysT.has(day)
                 return (
-                  <th key={day} style={{ background: isOff ? "#4B5563" : "#1e293b", color: isOff ? "#727780" : "#fff", padding:"8px 12px", textAlign:"center", minWidth:90, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>
+                  <th key={day} style={{ background: isOff ? "#4B5563" : "#1e293b", color: isOff ? "#6B7079" : "#fff", padding:"8px 12px", textAlign:"center", minWidth:90, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>
                     {DAY_SHORT[day]??day.slice(0,3)}
-                    {isOff && <div style={{ fontSize:8, fontWeight:400, color:"#727780", marginTop:2 }}>off</div>}
+                    {isOff && <div style={{ fontSize:8, fontWeight:400, color:"#6B7079", marginTop:2 }}>off</div>}
                   </th>
                 )
               })}
@@ -2232,7 +2232,7 @@ export function TimetablePage() {
                         transition:"background 0.12s, opacity 0.15s",
                       }}>
                       <div style={{ fontWeight:700, fontSize:11, color: isOverCT ? "#fff" : isSwapCT ? "#78350f" : isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
-                      {times && <div style={{ fontSize:9, color: isOverCT ? "rgba(255,255,255,0.75)" : "#767393" }}>{times.start} → {times.end}</div>}
+                      {times && <div style={{ fontSize:9, color: isOverCT ? "rgba(255,255,255,0.75)" : "#6D6A8A" }}>{times.start} → {times.end}</div>}
                       {canDragCT && <div style={{ fontSize: isHovCT||isSrcCT ? 14 : 10, color: isOverCT?"rgba(255,255,255,0.95)":isSrcCT?"#4338ca":isHovCT?"#7C6FE0":"#C4BFEA", marginTop:1, transition:"font-size 0.1s, color 0.1s", letterSpacing:"-1px" }} title="Drag to swap row">↔</div>}
                     </td>
                     {usedDays.map(day => {
@@ -2608,7 +2608,7 @@ export function TimetablePage() {
                   <tr key={col.key} style={{ background: rowBg }}>
                     <td style={{ padding:"6px 10px", whiteSpace:"nowrap" as const, border:"1px solid #E8E4FF" }}>
                       <div style={{ fontWeight:700, fontSize:11, color: isBreakRow?"#D4920E":"#1e293b" }}>{col.name}</div>
-                      <div style={{ fontSize:9, color:"#767393" }}>{col.start} → {col.end}</div>
+                      <div style={{ fontSize:9, color:"#6D6A8A" }}>{col.start} → {col.end}</div>
                       {chip && <div style={{ fontSize:7, fontWeight:600, color:"#475569", background:"#EEF2FF", borderRadius:3, padding:"1px 4px", marginTop:2, whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.3 }}>{chip}</div>}
                     </td>
                     {usedDays.map(day => {
@@ -2743,7 +2743,7 @@ export function TimetablePage() {
             <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{subName}</div>
             <div style={{ fontSize:11, color:"#4B5275" }}>{sub?.category ?? "Subject"} · {sub?.periodsPerWeek ?? "?"} periods/week target</div>
           </div>
-          <div style={{ fontSize:11, color:"#767393" }}>Which class has this subject · when</div>
+          <div style={{ fontSize:11, color:"#6D6A8A" }}>Which class has this subject · when</div>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
@@ -2843,7 +2843,7 @@ export function TimetablePage() {
             <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{subName}</div>
             <div style={{ fontSize:11, color:"#4B5275" }}>{sub?.category ?? "Subject"} · Transposed view</div>
           </div>
-          <div style={{ fontSize:11, color:"#767393" }}>Rows = periods · Columns = days</div>
+          <div style={{ fontSize:11, color:"#6D6A8A" }}>Rows = periods · Columns = days</div>
         </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
@@ -2862,7 +2862,7 @@ export function TimetablePage() {
                   <tr key={col.key} style={{ background: isBreakRow ? "#fffbeb" : pi%2===0?"#fff":"#FAFAFE" }}>
                     <td style={{ padding:"6px 10px", whiteSpace:"nowrap" as const, border:"1px solid #E8E4FF" }}>
                       <div style={{ fontWeight:700, fontSize:11, color: isBreakRow?"#D4920E":"#1e293b" }}>{col.name}</div>
-                      <div style={{ fontSize:9, color:"#767393" }}>{col.start} → {col.end}</div>
+                      <div style={{ fontSize:9, color:"#6D6A8A" }}>{col.start} → {col.end}</div>
                       {chip && <div style={{ fontSize:7, fontWeight:600, color:"#475569", background:"#EEF2FF", borderRadius:3, padding:"1px 4px", marginTop:2, whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.3 }}>{chip}</div>}
                     </td>
                     {usedDays.map(day => {
@@ -3069,7 +3069,7 @@ export function TimetablePage() {
                   <tr key={col.key} style={{ background: isBreakRow ? "#fffbeb" : pi%2===0?"#fff":"#FAFAFE" }}>
                     <td style={{ padding:"6px 10px", whiteSpace:"nowrap" as const, border:"1px solid #E8E4FF" }}>
                       <div style={{ fontWeight:700, fontSize:11, color: isBreakRow?"#D4920E":"#1e293b" }}>{col.name}</div>
-                      <div style={{ fontSize:9, color:"#767393" }}>{col.start} → {col.end}</div>
+                      <div style={{ fontSize:9, color:"#6D6A8A" }}>{col.start} → {col.end}</div>
                       {chip && <div style={{ fontSize:7, fontWeight:600, color:"#475569", background:"#EEF2FF", borderRadius:3, padding:"1px 4px", marginTop:2, whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.3 }}>{chip}</div>}
                     </td>
                     {usedDays.map(day => {
@@ -3433,7 +3433,7 @@ export function TimetablePage() {
           <div style={{ padding:"8px 12px", background:"#fff", borderBottom:"1px solid #E8E4FF", display:"flex", flexDirection:"column" as const, gap:6 }}>
             {/* Class filter */}
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <span style={{ fontSize:9, fontWeight:700, color:"#767393", width:44, flexShrink:0, textTransform:"uppercase" as const, letterSpacing:"0.06em" }}>Class</span>
+              <span style={{ fontSize:9, fontWeight:700, color:"#6D6A8A", width:44, flexShrink:0, textTransform:"uppercase" as const, letterSpacing:"0.06em" }}>Class</span>
               <select value={poolFilterClass} onChange={e => setPoolFilterClass(e.target.value)}
                 style={{ flex:1, padding:"4px 7px", border:`1px solid ${autoClass?"#a5b4fc":"#D8D2FF"}`, borderRadius:6, fontSize:10, background: autoClass?"#F0EDFF":"#fff", outline:"none", color:"#1e293b", cursor:"pointer" }}>
                 <option value="ALL">All classes</option>
@@ -3446,7 +3446,7 @@ export function TimetablePage() {
 
             {/* Teacher filter */}
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <span style={{ fontSize:9, fontWeight:700, color:"#767393", width:44, flexShrink:0, textTransform:"uppercase" as const, letterSpacing:"0.06em" }}>Teacher</span>
+              <span style={{ fontSize:9, fontWeight:700, color:"#6D6A8A", width:44, flexShrink:0, textTransform:"uppercase" as const, letterSpacing:"0.06em" }}>Teacher</span>
               <select value={poolFilterTeacher} onChange={e => setPoolFilterTeacher(e.target.value)}
                 style={{ flex:1, padding:"4px 7px", border:`1px solid ${autoTeacher?"#a5b4fc":"#D8D2FF"}`, borderRadius:6, fontSize:10, background: autoTeacher?"#F0EDFF":"#fff", outline:"none", color:"#1e293b", cursor:"pointer" }}>
                 <option value="ALL">All teachers</option>
@@ -3460,7 +3460,7 @@ export function TimetablePage() {
             {/* Clear filters */}
             {(poolFilterClass !== 'ALL' || poolFilterTeacher !== 'ALL') && (
               <button onClick={() => { setPoolFilterClass('ALL'); setPoolFilterTeacher('ALL') }}
-                style={{ alignSelf:"flex-end" as const, padding:"2px 8px", border:"1px solid #E8E4FF", borderRadius:5, background:"#fff", color:"#767393", fontSize:9, cursor:"pointer" }}>
+                style={{ alignSelf:"flex-end" as const, padding:"2px 8px", border:"1px solid #E8E4FF", borderRadius:5, background:"#fff", color:"#6D6A8A", fontSize:9, cursor:"pointer" }}>
                 ✕ Clear filters
               </button>
             )}
@@ -3490,13 +3490,13 @@ export function TimetablePage() {
             .filter(s => s.subjects.length > 0)
 
           if (poolTotalDeficit === 0) return (
-            <div style={{ padding:"32px 16px", textAlign:"center" as const, color:"#767393", fontSize:13 }}>
+            <div style={{ padding:"32px 16px", textAlign:"center" as const, color:"#6D6A8A", fontSize:13 }}>
               <div style={{ fontSize:32, marginBottom:8 }}>🎉</div>
               Every subject has its target periods scheduled!
             </div>
           )
           if (filtered.length === 0) return (
-            <div style={{ padding:"28px 16px", textAlign:"center" as const, color:"#767393", fontSize:12 }}>
+            <div style={{ padding:"28px 16px", textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>
               <div style={{ fontSize:24, marginBottom:8 }}>🔍</div>
               No unscheduled periods match the selected filters.
             </div>
@@ -3547,7 +3547,7 @@ export function TimetablePage() {
       </div>
 
       {/* Footer legend */}
-      <div style={{ padding:"8px 12px", borderTop:"1px solid #E8E4FF", background:"#FAFAFE", fontSize:9, color:"#767393", lineHeight:1.5 }}>
+      <div style={{ padding:"8px 12px", borderTop:"1px solid #E8E4FF", background:"#FAFAFE", fontSize:9, color:"#6D6A8A", lineHeight:1.5 }}>
         <div><span style={{ fontWeight:600 }}>-N</span> badge = periods still needed</div>
         <div>Only subjects with a target (periodsPerWeek) show here</div>
       </div>
@@ -3876,7 +3876,7 @@ export function TimetablePage() {
                           onChange={() => setShareVisibility(val)} style={{ marginTop:3 }} />
                         <span>
                           <span style={{ display:"block", fontSize:13, fontWeight:700, color:"#13111E" }}>{label}</span>
-                          <span style={{ display:"block", fontSize:11.5, color:"#767393", lineHeight:1.5 }}>{desc}</span>
+                          <span style={{ display:"block", fontSize:11.5, color:"#6D6A8A", lineHeight:1.5 }}>{desc}</span>
                         </span>
                       </label>
                     ))}
@@ -4031,7 +4031,7 @@ export function TimetablePage() {
                   })}
                   style={{ padding:"4px 11px", borderRadius:6, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit",
                     background: active ? "#fff" : "transparent",
-                    color: active ? "#7C6FE0" : "#7E7AA0",
+                    color: active ? "#7C6FE0" : "#6D6A8A",
                     boxShadow: active ? "0 1px 4px rgba(124,111,224,0.18)" : "none" }}>
                   {label}
                 </button>
@@ -4168,7 +4168,7 @@ export function TimetablePage() {
             {subActiveTab === "assign" && (
               <div style={{ padding:12 }}>
                 {/* Day chips */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#767393", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Day</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Day</div>
                 <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginBottom:12 }}>
                   {config.workDays.map(day => (
                     <button key={day} onClick={() => setSubAbsentDay(day)}
@@ -4179,7 +4179,7 @@ export function TimetablePage() {
                 </div>
 
                 {/* Absent teacher selector */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#767393", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Teacher</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Teacher</div>
                 <div style={{ display:"flex", flexWrap:"wrap" as const, gap:4, marginBottom:12 }}>
                   {staff.map(st => (
                     <button key={st.id} onClick={() => setSubAbsentTeacher(st.name)}
@@ -4190,7 +4190,7 @@ export function TimetablePage() {
                 </div>
 
                 {/* Reason input */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#767393", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:4 }}>Reason (optional)</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:4 }}>Reason (optional)</div>
                 <input value={subReason} onChange={e => setSubReason(e.target.value)} placeholder="e.g. Sick leave, Personal"
                   style={{ width:"100%", padding:"6px 10px", border:"1px solid #E8E4FF", borderRadius:6, fontSize:11, marginBottom:14, boxSizing:"border-box" as const, outline:"none" }} />
 
@@ -4208,7 +4208,7 @@ export function TimetablePage() {
                     </div>
 
                     {absentSlots.length === 0 && (
-                      <div style={{ padding:16, textAlign:"center" as const, color:"#767393", fontSize:12 }}>No periods for this teacher on {DAY_SHORT[subAbsentDay]??subAbsentDay}</div>
+                      <div style={{ padding:16, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>No periods for this teacher on {DAY_SHORT[subAbsentDay]??subAbsentDay}</div>
                     )}
 
                     {absentSlots.map(slot => {
@@ -4230,7 +4230,7 @@ export function TimetablePage() {
                                 <div key={cand.st.id}
                                   style={{ padding:"7px 10px", borderRadius:7, border:`1.5px solid ${isSelected?"#7C6FE0":cand.isBusy?"#fca5a5":"#E8E4FF"}`, background:isSelected?"#EDE9FF":cand.isBusy?"#fff5f5":"#fff", display:"flex", alignItems:"center", gap:8 }}>
                                   {/* Avatar */}
-                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#7C6FE0":"#767393", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
+                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#7C6FE0":"#6D6A8A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
                                     {cand.st.name[0]}
                                   </div>
                                   {/* Info */}
@@ -4243,7 +4243,7 @@ export function TimetablePage() {
                                     </div>
                                     {/* Workload bar */}
                                     <div style={{ marginTop:3 }}>
-                                      <div style={{ fontSize:8, color:"#767393", marginBottom:1 }}>{cand.workloadToday} today · {cand.workloadWeek}/{cand.maxW} week · Subbed {cand.subFreq}× term</div>
+                                      <div style={{ fontSize:8, color:"#6D6A8A", marginBottom:1 }}>{cand.workloadToday} today · {cand.workloadWeek}/{cand.maxW} week · Subbed {cand.subFreq}× term</div>
                                       <div style={{ height:3, background:"#E8E4FF", borderRadius:2, overflow:"hidden" }}>
                                         <div style={{ height:"100%", width:`${Math.min(100, Math.round(cand.workloadWeek/cand.maxW*100))}%`, background: cand.workloadWeek/cand.maxW > 0.9 ? "#dc2626" : "#7C6FE0", borderRadius:2 }} />
                                       </div>
@@ -4266,7 +4266,7 @@ export function TimetablePage() {
                 )}
 
                 {!subAbsentTeacher && (
-                  <div style={{ padding:24, textAlign:"center" as const, color:"#767393", fontSize:12 }}>Select an absent teacher above to see their slots and assign cover</div>
+                  <div style={{ padding:24, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>Select an absent teacher above to see their slots and assign cover</div>
                 )}
               </div>
             )}
@@ -4274,7 +4274,7 @@ export function TimetablePage() {
             {subActiveTab === "active" && (
               <div style={{ padding:12 }}>
                 {activeSubCount === 0 && (
-                  <div style={{ padding:24, textAlign:"center" as const, color:"#767393", fontSize:12 }}>No active substitutions</div>
+                  <div style={{ padding:24, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>No active substitutions</div>
                 )}
                 {Object.entries(substitutions).map(([key, staffName]) => {
                   const [sec, day, periodId] = key.split("|")
@@ -4305,7 +4305,7 @@ export function TimetablePage() {
           {subActiveTab === "assign" && (
             <div style={{ padding:12, borderTop:"1px solid #E8E4FF", background:"#FAFAFE" }}>
               <button onClick={applySubstitutions} disabled={Object.keys(subAssignments).length === 0}
-                style={{ width:"100%", padding:"9px", borderRadius:7, border:"none", background:Object.keys(subAssignments).length>0?"#f59e0b":"#E8E4FF", color:Object.keys(subAssignments).length>0?"#fff":"#767393", fontSize:12, fontWeight:700, cursor:Object.keys(subAssignments).length>0?"pointer":"not-allowed", transition:"background 0.15s" }}>
+                style={{ width:"100%", padding:"9px", borderRadius:7, border:"none", background:Object.keys(subAssignments).length>0?"#f59e0b":"#E8E4FF", color:Object.keys(subAssignments).length>0?"#fff":"#6D6A8A", fontSize:12, fontWeight:700, cursor:Object.keys(subAssignments).length>0?"pointer":"not-allowed", transition:"background 0.15s" }}>
                 Apply {Object.keys(subAssignments).length > 0 ? `(${Object.keys(subAssignments).length} assignment${Object.keys(subAssignments).length>1?"s":""})` : "Substitutions"}
               </button>
             </div>
@@ -4422,7 +4422,7 @@ export function TimetablePage() {
               <div style={{ fontSize:16, fontWeight:800, color:"#13111E", marginBottom:4 }}>
                 Swap: <span style={{ color:"#7C6FE0" }}>{pA.name}</span>{" ↔ "}<span style={{ color:"#7C6FE0" }}>{pB.name}</span>
               </div>
-              <div style={{ fontSize:11, color:"#767393", marginBottom:16 }}>
+              <div style={{ fontSize:11, color:"#6D6A8A", marginBottom:16 }}>
                 {bothClass
                   ? "Period contents will be swapped. Headers stay in place."
                   : "Slot positions will be reordered — headers and contents move together."}
@@ -4431,7 +4431,7 @@ export function TimetablePage() {
               {/* Scope selector — only when a specific section is being viewed */}
               {hasOrigin && bothClass && (
                 <div style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#767393", textTransform:"uppercase" as const, letterSpacing:"0.07em", marginBottom:8 }}>Apply to</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.07em", marginBottom:8 }}>Apply to</div>
                   <div style={{ display:"flex", flexDirection:"column" as const, gap:6 }}>
                     {([
                       { value:"section" as const, label:`${originSection} only`,       sub:"This section only",                          count:1 },
@@ -4447,7 +4447,7 @@ export function TimetablePage() {
                           style={{ accentColor:"#7C6FE0" }} />
                         <div>
                           <div style={{ fontSize:12, fontWeight:600, color:"#1e293b" }}>{opt.label}</div>
-                          <div style={{ fontSize:10, color:"#767393" }}>{opt.sub}</div>
+                          <div style={{ fontSize:10, color:"#6D6A8A" }}>{opt.sub}</div>
                         </div>
                         <div style={{ marginLeft:"auto", fontSize:11, fontWeight:700, color:"#7C6FE0", background:"#EDE9FF", padding:"2px 8px", borderRadius:8 }}>{opt.count}</div>
                       </label>
@@ -4476,7 +4476,7 @@ export function TimetablePage() {
               {/* Actions */}
               <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
                 <button onClick={() => setSwapPreview(null)}
-                  style={{ padding:"8px 16px", border:"1px solid #E8E4FF", borderRadius:7, background:"#fff", color:"#767393", fontSize:12, cursor:"pointer" }}>
+                  style={{ padding:"8px 16px", border:"1px solid #E8E4FF", borderRadius:7, background:"#fff", color:"#6D6A8A", fontSize:12, cursor:"pointer" }}>
                   Cancel
                 </button>
                 {!noConflicts && bothClass && (
@@ -4557,11 +4557,11 @@ function SectionHeader({ name, classTeacher, meta }: { name:string; classTeacher
         <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'Plus Jakarta Sans',Georgia,serif" }}>{name}</div>
         {classTeacher && <div style={{ fontSize:11, color:"#4B5275", marginTop:1 }}>Class Teacher: <strong>{classTeacher}</strong></div>}
       </div>
-      {meta && <div className="tt-section-meta" style={{ marginLeft:"auto", fontSize:11, color:"#767393" }}>{meta}</div>}
+      {meta && <div className="tt-section-meta" style={{ marginLeft:"auto", fontSize:11, color:"#6D6A8A" }}>{meta}</div>}
     </div>
   )
 }
 
 function EmptyState({ label }: { label:string }) {
-  return <div style={{ padding:40, textAlign:"center" as const, color:"#767393", fontSize:13 }}>No schedule data for <strong>{label}</strong></div>
+  return <div style={{ padding:40, textAlign:"center" as const, color:"#6D6A8A", fontSize:13 }}>No schedule data for <strong>{label}</strong></div>
 }

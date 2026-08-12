@@ -16,27 +16,27 @@ export function AppFooter({ style }: { style?: React.CSSProperties }) {
       fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
       ...style,
     }}>
-      <span style={{ fontSize: 12, color: '#727780' }}>
+      <span style={{ fontSize: 12, color: '#6B7079' }}>
         © {new Date().getFullYear()} schedU. All rights reserved.
       </span>
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         {links.map(l => (
           <a key={l} href="#" style={{
-            fontSize: 12, color: '#727780', textDecoration: 'none',
+            fontSize: 12, color: '#6B7079', textDecoration: 'none',
             transition: 'color 0.13s',
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#6B7280')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#727780')}
+            onMouseEnter={e => (e.currentTarget.style.color = '#69707E')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#6B7079')}
           >
             {l}
           </a>
         ))}
         <a href="mailto:hello@bhusku.com" style={{
-          fontSize: 12, color: '#727780', textDecoration: 'none',
+          fontSize: 12, color: '#6B7079', textDecoration: 'none',
           transition: 'color 0.13s',
         }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#6B7280')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#727780')}
+          onMouseEnter={e => (e.currentTarget.style.color = '#69707E')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#6B7079')}
         >
           hello@bhusku.com
         </a>

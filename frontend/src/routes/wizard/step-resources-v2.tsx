@@ -854,7 +854,7 @@ export function StepResourcesV2() {
                 boxShadow: ready ? '0 0 0 2px #D1FAE5' : 'none',
                 transition: 'background 0.2s',
               }} />
-              <span style={{ color: active ? P : ready ? '#767393' : '#D1CFF0', display: 'flex', flexShrink: 0 }}>
+              <span style={{ color: active ? P : ready ? '#6D6A8A' : '#D1CFF0', display: 'flex', flexShrink: 0 }}>
                 {tab.icon}
               </span>
               <span style={{ flex: 1, fontSize: 12.5, fontWeight: active ? 700 : 500, color: active ? P_D : '#374151' }}>
@@ -864,7 +864,7 @@ export function StepResourcesV2() {
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '1px 6px 2px', borderRadius: 10,
                   background: active ? P : '#F0ECFE',
-                  color: active ? '#fff' : '#767393',
+                  color: active ? '#fff' : '#6D6A8A',
                   minWidth: 22, textAlign: 'center',
                 }}>{count}</span>
               ) : (
@@ -960,7 +960,7 @@ export function StepResourcesV2() {
               <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0F0E1A', margin: '0 0 7px', letterSpacing: '-0.3px' }}>
                 Add your resources
               </h2>
-              <p style={{ fontSize: 12.5, color: '#6B7280', margin: '0 0 24px', lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12.5, color: '#69707E', margin: '0 0 24px', lineHeight: 1.6 }}>
                 {configuredClassDefs?.length
                   ? `Generate ${configuredClassDefs.length * 3} sections (3 per class, ${configuredClassDefs.length} classes from your setup), plus teachers, subjects and rooms — with class-teacher assignments pre-filled.`
                   : 'Generate your classes, teachers, subjects and rooms in one click based on your setup — or switch to a tab and use + Add to enter them manually.'
@@ -986,7 +986,7 @@ export function StepResourcesV2() {
                   : <><Sparkles size={13} /> HI Generate All Resources</>
                 }
               </button>
-              <p style={{ fontSize: 11, color: '#727780', marginTop: 10 }}>
+              <p style={{ fontSize: 11, color: '#6B7079', marginTop: 10 }}>
                 Or switch to a tab and use <strong>+ Add</strong> to enter data manually.
               </p>
             </div>
@@ -1121,7 +1121,7 @@ export function StepResourcesV2() {
                       padding: '3px 8px', borderRadius: 12,
                       background: t === activeTab ? P_L : ok ? '#F0FDF4' : '#F9FAFB',
                       border: `1px solid ${t === activeTab ? '#DDD8FF' : ok ? '#BBF7D0' : '#E5E7EB'}`,
-                      color: t === activeTab ? P : ok ? '#15803D' : '#727780',
+                      color: t === activeTab ? P : ok ? '#15803D' : '#6B7079',
                       fontSize: 10, fontWeight: 700, cursor: 'pointer',
                       fontFamily: 'inherit',
                     }}>
@@ -1154,8 +1154,8 @@ export function StepResourcesV2() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '7px 16px', borderRadius: 7, border: 'none',
-                    background: allReady ? '#16A34A' : '#E5E7EB',
-                    color: allReady ? '#fff' : '#727780',
+                    background: allReady ? '#0A8136' : '#E5E7EB',
+                    color: allReady ? '#fff' : '#6B7079',
                     fontSize: 12, fontWeight: 700,
                     cursor: allReady ? 'pointer' : 'default', fontFamily: 'inherit',
                     boxShadow: allReady ? '0 2px 8px rgba(22,163,74,0.28)' : 'none',
@@ -1238,14 +1238,14 @@ export function StepResourcesV2() {
           </button>
 
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <span style={{ fontSize: 11.5, color: '#727780', fontWeight: 500 }}>Step 1 of 5</span>
+            <span style={{ fontSize: 11.5, color: '#6B7079', fontWeight: 500 }}>Step 1 of 5</span>
             {!allReady && (
               <span style={{ fontSize: 11.5, color: '#EA580C', marginLeft: 10, fontWeight: 600 }}>
                 · All 4 resource types required before proceeding
               </span>
             )}
             {allReady && (
-              <span style={{ fontSize: 11.5, color: '#16A34A', marginLeft: 10, fontWeight: 600 }}>
+              <span style={{ fontSize: 11.5, color: '#0A8136', marginLeft: 10, fontWeight: 600 }}>
                 · All resources ready ✓
               </span>
             )}

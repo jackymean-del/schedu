@@ -46,7 +46,7 @@ export function MarketingRedirect() {
       style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 14,
         alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center',
-        background: '#F5F4F0', color: '#767393', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
+        background: '#F5F4F0', color: '#6D6A8A', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
         fontSize: 14,
       }}
     >

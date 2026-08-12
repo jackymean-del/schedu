@@ -54,7 +54,7 @@ const TYPE_META: Record<string, { color: string }> = {
   Library:        { color: '#F59E0B' },
   Hall:           { color: '#8B5CF6' },
   Gym:            { color: '#14B8A6' },
-  'Staff Room':   { color: '#6B7280' },
+  'Staff Room':   { color: '#69707E' },
   Other:          { color: '#7C6FE0' },
 }
 
@@ -207,7 +207,7 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
         <td style={{ ...TD, verticalAlign: 'top' }}>
           <input ref={ref} value={name} onChange={e => setName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
-            placeholder="Room name" style={{ ...inp, width: '100%', borderColor: match ? '#16A34A' : undefined }}
+            placeholder="Room name" style={{ ...inp, width: '100%', borderColor: match ? '#0A8136' : undefined }}
           />
         </td>
         <td style={TD}>
@@ -647,7 +647,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#767393',
+            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
@@ -719,7 +719,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
       </div>
 
       {/* Helper hint */}
-      <div style={{ flexShrink: 0, fontSize: 11, color: '#767393', margin: '0 0 7px 2px', lineHeight: 1.5 }}>
+      <div style={{ flexShrink: 0, fontSize: 11, color: '#6D6A8A', margin: '0 0 7px 2px', lineHeight: 1.5 }}>
         Group rooms by <strong style={{ color: P_D }}>block / building / area</strong> so timetabling knows which classes share a location.
         Click a block name to rename it; use the pill beside a room to move it. Skipping this is fine — everything stays in “{DEFAULT_BLOCK}”.
       </div>

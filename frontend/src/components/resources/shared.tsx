@@ -156,7 +156,7 @@ export function SmartEmptyState({
         {icon}
       </div>
       <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 5 }}>{title}</div>
-      <div style={{ fontSize: 12.5, color: '#767393', maxWidth: 440, lineHeight: 1.55, marginBottom: 24 }}>{subtitle}</div>
+      <div style={{ fontSize: 12.5, color: '#6D6A8A', maxWidth: 440, lineHeight: 1.55, marginBottom: 24 }}>{subtitle}</div>
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'stretch' }}>
         {/* Smart create — primary, prominent */}
@@ -197,7 +197,7 @@ export function SmartEmptyState({
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#DDD8FF'; e.currentTarget.style.background = '#fff' }}
         >
           <span style={{ fontSize: 14.5, fontWeight: 800, color: '#13111E' }}>✏️ {manualLabel}</span>
-          {manualSubtext && <span style={{ fontSize: 11, fontWeight: 500, color: '#767393' }}>{manualSubtext}</span>}
+          {manualSubtext && <span style={{ fontSize: 11, fontWeight: 500, color: '#6D6A8A' }}>{manualSubtext}</span>}
         </button>
       </div>
 
@@ -768,7 +768,7 @@ export function ImportModal({
                 placeholder="Paste here (Ctrl+V)…"
                 style={{ width: '100%', boxSizing: 'border-box', height: 150, border: `1.5px solid ${raw ? (rows.length > 0 ? '#86EFAC' : '#FECACA') : '#DDD8FF'}`, outline: 'none', resize: 'none', padding: '10px 12px', fontSize: 12, fontFamily: '"ui-monospace","Cascadia Code",monospace', color: '#111028', background: '#fff', borderRadius: 7, lineHeight: 1.6, transition: 'border-color 0.15s' }}
               />
-              <div style={{ marginTop: 5, fontSize: 11, color: rows.length > 0 ? '#16A34A' : (raw ? '#DC2626' : '#9896B5'), fontWeight: rows.length > 0 ? 600 : 400 }}>
+              <div style={{ marginTop: 5, fontSize: 11, color: rows.length > 0 ? '#0A8136' : (raw ? '#DC2626' : '#9896B5'), fontWeight: rows.length > 0 ? 600 : 400 }}>
                 {rows.length > 0 ? `✓ ${rows.length} row${rows.length !== 1 ? 's' : ''} ready to import` : raw ? 'No valid rows detected — check format' : 'Paste rows above'}
               </div>
             </div>

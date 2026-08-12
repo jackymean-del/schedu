@@ -152,7 +152,7 @@ const TOK = {
   cellRowH: 32,
   divider: '#EBEBEF',
   // Text
-  textDim: '#9B97B8',
+  textDim: '#6D6A8A',
   textMid: '#555555',
   textOn: '#1A1A1A',
   // Brand accent (toolbar, selection)

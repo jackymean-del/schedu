@@ -102,7 +102,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
       <h2 style={{ fontSize: 15, fontWeight: 800, color: '#13111E', margin: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
         <CalendarDays size={15} color={ACCENT} /> School holidays
       </h2>
-      <p style={{ fontSize: 12.5, color: '#767393', margin: '4px 0 16px' }}>
+      <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: '4px 0 16px' }}>
         Admin-only. Declare a holiday once — every subject scheduled that weekday loses its periods automatically,
         and remaining-hours figures update across the app. Faculty can still log a missed period for their own subject,
         but only an admin sets holidays.
@@ -119,7 +119,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
             <strong style={{ color: total > 0 ? '#92400E' : '#4B41C4' }}>
               {holidays.length} holiday{holidays.length > 1 ? 's' : ''} declared
             </strong>
-            <span style={{ color: '#767393' }}>
+            <span style={{ color: '#6D6A8A' }}>
               {total > 0
                 ? `— ${total} teaching hours removed from the year.`
                 : '— no teaching hours affected yet (generate a timetable and the impact appears here).'}
@@ -137,10 +137,10 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
               return (
                 <div key={h.id} style={{ display: 'grid', gridTemplateColumns: '110px 90px 1fr 90px 30px', gap: 8, alignItems: 'center', padding: '6px 9px', borderRadius: 8, border: '1px solid #ECE9FB' }}>
                   <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{h.date}</span>
-                  <span style={{ fontSize: 11, color: '#767393' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '—'}</span>
+                  <span style={{ fontSize: 11, color: '#6D6A8A' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '—'}</span>
                   <span style={{ fontSize: 12, color: '#13111E', fontWeight: 600 }}>
                     {h.name}
-                    <span style={{ color: h.sections?.length ? '#4B41C4' : '#767393', fontWeight: h.sections?.length ? 600 : 400 }}>
+                    <span style={{ color: h.sections?.length ? '#4B41C4' : '#6D6A8A', fontWeight: h.sections?.length ? 600 : 400 }}>
                       {' · '}{describeScope(h.sections, sectionNames)}
                     </span>
                   </span>
@@ -184,7 +184,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
           </button>
           {bulkOpen && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11.5, color: '#767393' }}>
+              <div style={{ fontSize: 11.5, color: '#6D6A8A' }}>
                 One per line: <code>date, name, classes</code> — e.g. <code>2026-08-15, Independence Day</code>.
                 Dates may be <code>YYYY-MM-DD</code> or <code>DD/MM/YYYY</code>; a header row and blank lines are ignored.
                 Leave the third field out for the whole school, or list class-sections

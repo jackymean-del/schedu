@@ -164,7 +164,7 @@ function UsageCellRenderer(params: ICellRendererParams<RowData>) {
     const p = parseAllocation(raw); if (p.valid) u += p.weeklyTotal
   })
   const st = utilisationStatus(u, c)
-  const dot  = st === 'over' ? '#DC2626' : st === 'tight' ? '#D97706' : st === 'ok' ? '#16A34A' : u > 0 ? '#2563EB' : '#D1D5DB'
+  const dot  = st === 'over' ? '#DC2626' : st === 'tight' ? '#D97706' : st === 'ok' ? '#0A8136' : u > 0 ? '#2563EB' : '#D1D5DB'
   const text = st === 'over' ? '#DC2626' : st === 'tight' ? '#92400E' : '#4B5275'
   const ul   = dm === 'hours' ? toHourMin(u, pm) : String(u)
   const cl   = dm === 'hours' ? toHourMin(c, pm) : String(c)
@@ -323,7 +323,7 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
         ) : parsed.valid ? (
           <span style={{ color: '#15803D', fontWeight: 600 }}>
             {desc}
-            <span style={{ color: over ? '#DC2626' : '#767393', fontWeight: 600 }}>
+            <span style={{ color: over ? '#DC2626' : '#6D6A8A', fontWeight: 600 }}>
               {' '}· class {newTotal}/{cap}{over ? ' — over capacity' : ''}
             </span>
           </span>
@@ -380,7 +380,7 @@ function ExportDropdown({ onCsv, onExcel }: { onCsv: () => void; onExcel: () => 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA', background: 'transparent', color: '#767393', fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 5, border: '1px solid #E5E5EA', background: 'transparent', color: '#6D6A8A', fontSize: 10.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
         Export <ChevronDown size={9} />
       </button>
       {open && (

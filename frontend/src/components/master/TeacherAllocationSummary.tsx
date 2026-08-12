@@ -209,10 +209,10 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 10, color: '#767393' }}>
+        <span style={{ fontSize: 10, color: '#6D6A8A' }}>
           {rows.filter((r: any) => r.load > 0).length} active · {overloaded.length > 0
             ? <span style={{ color: '#DC2626', fontWeight: 700 }}>{overloaded.length} overloaded</span>
-            : <span style={{ color: '#16A34A', fontWeight: 700 }}>No overloads</span>}
+            : <span style={{ color: '#0A8136', fontWeight: 700 }}>No overloads</span>}
         </span>
       </div>
 
@@ -275,7 +275,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           gridTemplateColumns: '220px 170px 1fr',
           padding: '8px 16px', gap: 12,
           background: '#F8F7FF', borderBottom: '2px solid #E8E4FF',
-          fontSize: 10, fontWeight: 800, color: '#767393',
+          fontSize: 10, fontWeight: 800, color: '#6D6A8A',
           letterSpacing: '0.1em', textTransform: 'uppercase' as const,
         }}>
           <button onClick={() => toggleSort('name')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'name' ? '#7C6FE0' : 'inherit' }}>
@@ -324,7 +324,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
               ? toHourMin(Math.round(rows.reduce((a: number, r: any) => a + r.load, 0) / rows.length), periodMinutes)
               : `${Math.round(rows.reduce((a: number, r: any) => a + r.load, 0) / rows.length)}p`
             ) : 0}/teacher ·{' '}
-            {overloaded.length > 0 ? <span style={{ color: '#DC2626', fontWeight: 700 }}>{overloaded.length} overloaded</span> : <span style={{ color: '#16A34A', fontWeight: 700 }}>No overloads ✓</span>}
+            {overloaded.length > 0 ? <span style={{ color: '#DC2626', fontWeight: 700 }}>{overloaded.length} overloaded</span> : <span style={{ color: '#0A8136', fontWeight: 700 }}>No overloads ✓</span>}
           </span>
         </div>
       )}
@@ -396,9 +396,9 @@ function NormDefaultsBar({
       <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 800, color: '#4B41C4' }}>
         {normCaps.perDay}p / day
       </span>
-      <span style={{ color: '#767393' }}>over {workingDays} days</span>
+      <span style={{ color: '#6D6A8A' }}>over {workingDays} days</span>
       {hours != null && (
-        <span style={{ color: '#767393' }}>≈ {hours} h/wk at {periodMinutes} min</span>
+        <span style={{ color: '#6D6A8A' }}>≈ {hours} h/wk at {periodMinutes} min</span>
       )}
       {/* Enter caps in whichever unit this school speaks. */}
       <span style={{ display: 'inline-flex', border: '1px solid #E0DBF2', borderRadius: 6, overflow: 'hidden' }}>
@@ -409,7 +409,7 @@ function NormDefaultsBar({
               all: 'unset', cursor: 'pointer', padding: '2px 9px',
               fontSize: 10, fontWeight: 700,
               background: unit === u ? '#7C6FE0' : '#fff',
-              color: unit === u ? '#fff' : '#767393',
+              color: unit === u ? '#fff' : '#6D6A8A',
             }}>
             {u === 'periods' ? 'Periods' : 'Hours'}
           </button>
@@ -500,7 +500,7 @@ function TeacherRow({
   const [draftWeek, setDraftWeek] = useState<string | null>(null)
   const [draftDay, setDraftDay] = useState<string | null>(null)
   const pct = max > 0 ? Math.min(100, (load / max) * 100) : 0
-  const barColor = load > max ? '#DC2626' : load >= max * 0.9 ? '#D4920E' : load > 0 ? '#16A34A' : '#B8B4D4'
+  const barColor = load > max ? '#DC2626' : load >= max * 0.9 ? '#D4920E' : load > 0 ? '#0A8136' : '#B8B4D4'
   const typeStyle = TYPE_STYLE[type]
 
   return (

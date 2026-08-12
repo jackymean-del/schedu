@@ -111,7 +111,7 @@ export function InsightsPage() {
             {/* Summary cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12, marginBottom: 16 }}>
               <Stat icon={<UserMinus size={16} />} label="Total Leaves" value={reports.totals.leaves} tint="#7C6FE0" />
-              <Stat icon={<CheckCircle2 size={16} />} label="Substitutes" value={reports.totals.substitutes} tint="#16A34A" />
+              <Stat icon={<CheckCircle2 size={16} />} label="Substitutes" value={reports.totals.substitutes} tint="#0A8136" />
               <Stat icon={<XCircle size={16} />} label="Cancelled" value={reports.totals.cancelled} tint="#DC2626" red={reports.totals.cancelled > 0} />
               <Stat icon={<CalendarDays size={16} />} label="Leave Days" value={reports.totals.leaveDays} tint="#D97706" />
               <Stat icon={<Users size={16} />} label="Faculty on Leave" value={reports.totals.facultyOnLeave} tint="#2563EB" />
@@ -122,7 +122,7 @@ export function InsightsPage() {
               {RANGES.map(r => (
                 <button key={r.key} onClick={() => setRangeKey(r.key)}
                   style={{ padding: '7px 14px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
-                    background: rangeKey === r.key ? '#7C6FE0' : '#fff', color: rangeKey === r.key ? '#fff' : '#6B7280',
+                    background: rangeKey === r.key ? '#7C6FE0' : '#fff', color: rangeKey === r.key ? '#fff' : '#69707E',
                     boxShadow: rangeKey === r.key ? '0 2px 8px rgba(124,111,224,0.28)' : '0 1px 2px rgba(0,0,0,0.04)' }}>
                   {r.label}
                 </button>
@@ -136,7 +136,7 @@ export function InsightsPage() {
                   style={{ padding: '8px 15px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     background: tab === t.key ? '#7C6FE0' : 'transparent', color: tab === t.key ? '#fff' : '#4B5275' }}>
-                  <span style={{ color: tab === t.key ? '#fff' : '#767393' }}>{t.icon}</span>{t.label}
+                  <span style={{ color: tab === t.key ? '#fff' : '#6D6A8A' }}>{t.icon}</span>{t.label}
                 </button>
               ))}
             </div>
@@ -155,7 +155,7 @@ export function InsightsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
                   <Highlight label="Coverage rate" value={coverageRate === null ? '—' : `${coverageRate}%`}
                     sub={coverageRate === null ? 'No absences' : `${reports.totals.substitutes} of ${reports.totals.substitutes + reports.totals.cancelled} periods covered`}
-                    tint={coverageRate !== null && coverageRate < 80 ? '#DC2626' : '#16A34A'} />
+                    tint={coverageRate !== null && coverageRate < 80 ? '#DC2626' : '#0A8136'} />
                   <Highlight label="Most affected faculty" value={reports.mostAffectedFaculty?.name ?? '—'} sub={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} periods` : ''} tint="#7C6FE0" />
                   <Highlight label="Most affected class" value={reports.mostAffectedClass?.name ?? '—'} sub={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} periods` : ''} tint="#2563EB" />
                   <Highlight label="Top cancel reason" value={reports.topReason?.reason ?? '—'} sub={reports.topReason ? `${reports.topReason.count} lessons` : ''} tint="#D97706" />
@@ -181,7 +181,7 @@ export function InsightsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12, marginBottom: 14 }}>
                   <MiniCard tint="#DC2626" bg="#FEF2F2" label="Total Cancelled" big={String(reports.totals.cancelled)} />
                   <MiniCard tint="#2563EB" bg="#EFF6FF" label="Most Affected Faculty" big={reports.mostAffectedFaculty?.name ?? '—'} small={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} lessons` : ''} />
-                  <MiniCard tint="#16A34A" bg="#F0FDF4" label="Most Affected Class" big={reports.mostAffectedClass?.name ?? '—'} small={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} lessons` : ''} />
+                  <MiniCard tint="#0A8136" bg="#F0FDF4" label="Most Affected Class" big={reports.mostAffectedClass?.name ?? '—'} small={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} lessons` : ''} />
                   <MiniCard tint="#D97706" bg="#FFFBEB" label="Top Reason" big={reports.topReason?.reason ?? '—'} small={reports.topReason ? `${reports.topReason.count} lessons` : ''} />
                 </div>
                 <Card>
@@ -255,7 +255,7 @@ function Card({ children }: { children: React.ReactNode }) {
 function Stat({ icon, label, value, tint, red }: { icon: React.ReactNode; label: string; value: number; tint: string; red?: boolean }) {
   return (
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: tint, marginBottom: 8 }}>{icon}<span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280' }}>{label}</span></div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: tint, marginBottom: 8 }}>{icon}<span style={{ fontSize: 12, fontWeight: 600, color: '#69707E' }}>{label}</span></div>
       <div style={{ fontSize: 28, fontWeight: 800, color: red ? '#DC2626' : '#13111E' }}>{value}</div>
     </div>
   )
@@ -274,7 +274,7 @@ function MiniCard({ tint, bg, label, big, small }: { tint: string; bg: string; l
     <div style={{ background: bg, border: `1px solid ${tint}22`, borderRadius: 12, padding: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: tint, marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{big}</div>
-      {small && <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{small}</div>}
+      {small && <div style={{ fontSize: 11, color: '#69707E', marginTop: 2 }}>{small}</div>}
     </div>
   )
 }
@@ -299,7 +299,7 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
   )
 }
 function LeaveTypes({ types, total }: { types: { type: string; count: number }[]; total: number }) {
-  const COLORS = ['#7C6FE0', '#2563EB', '#16A34A', '#D97706', '#DB2777', '#0891B2']
+  const COLORS = ['#7C6FE0', '#2563EB', '#0A8136', '#D97706', '#DB2777', '#0891B2']
   const max = Math.max(1, ...types.map(t => t.count))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -308,7 +308,7 @@ function LeaveTypes({ types, total }: { types: { type: string; count: number }[]
         <div key={t.type}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}>
             <span style={{ fontWeight: 700, color: '#13111E' }}>{t.type}</span>
-            <span style={{ color: '#6B7280' }}>{t.count} · {total ? Math.round((t.count / total) * 100) : 0}%</span>
+            <span style={{ color: '#69707E' }}>{t.count} · {total ? Math.round((t.count / total) * 100) : 0}%</span>
           </div>
           <div style={{ height: 10, borderRadius: 6, background: '#F1EFFA', overflow: 'hidden' }}>
             <div style={{ width: `${(t.count / max) * 100}%`, height: '100%', background: COLORS[i % COLORS.length], borderRadius: 6 }} />
@@ -321,8 +321,8 @@ function LeaveTypes({ types, total }: { types: { type: string; count: number }[]
 function NoActivity({ msg }: { msg?: string }) {
   return (
     <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-      <CheckCircle2 size={26} color="#16A34A" />
-      <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: 8 }}>{msg ?? 'No leave or substitution activity in this range.'}</div>
+      <CheckCircle2 size={26} color="#0A8136" />
+      <div style={{ fontSize: 13.5, color: '#69707E', marginTop: 8 }}>{msg ?? 'No leave or substitution activity in this range.'}</div>
     </div>
   )
 }
@@ -331,7 +331,7 @@ function Empty() {
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '52px 24px', textAlign: 'center' }}>
       <BarChart3 size={30} color="#C9C3EC" />
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '12px 0 6px' }}>No data yet</h3>
-      <p style={{ fontSize: 13, color: '#767393', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar — analytics will build from there.</p>
+      <p style={{ fontSize: 13, color: '#6D6A8A', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar — analytics will build from there.</p>
       <a href="/calendar" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#7C6FE0', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>Go to Calendar</a>
     </div>
   )

@@ -37,7 +37,7 @@ function EntryRow<T extends { id: string; name: string }>({
         <InlineEdit value={entry.name} onSave={(v) => v.trim() && v.trim() !== entry.name && onRename(v.trim())}
           style={{ fontWeight: 700, fontSize: 13 }} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, fontSize: 11, color: '#767393' }}>
+      <div style={{ flex: 1, minWidth: 0, fontSize: 11, color: '#6D6A8A' }}>
         {usage.length === 0
           ? <span style={{ fontStyle: 'italic', color: '#767384' }}>Not used by any active schedule</span>
           : <>Used in: {usage.join(', ')}</>}
@@ -125,7 +125,7 @@ export function DirectoryPanel() {
 
   return (
     <div>
-      <div style={{ fontSize: 11.5, color: '#767393', marginBottom: 14, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 11.5, color: '#6D6A8A', marginBottom: 14, lineHeight: 1.6 }}>
         The single roster every schedule's Faculty/Venues tabs check against, so the same real
         teacher or room is recognized across schedules instead of guessed from a matching name.
         Renaming or merging here updates every active schedule that uses it.

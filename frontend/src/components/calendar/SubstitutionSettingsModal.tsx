@@ -61,7 +61,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
             <span style={{ width: 38, height: 38, borderRadius: 10, background: '#EDE9FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Settings2 size={18} color="#7C6FE0" /></span>
             <div>
               <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E' }}>Substitution Settings</div>
-              <div style={{ fontSize: 12.5, color: '#767393' }}>Controls how Calendar ranks and auto-picks substitutes</div>
+              <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>Controls how Calendar ranks and auto-picks substitutes</div>
             </div>
           </div>
           <button onClick={onClose} style={{ width: 38, height: 38, borderRadius: 11, border: '1px solid #E7E3F6', background: '#fff', color: '#6B6890', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><X size={17} /></button>
@@ -146,7 +146,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
                         title={ov.canSub ? 'Disable substitution for this faculty' : 'Enable substitution for this faculty'}
                         style={{
                           width: 24, height: 24, borderRadius: 7, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          background: ov.canSub ? '#DCFCE7' : '#FEE2E2', color: ov.canSub ? '#16A34A' : '#DC2626',
+                          background: ov.canSub ? '#DCFCE7' : '#FEE2E2', color: ov.canSub ? '#0A8136' : '#DC2626',
                         }}>
                         {ov.canSub ? <Check size={13} /> : <X size={13} />}
                       </button>
@@ -167,7 +167,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
                         style={{
                           padding: '3px 10px', borderRadius: 6, border: 'none', cursor: ov.canSub ? 'pointer' : 'not-allowed',
                           fontSize: 10.5, fontWeight: 700, opacity: ov.canSub ? 1 : 0.4,
-                          background: ov.autoAssign ? '#EDE9FF' : '#F1F1F4', color: ov.autoAssign ? '#7C6FE0' : '#727780',
+                          background: ov.autoAssign ? '#EDE9FF' : '#F1F1F4', color: ov.autoAssign ? '#7C6FE0' : '#6B7079',
                         }}>
                         {ov.autoAssign ? 'Auto' : 'Manual'}
                       </button>
@@ -251,7 +251,7 @@ function WeightField({ label, hint, value, onChange, compact }: {
               fontSize: compact ? 11 : 12, fontWeight: 700,
               border: value === level ? '1.5px solid #7C6FE0' : '1.5px solid #E5E1F4',
               background: value === level ? '#F5F3FF' : '#fff',
-              color: value === level ? '#7C6FE0' : '#6B7280',
+              color: value === level ? '#7C6FE0' : '#69707E',
             }}>
             {WEIGHT_LABEL[level]}
           </button>

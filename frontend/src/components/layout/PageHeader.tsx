@@ -13,7 +13,7 @@ interface PageHeaderProps {
 }
 
 const STATUS_STYLES: Record<string, { dot: string; text: string }> = {
-  saved:     { dot: '#22c55e', text: '#6b7280' },
+  saved:     { dot: '#22c55e', text: '#69707e' },
   saving:    { dot: '#f59e0b', text: '#92400e' },
   draft:     { dot: '#f59e0b', text: '#92400e' },
   published: { dot: '#22c55e', text: '#065f46' },
@@ -54,7 +54,7 @@ export function PageHeader({
             {title}
           </h1>
           {description && (
-            <span style={{ fontSize: 12, color: '#727780', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12, color: '#6B7079', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               — {description}
             </span>
           )}
@@ -94,7 +94,7 @@ export function PageHeader({
                 borderBottom: activeTab === t.key ? '2px solid #7C6FE0' : '2px solid transparent',
                 background: 'transparent', marginBottom: -1,
                 fontSize: 12, fontWeight: activeTab === t.key ? 700 : 400,
-                color: activeTab === t.key ? '#7C6FE0' : '#6b7280',
+                color: activeTab === t.key ? '#7C6FE0' : '#69707e',
                 display: 'flex', alignItems: 'center', gap: 6,
                 transition: 'color 0.1s',
               }}
@@ -105,7 +105,7 @@ export function PageHeader({
                   fontSize: 10, fontWeight: 700,
                   padding: '1px 6px', borderRadius: 10,
                   background: activeTab === t.key ? '#EDE9FF' : '#f3f4f6',
-                  color: activeTab === t.key ? '#7C6FE0' : '#6b7280',
+                  color: activeTab === t.key ? '#7C6FE0' : '#69707e',
                 }}>
                   {t.count}
                 </span>

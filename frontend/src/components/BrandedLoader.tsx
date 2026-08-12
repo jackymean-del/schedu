@@ -39,7 +39,7 @@ export function BrandedLoader({ label = 'Loading…' }: { label?: string }) {
         </svg>
       </div>
 
-      <div className="schedu-fade-label" style={{ fontSize: 14, color: '#6B7280', animation: 'schedu-fade 1.2s ease-in-out infinite' }}>
+      <div className="schedu-fade-label" style={{ fontSize: 14, color: '#69707E', animation: 'schedu-fade 1.2s ease-in-out infinite' }}>
         {label}
       </div>
     </div>

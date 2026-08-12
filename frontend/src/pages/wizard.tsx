@@ -125,7 +125,7 @@ function WizardSetupGate() {
         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#13111E', margin: '0 0 8px' }}>
           Let’s set up your timetable first
         </h2>
-        <p style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 1.6, margin: '0 0 22px' }}>
+        <p style={{ fontSize: 13.5, color: '#69707E', lineHeight: 1.6, margin: '0 0 22px' }}>
           Before the wizard can help, it needs the basics — a name, your class range and
           approximate counts. Create a timetable to get started; you’ll land right back here.
         </p>
@@ -194,11 +194,11 @@ export function WizardPage() {
           </span>
         </span>
         <span style={{ color: '#D1D5DB' }}>|</span>
-        <span style={{ fontSize: 13, color: '#6B7280' }}>{ttName}</span>
+        <span style={{ fontSize: 13, color: '#69707E' }}>{ttName}</span>
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
-          <span style={{ fontSize: 11, color: '#6B7280' }}>Auto-saved</span>
+          <span style={{ fontSize: 11, color: '#69707E' }}>Auto-saved</span>
         </div>
       </div>
 
@@ -242,7 +242,7 @@ export function WizardPage() {
                   }}>
                     {done
                       ? <CheckCircle2 size={14} color="#fff" />
-                      : <span style={{ fontSize: 12, fontWeight: 700, color: active ? '#fff' : '#727780' }}>{n}</span>
+                      : <span style={{ fontSize: 12, fontWeight: 700, color: active ? '#fff' : '#6B7079' }}>{n}</span>
                     }
                   </div>
 
@@ -250,7 +250,7 @@ export function WizardPage() {
                   <div style={{
                     fontSize: 11,
                     fontWeight: active ? 600 : 400,
-                    color: active ? '#13111E' : done ? '#7C6FE0' : '#727780',
+                    color: active ? '#13111E' : done ? '#7C6FE0' : '#6B7079',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
                   }}>

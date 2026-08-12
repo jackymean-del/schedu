@@ -59,7 +59,7 @@ const FORMATS: Format[] = [
     icon: <FileSpreadsheet size={20} />,
     label: 'Class Schedules',
     sublabel: 'One sheet per section · XLSX',
-    accent: '#16A34A',
+    accent: '#0A8136',
     bg: '#F0FDF4',
     border: '#BBF7D0',
   },
@@ -266,7 +266,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             <div style={{ fontSize: 14, fontWeight: 800, color: '#13111E', letterSpacing: '-0.2px' }}>
               Publish &amp; Export
             </div>
-            <div style={{ fontSize: 10.5, color: '#767393', marginTop: 1 }}>
+            <div style={{ fontSize: 10.5, color: '#6D6A8A', marginTop: 1 }}>
               Choose formats, then click Export
             </div>
           </div>
@@ -275,7 +275,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             style={{
               width: 28, height: 28, borderRadius: 7,
               border: '1px solid #ECEAFB', background: '#FAFAFE',
-              color: '#767393', cursor: 'pointer',
+              color: '#6D6A8A', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
             title="Close"
@@ -290,7 +290,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
           {/* Format selector grid */}
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: '#767393', marginBottom: 10,
+            textTransform: 'uppercase', color: '#6D6A8A', marginBottom: 10,
           }}>
             Export formats
           </div>
@@ -319,7 +319,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
                   <div style={{
                     width: 36, height: 36, borderRadius: 9, flexShrink: 0,
                     background: active ? `${fmt.accent}22` : '#F0EEF8',
-                    color: active ? fmt.accent : '#767393',
+                    color: active ? fmt.accent : '#6D6A8A',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {isDone
@@ -338,7 +338,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
                       {fmt.label}
                     </div>
                     <div style={{
-                      fontSize: 10, color: active ? fmt.accent : '#767393',
+                      fontSize: 10, color: active ? fmt.accent : '#6D6A8A',
                       marginTop: 2, fontWeight: 500,
                     }}>
                       {fmt.sublabel}
@@ -366,7 +366,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
           {/* ─── Cell options ─── */}
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: '#767393', marginBottom: 10,
+            textTransform: 'uppercase', color: '#6D6A8A', marginBottom: 10,
           }}>
             Cell content
           </div>
@@ -393,7 +393,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, width: '100%',
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 10, fontWeight: 700, color: '#767393', padding: 0, marginBottom: 8,
+              fontSize: 10, fontWeight: 700, color: '#6D6A8A', padding: 0, marginBottom: 8,
               fontFamily: 'inherit',
             }}
           >
@@ -455,7 +455,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
           display: 'flex', alignItems: 'center', gap: 10,
           flexShrink: 0, background: '#FAFAFE',
         }}>
-          <span style={{ flex: 1, fontSize: 10.5, color: '#767393' }}>
+          <span style={{ flex: 1, fontSize: 10.5, color: '#6D6A8A' }}>
             {selected.size === 0
               ? 'Select at least one format'
               : `${selected.size} format${selected.size !== 1 ? 's' : ''} selected`}
@@ -509,7 +509,7 @@ function ToggleChip({
         padding: '6px 12px', borderRadius: 20,
         border: `1.5px solid ${value ? '#7C6FE0' : '#D8D2FF'}`,
         background: value ? '#EDE9FF' : '#FAFAFE',
-        color: value ? '#5B4FBA' : '#767393',
+        color: value ? '#5B4FBA' : '#6D6A8A',
         fontSize: 11, fontWeight: 600,
         cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit',
@@ -538,7 +538,7 @@ function SummaryRow({ label, value, note }: { label: string; value: number; note
         fontFamily: "'DM Mono', monospace", fontWeight: 700, color: '#13111E',
         minWidth: 32, textAlign: 'right',
       }}>{value}</span>
-      <span style={{ color: '#767393', minWidth: 160 }}>{note}</span>
+      <span style={{ color: '#6D6A8A', minWidth: 160 }}>{note}</span>
     </div>
   )
 }

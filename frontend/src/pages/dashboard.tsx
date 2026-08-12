@@ -180,7 +180,7 @@ const SIDE_SECTIONS: SideSection[] = [
 const STATUS_META = {
   active:   { label: 'Active',   bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0' },
   draft:    { label: 'Draft',    bg: '#FEF3C7', fg: '#92400E', border: '#FDE68A' },
-  archived: { label: 'Archived', bg: '#F3F4F6', fg: '#6B7280', border: '#E5E7EB' },
+  archived: { label: 'Archived', bg: '#F3F4F6', fg: '#69707E', border: '#E5E7EB' },
 }
 
 // ── Timetable list (persisted in localStorage) ─────────────────
@@ -521,7 +521,7 @@ function CreateTimetableModal({
         .ct-cancel {
           transition: background 0.13s, border-color 0.13s;
         }
-        .ct-cancel:hover { background: #F9FAFB !important; border-color: #727780 !important; }
+        .ct-cancel:hover { background: #F9FAFB !important; border-color: #6B7079 !important; }
         .ct-open {
           transition: background 0.13s;
         }
@@ -544,13 +544,13 @@ function CreateTimetableModal({
             <h2 style={{ fontSize: 17, fontWeight: 700, color: '#13111E', marginBottom: 4 }}>
               Create new schedule
             </h2>
-            <p style={{ fontSize: 13, color: '#6B7280' }}>
+            <p style={{ fontSize: 13, color: '#69707E' }}>
               the engine will generate all defaults — you only refine.
             </p>
           </div>
           <button onClick={onClose} style={{
             width: 28, height: 28, borderRadius: 6, border: 'none',
-            background: 'none', cursor: 'pointer', color: '#727780',
+            background: 'none', cursor: 'pointer', color: '#6B7079',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginLeft: 12,
           }}>
@@ -584,7 +584,7 @@ function CreateTimetableModal({
                 onChange={e => setStartDate(e.target.value)}
               />
             </div>
-            <div style={{ fontSize: 12, color: '#727780', marginTop: 4 }}>{fmt(startDate)}</div>
+            <div style={{ fontSize: 12, color: '#6B7079', marginTop: 4 }}>{fmt(startDate)}</div>
           </div>
           <div>
             <label style={lbl}>End date <span style={{ color: '#EF4444' }}>*</span></label>
@@ -594,7 +594,7 @@ function CreateTimetableModal({
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
             />
-            <div style={{ fontSize: 12, color: '#727780', marginTop: 4 }}>{fmt(endDate)}</div>
+            <div style={{ fontSize: 12, color: '#6B7079', marginTop: 4 }}>{fmt(endDate)}</div>
           </div>
         </div>
 
@@ -628,7 +628,7 @@ function CreateTimetableModal({
             <GradeInput className="ct-input" value={fromGrade} onChange={setFromGrade} placeholder="From — e.g. Class-I" />
             <GradeInput className="ct-input" value={toGrade}   onChange={setToGrade}   placeholder="To — e.g. Class-X" />
           </div>
-          <p style={{ fontSize: 12, color: '#6B7280', marginTop: 6 }}>
+          <p style={{ fontSize: 12, color: '#69707E', marginTop: 6 }}>
             Type your own naming — “Class-I”, “Grade 1”, “KG1”, “PP2”, “Nursery”, “Form 1”, “Year 7”. schedU adapts to your convention, tidies the spacing, and groups the levels automatically.
           </p>
         </div>
@@ -651,7 +651,7 @@ function CreateTimetableModal({
               { label: 'Rooms',    value: rooms,    set: setRooms    },
             ].map(f => (
               <div key={f.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 5 }}>{f.label}</div>
+                <div style={{ fontSize: 12, color: '#69707E', marginBottom: 5 }}>{f.label}</div>
                 <input
                   className="ct-num"
                   type="number"
@@ -708,7 +708,7 @@ function CreateTimetableModal({
             Cancel
           </button>
 
-          <span style={{ fontSize: 12, color: '#727780', flex: 1, textAlign: 'center' }}>
+          <span style={{ fontSize: 12, color: '#6B7079', flex: 1, textAlign: 'center' }}>
             You'll refine everything in the wizard →
           </span>
 
@@ -848,7 +848,7 @@ function EditTimetableModal({
               <Pencil size={16} color="#7C6FE0" />
               <h2 style={{ fontSize: 17, fontWeight: 700, color: '#13111E', margin: 0 }}>Edit schedule</h2>
             </div>
-            <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>
+            <p style={{ fontSize: 13, color: '#69707E', margin: 0 }}>
               Update the basic setup for <strong>{tt.name}</strong>
               {snap && (
                 <span style={{ display: 'block', fontSize: 11.5, color: '#059669', marginTop: 3, fontWeight: 500 }}>
@@ -859,7 +859,7 @@ function EditTimetableModal({
           </div>
           <button onClick={onClose} style={{
             width: 28, height: 28, borderRadius: 6, border: 'none',
-            background: 'none', cursor: 'pointer', color: '#727780',
+            background: 'none', cursor: 'pointer', color: '#6B7079',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 12,
           }}><X size={16} /></button>
         </div>
@@ -894,7 +894,7 @@ function EditTimetableModal({
                 onFocus={e => (e.currentTarget.style.borderColor = '#7C6FE0')}
                 onBlur={e => (e.currentTarget.style.borderColor = '#D1D5DB')}
               />
-              <div style={{ fontSize: 12, color: '#727780', marginTop: 4 }}>{fmt(f.val)}</div>
+              <div style={{ fontSize: 12, color: '#6B7079', marginTop: 4 }}>{fmt(f.val)}</div>
             </div>
           ))}
         </div>
@@ -924,7 +924,7 @@ function EditTimetableModal({
               { label: 'To',   val: toGrade,   set: setToGrade,   ph: 'e.g. Class XII' },
             ] as const).map(f => (
               <div key={f.label}>
-                <div style={{ fontSize: 11, color: '#727780', marginBottom: 4 }}>{f.label}</div>
+                <div style={{ fontSize: 11, color: '#6B7079', marginBottom: 4 }}>{f.label}</div>
                 <GradeInput value={f.val} onChange={f.set} style={selectStyle} placeholder={f.ph} />
               </div>
             ))}
@@ -957,7 +957,7 @@ function EditTimetableModal({
               { label: 'Rooms',    value: rooms,    set: setRooms,    req: false },
             ] as const).map(f => (
               <div key={f.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 5, fontWeight: 500 }}>
+                <div style={{ fontSize: 12, color: '#69707E', marginBottom: 5, fontWeight: 500 }}>
                   {f.label}
                   {!f.req && <span style={{ color: '#C0BBDD', fontWeight: 400 }}> *</span>}
                 </div>
@@ -992,7 +992,7 @@ function EditTimetableModal({
             background: '#fff', fontSize: 14, fontWeight: 600, color: '#374151',
             cursor: 'pointer', fontFamily: 'inherit',
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.borderColor = '#727780' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.borderColor = '#6B7079' }}
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#D1D5DB' }}
           >Cancel</button>
           <button onClick={handleSave} style={{
@@ -1534,7 +1534,7 @@ export function DashboardPage() {
               <h1 style={{ fontSize: 20, fontWeight: 700, color: '#13111E', marginBottom: 4, letterSpacing: '-0.3px' }}>
                 {greeting()}, {firstName}
               </h1>
-              <p style={{ fontSize: 13, color: '#6B7280' }}>
+              <p style={{ fontSize: 13, color: '#69707E' }}>
                 {orgSubtitle}
               </p>
             </div>
@@ -1582,7 +1582,7 @@ export function DashboardPage() {
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E' }}>Your schedules</h2>
-              <span style={{ fontSize: 12, color: '#727780' }}>{ttList.length} total</span>
+              <span style={{ fontSize: 12, color: '#6B7079' }}>{ttList.length} total</span>
             </div>
 
             {syncIssue && (
@@ -1633,8 +1633,8 @@ export function DashboardPage() {
                   padding: '32px 16px', textAlign: 'center',
                 }}>
                   <CalendarDays size={28} color="#D1D5DB" style={{ margin: '0 auto 10px' }} />
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#6B7280', marginBottom: 4 }}>No schedules yet</div>
-                  <div style={{ fontSize: 12, color: '#727780' }}>Click "+ New schedule" to create one</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#69707E', marginBottom: 4 }}>No schedules yet</div>
+                  <div style={{ fontSize: 12, color: '#6B7079' }}>Click "+ New schedule" to create one</div>
                 </div>
               )}
               {ttList.map(tt => {
@@ -1657,7 +1657,7 @@ export function DashboardPage() {
                       flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <CalendarDays size={16} color={tt.status === 'draft' ? '#7C6FE0' : '#6B7280'} />
+                      <CalendarDays size={16} color={tt.status === 'draft' ? '#7C6FE0' : '#69707E'} />
                     </div>
 
                     {/* Name + meta */}
@@ -1669,7 +1669,7 @@ export function DashboardPage() {
                         {tt.name}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, color: '#727780' }}>{ttMeta(tt)}</span>
+                        <span style={{ fontSize: 12, color: '#6B7079' }}>{ttMeta(tt)}</span>
                         {tt.status === 'draft' && tt.wizardStep > 0 && (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -1802,9 +1802,9 @@ export function DashboardPage() {
             <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', marginBottom: 12 }}>Quick actions</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               {[
-                { icon: <Users size={22} color="#6B7280" />, title: 'Manage teachers', desc: 'Update staff, subjects, and workload limits', href: '/master-data' },
-                { icon: <Database size={22} color="#6B7280" />, title: 'Manage resources', desc: 'Add venues, set capacity, configure availability', href: '/master-data' },
-                { icon: <BarChart2 size={22} color="#6B7280" />, title: 'View reports', desc: 'Workload analysis, room usage, conflict log', href: '/timetable' },
+                { icon: <Users size={22} color="#69707E" />, title: 'Manage teachers', desc: 'Update staff, subjects, and workload limits', href: '/master-data' },
+                { icon: <Database size={22} color="#69707E" />, title: 'Manage resources', desc: 'Add venues, set capacity, configure availability', href: '/master-data' },
+                { icon: <BarChart2 size={22} color="#69707E" />, title: 'View reports', desc: 'Workload analysis, room usage, conflict log', href: '/timetable' },
               ].map(qa => (
                 <a key={qa.title} href={qa.href} style={{ textDecoration: 'none' }}>
                   <div className="db-qa-card" style={{
@@ -1813,7 +1813,7 @@ export function DashboardPage() {
                   }}>
                     <div style={{ marginBottom: 12 }}>{qa.icon}</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E', marginBottom: 4 }}>{qa.title}</div>
-                    <div style={{ fontSize: 12, color: '#727780', lineHeight: 1.55 }}>{qa.desc}</div>
+                    <div style={{ fontSize: 12, color: '#6B7079', lineHeight: 1.55 }}>{qa.desc}</div>
                   </div>
                 </a>
               ))}

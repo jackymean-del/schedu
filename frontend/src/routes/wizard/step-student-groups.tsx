@@ -353,7 +353,7 @@ const TOT_W = 52
 function stickyHead(left: number, w: number): React.CSSProperties {
   return {
     position: 'sticky', left, zIndex: 3, width: w, minWidth: w,
-    padding: '6px 8px', fontSize: 9.5, fontWeight: 800, color: '#767393',
+    padding: '6px 8px', fontSize: 9.5, fontWeight: 800, color: '#6D6A8A',
     textTransform: 'uppercase', letterSpacing: '0.05em', background: '#F1EEFF',
     borderBottom: '2px solid #E8E4FF', borderRight: '2px solid #E8E4FF', textAlign: 'left', whiteSpace: 'nowrap',
   } as React.CSSProperties
@@ -493,7 +493,7 @@ function ParallelGroupCard({
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
           {secs.map(sn => <span key={sn} style={{ padding: '1px 6px', borderRadius: 7, background: '#EDE9FF', color: '#7C6FE0', fontSize: 9, fontWeight: 700, border: '1px solid #C4B5FD' }}>{sn}</span>)}
         </div>
-        <div style={{ fontSize: 10, color: '#767393', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+        <div style={{ fontSize: 10, color: '#6D6A8A', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
           <Users size={9} /> {tg.totalStrength} students
           {tg.roomCapacity ? <span style={{ color: over ? '#DC2626' : '#15803D', fontWeight: 700 }}>{over ? ` · over cap ${tg.roomCapacity}` : ` · cap ${tg.roomCapacity} ✓`}</span> : null}
         </div>
@@ -695,11 +695,11 @@ function BlockCard({
 
         {/* room capacity sensitivity toggle */}
         <div title="When OFF, room capacity is ignored — any number of sections can pool into a single group." style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#767393', padding: '2px 6px', background: '#fff' }}>Room cap.</span>
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 6px', background: '#fff' }}>Room cap.</span>
           {([['on', true], ['off', false]] as const).map(([lbl, val]) => (
             <button key={lbl} onClick={() => setRoomSensitive(val)} style={{
               padding: '2px 8px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              background: roomSensitive === val ? (val ? '#10B981' : '#727780') : '#fff',
+              background: roomSensitive === val ? (val ? '#10B981' : '#6B7079') : '#fff',
               color: roomSensitive === val ? '#fff' : '#767384',
             }}>{lbl === 'on' ? 'On' : 'Off'}</button>
           ))}
@@ -788,7 +788,7 @@ function BlockCard({
                     </span>
                   </td>
                   <td style={{ ...stickyCell(SEC_W, TOT_W, bg), textAlign: 'center' }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6B7280' }}>{total || '—'}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#69707E' }}>{total || '—'}</span>
                   </td>
                   {combos.map((combo, ci) => {
                     const cols = getCols(combo)
@@ -801,7 +801,7 @@ function BlockCard({
                           {!cols.length ? <span style={{ fontSize: 10, color: '#D1D5DB' }}>—</span>
                           : isNA(combo, sec, sub) ? (
                             <button onClick={() => toggleNA(combo.id, sec, sub)} title="Not applicable to this section — click to enable"
-                              style={{ width: 52, padding: '3px 4px', borderRadius: 5, border: '1.5px dashed #D1D5DB', background: '#F3F4F6', color: '#727780', fontSize: 10.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>NA</button>
+                              style={{ width: 52, padding: '3px 4px', borderRadius: 5, border: '1.5px dashed #D1D5DB', background: '#F3F4F6', color: '#6B7079', fontSize: 10.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>NA</button>
                           ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
                               <input type="number" min={0} value={getCell(combo, sec, sub) || ''}
@@ -809,7 +809,7 @@ function BlockCard({
                                 style={{ width: 46, padding: '3px 4px', borderRadius: 5, textAlign: 'center', border: `1.5px solid ${isOver ? '#FCA5A5' : colColor(ci) + '55'}`, fontSize: 12.5, fontWeight: 700, outline: 'none', fontFamily: 'inherit', background: isOver ? '#FEF2F2' : colColor(ci) + '0D', color: '#111028' }} />
                               <button onClick={() => toggleNA(combo.id, sec, sub)} title="Mark Not Applicable for this section"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#767384', fontSize: 8, fontWeight: 800, padding: 0, lineHeight: 1 }}
-                                onMouseEnter={e => { e.currentTarget.style.color = '#6B7280' }} onMouseLeave={e => { e.currentTarget.style.color = '#767384' }}>NA</button>
+                                onMouseEnter={e => { e.currentTarget.style.color = '#69707E' }} onMouseLeave={e => { e.currentTarget.style.color = '#767384' }}>NA</button>
                             </span>
                           )}
                         </td>
@@ -850,7 +850,7 @@ function BlockCard({
       {/* per-combo merge bars */}
       {combos.length > 0 && (
         <div style={{ padding: '8px 12px', borderTop: '1px solid #F0EDFF', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 9, fontWeight: 800, color: '#767393', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Merge each combination into teaching groups by:</span>
+          <span style={{ fontSize: 9, fontWeight: 800, color: '#6D6A8A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Merge each combination into teaching groups by:</span>
           {combos.map((combo, ci) => {
             const cs = getScope(combo)
             return (
@@ -860,7 +860,7 @@ function BlockCard({
                 </span>
                 {SCOPE_DIMS.map(dim => (
                   <div key={dim.key} title={dim.desc} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#767393', padding: '2px 5px', background: '#F8F7FF' }}>{dim.label}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 5px', background: '#F8F7FF' }}>{dim.label}</span>
                     {(['same', 'cross'] as const).map(v => {
                       const active = cs[dim.key] === v
                       return (
@@ -895,7 +895,7 @@ function BlockCard({
       {allGenerated.length > 0 && (
         <div style={{ padding: '2px 12px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 7px' }}>
-            <span style={{ fontSize: 9.5, fontWeight: 800, color: '#767393', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Parallel groups ({allGenerated.length})</span>
+            <span style={{ fontSize: 9.5, fontWeight: 800, color: '#6D6A8A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Parallel groups ({allGenerated.length})</span>
             <button onClick={() => setGroupsCollapsed(c => !c)} title={groupsCollapsed ? 'Show groups' : 'Hide groups'}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 6, border: '1.5px solid #E4E0FF', background: '#fff', color: '#7C6FE0', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               {groupsCollapsed ? <Eye size={11} /> : <EyeOff size={11} />}{groupsCollapsed ? 'Show' : 'Hide'}
@@ -1089,7 +1089,7 @@ export function StepStudentGroups() {
             <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: 'none', cursor: 'pointer',
               background: 'transparent', fontFamily: 'inherit', fontSize: 13, fontWeight: active ? 700 : 500,
-              color: active ? '#7C6FE0' : '#767393', borderBottom: active ? '3px solid #7C6FE0' : '3px solid transparent', marginBottom: -2,
+              color: active ? '#7C6FE0' : '#6D6A8A', borderBottom: active ? '3px solid #7C6FE0' : '3px solid transparent', marginBottom: -2,
             }}>
               <span style={{ color: active ? '#7C6FE0' : '#C4B5FD' }}>{tab.icon}</span>{tab.label}
             </button>
@@ -1104,7 +1104,7 @@ export function StepStudentGroups() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#13111E', marginBottom: 2 }}>Combination blocks</div>
-              <div style={{ fontSize: 11, color: '#6B7280' }}>
+              <div style={{ fontSize: 11, color: '#69707E' }}>
                 Each block shares one Section/Total rail; each card beside it is one optional group whose columns sum to the section total.
               </div>
             </div>
@@ -1138,7 +1138,7 @@ export function StepStudentGroups() {
                       <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: '#7C6FE0', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.n}</div>
                       <div>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#13111E', marginBottom: 2 }}>{s.t}</div>
-                        <div style={{ fontSize: 10.5, color: '#6B7280', lineHeight: 1.45 }}>{s.d}</div>
+                        <div style={{ fontSize: 10.5, color: '#69707E', lineHeight: 1.45 }}>{s.d}</div>
                       </div>
                     </div>
                   ))}
@@ -1153,7 +1153,7 @@ export function StepStudentGroups() {
               <span style={{ fontSize: 9.5, fontWeight: 800, color: '#7C6FE0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Global merge:</span>
               {SCOPE_DIMS.map(dim => (
                 <div key={dim.key} title={dim.desc} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#767393', padding: '2px 5px', background: '#fff' }}>{dim.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 5px', background: '#fff' }}>{dim.label}</span>
                   {(['same', 'cross'] as const).map(v => {
                     const active = globalScope[dim.key] === v
                     return <button key={v} onClick={() => setGlobalScope(s => ({ ...s, [dim.key]: v }))} style={{ padding: '2px 7px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: active ? (v === 'same' ? '#7C6FE0' : '#F59E0B') : '#fff', color: active ? '#fff' : '#767384' }}>{v === 'same' ? 'Same' : 'Cross'}</button>
@@ -1182,7 +1182,7 @@ export function StepStudentGroups() {
           {blocks.length === 0 ? (
             <div style={{ padding: '44px 20px', textAlign: 'center', background: '#FAFAFE', borderRadius: 12, border: '1.5px dashed #E4E0FF' }}>
               <Layers size={32} color="#C4B5FD" style={{ marginBottom: 12 }} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#767393', marginBottom: 6 }}>No combinations yet</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#6D6A8A', marginBottom: 6 }}>No combinations yet</div>
               <div style={{ fontSize: 12, color: '#B8B4D4', marginBottom: 16, lineHeight: 1.6 }}>
                 Click <strong>HI Suggest</strong> to auto-build blocks from your electives, or <strong>New block</strong> to start one.
               </div>

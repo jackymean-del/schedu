@@ -234,7 +234,7 @@ function CategoryManager({
         <div style={{ fontSize: 9.5, color: '#9896B5', marginBottom: 5, lineHeight: 1.4 }}>Scholastic = academic subjects. Co-scholastic = PE, Arts, CCA, Library, etc. Click a category header to rename it.</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {BUILTIN_CATS.map(cat => (
-            <span key={cat} style={{ fontSize: 10, padding: '1px 6px', background: '#F0EDFF', color: '#767393', borderRadius: 3, border: '1px solid #E8E4FF' }}>{cat}</span>
+            <span key={cat} style={{ fontSize: 10, padding: '1px 6px', background: '#F0EDFF', color: '#6D6A8A', borderRadius: 3, border: '1px solid #E8E4FF' }}>{cat}</span>
           ))}
         </div>
       </div>
@@ -1529,7 +1529,7 @@ export function SubjectsPanel({
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#767393',
+            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >

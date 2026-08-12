@@ -30,7 +30,7 @@ export function StepGuide({
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           margin: '0 0 12px', padding: '5px 12px', borderRadius: 999,
-          border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280',
+          border: '1px solid #E5E7EB', background: '#fff', color: '#69707E',
           fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
         }}
       >

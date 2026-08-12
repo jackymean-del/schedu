@@ -74,7 +74,7 @@ export function DLGInspector({ dlgs, periods, rooms = [] }: Props) {
 
   if (dlgs.length === 0) {
     return (
-      <div style={{ flex: 1, padding: '24px 16px', textAlign: 'center' as const, color: '#767393' }}>
+      <div style={{ flex: 1, padding: '24px 16px', textAlign: 'center' as const, color: '#6D6A8A' }}>
         <Layers size={28} color="#D8D2FF" style={{ margin: '0 auto 10px', display: 'block' }} />
         <div style={{ fontSize: 12, fontWeight: 700, color: '#13111E', marginBottom: 4 }}>
           No Dynamic Learning Groups
@@ -212,7 +212,7 @@ function BlockCard({
       <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
         <div style={{
           fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-          textTransform: 'uppercase' as const, color: '#767393', marginBottom: 2,
+          textTransform: 'uppercase' as const, color: '#6D6A8A', marginBottom: 2,
         }}>
           Parallel options ({block.items.length})
         </div>
@@ -281,15 +281,15 @@ function OptionRow({ dlg, roomCap }: { dlg: DynamicLearningGroup; roomCap?: numb
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
         }}>
           {overflow && <AlertTriangle size={10} />}
-          {!overflow && roomCap != null && <CheckCircle2 size={10} color={tight ? '#D4920E' : '#16A34A'} />}
+          {!overflow && roomCap != null && <CheckCircle2 size={10} color={tight ? '#D4920E' : '#0A8136'} />}
           {dlg.totalStrength}
-          {roomCap != null && <span style={{ color: '#767393' }}> / {roomCap}</span>}
+          {roomCap != null && <span style={{ color: '#6D6A8A' }}> / {roomCap}</span>}
         </div>
         {utilization != null && (
           <div style={{ height: 3, background: '#F5F2FF', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
             <div style={{
               height: '100%', width: `${utilization}%`,
-              background: overflow ? '#DC2626' : tight ? '#D4920E' : '#16A34A',
+              background: overflow ? '#DC2626' : tight ? '#D4920E' : '#0A8136',
               transition: 'width 0.25s',
             }} />
           </div>

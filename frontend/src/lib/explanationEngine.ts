@@ -233,7 +233,7 @@ export function categoryColor(c: FactorCategory): { bg: string; fg: string } {
     case 'expertise':      return { bg: '#EDE9FF', fg: '#7C6FE0' }
     case 'continuity':     return { bg: '#DBEAFE', fg: '#1D4ED8' }
     case 'familiarity':    return { bg: '#DCFCE7', fg: '#15803D' }
-    case 'workload':       return { bg: '#F0FDF4', fg: '#16A34A' }
+    case 'workload':       return { bg: '#F0FDF4', fg: '#0A8136' }
     case 'overload':       return { bg: '#FEE2E2', fg: '#991B1B' }
     case 'ct':             return { bg: '#FEF3C7', fg: '#92400E' }
     case 'scope-locked':   return { bg: '#FEE2E2', fg: '#991B1B' }

@@ -142,5 +142,5 @@ const chip = (active: boolean, small = false): React.CSSProperties => ({
   fontSize: small ? 11.5 : 12.5, fontWeight: 700,
   border: `1px solid ${active ? ACCENT : '#E4E0FF'}`,
   background: active ? '#EDE9FF' : '#fff',
-  color: active ? '#4B41C4' : '#767393',
+  color: active ? '#4B41C4' : '#6D6A8A',
 })

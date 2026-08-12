@@ -422,7 +422,7 @@ function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
         <input ref={ref} value={name} onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setActive(false) }}
           placeholder="Educator full name"
-          style={{ ...fld, width: '100%', fontSize: 12.5, boxSizing: 'border-box' as const, borderColor: match ? '#16A34A' : undefined }}
+          style={{ ...fld, width: '100%', fontSize: 12.5, boxSizing: 'border-box' as const, borderColor: match ? '#0A8136' : undefined }}
         />
         {match && (
           <div style={{ marginTop: 6, padding: '6px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', fontSize: 11, color: '#166534', lineHeight: 1.5 }}>
@@ -778,7 +778,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#767393',
+            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
@@ -788,11 +788,11 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             title={allRoleExpanded ? 'Collapse all roles' : 'Expand all roles'}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
-              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#767393',
+              border: '1.5px solid #E4E0FF', background: '#FAFAFE', color: '#6D6A8A',
               fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.borderColor = P_B; e.currentTarget.style.color = P_D }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#767393' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FAFAFE'; e.currentTarget.style.borderColor = '#E4E0FF'; e.currentTarget.style.color = '#6D6A8A' }}
           >
             {allRoleExpanded ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
             {allRoleExpanded ? 'Collapse' : 'Expand'}

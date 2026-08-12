@@ -43,7 +43,7 @@ export function BlockDistanceMatrix({ venueBuildings }: { venueBuildings: string
           </span>
         )}
       </div>
-      <p style={{ fontSize: 11.5, color: '#767393', margin: '0 0 10px' }}>
+      <p style={{ fontSize: 11.5, color: '#6D6A8A', margin: '0 0 10px' }}>
         Only needed if your school spans multiple blocks. Use your own relative scale — <strong>lower = closer</strong>
         {' '}(e.g. A–B 1, A–C 2). schedU prefers nearer blocks when a parallel session spans buildings, so students walk less.
       </p>

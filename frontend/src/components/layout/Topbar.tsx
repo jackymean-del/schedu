@@ -30,7 +30,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
           </svg>
         </div>
         <div>
-          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#767393', lineHeight: 1, marginBottom: 2 }}>by bhusku</div>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#6D6A8A', lineHeight: 1, marginBottom: 2 }}>by bhusku</div>
           <div style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.5px', lineHeight: 1 }}>
             Sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic', fontSize: 17 }}>U</span>
           </div>
@@ -74,10 +74,10 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
               </div>
               <div style={{ lineHeight:1.2 }}>
                 <div style={{ fontSize:12, fontWeight:600, color:'#13111E' }}>{user.name}</div>
-                {user.schoolName && <div style={{ fontSize:10, color:'#767393' }}>{user.schoolName}</div>}
+                {user.schoolName && <div style={{ fontSize:10, color:'#6D6A8A' }}>{user.schoolName}</div>}
               </div>
               <button onClick={handleLogout} title="Logout"
-                style={{ background:'none', border:'none', cursor:'pointer', color:'#767393', padding:'2px', display:'flex', alignItems:'center' }}>
+                style={{ background:'none', border:'none', cursor:'pointer', color:'#6D6A8A', padding:'2px', display:'flex', alignItems:'center' }}>
                 <LogOut size={13} />
               </button>
             </div>

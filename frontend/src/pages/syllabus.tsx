@@ -184,7 +184,7 @@ export function SyllabusPage() {
               <option value={WHOLE_RUN}>Whole schedule</option>
               {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
-            <span style={{ fontSize: 11.5, color: '#767393' }}>
+            <span style={{ fontSize: 11.5, color: '#6D6A8A' }}>
               {term
                 ? <>Hours, pace and time left below cover <strong>{fmtRange(term.start, term.end)}</strong> only.</>
                 : <>Hours, pace and time left below cover each schedule's full run.</>}
@@ -194,7 +194,7 @@ export function SyllabusPage() {
 
         {!canPick && tab === 'capture' && (
           <Card title="No subjects yet">
-            <p style={{ fontSize: 13, color: '#767393', margin: 0 }}>
+            <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
               Add classes and subjects in the wizard (or Master Data) first — then come back to record how many hours each subject needs.
               {rows.length > 0 && <> Coverage already recorded is still visible on the <strong>Coverage dashboard</strong> tab.</>}
             </p>
@@ -224,7 +224,7 @@ export function SyllabusPage() {
             <CoverageDashboard rows={rows} dim={dim} setDim={setDim} onPick={(sub, sec) => { setSubject(sub); setSection(sec); setTab('capture') }} />
             {staleRows > 0 && (
               <div style={{
-                fontSize: 11.5, color: '#767393', padding: '9px 12px', borderRadius: 10,
+                fontSize: 11.5, color: '#6D6A8A', padding: '9px 12px', borderRadius: 10,
                 background: '#FBFAFF', border: '1px solid #ECE9FB',
               }}>
                 {staleRows === 1
@@ -280,7 +280,7 @@ export function SyllabusPage() {
               </div>
 
               {/* Who teaches it is read off the timetable, not asked for. */}
-              <div style={{ fontSize: 11.5, color: '#767393', marginTop: 2 }}>
+              <div style={{ fontSize: 11.5, color: '#6D6A8A', marginTop: 2 }}>
                 {teachersHere.length > 0
                   ? <>Taught by <strong style={{ color: '#4B5275' }}>{teachersHere.join(', ')}</strong> — from the schedule, so faculty-wise reports need no extra input.</>
                   : 'No faculty is assigned to this slot in the timetable.'}
@@ -312,12 +312,12 @@ export function SyllabusPage() {
                 <Stat label="Allocated" value={`${req} h`} color="#4B41C4" />
                 <Stat label="Spent" value={`${spent} h`} color="#4B5275" />
                 <Stat label="Left" value={`${left} h`} color={left > 0 ? '#4B5275' : '#B45309'} />
-                <Stat label="Covered" value={`${pct}%`} color={pct >= 100 ? '#067647' : pct > 0 ? '#067647' : '#767393'} />
+                <Stat label="Covered" value={`${pct}%`} color={pct >= 100 ? '#067647' : pct > 0 ? '#067647' : '#6D6A8A'} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ height: 12, background: '#EDE9FF', borderRadius: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#16A34A' : ACCENT, transition: 'width .25s' }} />
+                    <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#0A8136' : ACCENT, transition: 'width .25s' }} />
                   </div>
-                  <div style={{ fontSize: 11, color: '#767393', marginTop: 3 }}>
+                  <div style={{ fontSize: 11, color: '#6D6A8A', marginTop: 3 }}>
                     {cov} of {req} h of syllabus covered
                     {rem > 0 && <> · {rem} h still to teach in {left} h of class time</>}
                   </div>
@@ -372,7 +372,7 @@ export function SyllabusPage() {
                         fontSize: 12, fontWeight: 700,
                         border: `1px solid ${method === m ? ACCENT : '#E4E0FF'}`,
                         background: method === m ? '#EDE9FF' : '#fff',
-                        color: method === m ? '#4B41C4' : '#767393',
+                        color: method === m ? '#4B41C4' : '#6D6A8A',
                       }}>
                       {METHOD_LABELS[m]}
                     </button>
@@ -454,8 +454,8 @@ export function SyllabusPage() {
                       title={c.coveredAt ? 'Mark as not yet taught' : 'Mark as taught'}
                       style={{
                         width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
-                        border: `1.5px solid ${c.coveredAt ? '#16A34A' : '#D8D2FF'}`,
-                        background: c.coveredAt ? '#16A34A' : '#fff',
+                        border: `1.5px solid ${c.coveredAt ? '#0A8136' : '#D8D2FF'}`,
+                        background: c.coveredAt ? '#0A8136' : '#fff',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                       }}
                     >
@@ -540,7 +540,7 @@ export function SyllabusPage() {
                 border: '1px solid #ECE9FB', fontSize: 12, color: '#4B5275',
               }}>
                 <strong style={{ color: '#4B41C4' }}>{holidays.length} school holiday{holidays.length > 1 ? 's' : ''} declared</strong>
-                <span style={{ color: '#767393' }}>
+                <span style={{ color: '#6D6A8A' }}>
                   — already deducted from the hours available for every subject.
                 </span>
                 <div style={{ flex: 1 }} />
@@ -574,13 +574,13 @@ export function SyllabusPage() {
                         <tr key={r.key} style={{ cursor: 'pointer' }} onClick={() => { setSubject(r.subject); setSection(r.section) }}>
                           <td style={cellS}>{r.subject}</td>
                           <td style={cellS}>{r.section}</td>
-                          <td style={{ ...cellS, color: '#767393' }}>{r.teacher ?? '—'}</td>
+                          <td style={{ ...cellS, color: '#6D6A8A' }}>{r.teacher ?? '—'}</td>
                           <td style={{ ...cellS, textAlign: 'right' }}>{r.required} h</td>
                           <td style={{ ...cellS, textAlign: 'right', color: '#067647' }}>{r.covered} h</td>
                           <td style={{ ...cellS, textAlign: 'right', color: r.remaining > 0 ? '#B45309' : '#067647', fontWeight: 700 }}>{r.remaining} h</td>
                           <td style={{ ...cellS, width: 90 }}>
                             <div style={{ height: 7, background: '#EDE9FF', borderRadius: 4, overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${r.pct}%`, background: r.pct >= 100 ? '#16A34A' : ACCENT }} />
+                              <div style={{ height: '100%', width: `${r.pct}%`, background: r.pct >= 100 ? '#0A8136' : ACCENT }} />
                             </div>
                           </td>
                         </tr>
@@ -644,7 +644,7 @@ function AllocatedHours({ allocated, override, scheduleName, hasSchedule, onOver
   const overridden = override != null && override > 0
 
   if (!hasSchedule) return (
-    <div style={{ fontSize: 12.5, color: '#767393' }}>
+    <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>
       No timetable is active for this class yet — generate or publish one and the hours it
       allocates appear here automatically.
     </div>
@@ -756,7 +756,7 @@ function SubstituteCoverageCard({
                 {INTENT_LABELS[r.intent]}
                 {r.intent === 'other-subject' && r.taughtSubject ? ` — ${r.taughtSubject}` : ''}
               </span>
-              <span style={{ color: '#767393' }}>
+              <span style={{ color: '#6D6A8A' }}>
                 {undecided
                   ? `· ${r.hours} h — nothing assumed either way`
                   : r.intent === 'continue'
@@ -802,7 +802,7 @@ function SubstituteCoverageCard({
             <span style={{ fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{r.date}</span>
             <strong style={{ color: '#13111E' }}>{r.substitute}</strong>
             <span style={{ color: '#4B41C4', fontWeight: 700 }}>taught {subject} in {r.subject}'s period</span>
-            <span style={{ color: '#767393' }}>· {r.hours} h gained, none spent</span>
+            <span style={{ color: '#6D6A8A' }}>· {r.hours} h gained, none spent</span>
           </div>
         ))}
       </div>
@@ -840,7 +840,7 @@ function PaceCard({
 
   if (!report.hasContentSignal) return (
     <Card title="Pace" subtitle="How fast the syllabus is actually being covered.">
-      <p style={{ fontSize: 12.5, color: '#767393', margin: 0 }}>
+      <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: 0 }}>
         Add <strong>chapters</strong> above to unlock this. Bulk hours tell us how long a subject was taught,
         but not how much of the syllabus that time actually covered — chapters are what separate the two,
         and ticking them off is the only input needed.
@@ -859,9 +859,9 @@ function PaceCard({
     >
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <Stat label="Syllabus covered" value={`${contentCovered} h`} color="#4B41C4" />
-        <Stat label="Class time used" value={`${timeSpent} h`} color="#767393" />
+        <Stat label="Class time used" value={`${timeSpent} h`} color="#6D6A8A" />
         <Stat label="Pace" value={`${pace}×`} color={pace >= 0.85 ? '#067647' : '#B45309'} />
-        <div style={{ fontSize: 11.5, color: '#767393', maxWidth: 210 }}>
+        <div style={{ fontSize: 11.5, color: '#6D6A8A', maxWidth: 210 }}>
           <strong style={{ color: pace >= 0.85 ? '#067647' : '#B45309' }}>{paceLabel}</strong> —
           {pace < 1
             ? ` ${contentCovered} h of syllabus took ${timeSpent} h of class.`
@@ -939,7 +939,7 @@ function BorrowReplaceCard({ onPick }: { onPick: (subject: string, section: stri
                 <strong style={{ color: '#067647' }}>{s.donor}</strong>
                 <span style={{ color: '#777391' }}> (covered)</span>
               </span>
-              <span style={{ fontSize: 11, color: '#767393' }}>· {s.section} · {s.teacher}</span>
+              <span style={{ fontSize: 11, color: '#6D6A8A' }}>· {s.section} · {s.teacher}</span>
               <div style={{ flex: 1 }} />
               <span style={{ fontSize: 11, fontWeight: 700, color: '#4B41C4', background: '#EDE9FF', borderRadius: 999, padding: '2px 9px' }}>
                 {s.hours} h
@@ -1012,7 +1012,7 @@ function LostSessionsCard({
           <strong style={{ fontSize: 12.5, color: risk === 'critical' ? '#92400E' : '#4B41C4' }}>
             {lost} h lost for {subject} · {section}
           </strong>
-          <span style={{ fontSize: 11.5, color: '#767393' }}>
+          <span style={{ fontSize: 11.5, color: '#6D6A8A' }}>
             {risk === 'critical'
               ? '— these hours have to be found again, or the syllabus won’t finish.'
               : '— already accounted for; nothing outstanding.'}
@@ -1031,7 +1031,7 @@ function LostSessionsCard({
               <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{s.date}</span>
               <span style={{ fontSize: 11.5, color: '#13111E', fontWeight: 600 }}>{LOST_REASON_LABELS[s.reason]}</span>
               <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: '#B45309', fontWeight: 700 }}>{s.hours} h</span>
-              <span style={{ fontSize: 11.5, color: '#767393', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.note ?? ''}</span>
+              <span style={{ fontSize: 11.5, color: '#6D6A8A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.note ?? ''}</span>
               <button onClick={() => onRemove(s.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C3EC', display: 'flex', justifyContent: 'center' }}>
                 <Trash2 size={13} />
               </button>
@@ -1130,7 +1130,7 @@ function CoverageDashboard({
 
   if (allRows.length === 0) return (
     <Card title="Nothing tracked yet">
-      <p style={{ fontSize: 13, color: '#767393', margin: 0 }}>
+      <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
         Record a subject's required hours or chapters on the <strong>Track syllabus</strong> tab — coverage appears here as faculty tick chapters off.
       </p>
     </Card>
@@ -1174,7 +1174,7 @@ function CoverageDashboard({
     <>
       {filterBar}
       <Card title="No match">
-        <p style={{ fontSize: 13, color: '#767393', margin: 0 }}>
+        <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
           Nothing tracked matches these filters. <button onClick={clearAll} style={{ background: 'none', border: 'none', color: ACCENT, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, padding: 0 }}>Clear filters</button>
         </p>
       </Card>
@@ -1192,12 +1192,12 @@ function CoverageDashboard({
           <Stat label="Allocated" value={`${totals.required} h`} color="#4B41C4" />
           <Stat label="Covered" value={`${totals.covered} h`} color="#067647" />
           <Stat label="Remaining" value={`${totals.remaining} h`} color={totals.remaining > 0 ? '#B45309' : '#067647'} />
-          <Stat label="Tracked" value={`${rows.length}`} color="#767393" />
+          <Stat label="Tracked" value={`${rows.length}`} color="#6D6A8A" />
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ height: 14, background: '#EDE9FF', borderRadius: 7, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${totals.pct}%`, background: totals.pct >= 100 ? '#16A34A' : ACCENT, transition: 'width .25s' }} />
+              <div style={{ height: '100%', width: `${totals.pct}%`, background: totals.pct >= 100 ? '#0A8136' : ACCENT, transition: 'width .25s' }} />
             </div>
-            <div style={{ fontSize: 11, color: '#767393', marginTop: 3 }}>{totals.pct}% of the syllabus taught</div>
+            <div style={{ fontSize: 11, color: '#6D6A8A', marginTop: 3 }}>{totals.pct}% of the syllabus taught</div>
           </div>
         </div>
       </Card>
@@ -1211,7 +1211,7 @@ function CoverageDashboard({
                 fontSize: 11.5, fontWeight: 700,
                 border: `1px solid ${dim === d.k ? ACCENT : '#E4E0FF'}`,
                 background: dim === d.k ? '#EDE9FF' : '#fff',
-                color: dim === d.k ? '#4B41C4' : '#767393',
+                color: dim === d.k ? '#4B41C4' : '#6D6A8A',
               }}>
               {d.label}
             </button>
@@ -1234,7 +1234,7 @@ function CoverageDashboard({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 160px', gap: 10, alignItems: 'center', padding: '8px 12px', background: '#F8F7FF', borderBottom: '1px solid #ECE9FB' }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: '#13111E' }}>{g.label}</span>
                   <div style={{ height: 10, background: '#EDE9FF', borderRadius: 5, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct >= 100 ? '#16A34A' : g.pct < 50 ? '#D4920E' : ACCENT }} />
+                    <div style={{ height: '100%', width: `${g.pct}%`, background: g.pct >= 100 ? '#0A8136' : g.pct < 50 ? '#D4920E' : ACCENT }} />
                   </div>
                   <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: '#4B5275' }}>
                     {g.covered}/{g.required} h · <strong style={{ color: g.remaining > 0 ? '#B45309' : '#067647' }}>{g.remaining} h left</strong>
@@ -1246,7 +1246,7 @@ function CoverageDashboard({
                 <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
                 <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 440, fontSize: 11.5 }}>
                   <thead>
-                    <tr style={{ color: '#767393' }}>
+                    <tr style={{ color: '#6D6A8A' }}>
                       {showSubject && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Subject</th>}
                       {showSection && <th style={{ ...cellS, textAlign: 'left', fontWeight: 700 }}>Section</th>}
                       <th style={{ ...cellS, textAlign: 'right', fontWeight: 700 }}>Allocated</th>
@@ -1273,7 +1273,7 @@ function CoverageDashboard({
                           <td style={{ ...cellS, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: r.remaining > 0 ? '#B45309' : '#067647', fontWeight: 700 }}>{r.remaining} h</td>
                           <td style={cellS}>
                             <div style={{ height: 6, background: '#EDE9FF', borderRadius: 3, overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${r.pct}%`, background: r.pct >= 100 ? '#16A34A' : r.pct < 50 ? '#D4920E' : ACCENT }} />
+                              <div style={{ height: '100%', width: `${r.pct}%`, background: r.pct >= 100 ? '#0A8136' : r.pct < 50 ? '#D4920E' : ACCENT }} />
                             </div>
                           </td>
                         </tr>
@@ -1323,7 +1323,7 @@ function Card({ title, subtitle, children }: { title: string; subtitle?: string;
       <h2 style={{ fontSize: 15, fontWeight: 800, color: '#13111E', margin: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
         <BookOpen size={15} color={ACCENT} /> {title}
       </h2>
-      {subtitle && <p style={{ fontSize: 12.5, color: '#767393', margin: '4px 0 16px' }}>{subtitle}</p>}
+      {subtitle && <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: '4px 0 16px' }}>{subtitle}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
     </section>
   )
@@ -1334,7 +1334,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: '#767393', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 11, color: '#6D6A8A', fontWeight: 600 }}>{label}</div>
       <div style={{ fontSize: 19, fontWeight: 900, color, fontFamily: "'DM Mono', monospace" }}>{value}</div>
     </div>
   )

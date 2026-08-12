@@ -957,7 +957,7 @@ export function CalendarPage() {
             </div>
             <div>
               <h1 style={{ fontSize: 24, fontWeight: 800, color: '#13111E', margin: 0, letterSpacing: '-0.4px' }}>Calendar</h1>
-              <div style={{ fontSize: 13, color: '#767393', marginTop: 2 }}>
+              <div style={{ fontSize: 13, color: '#6D6A8A', marginTop: 2 }}>
                 {DOW[date.getDay()]}, {MONTHS[date.getMonth()].slice(0,3)} {date.getDate()}, {date.getFullYear()}
               </div>
             </div>
@@ -1067,7 +1067,7 @@ export function CalendarPage() {
                   {ev.sections?.length && (
                     <span style={{ color: '#4B41C4', fontWeight: 700 }}>{describeScope(ev.sections, sectionNames)}</span>
                   )}
-                  {ev.start && <span style={{ color: '#767393' }}>{ev.start}{ev.end ? `–${ev.end}` : ''}</span>}
+                  {ev.start && <span style={{ color: '#6D6A8A' }}>{ev.start}{ev.end ? `–${ev.end}` : ''}</span>}
                   <button onClick={() => saveEvents(events.filter(e => e.id !== ev.id))}
                     title="Remove event"
                     style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#C0BBDD', display: 'inline-flex' }}>
@@ -1272,7 +1272,7 @@ export function CalendarPage() {
 
                   {/* Rows */}
                   {gridEntities.length === 0 && (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#767393', fontSize: 13 }}>No {colLabel.toLowerCase()} matches “{query}”.</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#6D6A8A', fontSize: 13 }}>No {colLabel.toLowerCase()} matches “{query}”.</div>
                   )}
                   {gridEntities.map(ent => {
                     const blocks = blocksFor(ent.id)
@@ -1761,16 +1761,16 @@ function LiveBoard(props: {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '16px 18px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <div style={{ fontSize: 30, fontWeight: 800, color: '#13111E', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>{fmtClock(scrub, h24)}</div>
-          <div style={{ fontSize: 13.5, color: '#6B7280' }}>
+          <div style={{ fontSize: 13.5, color: '#69707E' }}>
             {!active ? (scrub < dayStart ? 'Before school' : 'After school')
               : isBreak ? (active.name ?? 'Break')
-              : <>{active.name ?? 'Period'} · <span style={{ color: '#16A34A', fontWeight: 700 }}>{Math.max(0, at!.endMin - scrub)} min left</span></>}
+              : <>{active.name ?? 'Period'} · <span style={{ color: '#0A8136', fontWeight: 700 }}>{Math.max(0, at!.endMin - scrub)} min left</span></>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {viewingToday && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: following ? '#16A34A' : '#777391' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 4, background: following ? '#16A34A' : '#CBC9DA' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: following ? '#0A8136' : '#777391' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: following ? '#0A8136' : '#CBC9DA' }} />
               {following ? 'Live' : 'Paused'}
             </span>
           )}
@@ -1800,7 +1800,7 @@ function LiveBoard(props: {
               <div style={{ marginBottom: (onTask.length + onPull.length + free.length) ? 18 : 0 }}>
                 {segmentBySchedule ? (
                   <>
-                    <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
+                    <SectionLabel text={`In session · ${busy.length}`} tone="#0A8136" />
                     {(() => {
                       const withCards = visibleSchedules.filter(sch => busy.some(b => b.sid === sch.id))
                       return (
@@ -1830,7 +1830,7 @@ function LiveBoard(props: {
                   </>
                 ) : (
                   <>
-                    <SectionLabel text={`In session · ${busy.length}`} tone="#16A34A" />
+                    <SectionLabel text={`In session · ${busy.length}`} tone="#0A8136" />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
                       {busy.map(b => <LiveCard key={b.id} entity={entities.find(e => e.id === b.id)?.name ?? b.id} a={b} onPullOut={onPullOut} />)}
                     </div>
@@ -1847,7 +1847,7 @@ function LiveBoard(props: {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#777391', marginBottom: 2 }}>{entity} <span style={{ color: '#C2410C', fontWeight: 800 }}>· pulled out</span></div>
                         <div style={{ fontSize: 13.5, fontWeight: 800, color: '#C2410C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>⚡ {p.task}</div>
-                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.replacement ? `${p.section} covered by ${p.replacement}` : `${p.section} — uncovered`}</div>
+                        <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.replacement ? `${p.section} covered by ${p.replacement}` : `${p.section} — uncovered`}</div>
                       </div>
                       <button onClick={() => onClearPull(p.id)} title="Undo pull-out"
                         style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#D08A5C', display: 'inline-flex', flexShrink: 0 }}>
@@ -1860,7 +1860,7 @@ function LiveBoard(props: {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#777391', marginBottom: 2 }}>{entity}</div>
                         <div style={{ fontSize: 13.5, fontWeight: 800, color: '#B45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📌 {a.title}</div>
-                        {a.note && <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.note}</div>}
+                        {a.note && <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.note}</div>}
                       </div>
                       <button onClick={() => onClearTask(a.id)} title="Remove assignment"
                         style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#C9A45C', display: 'inline-flex', flexShrink: 0 }}>
@@ -1886,7 +1886,7 @@ function LiveBoard(props: {
                             padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
                             fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
                             background: freeSort === key ? '#fff' : 'transparent',
-                            color: freeSort === key ? '#7C6FE0' : '#767393',
+                            color: freeSort === key ? '#7C6FE0' : '#6D6A8A',
                             boxShadow: freeSort === key ? '0 1px 4px rgba(124,111,224,0.18)' : 'none',
                           }}>
                           {label}
@@ -1905,13 +1905,13 @@ function LiveBoard(props: {
                           ? `${load} on the plate today — assign a task for this slot (${anchor.sname})`
                           : `${load} on the plate today — assign a task for this slot`}
                         className="cal-free-chip"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#69707E', cursor: 'pointer', fontFamily: 'inherit' }}>
                         {name}
-                        <span style={{ fontSize: 10.5, fontWeight: 800, color: load <= 2 ? '#16A34A' : load <= 4 ? '#B45309' : '#DC2626', background: '#F6F4FD', padding: '1px 6px', borderRadius: 6 }}>{load} today</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: load <= 2 ? '#0A8136' : load <= 4 ? '#B45309' : '#DC2626', background: '#F6F4FD', padding: '1px 6px', borderRadius: 6 }}>{load} today</span>
                         <Plus size={12} style={{ color: '#777489' }} />
                       </button>
                     ) : (
-                      <span key={name} style={{ padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>{name}</span>
+                      <span key={name} style={{ padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#69707E' }}>{name}</span>
                     )
                   })}
                 </div>
@@ -1955,7 +1955,7 @@ function LiveCard({ entity, a, onPullOut }: {
         ) : (
           <div style={{ fontSize: 13.5, fontWeight: 800, color: accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: bg, display: 'inline-block', padding: '1px 8px', borderRadius: 6, maxWidth: '100%', boxSizing: 'border-box' }}>{a.title}</div>
         )}
-        {a.sub && <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.sub}</div>}
+        {a.sub && <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.sub}</div>}
       </div>
       {canPull && a.slot && (
         <button
@@ -1970,7 +1970,7 @@ function LiveCard({ entity, a, onPullOut }: {
 }
 
 function ScrubLegend({ swatch, label }: { swatch: string; label: string }) {
-  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: '#767393' }}>
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: '#6D6A8A' }}>
     <span style={{ width: 10, height: 10, borderRadius: 3, background: swatch, border: '1px solid rgba(19,17,30,0.08)' }} />{label}
   </span>
 }
@@ -1983,7 +1983,7 @@ function SectionLabel({ text, tone }: { text: string; tone: string }) {
 function Idle({ icon, text }: { icon: string; text: string }) {
   return <div style={{ textAlign: 'center', padding: '34px 20px' }}>
     <div style={{ fontSize: 30, marginBottom: 8 }}>{icon}</div>
-    <div style={{ fontSize: 13.5, color: '#6B7280', fontWeight: 600 }}>{text}</div>
+    <div style={{ fontSize: 13.5, color: '#69707E', fontWeight: 600 }}>{text}</div>
   </div>
 }
 
@@ -2139,7 +2139,7 @@ function EmptyState() {
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>
       <div style={{ fontSize: 38, marginBottom: 12 }}>🗓️</div>
       <h3 style={{ fontSize: 17, fontWeight: 800, color: '#13111E', margin: '0 0 6px' }}>No schedule generated yet</h3>
-      <p style={{ fontSize: 13.5, color: '#767393', margin: '0 0 18px' }}>Complete the wizard to generate a schedule — it will appear here automatically.</p>
+      <p style={{ fontSize: 13.5, color: '#6D6A8A', margin: '0 0 18px' }}>Complete the wizard to generate a schedule — it will appear here automatically.</p>
       <a href="/dashboard" style={{ display: 'inline-block', padding: '10px 22px', background: '#7C6FE0', color: '#fff', borderRadius: 10, fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>Go to Dashboard</a>
     </div>
   )
@@ -2149,7 +2149,7 @@ function RestDay({ day }: { day: string }) {
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, padding: '54px 24px', textAlign: 'center' }}>
       <Clock size={30} color="#C9C3EC" />
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '12px 0 6px' }}>No classes on {day}</h3>
-      <p style={{ fontSize: 13, color: '#767393', margin: 0 }}>This isn’t a working day in your schedule. Add an event, or pick another date.</p>
+      <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>This isn’t a working day in your schedule. Add an event, or pick another date.</p>
     </div>
   )
 }
@@ -2204,13 +2204,13 @@ function MonthGrid({
         .cal-month-cell:hover { box-shadow: 0 2px 10px rgba(124,111,224,0.13); }
       `}</style>
       {isAdmin && (
-        <div style={{ fontSize: 11.5, color: '#767393', marginBottom: 10 }}>
+        <div style={{ fontSize: 11.5, color: '#6D6A8A', marginBottom: 10 }}>
           Hover a day and hit <strong style={{ color: '#4B5275' }}>＋</strong> to declare a holiday or add an event.
           A holiday automatically removes that day's periods from every subject's available hours.
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
-        {DOW.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 800, color: '#767393', padding: '4px 0' }}>{d}</div>)}
+        {DOW.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 800, color: '#6D6A8A', padding: '4px 0' }}>{d}</div>)}
         {cells.map((c, i) => {
           const isToday = c === today.getDate() && m === today.getMonth() && y === today.getFullYear()
           const evs = c ? (evByDay[c] ?? []) : []
@@ -2283,7 +2283,7 @@ function MonthGrid({
                 const meta = EVENT_TYPES.find(t => t.key === ev.type) ?? EVENT_TYPES[5]
                 return <div key={ev.id} style={{ fontSize: 10.5, fontWeight: 600, color: '#fff', background: meta.color, borderRadius: 5, padding: '2px 6px', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
               })}
-              {evs.length > 2 && <div style={{ fontSize: 10, color: '#767393' }}>+{evs.length - 2} more</div>}
+              {evs.length > 2 && <div style={{ fontSize: 10, color: '#6D6A8A' }}>+{evs.length - 2} more</div>}
             </div>
           )
         })}
@@ -2383,7 +2383,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
           )}
 
           <div style={{ borderTop: '1px solid #F1EFFA', paddingTop: 13 }}>
-            <div style={{ fontSize: 12, color: '#767393', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: '#6D6A8A', marginBottom: 8 }}>
               Classes still running that day? Add it as an event instead — nothing is deducted.
             </div>
             <button onClick={onEvent}
@@ -2580,7 +2580,7 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
           <button onClick={onClose} style={{ border: 'none', background: '#F4F2FC', width: 32, height: 32, borderRadius: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B6890' }}><ArrowLeft size={16} /></button>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#13111E' }}>Mark Leave</div>
-            <div style={{ fontSize: 12.5, color: '#767393' }}>{teacher}</div>
+            <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>{teacher}</div>
           </div>
         </div>
 
@@ -2645,7 +2645,7 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
 }
 
 const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: string; bg: string }> = {
-  exact:   { label: 'Exact Match',    color: '#16A34A', bg: '#DCFCE7' },
+  exact:   { label: 'Exact Match',    color: '#0A8136', bg: '#DCFCE7' },
   class:   { label: 'Knows Class',    color: '#2563EB', bg: '#E8F0FF' },
   subject: { label: 'Knows Subject',  color: '#7C6FE0', bg: '#EDE9FF' },
 }
@@ -2679,7 +2679,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
             <span style={{ width: 38, height: 38, borderRadius: 10, background: '#E8F0FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Repeat size={18} color="#2563EB" /></span>
             <div>
               <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E' }}>Arrange cover — {teacher}</div>
-              <div style={{ fontSize: 12.5, color: '#767393' }}>{dayLabel} · {covered}/{slots.length} period{slots.length !== 1 ? 's' : ''} covered</div>
+              <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>{dayLabel} · {covered}/{slots.length} period{slots.length !== 1 ? 's' : ''} covered</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -2698,11 +2698,11 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
         <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
           {slots.length === 0 ? (
             <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '50px 24px', textAlign: 'center' }}>
-              <Check size={28} color="#16A34A" />
+              <Check size={28} color="#0A8136" />
               <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '10px 0 4px' }}>No cover needed</h3>
               {/* Say WHICH reason. "No classes today" would be a plain untruth
                   on an exam day: the classes exist, they just aren't running. */}
-              <p style={{ fontSize: 13, color: '#767393', margin: 0 }}>
+              <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
                 {suspendedBy
                   ? <>Normal lessons are suspended for <strong>{suspendedBy}</strong>, so {teacher}'s periods aren't running.</>
                   : <>{teacher} has no classes on {dayLabel}.</>}
@@ -2722,8 +2722,8 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
                       {multiActive && (
                         <div style={{ marginTop: 6, display: 'inline-block', fontSize: 10.5, fontWeight: 800, color: '#5D4FCF', background: '#EEF0FF', padding: '2px 7px', borderRadius: 6, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔀 {slot.sname}</div>
                       )}
-                      <div style={{ fontSize: 12, color: '#767393', marginTop: 6 }}>📘 {slot.subject}</div>
-                      <div style={{ fontSize: 12, color: '#767393', marginTop: 4 }}>🏫 {slot.section}</div>
+                      <div style={{ fontSize: 12, color: '#6D6A8A', marginTop: 6 }}>📘 {slot.subject}</div>
+                      <div style={{ fontSize: 12, color: '#6D6A8A', marginTop: 4 }}>🏫 {slot.section}</div>
                       {current && (
                         <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 7, background: '#E8F0FF', color: '#2563EB', fontSize: 11.5, fontWeight: 700 }}>
                           <Check size={12} /> {current}
@@ -2893,13 +2893,13 @@ function AssignTaskModal({ target, date, terms, history, weekCount, multiActive,
   const name = target.entity
   const advisory =
     target.kind === 'teacher'
-      ? weekCount === 0 ? { text: `This would be ${name}’s first extra duty this week — a fair pick. 👍`, tone: '#16A34A' }
+      ? weekCount === 0 ? { text: `This would be ${name}’s first extra duty this week — a fair pick. 👍`, tone: '#0A8136' }
       : weekCount <= 2 ? { text: `${name} has taken ${weekCount} extra dut${weekCount === 1 ? 'y' : 'ies'} this week — still a reasonable ask.`, tone: '#B45309' }
       : { text: `Heads up — ${name} already has ${weekCount} extra duties this week. Someone lighter might be fairer.`, tone: '#DC2626' }
     : target.kind === 'room'
-      ? weekCount === 0 ? { text: `${name} hasn’t been booked for anything extra this week.`, tone: '#16A34A' }
+      ? weekCount === 0 ? { text: `${name} hasn’t been booked for anything extra this week.`, tone: '#0A8136' }
       : { text: `${name} has ${weekCount} extra booking${weekCount === 1 ? '' : 's'} this week.`, tone: '#B45309' }
-      : weekCount === 0 ? { text: `No extra activities for ${name} this week yet.`, tone: '#16A34A' }
+      : weekCount === 0 ? { text: `No extra activities for ${name} this week yet.`, tone: '#0A8136' }
       : { text: `${name} has had ${weekCount} extra activit${weekCount === 1 ? 'y' : 'ies'} this week — keep the balance in mind.`, tone: '#B45309' }
 
   const fmtHist = (iso: string) => { const d = new Date(iso + 'T00:00:00'); return `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` }
@@ -3009,7 +3009,7 @@ const pillBtn = (active: boolean): React.CSSProperties => ({
   padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
   fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
   background: active ? '#fff' : 'transparent',
-  color: active ? '#7C6FE0' : '#7E7AA0',
+  color: active ? '#7C6FE0' : '#6D6A8A',
   boxShadow: active ? '0 2px 6px rgba(124,111,224,0.18)' : 'none',
 })
 const inp: React.CSSProperties = {

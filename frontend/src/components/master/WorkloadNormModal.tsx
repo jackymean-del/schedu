@@ -275,7 +275,7 @@ export function WorkloadNormModal({
                   all: 'unset', cursor: 'pointer', padding: '5px 13px', borderRadius: 7,
                   fontSize: 12, fontWeight: 700,
                   background: scope === s ? '#fff' : 'transparent',
-                  color: scope === s ? '#4B41C4' : '#767393',
+                  color: scope === s ? '#4B41C4' : '#6D6A8A',
                   boxShadow: scope === s ? '0 1px 3px rgba(76,65,196,0.14)' : 'none',
                 }}>
                 {SCOPE_LABELS[s]}
@@ -290,7 +290,7 @@ export function WorkloadNormModal({
           <div style={{ display: 'flex', gap: 14, marginBottom: 13, flexWrap: 'wrap', alignItems: 'center' }}>
             {scope === 'subject' ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#767393' }}>Class</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#6D6A8A' }}>Class</span>
                 <select
                   value={activeClass}
                   onChange={e => { setSubjectClass(e.target.value); setDraft({}) }}
@@ -333,7 +333,7 @@ export function WorkloadNormModal({
                 return (
                   <tr key={r.key} style={{ borderTop: '1px solid #F1EFFA' }}>
                     <td style={{ ...td, fontWeight: 600, color: '#13111E' }}>{r.label}</td>
-                    <td style={{ ...td, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: '#767393' }}>
+                    <td style={{ ...td, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: '#6D6A8A' }}>
                       {r.isSubject ? (r.normPeriods ? `${r.normPeriods}p` : '—') : show(r.norm)}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
@@ -370,7 +370,7 @@ export function WorkloadNormModal({
             </tbody>
           </table>
 
-          <p style={{ fontSize: 11.5, color: '#767393', margin: '12px 0 0', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11.5, color: '#6D6A8A', margin: '12px 0 0', lineHeight: 1.5 }}>
             Leave a field blank to follow {scope === 'band' ? 'the national norm'
               : scope === 'class' ? "its stage's figure"
               : 'the curriculum norm'}.
@@ -408,7 +408,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
 }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#767393' }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#6D6A8A' }}>{label}</span>
       <span style={{ display: 'inline-flex', border: '1px solid #E0DBF2', borderRadius: 7, overflow: 'hidden' }}>
         {options.map(([v, text]) => (
           <button key={v} onClick={() => onChange(v)}
@@ -416,7 +416,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
               all: 'unset', cursor: 'pointer', padding: '3px 11px',
               fontSize: 11, fontWeight: 700,
               background: value === v ? P : '#fff',
-              color: value === v ? '#fff' : '#767393',
+              color: value === v ? '#fff' : '#6D6A8A',
             }}>
             {text}
           </button>
@@ -427,7 +427,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
 }
 
 const th: React.CSSProperties = {
-  padding: '7px 10px', fontSize: 10, fontWeight: 800, color: '#767393',
+  padding: '7px 10px', fontSize: 10, fontWeight: 800, color: '#6D6A8A',
   textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left',
   // Sticky within the scrolling body — a long subject list otherwise scrolls
   // its own column headings away, leaving three unlabelled numbers.

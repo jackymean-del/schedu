@@ -154,13 +154,13 @@ export function BellScheduleModal({
           )}
 
           {rows.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#767393', margin: 0 }}>
+            <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
               No bell times yet — generate a schedule and the bells come from its own timings, with nothing to type.
             </p>
           ) : (
             <>
               {columns.length > 1 && (
-                <p style={{ fontSize: 12, color: '#767393', margin: '0 0 12px', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, color: '#6D6A8A', margin: '0 0 12px', lineHeight: 1.5 }}>
                   {active === 'block'
                     ? 'Each block runs on its own clock. A blank cell means that block has nothing running then.'
                     : "These classes don't share a clock — early dispersal or class-wise breaks give them their own bells. A blank cell means that column has nothing running then."}
@@ -195,7 +195,7 @@ export function BellScheduleModal({
               </table>
               {/* The chart's last row starts a block; without this the reader
                   has no idea when the day actually finishes. */}
-              <p style={{ fontSize: 12, color: '#767393', margin: '10px 0 0' }}>
+              <p style={{ fontSize: 12, color: '#6D6A8A', margin: '10px 0 0' }}>
                 Day ends at <strong>{fmtRingTime(rows[rows.length - 1].endMin, h24)}</strong>.
               </p>
             </>

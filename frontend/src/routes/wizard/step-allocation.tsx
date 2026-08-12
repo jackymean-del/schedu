@@ -49,7 +49,7 @@ const DEFAULT_WORK_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY
 // Band display names + colors for Capacity Engine sidebar
 const BANDS = [
   { key: 'pre',       label: 'Pre-primary',  color: '#7C6FE0' },
-  { key: 'primary',   label: 'Primary',       color: '#16A34A' },
+  { key: 'primary',   label: 'Primary',       color: '#0A8136' },
   { key: 'middle',    label: 'Middle',        color: '#2563EB' },
   { key: 'secondary', label: 'Secondary',     color: '#D97706' },
   { key: 'senior',    label: 'Sr. Secondary', color: '#DC2626' },
@@ -821,7 +821,7 @@ export function StepAllocation() {
         <button onClick={() => exportPeriodAllocation('xlsx')} style={{
           display: 'inline-flex', alignItems: 'center', gap: 3,
           padding: '2px 7px', border: 'none', borderRight: '1px solid #EEECF2',
-          background: 'transparent', color: '#16A34A',
+          background: 'transparent', color: '#0A8136',
           fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
         }} title="Export to Excel (.xlsx)">
           <FileSpreadsheet size={9} /> Excel
@@ -951,7 +951,7 @@ export function StepAllocation() {
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   fontSize: 11, fontWeight: 700,
-                  color: hardConflicts.length > 0 ? '#DC2626' : '#16A34A',
+                  color: hardConflicts.length > 0 ? '#DC2626' : '#0A8136',
                 }}>
                   {hardConflicts.length > 0
                     ? <><XCircle size={14} /> {hardConflicts.length} hard conflict{hardConflicts.length !== 1 ? 's' : ''}</>
@@ -973,7 +973,7 @@ export function StepAllocation() {
 
           {/* Tab content */}
           {sub === 'periods'    && (
-            <Suspense fallback={<div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: '#767393' }}>Loading the allocation grid…</div>}>
+            <Suspense fallback={<div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: '#6D6A8A' }}>Loading the allocation grid…</div>}>
               <AllocationGridAG displayMode={displayMode} periodMinutes={periodMinutes} toolbarExtra={periodsToolbarExtra} sortRowsAZ={sortRowsAZ} sortColsAZ={sortColsAZ} />
             </Suspense>
           )}
@@ -991,7 +991,7 @@ export function StepAllocation() {
                 <button onClick={() => exportTeacherAllocation('xlsx')} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '5px 11px', border: 'none', borderRight: '1px solid #D8D2FF',
-                  background: '#F8F7FF', color: '#16A34A',
+                  background: '#F8F7FF', color: '#0A8136',
                   fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 }} title="Export to Excel">
                   <FileSpreadsheet size={11} /> Excel
@@ -1117,7 +1117,7 @@ function SubTab({ active, onClick, icon, label }: {
   return (
     <button onClick={onClick} style={{
       padding: '6px 14px', border: 'none', cursor: 'pointer', background: 'transparent',
-      color: active ? '#7C6FE0' : '#6B7280', fontFamily: 'inherit',
+      color: active ? '#7C6FE0' : '#69707E', fontFamily: 'inherit',
       fontSize: 11.5, fontWeight: active ? 700 : 500,
       borderBottom: active ? '2px solid #7C6FE0' : '2px solid transparent',
       display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -1175,7 +1175,7 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
       <div style={{
         marginTop: 10, padding: '6px 10px', borderRadius: 6,
         background: '#F8F7FF', border: '1px solid #ECEAFB',
-        fontSize: 9.5, color: '#767393',
+        fontSize: 9.5, color: '#6D6A8A',
       }}>
         1 period = {periodMinutes} min
       </div>
@@ -1302,7 +1302,7 @@ function CapacityEnginePanel({
           const status = utilisationStatus(avgUsed, avgCap)
           const barColor = status === 'over' ? '#DC2626'
             : status === 'tight' ? '#D97706'
-            : status === 'ok'    ? '#16A34A'
+            : status === 'ok'    ? '#0A8136'
             : status === 'light' ? '#2563EB'
             : '#C4BAF5'
 
@@ -1328,7 +1328,7 @@ function CapacityEnginePanel({
         })}
       </div>
       <div style={{
-        marginTop: 10, fontSize: 9.5, color: '#767393',
+        marginTop: 10, fontSize: 9.5, color: '#6D6A8A',
         borderTop: '1px solid #F0EDFF', paddingTop: 8,
       }}>
         Avg periods/wk · Max shown in periods
@@ -1470,11 +1470,11 @@ function ActiveConstraintsPanel() {
     'No double booking — teacher can\'t appear in two classes at the same period',
   ]
   return (
-    <SideCard title="Active constraints" icon={<ShieldCheck size={13} color="#16A34A" />}>
+    <SideCard title="Active constraints" icon={<ShieldCheck size={13} color="#0A8136" />}>
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
         {constraints.map((c, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-            <CheckCircle2 size={11} color="#16A34A" style={{ flexShrink: 0, marginTop: 1 }} />
+            <CheckCircle2 size={11} color="#0A8136" style={{ flexShrink: 0, marginTop: 1 }} />
             <span style={{ fontSize: 10.5, color: '#4B5275', lineHeight: 1.45 }}>{c}</span>
           </div>
         ))}
@@ -1501,7 +1501,7 @@ function AllocationSummaryPanel({
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <tbody>
           <SumRow label="Total teachers"    value={teacherStats.total}         />
-          <SumRow label="Fully allocated"   value={teacherStats.fullyAllocated} color="#16A34A" />
+          <SumRow label="Fully allocated"   value={teacherStats.fullyAllocated} color="#0A8136" />
           <SumRow label="Overloaded"         value={teacherStats.overloaded}     color={teacherStats.overloaded > 0 ? '#DC2626' : undefined} />
           <SumRow label="Light load"         value={teacherStats.light}          color={teacherStats.light > 0 ? '#D97706' : undefined} />
           <SumRow label="Unassigned"         value={teacherStats.unassigned}     color={teacherStats.unassigned > 0 ? '#B8B4D4' : undefined} />
@@ -1513,8 +1513,8 @@ function AllocationSummaryPanel({
       <div style={{ marginTop: 8, borderTop: '1px solid #F0EDFF', paddingTop: 8 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <tbody>
-            <SumRow label="Hard conflicts"  value={hardConflicts.length}  color={hardConflicts.length > 0 ? '#DC2626' : '#16A34A'} />
-            <SumRow label="Soft warnings"   value={softWarnings.length}   color={softWarnings.length > 0 ? '#D97706' : '#16A34A'} />
+            <SumRow label="Hard conflicts"  value={hardConflicts.length}  color={hardConflicts.length > 0 ? '#DC2626' : '#0A8136'} />
+            <SumRow label="Soft warnings"   value={softWarnings.length}   color={softWarnings.length > 0 ? '#D97706' : '#0A8136'} />
           </tbody>
         </table>
       </div>
@@ -1549,11 +1549,11 @@ function ValidationSidebarPanel({
       title={hardConflicts.length > 0 ? 'Issues found' : 'Validation passed'}
       icon={hardConflicts.length > 0
         ? <XCircle size={13} color="#DC2626" />
-        : <CheckCircle2 size={13} color="#16A34A" />
+        : <CheckCircle2 size={13} color="#0A8136" />
       }
     >
       {hardConflicts.length === 0 && softWarnings.length === 0 ? (
-        <p style={{ fontSize: 11, color: '#16A34A', margin: 0 }}>
+        <p style={{ fontSize: 11, color: '#0A8136', margin: 0 }}>
           All allocation rules satisfied. Ready to proceed to Student Groups.
         </p>
       ) : (
@@ -1597,7 +1597,7 @@ function ValidationView({
       <div style={{
         padding: 32, textAlign: 'center' as const,
         background: '#F8F7FF', borderRadius: 12, border: '1px dashed #D8D2FF',
-        color: '#767393', fontSize: 13,
+        color: '#6D6A8A', fontSize: 13,
       }}>
         Complete Period Allocation and Teacher Allocation first, then run validation.
       </div>
@@ -1612,21 +1612,21 @@ function ValidationView({
         <StatCard
           label="Hard conflicts"
           value={hardConflicts.length}
-          color={hardConflicts.length > 0 ? '#DC2626' : '#16A34A'}
+          color={hardConflicts.length > 0 ? '#DC2626' : '#0A8136'}
           bg={hardConflicts.length > 0 ? '#FEF2F2' : '#DCFCE7'}
           icon={hardConflicts.length > 0 ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
         />
         <StatCard
           label="Soft warnings"
           value={softWarnings.length}
-          color={softWarnings.length > 0 ? '#D97706' : '#16A34A'}
+          color={softWarnings.length > 0 ? '#D97706' : '#0A8136'}
           bg={softWarnings.length > 0 ? '#FFFBEB' : '#DCFCE7'}
           icon={softWarnings.length > 0 ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
         />
         <StatCard
           label="Teachers balanced"
           value={teacherStats.fullyAllocated}
-          color="#16A34A"
+          color="#0A8136"
           bg="#DCFCE7"
           icon={<Users size={16} />}
           suffix={`/ ${teacherStats.total}`}
@@ -1756,7 +1756,7 @@ function SideCard({ title, icon, children }: {
 
 function NoteItem({ kind, text }: { kind: 'ok' | 'warn' | 'info'; text: string }) {
   const cfg = {
-    ok:   { icon: <CheckCircle2 size={11} color="#16A34A" />, color: '#166534' },
+    ok:   { icon: <CheckCircle2 size={11} color="#0A8136" />, color: '#166534' },
     warn: { icon: <AlertTriangle size={11} color="#D97706" />, color: '#78350F' },
     info: { icon: <Info size={11} color="#2563EB" />,         color: '#1E3A5F' },
   }[kind]

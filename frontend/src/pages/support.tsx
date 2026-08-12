@@ -32,7 +32,7 @@ export function SupportPage() {
               <button onClick={() => setOpen(open === i ? null : i)}
                 style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'inherit' }}>
                 <span style={{ fontSize: 13.5, fontWeight: 600, color: '#13111E' }}>{f.q}</span>
-                <ChevronDown size={16} color="#767393" style={{ transform: open === i ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                <ChevronDown size={16} color="#6D6A8A" style={{ transform: open === i ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
               </button>
               {open === i && <p style={{ fontSize: 13, color: '#4B5275', lineHeight: 1.6, margin: 0, padding: '0 14px 14px' }}>{f.a}</p>}
             </div>
@@ -50,7 +50,7 @@ function LinkCard({ icon, title, desc, href }: { icon: React.ReactNode; title: s
       style={{ textDecoration: 'none', background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 18, display: 'block' }}>
       <div style={{ color: '#7C6FE0', marginBottom: 10 }}>{icon}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E' }}>{title}</div>
-      <div style={{ fontSize: 12.5, color: '#767393', marginTop: 2 }}>{desc}</div>
+      <div style={{ fontSize: 12.5, color: '#6D6A8A', marginTop: 2 }}>{desc}</div>
     </a>
   )
 }

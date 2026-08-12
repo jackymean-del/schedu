@@ -304,7 +304,7 @@ export function buildPrintHTML(options: ExportOptions): string {
     }
     .room {
       font-size: 9px;
-      color: #767393;
+      color: #6D6A8A;
       margin-top: 1px;
     }
     .empty-cell { background: #FAFAFE; }
