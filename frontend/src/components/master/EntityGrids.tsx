@@ -16,6 +16,7 @@ import { useNamingMemory } from '@/hooks/useNamingMemory'
 import { useDirectoryStore } from '@/store/directoryStore'
 import { useTimetableStore } from '@/store/timetableStore'
 import { usageOf, deleteWarning, type ResourceKind } from '@/lib/resourceUsage'
+import { findOrphans, orphanWarning, type OrphanKind } from '@/lib/rosterOrphans'
 import { applyRename } from '@/lib/renameCascade'
 import { findNameConflicts, conflictWarning } from '@/lib/nameConflicts'
 import type { RenameKind } from '@/lib/resourceRename'
@@ -259,6 +260,32 @@ function NameConflictBanner<T>({ rows, nameOf, kind }: {
   )
 }
 
+/**
+ * The other half of the delete warning. That one is shown once, as the row goes;
+ * this one stays up for as long as the timetable and the roster disagree —
+ * which, for a teacher who left in March, is the rest of the year.
+ */
+function OrphanBanner<T>({ rows, nameOf, kind }: {
+  rows: T[]; nameOf: (row: T) => string | undefined; kind: OrphanKind
+}) {
+  const classTT = useTimetableStore(s => (s as any).classTT)
+  const msg = useMemo(
+    () => orphanWarning(kind, findOrphans(classTT, kind, rows.map(nameOf))),
+    [classTT, rows, kind, nameOf],
+  )
+  if (!msg) return null
+  return (
+    <div role="status" style={{
+      display: 'flex', gap: 8, alignItems: 'flex-start',
+      background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B',
+      borderRadius: 10, padding: '9px 12px', margin: '0 0 10px',
+      fontSize: 12, lineHeight: 1.5,
+    }}>
+      <span aria-hidden="true">⚠</span><span>{msg}</span>
+    </div>
+  )
+}
+
 function useDeleteWarning(kind: ResourceKind, nameOf: (row: any) => string) {
   const classTT = useTimetableStore(s => (s as any).classTT)
   return useCallback((going: any[]): string | null => {
@@ -315,6 +342,7 @@ export function ClassesGrid({
   return (
     <div>
     <NameConflictBanner rows={sections} nameOf={(r: Section) => r.name} kind="section" />
+    <OrphanBanner rows={sections} nameOf={(r: Section) => r.name} kind="section" />
     <DataGrid<Section>
       confirmDelete={confirmDelete}
       title="Classes & Sections"
@@ -390,6 +418,7 @@ export function SubjectsGrid({
   return (
     <div>
     <NameConflictBanner rows={subjects} nameOf={(r: Subject) => r.name} kind="subject" />
+    <OrphanBanner rows={subjects} nameOf={(r: Subject) => r.name} kind="subject" />
     <DataGrid<Subject>
       confirmDelete={confirmDelete}
       title="Subjects"
@@ -548,6 +577,7 @@ export function TeachersGrid({
         <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
       <NameConflictBanner rows={staff} nameOf={(r: Staff) => r.name} kind="teacher" />
+    <OrphanBanner rows={staff} nameOf={(r: Staff) => r.name} kind="teacher" />
       <DataGrid<Staff>
         confirmDelete={confirmDelete}
         title="Teachers"
@@ -627,6 +657,7 @@ export function RoomsGrid({
         <DirectoryLinkedBanner name={linked.name} onUnlink={() => unlink(linked.rowId)} onDismiss={() => setLinked(null)} />
       )}
       <NameConflictBanner rows={rooms} nameOf={(r: RoomRow) => r.name} kind="room" />
+    <OrphanBanner rows={rooms} nameOf={(r: RoomRow) => r.name} kind="room" />
       <DataGrid<RoomRow>
         confirmDelete={confirmDelete}
         title="Venues"

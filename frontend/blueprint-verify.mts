@@ -2070,6 +2070,63 @@ ok(contrast('#9B97B8', '#FFFFFF') < AA, 'the old grid dim text did NOT meet AA o
 // #8B87AD stays: on the dark Pro card and the corridor board it is correct,
 // and darkening it there would make it worse, not better.
 ok(contrast('#8B87AD', '#13111E') >= AA, 'the dim purple is fine where it belongs — on dark')
+// ── The timetable outliving the roster ──
+// A teacher who leaves in March is deleted from the roster; the timetable
+// deliberately keeps her lessons. The warning at delete time is shown once,
+// and the school then lives in that state for a term — so it has to stay
+// visible afterwards.
+import { findOrphans, orphanWarning } from './src/lib/rosterOrphans'
+
+const tt = {
+  'I-A': {
+    MONDAY:  { p1: { subject: 'English', teacher: 'Anita Sharma', room: 'R1' },
+               p2: { subject: 'Maths',   teacher: 'Ravi Kumar',   room: 'R1' } },
+    TUESDAY: { p1: { subject: 'English', teacher: 'Anita Sharma', room: 'R2' } },
+  },
+  'I-B': { MONDAY: { p1: { subject: 'Maths', teacher: 'Ravi Kumar', room: 'R1' } } },
+}
+
+const orphanGone = findOrphans(tt, 'teacher', ['Ravi Kumar'])
+ok(orphanGone.length === 1 && orphanGone[0].name === 'Anita Sharma', 'a deleted teacher still in the timetable is found')
+ok(orphanGone[0].periods === 2, 'counted by booked periods, not by cells mentioning her once')
+ok(orphanGone[0].sections.join() === 'I-A', 'and says which class is affected')
+ok(findOrphans(tt, 'teacher', ['Ravi Kumar', 'Anita Sharma']).length === 0, 'a full roster is clean')
+
+// Re-typing a name with different case is the school FIXING it. Flagging that
+// would train people to ignore the banner.
+ok(findOrphans(tt, 'teacher', ['ravi kumar', ' anita sharma ']).length === 0,
+  'case and stray spaces do not resurrect an orphan')
+
+// An empty roster is what a not-yet-loaded store looks like. Declaring every
+// cell orphaned on page load would make the warning worthless.
+ok(findOrphans(tt, 'teacher', []).length === 0, 'an empty roster reports nothing rather than everything')
+ok(findOrphans(null, 'teacher', ['Ravi Kumar']).length === 0, 'no timetable, no orphans')
+
+// Every kind the timetable references by name.
+ok(findOrphans(tt, 'room', ['R1'])[0].name === 'R2', 'a deleted venue is found')
+ok(findOrphans(tt, 'subject', ['English'])[0].name === 'Maths', 'a deleted subject is found')
+const orphanSect = findOrphans(tt, 'section', ['I-A'])
+ok(orphanSect.length === 1 && orphanSect[0].name === 'I-B' && orphanSect[0].periods === 1,
+  'a class removed from the roster still holding a schedule is found')
+
+// Parallel/elective slots carry one teacher per group; those count too.
+const orphanGrouped = { 'XI-A': { MONDAY: { p1: {
+  groupAssignments: [{ subject: 'Physics', teacher: 'Meera Iyer' }, { subject: 'Biology', teacher: 'Anita Sharma' }],
+} } } }
+const g = findOrphans(orphanGrouped, 'teacher', ['Meera Iyer'])
+ok(g.length === 1 && g[0].name === 'Anita Sharma', 'a teacher inside a parallel group is not missed')
+
+// The message has to name the cost, not just report a mismatch.
+const orphanWarn = orphanWarning('teacher', orphanGone)!
+ok(orphanWarn.includes('Anita Sharma'), 'the warning names who')
+ok(/2 periods a week/.test(orphanWarn), 'and how much is riding on it')
+ok(/marked absent or given cover/.test(orphanWarn), 'and what it actually costs')
+ok(orphanWarning('teacher', []) === null, 'clean roster, no warning')
+ok(/two classes can be sent to the same place/.test(orphanWarning('room', findOrphans(tt, 'room', ['R1']))!),
+  'each kind gets its own consequence')
+
+const orphanMany = ['A', 'B', 'C', 'D'].map(n => ({ name: n, periods: 1, sections: [] }))
+ok(/and 1 more/.test(orphanWarning('teacher', orphanMany)!), 'a long list is summarised')
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
