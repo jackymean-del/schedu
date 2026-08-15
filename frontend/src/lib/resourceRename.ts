@@ -206,3 +206,68 @@ export function renameInStringLists<T extends Record<string, any>>(
   })
   return changed ? out : list
 }
+
+/**
+ * Rename the KEYS of a nested map whose levels are named entities.
+ *
+ * The allocation structures are keyed by name at every level — teacher →
+ * section → subject for teacherAllocations, section → subject for
+ * subjectAllocations — so a rename that moved the timetable and not these left
+ * the school's allocation grid pointing at names nothing else uses. They are
+ * the input to generation, so the next solve reads the stale numbers.
+ *
+ * `levels` says what each nesting level is keyed by, e.g.
+ * ['teacher','section','subject'].
+ *
+ * Collisions follow renameInPlans: the incumbent wins and the moving entry
+ * stays where it is. Overwriting would silently discard hand-tuned periods,
+ * and a visible duplicate is something the school can see and merge.
+ */
+function renameKeysAtLevel(node: Record<string, any>, from: string, to: string): Record<string, any> {
+  const keys = Object.keys(node)
+  if (!keys.some(k => clean(k) === from)) return node
+  // Computed from the ORIGINAL keys so the result cannot depend on key order.
+  const occupied = new Set(keys.filter(k => clean(k) !== from).map(clean))
+  let claimed = false
+  const out: Record<string, any> = {}
+  for (const k of keys) {
+    if (clean(k) !== from) { out[k] = node[k]; continue }
+    // Already taken by a row that is not moving, or by an earlier source key
+    // that also cleaned to `from` — leave this one where it is rather than
+    // overwrite somebody's real numbers.
+    if (occupied.has(to) || claimed) { out[k] = node[k]; continue }
+    out[to] = node[k]
+    claimed = true
+  }
+  return out
+}
+
+export function renameInNestedKeys(
+  map: Record<string, any> | undefined,
+  levels: RenameKind[],
+  kind: RenameKind,
+  fromRaw: string,
+  toRaw: string,
+): Record<string, any> | undefined {
+  const from = clean(fromRaw), to = clean(toRaw)
+  if (!map || !renameIsValid(from, to) || !levels.includes(kind)) return map
+
+  const walk = (node: any, depth: number): any => {
+    if (depth >= levels.length || node == null || typeof node !== 'object' || Array.isArray(node)) return node
+    let next = node
+    // Deeper levels first, so an outer rename never re-walks rebuilt children.
+    if (levels.slice(depth + 1).includes(kind)) {
+      let changed = false
+      const out: Record<string, any> = {}
+      for (const k of Object.keys(node)) {
+        const child = walk(node[k], depth + 1)
+        if (child !== node[k]) changed = true
+        out[k] = child
+      }
+      if (changed) next = out
+    }
+    if (levels[depth] === kind) next = renameKeysAtLevel(next, from, to)
+    return next
+  }
+  return walk(map, 0)
+}

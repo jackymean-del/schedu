@@ -2173,6 +2173,54 @@ ok(renamedRooms[2].actualName === 'Hall', 'a room that never had the name is unt
 // tell "changed" from "unchanged" by identity and skip a needless write.
 ok(rrec(rosterStaff, ['name'], 'Nobody At All', 'X') === rosterStaff, 'no match returns the same reference')
 ok(rlist(rosterStaff, 'subjects', 'Nobody At All', 'X') === rosterStaff, 'and likewise for string lists')
+// ── The allocation grids are keyed by name too ──
+// teacherAllocations is { teacher: { section: { subject: periods } } } and
+// subjectAllocations is { section: { subject } }. They are the INPUT to
+// generation, so a rename that moved the timetable and not these left the next
+// solve reading numbers filed under a name nothing else uses.
+import { renameInNestedKeys as rkeys } from './src/lib/resourceRename'
+
+const TA = { 'Anita Sharma': { 'I-A': { English: 5, Maths: 2 } }, 'Ravi Kumar': { 'I-A': { Maths: 3 } } }
+
+const t = rkeys(TA, ['teacher', 'section', 'subject'], 'teacher', 'Anita Sharma', 'Anita S. Sharma')!
+ok(!!t['Anita S. Sharma'] && !t['Anita Sharma'], 'a teacher rename moves the top-level key')
+ok(t['Anita S. Sharma']['I-A'].English === 5, 'and carries the periods with it')
+ok(!!t['Ravi Kumar'], 'other teachers are untouched')
+
+const allocSec = rkeys(TA, ['teacher', 'section', 'subject'], 'section', 'I-A', 'I-Alpha')!
+ok(!!allocSec['Anita Sharma']['I-Alpha'] && !allocSec['Anita Sharma']['I-A'], 'a section rename moves the MIDDLE key')
+ok(!!allocSec['Ravi Kumar']['I-Alpha'], 'in every teacher, not just the first')
+
+const allocSub = rkeys(TA, ['teacher', 'section', 'subject'], 'subject', 'English', 'English Language')!
+ok(allocSub['Anita Sharma']['I-A']['English Language'] === 5, 'a subject rename moves the DEEPEST key')
+ok(allocSub['Anita Sharma']['I-A'].Maths === 2, 'siblings at that level stay put')
+
+const SA = { 'I-A': { English: '5' }, 'I-B': { English: '4' } }
+const sa = rkeys(SA, ['section', 'subject'], 'section', 'I-A', 'I-Alpha')!
+ok(!!sa['I-Alpha'] && !sa['I-A'] && !!sa['I-B'], 'the two-level map renames on its own shape')
+ok(rkeys(SA, ['section', 'subject'], 'teacher', 'I-A', 'X') === SA,
+  'a kind the map has no level for is left completely alone')
+
+// Same collision rule as renameInPlans: the incumbent wins and the mover stays
+// put, because overwriting silently discards hand-tuned periods.
+const allocClash = rkeys({ 'I-A': { English: '5' }, 'I-B': { English: '9' } }, ['section', 'subject'],
+  'section', 'I-A', 'I-B')!
+ok(allocClash['I-B'].English === '9', 'renaming onto an occupied key does not overwrite it')
+ok(!!allocClash['I-A'], 'the entry that could not move stays visible rather than vanishing')
+
+// Order independence: the same inputs must give the same answer whichever way
+// the keys happen to be enumerated.
+const a = rkeys({ 'I-A': { X: 1 }, 'I-B': { X: 2 } }, ['section', 'subject'], 'section', 'I-A', 'I-B')!
+const b = rkeys({ 'I-B': { X: 2 }, 'I-A': { X: 1 } }, ['section', 'subject'], 'section', 'I-A', 'I-B')!
+ok(a['I-B'].X === 2 && b['I-B'].X === 2, 'key order cannot change who wins a collision')
+
+// Identity when nothing matched, so the cascade can skip a needless write.
+ok(rkeys(TA, ['teacher', 'section', 'subject'], 'teacher', 'Nobody', 'X') === TA, 'no match returns the same reference')
+ok(rkeys(undefined, ['section'], 'section', 'a', 'b') === undefined, 'an absent map is not invented')
+
+// One level, the shape sectionCapacityOverrides uses.
+const allocCaps = rkeys({ 'I-A': 40 }, ['section'], 'section', 'I-A', 'I-Alpha')!
+ok(allocCaps['I-Alpha'] === 40, 'a flat section-keyed map renames too')
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

@@ -24,7 +24,7 @@ import { useUrgentPullouts } from './urgentReassignments'
 import { useSyllabus } from './syllabusTracking'
 import {
   renameInClassTT, renameInSubstitutions, renameInPlans,
-  renameInRecords, renameInStringLists, renameIsValid, type RenameKind,
+  renameInRecords, renameInStringLists, renameInNestedKeys, renameIsValid, type RenameKind,
 } from './resourceRename'
 
 /** What the cascade touched, so the UI can say so honestly. */
@@ -37,6 +37,14 @@ export interface RenameReport {
    *  own staff/subject/room/section lists. */
   rostersChanged: boolean
 }
+
+/** Which entity keys each level of an allocation map holds. */
+const ALLOCATION_SHAPES: Array<[string, RenameKind[]]> = [
+  ['teacherAllocations', ['teacher', 'section', 'subject']],
+  ['subjectAllocations', ['section', 'subject']],
+  ['manualSubjectAllocations', ['section', 'subject']],
+  ['sectionCapacityOverrides', ['section']],
+]
 
 /**
  * A schedule other than the open one holds its OWN roster as well as its own
@@ -65,6 +73,12 @@ function renameRosters(snap: Record<string, any>, kind: RenameKind, from: string
     // Teachers carry the subject NAMES they can teach. Miss these and the
     // renamed subject has no qualified teacher in this schedule at all.
     swap('staff', renameInStringLists(snap.staff, 'subjects', from, to))
+  }
+  // The allocation grids are keyed by name at every level, and they are the
+  // INPUT to generation — stale keys mean the next solve reads numbers filed
+  // under a name nothing else uses.
+  for (const [field, levels] of ALLOCATION_SHAPES) {
+    swap(field, renameInNestedKeys(snap[field], levels, kind, from, to))
   }
   return changed
 }
@@ -117,6 +131,17 @@ export function applyRename(kind: RenameKind, from: string, to: string): RenameR
   if (kind === 'subject') {
     const nextStaff = renameInStringLists(store.staff, 'subjects', from, to)
     if (nextStaff !== store.staff) { store.setStaff?.(nextStaff); report.rostersChanged = true }
+  }
+
+  // Same for the open schedule's allocation grids. Two of these are persisted
+  // per-schedule and two live only in memory, but a rename mid-session corrupts
+  // the grid the user is about to open either way.
+  for (const [field, levels] of ALLOCATION_SHAPES) {
+    const nextAlloc = renameInNestedKeys(store[field], levels, kind, from, to)
+    if (nextAlloc !== store[field]) {
+      useTimetableStore.setState({ [field]: nextAlloc } as any)
+      report.rostersChanged = true
+    }
   }
 
   if (report.timetableChanged || report.rostersChanged) {
