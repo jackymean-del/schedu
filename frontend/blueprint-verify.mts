@@ -2253,6 +2253,44 @@ const strengthCollide = smaps([{ id: 'c', subjectStrengths: { English: 40, Maths
   'subjectStrengths', ['subject'], 'subject', 'English', 'Maths')!
 ok(strengthCollide[0].subjectStrengths.Maths === 30, 'the existing count survives')
 ok(strengthCollide[0].subjectStrengths.English === 40, 'and the one that could not move stays visible')
+// ── The two snapshot field lists have to stay identical ──
+// ttRegistry saves and restores a schedule from TT_SNAPSHOT_FIELDS; dashboard
+// keeps its own copy and its comment says "Must mirror dashboard.tsx". Nothing
+// enforced it, and a field present in one and not the other is exactly the
+// silent per-schedule data loss this list exists to prevent.
+import { readFileSync } from 'node:fs'
+
+function snapshotFields(path: string): string[] {
+  const src = readFileSync(path, 'utf8')
+  const i = src.indexOf('const TT_SNAPSHOT_FIELDS = [')
+  const j = src.indexOf(']', i)
+  return [...src.slice(i, j).matchAll(/'([A-Za-z]+)'/g)].map(m => m[1])
+}
+
+const registryFields = snapshotFields('./src/lib/ttRegistry.ts')
+const dashboardFields = snapshotFields('./src/pages/dashboard.tsx')
+
+ok(registryFields.length > 20, 'the registry list was actually found and parsed')
+ok(registryFields.join() === dashboardFields.join(),
+  'ttRegistry and dashboard save exactly the same fields')
+
+// A snapshot is rebuilt from this list and overwrites the whole key, so a
+// name-keyed structure missing here is not merely unsaved — it is destroyed on
+// the next save, and the globally-persisted copy then bleeds across schedules.
+for (const field of [
+  'sectionStrengths', 'subjectAllocations', 'manualSubjectAllocations',
+  'teacherAllocations', 'sectionCapacityOverrides',
+]) {
+  ok(registryFields.includes(field), `${field} survives a per-schedule save/restore`)
+}
+
+// The loader derives a setter name from each field, so a field whose setter is
+// spelled differently would be restored silently into nothing.
+const storeSrc = readFileSync('./src/store/timetableStore.ts', 'utf8')
+for (const field of ['teacherAllocations', 'sectionCapacityOverrides', 'sectionStrengths']) {
+  const setter = `set${field[0].toUpperCase()}${field.slice(1)}`
+  ok(storeSrc.includes(`${setter}:`), `${field} has the ${setter} the loader looks for`)
+}
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

@@ -77,6 +77,13 @@ const TT_SNAPSHOT_FIELDS = [
   'facilities','teacherPools',
   'subjectGroups','subjectCombinations','dynamicLearningGroups',
   'sectionStrengths','subjectGroupingRules','subjectAllocations','manualSubjectAllocations',
+  // Both sides of the allocation matrix, and the hand-typed capacity
+  // denominator beside it. They persist globally through the store, so they
+  // looked saved — but a snapshot is rebuilt from THIS list and overwrites
+  // the whole key, so per schedule they were never written and any that got
+  // there were wiped on the next save. The effect was one schedule's typed
+  // numbers showing up under another schedule's sections.
+  'teacherAllocations','sectionCapacityOverrides',
 ]
 
 /**
