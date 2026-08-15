@@ -2291,6 +2291,103 @@ for (const field of ['teacherAllocations', 'sectionCapacityOverrides', 'sectionS
   const setter = `set${field[0].toUpperCase()}${field.slice(1)}`
   ok(storeSrc.includes(`${setter}:`), `${field} has the ${setter} the loader looks for`)
 }
+// ── Backward sync: the two allocation matrices must agree with the timetable ──
+// The store documents the invariant — the sum of teacherAllocations[*][sec][sub]
+// equals the parsed total of subjectAllocations[sec][sub] — and nothing checked
+// it. These are the structures the rename cascade now moves, so they are worth
+// pinning against real solver output rather than a hand-built fixture.
+import { deriveTeacherAllocations, deriveSubjectAllocations } from './src/lib/schedulingEngine'
+
+const dTeach = deriveTeacherAllocations(engOut.classTT as any)
+const dSubj = deriveSubjectAllocations(engOut.classTT as any)
+
+// Fold the faculty matrix down to section|subject totals and compare.
+const folded = new Map<string, number>()
+for (const teacher of Object.keys(dTeach)) {
+  for (const sec of Object.keys(dTeach[teacher])) {
+    for (const sub of Object.keys(dTeach[teacher][sec])) {
+      const k = `${sec}|${sub}`
+      folded.set(k, (folded.get(k) ?? 0) + dTeach[teacher][sec][sub])
+    }
+  }
+}
+let mismatches = 0, cells = 0
+for (const sec of Object.keys(dSubj)) {
+  for (const sub of Object.keys(dSubj[sec])) {
+    cells++
+    if ((folded.get(`${sec}|${sub}`) ?? 0) !== parseInt(dSubj[sec][sub], 10)) mismatches++
+  }
+}
+ok(cells > 100, `the invariant is checked over a real school (${cells} section/subject pairs)`)
+ok(mismatches === 0, 'every teacher-side total equals the class-side total for the same section and subject')
+
+// Each side must also agree with the periods-per-week the curriculum asked for.
+const dWanted = new Map(ENG_SUBS.map(s => [s.name, s.ppw]))
+let wrongPpw = 0
+for (const sec of Object.keys(dSubj)) {
+  for (const sub of Object.keys(dSubj[sec])) {
+    if (parseInt(dSubj[sec][sub], 10) !== dWanted.get(sub)) wrongPpw++
+  }
+}
+ok(wrongPpw === 0, 'the derived class plan matches the periods per week each subject asked for')
+
+// A parallel/elective cell carries one teacher per group; both sides count each
+// group, not the cell, or an elective slot reads as a single lesson.
+const dGrouped: any = { 'XI-A': { MONDAY: { p1: {
+  subject: 'Physics', teacher: 'Meera Iyer',
+  groupAssignments: [{ subject: 'Physics', teacher: 'Meera Iyer' }, { subject: 'Biology', teacher: 'Anita Sharma' }],
+} } } }
+const gT = deriveTeacherAllocations(dGrouped), gS = deriveSubjectAllocations(dGrouped)
+ok(gT['Meera Iyer']['XI-A'].Physics === 1 && gT['Anita Sharma']['XI-A'].Biology === 1,
+  'both halves of an elective slot land on their own teacher')
+ok(gS['XI-A'].Physics === '1' && gS['XI-A'].Biology === '1', 'and on their own subject')
+
+// KNOWN, DELIBERATE ASYMMETRY: an unstaffed lesson is a real class-period, so
+// the class side counts it; there is no teacher to file it under, so the
+// faculty side cannot. The invariant above therefore holds for a fully staffed
+// timetable only — which is what the solver produces when the school fits.
+const dUnstaffed: any = { 'I-A': { MONDAY: { p1: { subject: 'English' } } } }
+ok(deriveSubjectAllocations(dUnstaffed)['I-A'].English === '1', 'an unstaffed lesson still counts as a class period')
+ok(Object.keys(deriveTeacherAllocations(dUnstaffed)).length === 0, 'but is filed against no teacher')
+
+// Empty in, empty out — a not-yet-generated schedule must not invent rows.
+ok(Object.keys(deriveTeacherAllocations({} as any)).length === 0, 'no timetable derives no faculty matrix')
+ok(Object.keys(deriveSubjectAllocations({} as any)).length === 0, 'and no class plan')
+// ── Renaming and deriving have to commute ──
+// The cascade rewrites the allocation matrices in place; backward sync rebuilds
+// them from the timetable. If those two disagree, a rename followed by a sync
+// silently changes the school's numbers. Renaming the timetable and then
+// deriving must give exactly what deriving and then renaming gives.
+const cmSubjTT = renameInClassTT(engOut.classTT as any, 'subject', 'English', 'English Language')
+ok(cmSubjTT !== engOut.classTT, 'the fixture actually contains the subject being renamed')
+
+ok(JSON.stringify(deriveSubjectAllocations(cmSubjTT)) ===
+   JSON.stringify(rkeys(deriveSubjectAllocations(engOut.classTT as any), ['section', 'subject'], 'subject', 'English', 'English Language')),
+  'subject rename: derive-then-rename equals rename-then-derive')
+
+ok(JSON.stringify(deriveTeacherAllocations(cmSubjTT)) ===
+   JSON.stringify(rkeys(deriveTeacherAllocations(engOut.classTT as any), ['teacher', 'section', 'subject'], 'subject', 'English', 'English Language')),
+  'the same holds for the faculty matrix, where the subject is the DEEPEST key')
+
+const cmTeachTT = renameInClassTT(engOut.classTT as any, 'teacher', 'Teacher 1', 'Teacher One')
+ok(cmTeachTT !== engOut.classTT, 'the fixture actually contains the teacher being renamed')
+ok(JSON.stringify(deriveTeacherAllocations(cmTeachTT)) !== JSON.stringify(deriveTeacherAllocations(engOut.classTT as any)),
+  'and the rename genuinely changes the matrix, so the comparison below is not vacuous')
+ok(JSON.stringify(deriveTeacherAllocations(cmTeachTT)) ===
+   JSON.stringify(rkeys(deriveTeacherAllocations(engOut.classTT as any), ['teacher', 'section', 'subject'], 'teacher', 'Teacher 1', 'Teacher One')),
+  'teacher rename commutes too, on the top-level key')
+
+// And the invariant still holds after a rename, which is the point of all of it.
+const cmT = deriveTeacherAllocations(cmSubjTT), cmS = deriveSubjectAllocations(cmSubjTT)
+const cmFolded = new Map<string, number>()
+for (const t of Object.keys(cmT)) for (const sec of Object.keys(cmT[t])) for (const sub of Object.keys(cmT[t][sec])) {
+  cmFolded.set(`${sec}|${sub}`, (cmFolded.get(`${sec}|${sub}`) ?? 0) + cmT[t][sec][sub])
+}
+let cmBad = 0
+for (const sec of Object.keys(cmS)) for (const sub of Object.keys(cmS[sec])) {
+  if ((cmFolded.get(`${sec}|${sub}`) ?? 0) !== parseInt(cmS[sec][sub], 10)) cmBad++
+}
+ok(cmBad === 0, 'the two matrices still agree with each other after a rename')
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')
