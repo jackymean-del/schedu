@@ -5,6 +5,7 @@
  * keeps the (non-trivial) uncovered-slot logic from drifting between them.
  */
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
+import { subKey } from './substitutionKeys'
 
 import { DAY_NAMES } from './days'
 export { DAY_NAMES as DAY_KEY } from './days'
@@ -89,7 +90,9 @@ export function computeTodaySummary(params: {
         if (!c?.subject) continue
         const room = (c.room ?? '').trim()
         if (!room) continue
-        const teacher = substitutions[`${s.name}|${dayKey}|${p.id}`] || c.teacher || ''
+        // Dated, so last week's cover cannot make two teachers look like one
+        // and hide a genuine double-booking today.
+        const teacher = substitutions[subKey(s.name, isoDate, p.id)] || c.teacher || ''
         ;(byRoom[room] ??= []).push({ section: s.name, teacher })
       }
       const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
@@ -109,7 +112,7 @@ export function computeTodaySummary(params: {
         const c = sd[p.id]
         if (!c?.subject || !c.teacher || !onLeaveSet.has(c.teacher)) continue
         const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
-        const coveredBy = substitutions[`${s.name}|${dayKey}|${p.id}`]
+        const coveredBy = substitutions[subKey(s.name, isoDate, p.id)]
         const slot: AffectedSlot = {
           teacher: c.teacher, section: s.name, subject: c.subject,
           periodId: p.id, periodName: p.name ?? p.id,

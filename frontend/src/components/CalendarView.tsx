@@ -26,6 +26,8 @@
  */
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react"
+import { subKey, localISO } from '@/lib/substitutionKeys'
+import { DAY_NAMES } from '@/lib/days'
 import type { Period, Section, Staff, Subject } from "@/types"
 import type { ClassTimetable, TeacherSchedule } from "@/types"
 import type { BlockedSlot, DynamicLearningGroup } from "@/lib/schedulingEngine"
@@ -786,6 +788,17 @@ export function CalendarView({
   const [density,    setDensity]    = useState<"comfortable" | "compact">("comfortable")  // matrix row density
   const [curDate,    setCurDate]    = useState(new Date())
   const [tooltip,    setTooltip]    = useState<{lines:string[];x:number;y:number}|null>(null)
+  /**
+   * The date a weekday column stands for. This view navigates by week and
+   * shows a week range in its header, so every column belongs to the week of
+   * curDate — and a cover belongs to a date, not to every Monday.
+   */
+  const dateOfWeekday = useCallback((dayKey:string):string => {
+    const idx = DAY_NAMES.findIndex(d => d === (dayKey ?? '').toUpperCase())
+    const d = new Date(curDate)
+    d.setDate(d.getDate() - d.getDay() + (idx < 0 ? d.getDay() : idx))
+    return localISO(d)
+  },[curDate])
   const [activeD,    setActiveD]    = useState<ActiveDetail|null>(null)
   // drag state: only src key + hover key — lightweight strings, not objects
   const [dragSrcKey,      setDragSrcKey]      = useState<string|null>(null)
@@ -961,20 +974,20 @@ export function CalendarView({
     return ps.map(p=>{
       const t=tm.get(p.id)!
       const cell=classTT[secName]?.[dayKey]?.[p.id]
-      const subKey=`${secName}|${dayKey}|${p.id}`
-      const isSub=!!substitutions[subKey]
+      const subK=subKey(secName, dateOfWeekday(dayKey), p.id)
+      const isSub=!!substitutions[subK]
       const absent=!!(absentHighlights?.some(h=>h.day===dayKey&&h.teacher===(cell?.teacher??"")&&cell?.teacher))
       return {
         key:`${secName}|${dayKey}|${p.id}`, periodId:p.id,
         periodName:p.name, periodType:p.type,
         startMin:t.start, endMin:t.end, sectionName:secName,
         subject:  p.type!=="class"?"": (cell?.subject??""),
-        teacher:  p.type!=="class"?"": (isSub?substitutions[subKey]:(cell?.teacher??"")),
+        teacher:  p.type!=="class"?"": (isSub?substitutions[subK]:(cell?.teacher??"")),
         room:     p.type!=="class"?"": (cell?.room??""),
         isSub, isClassTeacher:!!(cell?.isClassTeacher), absent,
       }
     })
-  },[classTT,periods,classwiseBreaks,substitutions,absentHighlights,dayStartMin])
+  },[classTT,periods,classwiseBreaks,substitutions,absentHighlights,dayStartMin,dateOfWeekday])
 
   const buildTeacherBlocks = useCallback((tName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1013,14 +1026,14 @@ export function CalendarView({
         taughtSlotKeys.add(slotKey)
         const existing = taughtBySlot.get(slotKey)
         if (existing) { existing.sectionName = existing.sectionName ? `${existing.sectionName}, ${sec.name}` : sec.name; return }
-        const subKey=`${sec.name}|${dayKey}|${p.id}`
-        const isSub=!!substitutions[subKey]
+        const subK=subKey(sec.name, dateOfWeekday(dayKey), p.id)
+        const isSub=!!substitutions[subK]
         const block: TimeBlock = {
           key:`${sec.name}|${p.id}|${dayKey}`, periodId:p.id,
           periodName:p.name, periodType:p.type,
           startMin:t.start, endMin:t.end, sectionName:sec.name,
           subject:info.subject,
-          teacher:isSub?substitutions[subKey]:tName,
+          teacher:isSub?substitutions[subK]:tName,
           room:info.room,
           isSub:!!isSub, isClassTeacher:!!(cell.isClassTeacher),
           absent:!!(absentHighlights?.some(h=>h.day===dayKey&&h.teacher===tName)),
@@ -1050,7 +1063,7 @@ export function CalendarView({
     })
     addLunchBlocks(blocks, dayKey, {teacher:tName})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,absentHighlights,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,absentHighlights,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks,dateOfWeekday])
 
   const buildRoomBlocks = useCallback((roomName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1083,8 +1096,8 @@ export function CalendarView({
         occupiedSlotKeys.add(slotKey)
         const existing = occBySlot.get(slotKey)
         if (existing) { existing.sectionName = existing.sectionName ? `${existing.sectionName}, ${sec.name}` : sec.name; return }
-        const subKey=`${sec.name}|${dayKey}|${p.id}`
-        const isSub=!!substitutions[subKey]
+        const subK=subKey(sec.name, dateOfWeekday(dayKey), p.id)
+        const isSub=!!substitutions[subK]
         // teacher from the option array when the section-level teacher is blank
         const optTeacher = Array.isArray((cell as any).options) ? ((cell as any).options[0]?.teacher ?? "") : ""
         const block: TimeBlock = {
@@ -1092,7 +1105,7 @@ export function CalendarView({
           periodName:p.name, periodType:p.type,
           startMin:t.start, endMin:t.end, sectionName:sec.name,
           subject:cell.subject??"",
-          teacher:isSub?substitutions[subKey]:(cell.teacher || optTeacher || ""),
+          teacher:isSub?substitutions[subK]:(cell.teacher || optTeacher || ""),
           room:roomName,
           isSub:!!isSub, isClassTeacher:!!(cell.isClassTeacher), absent:false,
         }
@@ -1118,7 +1131,7 @@ export function CalendarView({
     })
     addLunchBlocks(blocks, dayKey, {room:roomName})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks,dateOfWeekday])
 
   const buildSubjectBlocks = useCallback((subjectName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1145,14 +1158,14 @@ export function CalendarView({
         const cell=classTT[sec.name]?.[dayKey]?.[p.id]
         if(cell?.subject!==subjectName) return
         const t=tm.get(p.id)!
-        const subKey=`${sec.name}|${dayKey}|${p.id}`
-        const isSub=!!substitutions[subKey]
+        const subK=subKey(sec.name, dateOfWeekday(dayKey), p.id)
+        const isSub=!!substitutions[subK]
         blocks.push({
           key:`${sec.name}|${p.id}|${dayKey}`, periodId:p.id,
           periodName:p.name, periodType:p.type,
           startMin:t.start, endMin:t.end, sectionName:sec.name,
           subject:subjectName,
-          teacher:isSub?substitutions[subKey]:(cell.teacher??""),
+          teacher:isSub?substitutions[subK]:(cell.teacher??""),
           room:cell.room??"",
           isSub:!!isSub, isClassTeacher:!!(cell.isClassTeacher), absent:false,
         })
@@ -1160,7 +1173,7 @@ export function CalendarView({
     })
     addLunchBlocks(blocks, dayKey, {})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,addLunchBlocks])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,addLunchBlocks,dateOfWeekday])
 
   // ── Get blocks for entity × day ──────────────────────────────────────
   const getEntityBlocks = useCallback((entityId:string, dayKey:string): TimeBlock[] => {

@@ -12,6 +12,7 @@ import { migrateLegacyEvents } from "@/lib/schoolEvents"
 import { migrateLegacyAssignments } from "@/lib/freeAssignments"
 import { migrateLegacyPullouts } from "@/lib/urgentReassignments"
 import { migrateLegacyNaming } from "@/lib/terms"
+import { migrateLegacySubstitutions } from "@/lib/substitutionKeys"
 
 // These were all stored per signed-in account and are all facts about the
 // SCHOOL — see lib/schoolScope. Fold any such records into the school-wide
@@ -21,6 +22,13 @@ migrateLegacyEvents()
 migrateLegacyAssignments()
 migrateLegacyPullouts()
 migrateLegacyNaming()
+
+// Substitutions used to be keyed by weekday, which made a one-off cover repeat
+// every week. Move any that remain onto real dates before anything reads them.
+{
+  const moved = migrateLegacySubstitutions()
+  if (moved) console.info(`schedU: moved ${moved} weekday-keyed substitution(s) onto dates`)
+}
 
 // Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).

@@ -9,6 +9,8 @@
  * and Auto-Assign layer on top of this in later phases.
  */
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { subKey, localISO } from '@/lib/substitutionKeys'
+import { DAY_NAMES } from '@/lib/days'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import {
@@ -144,7 +146,7 @@ function toISODate(d: Date): string {
 // actual scheduling actions (substitution candidacy, task anchoring) is a
 // separate path that always consults every active schedule via `sources`.
 interface DayCell { sid: string; sname: string; section: string; periodId: string; subject: string; teacher: string; room: string; startMin: number; endMin: number; sub?: string; directoryId?: string }
-function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
+function buildGridData(srcs: ScheduleBundle[], dayKey: string, isoDate: string) {
   const cells: DayCell[] = []
   const timeById: Record<string, { startMin: number; endMin: number }> = {}
   let lo = Infinity, hi = -Infinity
@@ -167,7 +169,7 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string) {
         timeById[p.id] = t; lo = Math.min(lo, t.startMin); hi = Math.max(hi, t.endMin)
         const c = b.classTT[s.name]?.[dayKey]?.[p.id]
         if (!c?.subject) continue
-        const sub = b.substitutions[`${s.name}|${dayKey}|${p.id}`]
+        const sub = b.substitutions[subKey(s.name, isoDate, p.id)]
         cells.push({
           sid: b.id, sname: b.name, section: s.name, periodId: p.id, subject: c.subject,
           teacher: c.teacher ?? '', room: (c.room ?? '').trim(), startMin: t.startMin, endMin: t.endMin,
@@ -259,6 +261,24 @@ export function CalendarPage() {
   const h24             = (config.timeFormat ?? '12h') === '24h'
 
   const dayKey = DAY_KEY[date.getDay()]
+  const isoDate = toISODate(date)
+  /**
+   * The date a given weekday falls on in the week being viewed.
+   *
+   * Weekly load and weekly substitution counts are gathered per weekday,
+   * but a cover now belongs to a date. Without this, 'how many covers has
+   * this teacher taken this week' would read every week's covers at once,
+   * which is what the weekday keys used to do.
+   */
+  const dateOfWeekday = (day: string): string => {
+    const idx = DAY_NAMES.findIndex(d => d === (day ?? '').toUpperCase())
+    if (idx < 0) return isoDate
+    const sunday = new Date(date)
+    sunday.setDate(sunday.getDate() - sunday.getDay())
+    sunday.setDate(sunday.getDate() + idx)
+    return localISO(sunday)
+  }
+
   const workDays: string[] = config.workDays?.length
     ? config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
   const isWorkDay = workDays.includes(dayKey)
@@ -380,7 +400,9 @@ export function CalendarPage() {
     return filtered.length ? filtered : sources
   }, [multiActive, sources, viewIds])
 
-  const gridData = useMemo(() => buildGridData(visibleSources, dayKey), [visibleSources, dayKey])
+  // isoDate is a dependency, not just an argument: the SAME weekday next week
+  // is a different day with different covers, and dayKey alone cannot see that.
+  const gridData = useMemo(() => buildGridData(visibleSources, dayKey, isoDate), [visibleSources, dayKey, isoDate])
 
   // A schedule exists to show when ANY schedule currently in view has actually
   // been generated — not just the single open one, so switching "All" on with
@@ -413,7 +435,7 @@ export function CalendarPage() {
   //     a coincidence that's already been resolved.
   const teacherClashes = useMemo(() => {
     if (!multiActive) return [] as { teacher: string; a: DayCell; b: DayCell; confirmed: boolean }[]
-    const full = buildGridData(sources, dayKey).cells
+    const full = buildGridData(sources, dayKey, isoDate).cells
     const byTeacher = new Map<string, DayCell[]>()
     for (const c of full) {
       if (!c.teacher) continue
@@ -470,7 +492,6 @@ export function CalendarPage() {
     store.setSubstitutionSettings(next)
     saveActiveTimetableSnapshot()
   }
-  const isoDate = toISODate(date)
   const onLeave = (teacher: string) => isOnLeaveOn(leaves, teacher, isoDate)
 
   // Periods the given teacher covers on the selected day — across EVERY active
@@ -508,7 +529,7 @@ export function CalendarPage() {
         for (const p of b.periods) {
           const c = sd[p.id]
           if (!c?.subject) continue
-          const covered = b.substitutions[`${s.name}|${day}|${p.id}`]
+          const covered = b.substitutions[subKey(s.name, dateOfWeekday(day), p.id)]
           if (covered) { if (covered === teacher) sub++ }
           else if (c.teacher === teacher) reg++
         }
@@ -538,7 +559,7 @@ export function CalendarPage() {
         for (const pid of Object.keys(sd)) {
           const c = sd[pid]
           if (!c?.subject) continue
-          const eff = b.substitutions[`${s.name}|${dayKey}|${pid}`] || c.teacher
+          const eff = b.substitutions[subKey(s.name, isoDate, pid)] || c.teacher
           if (eff !== name) continue
           const t = times[pid]
           if (t && t.s < endMin && startMin < t.e) return true
@@ -616,7 +637,7 @@ export function CalendarPage() {
       if (!pid) return false
       return tb.sections.some((s: any) => {
         const c = tb.classTT[s.name]?.[dayKey]?.[pid]
-        const cov = tb.substitutions[`${s.name}|${dayKey}|${pid}`]
+        const cov = tb.substitutions[subKey(s.name, isoDate, pid)]
         return cov ? cov === name : c?.teacher === name
       })
     }
@@ -645,7 +666,7 @@ export function CalendarPage() {
   }
 
   const assignSub = (sid: string, section: string, periodId: string, subName: string) => {
-    writeSubs(sid, { ...bundleById(sid).substitutions, [`${section}|${dayKey}|${periodId}`]: subName })
+    writeSubs(sid, { ...bundleById(sid).substitutions, [subKey(section, isoDate, periodId)]: subName })
     const cell = bundleById(sid).classTT[section]?.[dayKey]?.[periodId]
     recordCoverage({
       date: isoDate, sid, section, periodId,
@@ -657,7 +678,7 @@ export function CalendarPage() {
     })
   }
   const clearSub = (sid: string, section: string, periodId: string) => {
-    const next = { ...bundleById(sid).substitutions }; delete next[`${section}|${dayKey}|${periodId}`]
+    const next = { ...bundleById(sid).substitutions }; delete next[subKey(section, isoDate, periodId)]
     writeSubs(sid, next)
     clearCoverage(slotKey({ date: isoDate, sid, section, periodId }))
   }
@@ -1364,7 +1385,7 @@ export function CalendarPage() {
           dayLabel={DOW_FULL[date.getDay()]}
           slots={slotsOf(subFor)}
           multiActive={multiActive}
-          subAt={(sid, section, periodId) => bundleById(sid).substitutions[`${section}|${dayKey}|${periodId}`]}
+          subAt={(sid, section, periodId) => bundleById(sid).substitutions[subKey(section, isoDate, periodId)]}
           candidatesFor={candidatesFor}
           onAssign={assignSub}
           onClear={clearSub}
@@ -1487,7 +1508,7 @@ function LiveBoard(props: {
   const effTeacher = (section: string, pid: string, cell: any) => {
     const cov = coverFor(pullouts, isoDate, openId, section, pid)
     if (cov?.kind === 'teacher') return cov.teacher ?? ''
-    return substitutions[`${section}|${dayKey}|${pid}`] || cell?.teacher || ''
+    return substitutions[subKey(section, isoDate, pid)] || cell?.teacher || ''
   }
   const effRoom = (section: string, pid: string, cell: any) => {
     const cov = coverFor(pullouts, isoDate, openId, section, pid)
@@ -1595,7 +1616,7 @@ function LiveBoard(props: {
   // Month grid) reflects the selection exactly.
   const busyElsewhere = useMemo(() => {
     if (!multiActive || idle.length === 0) return new Set<string>()
-    const fullCells = buildGridData(sources, dayKey).cells
+    const fullCells = buildGridData(sources, dayKey, isoDate).cells
     const fullRunning = fullCells.filter((c: any) => scrub >= c.startMin && scrub < c.endMin)
     const names = new Set<string>()
     for (const name of idle) {
@@ -1693,7 +1714,7 @@ function LiveBoard(props: {
         const sd = classTT[s.name]?.[dayKey] ?? {}
         for (const pid of Object.keys(sd)) {
           const c = sd[pid]
-          if (c?.subject && (substitutions[`${s.name}|${dayKey}|${pid}`] || c.teacher) === name) n++
+          if (c?.subject && (substitutions[subKey(s.name, isoDate, pid)] || c.teacher) === name) n++
         }
       }
     } else if (mode === 'room') {

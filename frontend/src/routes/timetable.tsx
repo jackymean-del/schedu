@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
+import { subKey, localISO } from '@/lib/substitutionKeys'
+import { weekdayOf } from '@/lib/days'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { TimetableOrphanBanner } from '@/components/TimetableOrphanBanner'
@@ -1349,7 +1351,11 @@ export function TimetablePage() {
   // ── Substitution panel state ─────────────────────────────
   const [subPanelOpen, setSubPanelOpen] = useState(false)
   const [subAbsentTeacher, setSubAbsentTeacher] = useState("")
-  const [subAbsentDay, setSubAbsentDay] = useState(config.workDays[0] ?? "MONDAY")
+  // An absence happens on a DATE. The weekday is derived from it, because the
+  // timetable it looks up is a weekly template while the cover it writes is
+  // dated — keying the cover by weekday made it repeat every week.
+  const [subAbsentDate, setSubAbsentDate] = useState(localISO(new Date()))
+  const subAbsentDay = weekdayOf(subAbsentDate)
   const [subReason, setSubReason] = useState("")
   const [subAssignments, setSubAssignments] = useState<Record<string, string>>({}) // periodId → staffName
   const [subActiveTab, setSubActiveTab] = useState<"assign"|"active">("assign")
@@ -2043,7 +2049,7 @@ export function TimetablePage() {
     const newSubs = { ...substitutions }
     Object.entries(subAssignments).forEach(([periodId, staffName]) => {
       const slot = absentSlots.find(s => s.periodId === periodId)
-      if (slot) newSubs[`${slot.sectionName}|${subAbsentDay}|${periodId}`] = staffName
+      if (slot) newSubs[subKey(slot.sectionName, subAbsentDate, periodId)] = staffName
     })
     setSubstitutions(newSubs)
     setSubAssignments({})
@@ -2125,8 +2131,14 @@ export function TimetablePage() {
                     {sectionPeriods.map(p => {
                       if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                       const cell = sd[day]?.[p.id]
-                      const isSub = !!substitutions[`${sn}|${day}|${p.id}`]
-                      const subTeacher = substitutions[`${sn}|${day}|${p.id}`]
+                      // This grid is the weekly TEMPLATE, and a cover belongs to a
+                      // date, so covers show only on the row for the absent date
+                      // being worked on. Otherwise one day's cover would appear to
+                      // be part of the plan every week, which is the bug this
+                      // dated key exists to remove.
+                      const onAbsentDay = day === subAbsentDay
+                      const subTeacher = onAbsentDay ? substitutions[subKey(sn, subAbsentDate, p.id)] : undefined
+                      const isSub = !!subTeacher
                       const cellKey = `${sn}|${day}|${p.id}`
                       const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
                       return (
@@ -4174,15 +4186,14 @@ export function TimetablePage() {
           <div style={{ flex:1, overflowY:"auto" }}>
             {subActiveTab === "assign" && (
               <div style={{ padding:12 }}>
-                {/* Day chips */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Day</div>
-                <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginBottom:12 }}>
-                  {config.workDays.map(day => (
-                    <button key={day} onClick={() => setSubAbsentDay(day)}
-                      style={{ padding:"4px 10px", borderRadius:20, border:`1px solid ${subAbsentDay===day?"#f59e0b":"#E8E4FF"}`, background:subAbsentDay===day?"#fff7ed":"#fff", color:subAbsentDay===day?"#92400e":"#4B5275", fontSize:10, fontWeight:600, cursor:"pointer" }}>
-                      {DAY_SHORT[day]??day.slice(0,3)}
-                    </button>
-                  ))}
+                {/* Absent date — a cover belongs to a day, not to every Monday */}
+                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Date</div>
+                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12 }}>
+                  <input type="date" value={subAbsentDate} onChange={e => setSubAbsentDate(e.target.value)}
+                    style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #E8E4FF", fontSize:11, color:"#13111E", fontFamily:"inherit" }} />
+                  <span style={{ fontSize:10, fontWeight:700, color: config.workDays.includes(subAbsentDay) ? "#6D6A8A" : "#991B1B" }}>
+                    {config.workDays.includes(subAbsentDay) ? (DAY_SHORT[subAbsentDay] ?? subAbsentDay) : "not a working day"}
+                  </span>
                 </div>
 
                 {/* Absent teacher selector */}

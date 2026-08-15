@@ -2401,6 +2401,56 @@ ok(resolveCountryInput('India (CBSE norms)') === 'IN', 'matches the dataset labe
 ok(resolveCountryInput('Freedonia') === undefined, 'unknown country → undefined, never a wrong guess')
 ok(resolveCountryInput('') === undefined && resolveCountryInput(null) === undefined, 'empty input → undefined')
 
+// ── A cover belongs to a date, not to every Monday ──
+// Substitutions used to be keyed section|MONDAY|period, so cover arranged for
+// one absence reappeared every week — and, worse, made two teachers look like
+// one to room-clash detection, hiding genuine double-bookings on later weeks.
+import { localISO, subKey, isDatedSubKey, migrateWeekdaySubs } from './src/lib/substitutionKeys'
+
+// Local calendar, never UTC. toISOString() on a local-midnight Date reports the
+// previous or next day depending on the timezone, which would file an evening
+// cover against the wrong date.
+const eve = new Date(2026, 7, 17, 23, 30)   // 17 Aug 2026, 23:30 local
+ok(localISO(eve) === '2026-08-17', 'a late-evening date keeps its own day')
+ok(localISO(new Date(2026, 0, 5)) === '2026-01-05', 'months and days are zero-padded')
+
+ok(subKey('I-A', '2026-08-17', 'p1') === 'I-A|2026-08-17|p1', 'the key names the date')
+ok(isDatedSubKey('I-A|2026-08-17|p1'), 'a dated key is recognised')
+ok(!isDatedSubKey('I-A|MONDAY|p1'), 'and a legacy weekday key is not')
+
+// Migration: a weekday key becomes the matching weekday of the week it is run
+// in. The date it was originally meant for was never stored, so this is the
+// least-harmful guess — the cover happens once, near when it was arranged,
+// and stops repeating.
+const wed = new Date(2026, 7, 19)           // Wednesday 19 Aug 2026
+const m1 = migrateWeekdaySubs({ 'I-A|MONDAY|p1': 'Ravi Kumar' }, wed)
+ok(m1.migrated === 1, 'a legacy key is migrated')
+ok(m1.next['I-A|2026-08-17|p1'] === 'Ravi Kumar', 'onto the Monday of that same week')
+ok(!('I-A|MONDAY|p1' in m1.next), 'and the weekday key is gone')
+
+// Idempotent — running it again must not move an already-dated cover.
+const m2 = migrateWeekdaySubs(m1.next, wed)
+ok(m2.migrated === 0 && m2.next['I-A|2026-08-17|p1'] === 'Ravi Kumar', 'a second run changes nothing')
+
+// A deliberate dated entry outranks a migrated guess for the same slot.
+const clash = migrateWeekdaySubs(
+  { 'I-A|MONDAY|p1': 'Guessed', 'I-A|2026-08-17|p1': 'Deliberate' }, wed)
+ok(clash.next['I-A|2026-08-17|p1'] === 'Deliberate', 'an existing dated cover is not overwritten')
+ok(clash.next['I-A|MONDAY|p1'] === 'Guessed', 'and the one that could not move is kept, not dropped')
+
+// Nothing is ever silently lost: an unrecognised key passes through.
+const odd = migrateWeekdaySubs({ 'weird-key': 'X', 'I-A|NOTADAY|p1': 'Y' }, wed)
+ok(odd.next['weird-key'] === 'X' && odd.next['I-A|NOTADAY|p1'] === 'Y', 'unparseable keys are carried through untouched')
+ok(odd.migrated === 0, 'and not counted as migrated')
+
+ok(migrateWeekdaySubs(undefined, wed).migrated === 0, 'no substitutions, nothing to do')
+
+// Every weekday maps to its own date within the run week.
+const all = migrateWeekdaySubs(
+  { 'A|SUNDAY|p': '1', 'A|MONDAY|p': '2', 'A|SATURDAY|p': '3' }, wed)
+ok(all.next['A|2026-08-16|p'] === '1', 'Sunday is the start of that week')
+ok(all.next['A|2026-08-17|p'] === '2', 'Monday follows it')
+ok(all.next['A|2026-08-22|p'] === '3', 'and Saturday ends it')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

@@ -7,6 +7,7 @@
  * summaries all fall out of that same expansion.
  */
 import { type CalLeave, leaveCoversDate } from './leaveUtils'
+import { subKey } from './substitutionKeys'
 import { DAY_KEY, toISODate } from './scheduleToday'
 
 export interface DateRange { start: string; end: string }   // inclusive ISO dates
@@ -132,7 +133,7 @@ export function computeReports(params: {
           for (const p of src.periods) {
             const c = sd[p.id]
             if (!c?.subject || c.teacher !== l.teacher) continue
-            const sub = src.substitutions[`${s.name}|${dayKey}|${p.id}`]
+            const sub = src.substitutions[subKey(s.name, date, p.id)]
             const t = times[p.id] ?? { startMin: 0, endMin: 0, name: p.id }
             events.push({
               date, day: dayKey, periodId: p.id, periodName: t.name,
