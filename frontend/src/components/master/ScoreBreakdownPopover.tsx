@@ -12,6 +12,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { PopoverPanel } from '@/components/PopoverPanel'
 import { TrendingDown, Activity, ChevronDown, ChevronUp, BarChart2, TrendingUp } from 'lucide-react'
 import type { ScorePoint } from './PenaltyTrendChart'
 
@@ -156,6 +157,8 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
       <button
         onClick={() => setOpen(v => !v)}
         title="Click for score breakdown"
+        aria-label={`Schedule score ${liveScore}. Show breakdown.`}
+        aria-expanded={open}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '3px 10px', borderRadius: 12,
@@ -175,25 +178,24 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
       </button>
 
       {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'absolute' as const,
-              left: 0, top: '100%',
-              marginTop: 6,
-              zIndex: 9999,
-              minWidth: 340, maxWidth: 430,
-              background: '#fff',
-              border: '1px solid #ECEAFB',
-              borderRadius: 12,
-              boxShadow: '0 14px 38px rgba(19,17,30,0.18)',
-              padding: 0,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              textAlign: 'left' as const,
-            }}
-          >
+        <PopoverPanel
+          onClose={() => setOpen(false)}
+          label={`Schedule score breakdown, currently ${liveScore}`}
+          style={{
+            position: 'absolute',
+            left: 0, top: '100%',
+            marginTop: 6,
+            zIndex: 9999,
+            minWidth: 340, maxWidth: 430,
+            background: '#fff',
+            border: '1px solid #ECEAFB',
+            borderRadius: 12,
+            boxShadow: '0 14px 38px rgba(19,17,30,0.18)',
+            padding: 0,
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            textAlign: 'left',
+          }}
+        >
             {/* Header */}
             <div style={{
               padding: '12px 14px 10px',
@@ -348,8 +350,7 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
                   : 'Trend snapshots are captured on every fix, auto-fix, and re-optimise action.'}
               </div>
             </div>
-          </div>
-        </>
+        </PopoverPanel>
       )}
     </span>
   )

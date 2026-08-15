@@ -12,6 +12,7 @@
  */
 
 import { useState } from 'react'
+import { PopoverPanel } from '@/components/PopoverPanel'
 import { Info, CheckCircle2, XCircle, Sparkles } from 'lucide-react'
 import type { AssignmentExplanation, ExplanationFactor } from '@/lib/explanationEngine'
 import { categoryLabel, categoryColor } from '@/lib/explanationEngine'
@@ -37,6 +38,8 @@ export function ExplanationInfoIcon({
       <button
         onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
         title="Why this assignment?"
+        aria-label={`Why ${explanation.teacher} for ${explanation.subject} in ${explanation.section}?`}
+        aria-expanded={open}
         style={{
           background: 'transparent', border: 'none', padding: 2,
           cursor: 'pointer', color: tone, display: 'inline-flex',
@@ -49,28 +52,40 @@ export function ExplanationInfoIcon({
         <Info size={12} />
       </button>
       {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'absolute' as const,
-              ...(anchor === 'top-right' ? { right: 0, top: '100%', marginTop: 4 } : { left: 0, top: '100%', marginTop: 4 }),
-              zIndex: 9999,
-              minWidth: 320, maxWidth: 380,
-              background: '#fff',
-              border: '1px solid #ECEAFB',
-              borderRadius: 12,
-              boxShadow: '0 14px 38px rgba(19,17,30,0.18)',
-              padding: 0,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              textAlign: 'left' as const,
-            }}>
-            <ExplanationCard explanation={explanation} compact />
-          </div>
-        </>
+        <ExplanationPanel explanation={explanation} anchor={anchor} onClose={() => setOpen(false)} />
       )}
     </span>
+  )
+}
+
+/**
+ * The open popover, as its own component so PopoverPanel mounts WITH it —
+ * rendered from the parent it would bind Escape for the whole life of the icon.
+ */
+function ExplanationPanel({ explanation, anchor, onClose }: {
+  explanation: AssignmentExplanation
+  anchor: 'top-right' | 'top-left'
+  onClose: () => void
+}) {
+  return (
+    <PopoverPanel
+      onClose={onClose}
+      label={`Why ${explanation.teacher} for ${explanation.subject} in ${explanation.section}?`}
+      style={{
+        position: 'absolute',
+        ...(anchor === 'top-right' ? { right: 0, top: '100%', marginTop: 4 } : { left: 0, top: '100%', marginTop: 4 }),
+        zIndex: 9999,
+        minWidth: 320, maxWidth: 380,
+        background: '#fff',
+        border: '1px solid #ECEAFB',
+        borderRadius: 12,
+        boxShadow: '0 14px 38px rgba(19,17,30,0.18)',
+        padding: 0,
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        textAlign: 'left',
+      }}>
+      <ExplanationCard explanation={explanation} compact />
+    </PopoverPanel>
   )
 }
 
