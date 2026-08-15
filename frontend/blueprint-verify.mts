@@ -2127,6 +2127,52 @@ ok(/two classes can be sent to the same place/.test(orphanWarning('room', findOr
 
 const orphanMany = ['A', 'B', 'C', 'D'].map(n => ({ name: n, periods: 1, sections: [] }))
 ok(/and 1 more/.test(orphanWarning('teacher', orphanMany)!), 'a long list is summarised')
+// ── A rename has to move the roster, not just the timetable ──
+// The cascade rewrote every active schedule's CELLS and none of their ROSTERS,
+// which is worse than not cascading: the other schedule ended up with a lesson
+// taught by the new name and a roster listing the old one, so one person
+// became two — an orphaned lesson beside a roster row teaching nothing.
+import { renameInRecords as rrec, renameInStringLists as rlist } from './src/lib/resourceRename'
+
+const rosterStaff = [
+  { id: 't1', name: 'Anita Sharma', subjects: ['English', 'Maths'] },
+  { id: 't2', name: 'Ravi Kumar', subjects: ['Maths'] },
+]
+
+const renamedStaff = rrec(rosterStaff, ['name'], 'Anita Sharma', 'Anita S. Sharma')!
+ok(renamedStaff[0].name === 'Anita S. Sharma', "another schedule's rosterStaff row follows the rename")
+ok(renamedStaff[1].name === 'Ravi Kumar', 'and nobody else moves')
+
+// The one that silently broke generation: teachers list the subject NAMES they
+// can teach, so a renamed subject left every teacher unqualified for it and the
+// engine — which matches teacher to subject by name — reported it unstaffable.
+const requalified = rlist(rosterStaff, 'subjects', 'English', 'English Language')!
+ok(requalified[0].subjects.join() === 'English Language,Maths',
+  "a subject rename follows into each teacher's can-teach list")
+ok(requalified[1].subjects.join() === 'Maths', 'teachers who never taught it are untouched')
+
+// Renaming onto a subject a teacher already has must not list it twice, or the
+// teacher looks doubly qualified and load maths counts it twice.
+const subjMerged = rlist(rosterStaff, 'subjects', 'English', 'Maths')!
+ok(subjMerged[0].subjects.join() === 'Maths', 'renaming onto an existing entry merges rather than duplicates')
+
+// Rooms carry their display name in one of three fields depending on age of
+// the record; offering all three must rewrite only the ones that match.
+const rosterRooms = [
+  { id: 'r1', actualName: 'Lab 1', generatedName: 'R1' },
+  { id: 'r2', name: 'Lab 1' },
+  { id: 'r3', actualName: 'Hall' },
+]
+const renamedRooms = rrec(rosterRooms, ['actualName', 'name', 'generatedName'], 'Lab 1', 'Physics Lab')!
+ok(renamedRooms[0].actualName === 'Physics Lab' && renamedRooms[0].generatedName === 'R1',
+  'the display field moves and the generated id does not')
+ok((renamedRooms[1] as any).name === 'Physics Lab', 'an older record keyed on name also moves')
+ok(renamedRooms[2].actualName === 'Hall', 'a room that never had the name is untouched')
+
+// Nothing matched means the caller gets its own array back, so the cascade can
+// tell "changed" from "unchanged" by identity and skip a needless write.
+ok(rrec(rosterStaff, ['name'], 'Nobody At All', 'X') === rosterStaff, 'no match returns the same reference')
+ok(rlist(rosterStaff, 'subjects', 'Nobody At All', 'X') === rosterStaff, 'and likewise for string lists')
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

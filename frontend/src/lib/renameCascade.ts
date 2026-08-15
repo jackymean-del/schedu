@@ -33,19 +33,58 @@ export interface RenameReport {
   timetableChanged: boolean
   plansChanged: boolean
   recordsChanged: boolean
+  /** Roster rows moved too — teachers' subject lists, and the other schedules'
+   *  own staff/subject/room/section lists. */
+  rostersChanged: boolean
 }
 
-function patchSnapshot(uid: string, id: string, kind: RenameKind, from: string, to: string): boolean {
+/**
+ * A schedule other than the open one holds its OWN roster as well as its own
+ * timetable, and both have to move together.
+ *
+ * Renaming only the timetable was worse than not cascading at all: the other
+ * schedule ended up with a lesson taught by "Anita S. Sharma" and a roster
+ * listing "Anita Sharma", so one person became two — an orphaned lesson nobody
+ * can be marked absent for, beside a roster row that teaches nothing. That is
+ * the exact failure this cascade exists to prevent, reproduced one schedule
+ * over.
+ */
+function renameRosters(snap: Record<string, any>, kind: RenameKind, from: string, to: string): boolean {
+  let changed = false
+  const swap = (field: string, next: any) => {
+    if (next !== snap[field]) { snap[field] = next; changed = true }
+  }
+  if (kind === 'teacher') swap('staff', renameInRecords(snap.staff, ['name'], from, to))
+  if (kind === 'section') swap('sections', renameInRecords(snap.sections, ['name'], from, to))
+  // A room's display name is actualName, falling back to name or generatedName
+  // (see lib/roomShape). Offer all three: only the ones that actually hold the
+  // old name are rewritten.
+  if (kind === 'room') swap('rooms', renameInRecords(snap.rooms, ['actualName', 'name', 'generatedName'], from, to))
+  if (kind === 'subject') {
+    swap('subjects', renameInRecords(snap.subjects, ['name'], from, to))
+    // Teachers carry the subject NAMES they can teach. Miss these and the
+    // renamed subject has no qualified teacher in this schedule at all.
+    swap('staff', renameInStringLists(snap.staff, 'subjects', from, to))
+  }
+  return changed
+}
+
+interface SnapshotPatch { timetable: boolean; rosters: boolean }
+const NO_PATCH: SnapshotPatch = { timetable: false, rosters: false }
+
+function patchSnapshot(uid: string, id: string, kind: RenameKind, from: string, to: string): SnapshotPatch {
   const key = snapKeyFor(uid, id)
   let snap: Record<string, any> = {}
-  try { const raw = localStorage.getItem(key); if (raw) snap = JSON.parse(raw) } catch { return false }
+  try { const raw = localStorage.getItem(key); if (raw) snap = JSON.parse(raw) } catch { return NO_PATCH }
   const tt = renameInClassTT(snap.classTT, kind, from, to)
   const subs = renameInSubstitutions(snap.substitutions, kind, from, to)
-  if (tt === snap.classTT && subs === snap.substitutions) return false
+  const rosters = renameRosters(snap, kind, from, to)
+  const timetable = tt !== snap.classTT || subs !== snap.substitutions
+  if (!timetable && !rosters) return NO_PATCH
   snap.classTT = tt
   snap.substitutions = subs
-  try { localStorage.setItem(key, JSON.stringify(snap)) } catch { return false }
-  return true
+  try { localStorage.setItem(key, JSON.stringify(snap)) } catch { return NO_PATCH }
+  return { timetable, rosters }
 }
 
 /**
@@ -56,7 +95,7 @@ function patchSnapshot(uid: string, id: string, kind: RenameKind, from: string, 
  * so a rename that concerns one schedule never rewrites the others.
  */
 export function applyRename(kind: RenameKind, from: string, to: string): RenameReport {
-  const report: RenameReport = { schedules: 0, timetableChanged: false, plansChanged: false, recordsChanged: false }
+  const report: RenameReport = { schedules: 0, timetableChanged: false, plansChanged: false, recordsChanged: false, rostersChanged: false }
   if (!renameIsValid(from, to)) return report
 
   // ── Every active schedule's timetable ──
@@ -70,14 +109,29 @@ export function applyRename(kind: RenameKind, from: string, to: string): RenameR
   const openSubs = renameInSubstitutions(store.substitutions, kind, from, to)
   if (openTT !== store.classTT) { store.setClassTT?.(openTT); report.timetableChanged = true }
   if (openSubs !== store.substitutions) { store.setSubstitutions?.(openSubs); report.timetableChanged = true }
-  if (report.timetableChanged) {
+  // The open schedule's own roster ROW is rewritten by the grid cell that
+  // committed the rename. Its teachers' subject lists are not — nothing owns
+  // them, so a renamed subject silently lost every teacher qualified to teach
+  // it, and the engine (which matches teacher to subject by name) would report
+  // the subject as unstaffable on the next generation.
+  if (kind === 'subject') {
+    const nextStaff = renameInStringLists(store.staff, 'subjects', from, to)
+    if (nextStaff !== store.staff) { store.setStaff?.(nextStaff); report.rostersChanged = true }
+  }
+
+  if (report.timetableChanged || report.rostersChanged) {
     report.schedules++
     try { saveActiveTimetableSnapshot() } catch { /* nothing open yet */ }
   }
 
   for (const b of bundles) {
     if (b.id === openId) continue
-    if (patchSnapshot(uid, b.id, kind, from, to)) { report.schedules++; report.timetableChanged = true }
+    const patch = patchSnapshot(uid, b.id, kind, from, to)
+    if (patch.timetable || patch.rosters) {
+      report.schedules++
+      if (patch.timetable) report.timetableChanged = true
+      if (patch.rosters) report.rostersChanged = true
+    }
   }
 
   // ── Syllabus plans, keyed by subject||section ──
