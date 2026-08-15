@@ -2401,5 +2401,10 @@ ok(resolveCountryInput('India (CBSE norms)') === 'IN', 'matches the dataset labe
 ok(resolveCountryInput('Freedonia') === undefined, 'unknown country → undefined, never a wrong guess')
 ok(resolveCountryInput('') === undefined && resolveCountryInput(null) === undefined, 'empty input → undefined')
 
+// ──────────────────
+// ADD NEW CHECKS ABOVE THIS LINE.
+// process.exit() ends the run here, so anything appended below never
+// executes — and a check that never executes still reports as passing.
+// ──────────────────
 console.log(fail === 0 ? '\nALL BLUEPRINT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

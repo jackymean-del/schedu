@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
+import { TimetableOrphanBanner } from '@/components/TimetableOrphanBanner'
 import { useNamingTerms, plural, type Terms } from "@/lib/terms"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
@@ -4006,6 +4007,12 @@ export function TimetablePage() {
             )}
           </div>
         </div>
+
+        {/* Names the timetable still uses that the roster has dropped. Shown
+            here as well as in Master Data: this is where the ghost is
+            actually visible — a lesson that looks staffed by somebody who
+            left. */}
+        <TimetableOrphanBanner classTT={classTT} sections={sections} staff={staff} subjects={subjects} rooms={store.rooms} />
 
         {/* ══ Unified toolbar — identical in Grid AND Timeline ══════════
             One control surface for both modes: the same View pills (Normal /
