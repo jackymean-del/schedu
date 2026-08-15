@@ -271,3 +271,27 @@ export function renameInNestedKeys(
   }
   return walk(map, 0)
 }
+
+/**
+ * Rename map keys held in a FIELD of each record in a list.
+ *
+ * sectionStrengths is the live case: each row is one class-section, and its
+ * `subjectStrengths` is keyed by subject name ({ English: 40, PE: 20 }). Those
+ * counts decide how many students take each subject, which drives room
+ * capacity and grouping — filed under a subject name nothing else uses, they
+ * quietly stop being consulted.
+ */
+export function renameInRecordMaps<T extends Record<string, any>>(
+  list: T[] | undefined, field: keyof T, levels: RenameKind[],
+  kind: RenameKind, fromRaw: string, toRaw: string,
+): T[] | undefined {
+  if (!list || !renameIsValid(clean(fromRaw), clean(toRaw))) return list
+  let changed = false
+  const out = list.map(rec => {
+    const next = renameInNestedKeys(rec?.[field] as any, levels, kind, fromRaw, toRaw)
+    if (next === rec?.[field]) return rec
+    changed = true
+    return { ...rec, [field]: next }
+  })
+  return changed ? out : list
+}

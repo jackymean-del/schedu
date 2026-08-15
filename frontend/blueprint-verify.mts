@@ -2221,6 +2221,38 @@ ok(rkeys(undefined, ['section'], 'section', 'a', 'b') === undefined, 'an absent 
 // One level, the shape sectionCapacityOverrides uses.
 const allocCaps = rkeys({ 'I-A': 40 }, ['section'], 'section', 'I-A', 'I-Alpha')!
 ok(allocCaps['I-Alpha'] === 40, 'a flat section-keyed map renames too')
+// ── Student counts are name-keyed on both axes ──
+// One row per class-section, each holding per-SUBJECT numbers. These decide how
+// many students take each subject, which drives room capacity and grouping — so
+// a stale key is not cosmetic, it is a class sent to a room that cannot hold it.
+import { renameInRecords as srec, renameInRecordMaps as smaps } from './src/lib/resourceRename'
+
+const strengthRows = [
+  { id: 'a', sectionName: 'I-A', subjectStrengths: { English: 40, PE: 20 } },
+  { id: 'b', sectionName: 'I-B', subjectStrengths: { English: 35 } },
+]
+
+const strengthBySection = srec(strengthRows, ['sectionName'], 'I-A', 'I-Alpha')!
+ok(strengthBySection[0].sectionName === 'I-Alpha', 'a section rename moves the row it belongs to')
+ok(strengthBySection[1].sectionName === 'I-B', 'and leaves the others alone')
+
+const strengthBySubject = smaps(strengthRows, 'subjectStrengths', ['subject'], 'subject', 'English', 'English Language')!
+ok(strengthBySubject[0].subjectStrengths['English Language'] === 40, 'a subject rename moves the count')
+ok(strengthBySubject[0].subjectStrengths.PE === 20, 'other subjects in the same row keep their counts')
+ok(strengthBySubject[1].subjectStrengths['English Language'] === 35, 'in every section, not just the first')
+
+// A rename of a kind these rows do not key on must not rebuild them.
+ok(smaps(strengthRows, 'subjectStrengths', ['subject'], 'teacher', 'Anita', 'Anita S.') === strengthRows,
+  'a teacher rename leaves student counts untouched')
+ok(smaps(strengthRows, 'subjectStrengths', ['subject'], 'subject', 'Nothing', 'X') === strengthRows,
+  'no match returns the same reference')
+
+// Renaming onto a subject the section already counts must not overwrite it —
+// same incumbent-wins rule as everywhere else, since these are typed-in numbers.
+const strengthCollide = smaps([{ id: 'c', subjectStrengths: { English: 40, Maths: 30 } }],
+  'subjectStrengths', ['subject'], 'subject', 'English', 'Maths')!
+ok(strengthCollide[0].subjectStrengths.Maths === 30, 'the existing count survives')
+ok(strengthCollide[0].subjectStrengths.English === 40, 'and the one that could not move stays visible')
 // ── Free-typed country (as captured at sign-up) → dataset code ──
 import { resolveCountryInput } from './src/lib/countryHours'
 ok(resolveCountryInput('India') === 'IN', 'resolves a plain country name')

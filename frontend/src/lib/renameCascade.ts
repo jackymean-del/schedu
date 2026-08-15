@@ -24,7 +24,8 @@ import { useUrgentPullouts } from './urgentReassignments'
 import { useSyllabus } from './syllabusTracking'
 import {
   renameInClassTT, renameInSubstitutions, renameInPlans,
-  renameInRecords, renameInStringLists, renameInNestedKeys, renameIsValid, type RenameKind,
+  renameInRecords, renameInStringLists, renameInNestedKeys, renameInRecordMaps,
+  renameIsValid, type RenameKind,
 } from './resourceRename'
 
 /** What the cascade touched, so the UI can say so honestly. */
@@ -80,6 +81,9 @@ function renameRosters(snap: Record<string, any>, kind: RenameKind, from: string
   for (const [field, levels] of ALLOCATION_SHAPES) {
     swap(field, renameInNestedKeys(snap[field], levels, kind, from, to))
   }
+  // Student counts: one row per section, each holding per-SUBJECT numbers.
+  if (kind === 'section') swap('sectionStrengths', renameInRecords(snap.sectionStrengths, ['sectionName'], from, to))
+  if (kind === 'subject') swap('sectionStrengths', renameInRecordMaps(snap.sectionStrengths, 'subjectStrengths', ['subject'], kind, from, to))
   return changed
 }
 
@@ -142,6 +146,14 @@ export function applyRename(kind: RenameKind, from: string, to: string): RenameR
       useTimetableStore.setState({ [field]: nextAlloc } as any)
       report.rostersChanged = true
     }
+  }
+
+  const nextStrengths = kind === 'section'
+    ? renameInRecords(store.sectionStrengths, ['sectionName'], from, to)
+    : renameInRecordMaps(store.sectionStrengths, 'subjectStrengths', ['subject'], kind, from, to)
+  if (nextStrengths !== store.sectionStrengths) {
+    useTimetableStore.setState({ sectionStrengths: nextStrengths } as any)
+    report.rostersChanged = true
   }
 
   if (report.timetableChanged || report.rostersChanged) {
