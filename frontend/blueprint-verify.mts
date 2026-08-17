@@ -506,7 +506,7 @@ import {
   coverageLoss, hoursNotSpent, bonusSessions, awaitingConfirmation, slotKey,
   type SubCoverageRecord,
 } from './src/lib/substitutionCoverage'
-import { withLostImpact, lostHours, riskOf } from './src/lib/syllabusTracking'
+import { withLostImpact } from './src/lib/syllabusTracking'   // lostHours/riskOf already imported above
 
 const sub = (o: Partial<SubCoverageRecord>): SubCoverageRecord => ({
   id: o.id ?? Math.random().toString(36).slice(2, 8),
@@ -1789,7 +1789,11 @@ ok(!!subsSec['I-Alpha|MONDAY|p1'] && !subsSec['I-A|MONDAY|p1'],
 ok(renameInSubstitutions(subs, 'room', 'R1', 'R9') === subs, 'venues never appear in substitutions')
 
 // Syllabus plans are keyed subject||section AND carry the names as fields.
-const renamePlans: any = {
+// Typed, not `any`: with `any` the generic collapsed and the return lost
+// `chapters`, so the assertion below that a term's recorded coverage survives a
+// rename was checking a property TypeScript did not believe existed.
+interface RenamePlan { subject: string; section: string; chapters: { id: string }[] }
+const renamePlans: Record<string, RenamePlan> = {
   'English||I-A': { subject: 'English', section: 'I-A', chapters: [{ id: 'c1' }] },
   'Maths||I-A':   { subject: 'Maths',   section: 'I-A', chapters: [] },
 }
@@ -1802,7 +1806,8 @@ const secPlans = renameInPlans(renamePlans, 'section', 'I-A', 'I-Alpha')!
 ok(!!secPlans['English||I-Alpha'] && !!secPlans['Maths||I-Alpha'], 'a class rename moves every plan for it')
 
 // A rename onto an existing plan must not overwrite real recorded progress.
-const dupPlans: any = {
+interface HoursPlan { subject: string; section: string; loggedHours: number }
+const dupPlans: Record<string, HoursPlan> = {
   'English||I-A': { subject: 'English', section: 'I-A', loggedHours: 0 },
   'Eng||I-A':     { subject: 'Eng',     section: 'I-A', loggedHours: 12 },
 }
@@ -1810,7 +1815,7 @@ ok(renameInPlans(dupPlans, 'subject', 'Eng', 'English')!['English||I-A'].loggedH
   'renaming a subject onto one that already has a plan keeps the existing plan, not the incoming one')
 // Declared in the OTHER order: the outcome must come from the rule, not from
 // which key JavaScript happens to iterate first.
-const dupSwapped: any = {
+const dupSwapped: Record<string, HoursPlan> = {
   'Eng||I-A':     { subject: 'Eng',     section: 'I-A', loggedHours: 12 },
   'English||I-A': { subject: 'English', section: 'I-A', loggedHours: 0 },
 }
@@ -2241,7 +2246,8 @@ ok(allocCaps['I-Alpha'] === 40, 'a flat section-keyed map renames too')
 // a stale key is not cosmetic, it is a class sent to a room that cannot hold it.
 import { renameInRecords as srec, renameInRecordMaps as smaps } from './src/lib/resourceRename'
 
-const strengthRows = [
+interface StrengthRow { id: string; sectionName: string; subjectStrengths: Record<string, number> }
+const strengthRows: StrengthRow[] = [
   { id: 'a', sectionName: 'I-A', subjectStrengths: { English: 40, PE: 20 } },
   { id: 'b', sectionName: 'I-B', subjectStrengths: { English: 35 } },
 ]
