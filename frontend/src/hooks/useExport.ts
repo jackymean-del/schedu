@@ -1,4 +1,5 @@
 import { useTimetableStore } from "@/store/timetableStore"
+import { safeSheetName } from '@/lib/sheetNames'
 import { ORG_CONFIGS } from "@/lib/orgData"
 
 // ─── Excel format types ────────────────────────────────────────────────
@@ -18,6 +19,10 @@ export function useExport() {
     const XLSX = await import("xlsx")
 
     const wb   = XLSX.utils.book_new()
+    // One workbook, so one register of names. These already stripped
+    // forbidden characters but never de-duplicated, so two sections called
+    // I-A — which this app allows — threw and produced no file.
+    const usedSheets = new Set<string>()
     const days = config.workDays
     const classPeriods = periods.filter(p => p.type === "class")
     const org  = ORG_CONFIGS[config.orgType ?? "school"]
@@ -55,7 +60,7 @@ export function useExport() {
           })
           rows.push(row)
         })
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), day.slice(0,10))
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), safeSheetName(day, usedSheets))
       })
     }
 
@@ -76,7 +81,7 @@ export function useExport() {
           rows.push(row)
         })
         const ws = XLSX.utils.aoa_to_sheet(rows)
-        XLSX.utils.book_append_sheet(wb, ws, sec.name.replace(/[^\w]/g,"_").slice(0,25))
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName(sec.name, usedSheets))
       })
     }
 
@@ -95,7 +100,7 @@ export function useExport() {
           })
           rows.push(row)
         })
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), day.slice(0,10))
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), safeSheetName(day, usedSheets))
       })
     }
 
@@ -117,7 +122,7 @@ export function useExport() {
           rows.push(row)
         })
         const ws = XLSX.utils.aoa_to_sheet(rows)
-        XLSX.utils.book_append_sheet(wb, ws, st.name.replace(/[^\w]/g,"_").slice(0,25))
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName(st.name, usedSheets))
       })
     }
 
@@ -140,7 +145,7 @@ export function useExport() {
           })
           rows.push(row)
         })
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), day.slice(0,10))
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), safeSheetName(day, usedSheets))
       })
     }
 
@@ -164,7 +169,7 @@ export function useExport() {
           rows.push(row)
         })
         const ws = XLSX.utils.aoa_to_sheet(rows)
-        XLSX.utils.book_append_sheet(wb, ws, room.replace(/[^\w]/g,"_").slice(0,25))
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName(room, usedSheets))
       })
     }
 

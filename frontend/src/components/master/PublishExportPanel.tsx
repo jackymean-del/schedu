@@ -16,6 +16,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { safeSheetName } from '@/lib/sheetNames'
 import { useDialog } from '@/hooks/useDialog'
 import {
   X, Download, FileSpreadsheet, FileText, Printer,
@@ -138,6 +139,9 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
         // ── Class timetables workbook ──
         if (selected.has('class-xlsx')) {
           const wb = XLSX.utils.book_new()
+          // One sheet per section, named from data the school typed: two classes
+          // called I-A, or one called "I-A/B", threw and produced no file at all.
+          const usedClassSheets = new Set<string>()
           opts.sections.forEach(sec => {
             const aoa = buildClassSheet(sec.name, opts)
             const ws  = XLSX.utils.aoa_to_sheet(aoa)
@@ -146,7 +150,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
               { wch: 18 },
               ...opts.workDays.map(() => ({ wch: 20 })),
             ]
-            XLSX.utils.book_append_sheet(wb, ws, sec.name.slice(0, 31))
+            XLSX.utils.book_append_sheet(wb, ws, safeSheetName(sec.name, usedClassSheets))
           })
           XLSX.writeFile(wb, 'class-timetables.xlsx')
           completed.push('class-xlsx')
@@ -156,6 +160,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
         // ── Teacher timetables workbook ──
         if (selected.has('teacher-xlsx')) {
           const wb = XLSX.utils.book_new()
+          const usedTeacherSheets = new Set<string>()
           opts.staff.forEach(teacher => {
             const aoa = buildTeacherSheet(teacher.name, opts)
             const ws  = XLSX.utils.aoa_to_sheet(aoa)
@@ -163,9 +168,9 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
               { wch: 18 },
               ...opts.workDays.map(() => ({ wch: 22 })),
             ]
-            // Sheet names must be ≤31 chars
-            const sheetName = teacher.name.slice(0, 31)
-            XLSX.utils.book_append_sheet(wb, ws, sheetName)
+            // Two staff sharing a name is allowed (lib/nameConflicts warns
+            // rather than blocks), so the workbook has to survive it.
+            XLSX.utils.book_append_sheet(wb, ws, safeSheetName(teacher.name, usedTeacherSheets))
           })
           XLSX.writeFile(wb, 'teacher-timetables.xlsx')
           completed.push('teacher-xlsx')

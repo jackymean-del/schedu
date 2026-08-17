@@ -28,6 +28,7 @@
  */
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react'
+import { safeSheetName } from '@/lib/sheetNames'
 // xlsx is loaded on demand (export/import click) — keeps it out of the main bundle
 import {
   Plus, Upload, Download, ClipboardPaste, Search, RefreshCw,
@@ -871,7 +872,7 @@ export function DataGrid<T>({
     // auto-size columns based on header label length
     ws['!cols'] = columns.map(c => ({ wch: Math.max(c.label.length + 2, 12) }))
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, (title ?? 'Data').slice(0, 30))
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName(title ?? 'Data', new Set<string>()))
     XLSX.writeFile(wb, `${(title ?? 'data').toLowerCase().replace(/\s+/g, '-')}.xlsx`)
   }
 

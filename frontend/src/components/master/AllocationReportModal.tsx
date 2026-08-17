@@ -13,6 +13,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
+import { safeSheetName } from '@/lib/sheetNames'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { useDialog } from '@/hooks/useDialog'
 // xlsx is loaded on demand (export click) — keeps it out of the main bundle
@@ -446,7 +447,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
     const ws = XLSX.utils.aoa_to_sheet(data)
     ws['!cols'] = data[0].map((_, ci) => ({ wch: Math.min(30, Math.max(10, ...data.map(r => String(r[ci] ?? '').length))) }))
     const tabName = activeTab === 'class' ? 'Class-wise' : activeTab === 'subject' ? 'Subject-wise' : activeTab === 'teacher' ? 'Teacher-wise' : 'Room-wise'
-    XLSX.utils.book_append_sheet(wb, ws, tabName)
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName(tabName, new Set<string>()))
     XLSX.writeFile(wb, `${title.replace(/ /g, '_')}_${activeTab}.xlsx`)
   }, [buildExportData, title, activeTab])
 
