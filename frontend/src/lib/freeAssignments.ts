@@ -3,8 +3,8 @@
  * on a specific date: a free teacher gets exam invigilation, an empty hall
  * hosts a club, a class with no lesson gets supervised self-study.
  *
- * Assignments are date-scoped (unlike substitutions, which are day-of-week
- * keyed) and label-only: they never touch the generated timetable. They show
+ * Assignments are date-scoped, as substitutions now are too, and label-only:
+ * they never touch the generated timetable. They show
  * up on the Live board (an "On assignment" group between In-session and Free)
  * and as dashed TASK blocks on the Day grid for that entity's row.
  *

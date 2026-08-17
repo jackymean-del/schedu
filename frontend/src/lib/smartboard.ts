@@ -15,6 +15,7 @@
  * can be tested at 7am, mid-lesson, and at midnight.
  */
 import type { Period } from '@/types'
+import { subKey } from './substitutionKeys'
 import { sectionPeriodTimes } from './bellTimes'
 import { ringsForSection, nextRing, describeRing, type Ring } from './bellSchedule'
 
@@ -123,6 +124,7 @@ interface BoardBundle {
 export function boardRows(
   bundles: BoardBundle[],
   dayKey: string,
+  isoDate: string,
   nowMin: number,
   absentTeachers: Set<string>,
 ): BoardRow[] {
@@ -139,7 +141,9 @@ export function boardRows(
         row.endMin = t.endMin
         const cell = b.classTT?.[s.name]?.[dayKey]?.[p.id]
         if (cell?.subject) {
-          const sub = b.substitutions?.[`${s.name}|${dayKey}|${p.id}`]
+          // Dated: the corridor screen must name who is ACTUALLY teaching now,
+          // and a weekday key stopped matching once covers became dated.
+          const sub = b.substitutions?.[subKey(s.name, isoDate, p.id)]
           const timetabled = cell.teacher ?? ''
           row.subject = cell.subject
           row.room = (cell.room ?? '').trim() || undefined

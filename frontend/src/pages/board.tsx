@@ -11,6 +11,7 @@
  * lives in lib/smartboard so it can be tested at 7am, mid-lesson and midnight.
  */
 import { useEffect, useMemo, useState } from 'react'
+import { localISO } from '@/lib/substitutionKeys'
 import { useAuthStore } from '@/store/authStore'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -94,8 +95,8 @@ export function BoardPage() {
 
   const absent = useMemo(() => new Set(teachersOnLeaveOn(leaves, isoDate)), [leaves, isoDate])
   const rows = useMemo(
-    () => boardRows(bundles as any, dayKey, nowMin, absent),
-    [bundles, dayKey, nowMin, absent],
+    () => boardRows(bundles as any, dayKey, localISO(now), nowMin, absent),
+    [bundles, dayKey, now, nowMin, absent],
   )
   const uncovered = useMemo(() => uncoveredRows(rows), [rows])
   const teaching = rows.filter(r => r.subject)

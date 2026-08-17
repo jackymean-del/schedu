@@ -1513,31 +1513,45 @@ const boardBundle: any = {
   substitutions: {},
 }
 // 08:30 is inside P1 (08:15–08:55).
-const at830 = boardRows([boardBundle], 'MONDAY', 8 * 60 + 30, new Set<string>())
+const at830 = boardRows([boardBundle], 'MONDAY', '2026-08-17', 8 * 60 + 30, new Set<string>())
 ok(at830.length === 2, 'every class gets a row')
 ok(at830.find(r => r.section === 'I-A')?.subject === 'English', 'showing what is on right now')
 ok(at830.find(r => r.section === 'I-A')?.endMin === 8 * 60 + 55, 'and when it finishes')
 
 // A free class keeps its row rather than vanishing — a list that changes
 // length through the day reads as a fault.
-const at940 = boardRows([boardBundle], 'MONDAY', 9 * 60 + 40, new Set<string>())
+const at940 = boardRows([boardBundle], 'MONDAY', '2026-08-17', 9 * 60 + 40, new Set<string>())
 ok(at940.length === 2 && at940.every(r => !r.subject),
   'during the break every class still has a row, with nothing on it')
 
 // The one thing a board exists to shout about.
-const teacherOut = boardRows([boardBundle], 'MONDAY', 8 * 60 + 30, new Set(['Anita']))
+const teacherOut = boardRows([boardBundle], 'MONDAY', '2026-08-17', 8 * 60 + 30, new Set(['Anita']))
 ok(teacherOut.find(r => r.section === 'I-A')?.uncovered === true,
   'a class whose teacher is absent with no cover is flagged')
 ok(teacherOut.find(r => r.section === 'I-B')?.uncovered === false, 'and the others are not')
 ok(uncoveredRows(teacherOut).length === 1, 'only that one is worth flashing')
 
-const covered: any = { ...boardBundle, substitutions: { 'I-A|MONDAY|p1': 'Meera' } }
-const withSub = boardRows([covered], 'MONDAY', 8 * 60 + 30, new Set(['Anita']))
+// Dated, as the app now writes it — a weekday key here would pass only
+// because the board ignored it, which is the bug this replaced.
+const covered: any = { ...boardBundle, substitutions: { 'I-A|2026-08-17|p1': 'Meera' } }
+const withSub = boardRows([covered], 'MONDAY', '2026-08-17', 8 * 60 + 30, new Set(['Anita']))
 const iaSub = withSub.find(r => r.section === 'I-A')!
 ok(iaSub.uncovered === false, 'once a substitute is assigned the class is no longer uncovered')
 ok(iaSub.teacher === 'Meera' && iaSub.isSub,
   'and the board names who is ACTUALLY in the room, marked as cover')
 ok(uncoveredRows(withSub).length === 0, 'so nothing flashes')
+
+// The corridor screen is the one surface where naming the wrong person is
+// public. When covers became dated this lookup was left on the weekday key,
+// so it matched nothing and the board showed the ABSENT teacher — verified
+// here by feeding it exactly that stale shape.
+const staleWeekdayCover: any = { ...boardBundle, substitutions: { 'I-A|MONDAY|p1': 'Meera' } }
+const staleRows = boardRows([staleWeekdayCover], 'MONDAY', '2026-08-17', 8 * 60 + 30, new Set(['Anita']))
+ok(staleRows.find(r => r.section === 'I-A')?.teacher === 'Anita',
+  'a weekday-keyed cover is NOT honoured, so the mismatch is visible instead of silent')
+const otherDay = boardRows([covered], 'MONDAY', '2026-08-24', 8 * 60 + 30, new Set(['Anita']))
+ok(otherDay.find(r => r.section === 'I-A')?.teacher === 'Anita',
+  "and last Monday's cover does not staff this Monday's class")
 
 // Sections on different clocks must not be merged into one countdown wrongly.
 const mergedRings = soonestRings([{ sections: ['I-A', 'Nursery-A'], config: bellConfig, periods: bellPeriods }])
