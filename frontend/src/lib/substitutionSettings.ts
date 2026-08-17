@@ -102,3 +102,27 @@ export function scoreCandidate(weights: ScoringWeights, params: {
     - weightValue(weights.dailySubBalance) * params.todaySubs
     - weightValue(weights.weeklySubBalance) * params.weekSubs
 }
+
+/**
+ * Fill in anything a stored settings object is missing.
+ *
+ * These settings are persisted per schedule, so a snapshot saved before a field
+ * existed comes back without it. The read site used `settings ?? DEFAULTS`,
+ * which only helps when the WHOLE object is absent — a partial one passes
+ * straight through, and the first read of `weights.dailyWorkloadBalance` throws.
+ * That took out the calendar entirely: the ops console a school uses every
+ * morning to arrange cover, replaced by an error boundary, because one nested
+ * key was added after they last saved.
+ *
+ * Merged per group rather than deeply, because these three are flat records of
+ * scalars — and facultyOverrides is a map of real per-teacher decisions, so it
+ * is taken as-is rather than merged against a default that has no entries.
+ */
+export function withSubstitutionDefaults(stored: Partial<SubstitutionSettings> | null | undefined): SubstitutionSettings {
+  const s = stored ?? {}
+  return {
+    weights: { ...DEFAULT_SUBSTITUTION_SETTINGS.weights, ...(s.weights ?? {}) },
+    defaults: { ...DEFAULT_SUBSTITUTION_SETTINGS.defaults, ...(s.defaults ?? {}) },
+    facultyOverrides: s.facultyOverrides ?? {},
+  }
+}

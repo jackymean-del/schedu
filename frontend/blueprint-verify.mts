@@ -2451,6 +2451,41 @@ const all = migrateWeekdaySubs(
 ok(all.next['A|2026-08-16|p'] === '1', 'Sunday is the start of that week')
 ok(all.next['A|2026-08-17|p'] === '2', 'Monday follows it')
 ok(all.next['A|2026-08-22|p'] === '3', 'and Saturday ends it')
+// ── A settings object saved before a field existed must not take out the page ──
+// substitutionSettings is persisted per schedule. The read site used
+// `stored ?? DEFAULTS`, which only helps when the WHOLE object is missing; a
+// partial one passed straight through and the first read of
+// weights.dailyWorkloadBalance threw, replacing the ops console — the screen a
+// school uses every morning to arrange cover — with an error boundary.
+import { withSubstitutionDefaults, DEFAULT_SUBSTITUTION_SETTINGS } from './src/lib/substitutionSettings'
+
+const subsFromOldSnapshot: any = { defaults: { maxSubstitutesPerWeek: 1 }, facultyOverrides: {} }
+const subsMerged = withSubstitutionDefaults(subsFromOldSnapshot)
+ok(!!subsMerged.weights, 'a snapshot with no weights at all still gets a full set')
+ok(subsMerged.weights.dailyWorkloadBalance === DEFAULT_SUBSTITUTION_SETTINGS.weights.dailyWorkloadBalance,
+  'and the missing weight is the default, not undefined')
+ok(subsMerged.defaults.maxSubstitutesPerWeek === 1, "the school's own stored value survives the merge")
+ok(subsMerged.defaults.maxPeriodsPerDay === DEFAULT_SUBSTITUTION_SETTINGS.defaults.maxPeriodsPerDay,
+  'while the fields it never set fall back')
+
+ok(!!withSubstitutionDefaults(null).weights, 'null is still handled, as the old `??` did')
+ok(!!withSubstitutionDefaults(undefined).defaults, 'and undefined')
+ok(Object.keys(withSubstitutionDefaults({}).weights).length ===
+   Object.keys(DEFAULT_SUBSTITUTION_SETTINGS.weights).length, 'an empty object yields every weight')
+
+// facultyOverrides is a map of real per-teacher decisions, not a shape with
+// defaults to fill in — merging a default that has no entries would be
+// meaningless, and inventing entries would be worse.
+const subsWithOverride = withSubstitutionDefaults({ facultyOverrides: { t1: { canSub: false, autoAssign: false } } } as any)
+ok(subsWithOverride.facultyOverrides.t1.canSub === false, 'per-teacher overrides are carried through untouched')
+ok(Object.keys(withSubstitutionDefaults({} as any).facultyOverrides).length === 0,
+  'and no teacher is invented when there are none')
+
+// A stored partial must not be mutated in place — it belongs to the store.
+const subsOriginal: any = { defaults: { maxPeriodsPerDay: 4 } }
+withSubstitutionDefaults(subsOriginal)
+ok(subsOriginal.weights === undefined && Object.keys(subsOriginal.defaults).length === 1,
+  'the caller\'s stored object is left exactly as it was')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

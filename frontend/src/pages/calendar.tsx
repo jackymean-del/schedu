@@ -21,8 +21,8 @@ import { useSchoolEvents, eventCoversDate, eventDates, teachingSuspendedOn, type
 import { DAY_NAMES as DAY_KEY } from '@/lib/days'
 import { useDialog } from '@/hooks/useDialog'
 import {
-  type SubstitutionSettings, type MatchTier, DEFAULT_SUBSTITUTION_SETTINGS,
-  overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
+  type SubstitutionSettings, type MatchTier,
+  overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate, withSubstitutionDefaults,
 } from '@/lib/substitutionSettings'
 import { SubstitutionSettingsModal } from '@/components/calendar/SubstitutionSettingsModal'
 import { BellScheduleModal } from '@/components/calendar/BellScheduleModal'
@@ -487,7 +487,10 @@ export function CalendarPage() {
   const [bellOpen, setBellOpen] = useState(false)
   const orgName = useOrgProfile(s => s.name)
 
-  const substitutionSettings: SubstitutionSettings = store.substitutionSettings ?? DEFAULT_SUBSTITUTION_SETTINGS
+  // Merged, not just defaulted: a schedule saved before a settings field
+  // existed restores a PARTIAL object, which `?? DEFAULTS` lets through and
+  // which then throws on the first nested read.
+  const substitutionSettings: SubstitutionSettings = withSubstitutionDefaults(store.substitutionSettings)
   const updateSettings = (next: SubstitutionSettings) => {
     store.setSubstitutionSettings(next)
     saveActiveTimetableSnapshot()
