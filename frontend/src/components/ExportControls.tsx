@@ -16,6 +16,7 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
 }) {
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<PrintItem[] | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -47,7 +48,14 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
           <div onClick={e => e.stopPropagation()}
             style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 300, background: '#fff', border: '1px solid #E5EBF5', borderRadius: 10, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', minWidth: 200, padding: '6px 0' }}>
             <button style={menuItem}
-              onClick={() => { exportSheetsToXLSX(filename, sheets()); setOpen(false) }}>
+              onClick={() => {
+                setExportError(null)
+                // The promise was previously dropped: when the workbook could not
+                // be built the menu closed and no file appeared, with nothing said.
+                exportSheetsToXLSX(filename, sheets())
+                  .catch(err => setExportError(err?.message ? String(err.message) : 'Could not build the Excel file.'))
+                setOpen(false)
+              }}>
               <span style={{ fontSize: 15 }}>📊</span> Export to Excel
             </button>
             <button style={menuItem} onClick={openPreview}>
@@ -56,6 +64,18 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
           </div>
         )}
       </div>
+
+      {exportError && (
+        <div role="alert" style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 301,
+          background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', borderRadius: 8,
+          padding: '7px 10px', fontSize: 11.5, maxWidth: 280, lineHeight: 1.45 }}>
+          {exportError}{' '}
+          <button onClick={() => setExportError(null)}
+            style={{ background: 'none', border: 'none', color: '#991B1B', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Prominent Print button — opens the shared preview */}
       <button onClick={openPreview}

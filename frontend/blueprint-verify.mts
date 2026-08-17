@@ -2536,6 +2536,44 @@ ok(migrateWeekdaySubs({ 'A|Moonday|p': 'x' }, dcWed).migrated === 0,
   "'Moonday' truncates to MOO, so it is not silently filed as Monday")
 ok(migrateWeekdaySubs({ 'A|Mondayy|p': 'x' }, dcWed).next['A|2026-08-17|p'] === 'x',
   'while a trailing typo after MON still resolves, which is what a three-letter compare means')
+// ── Excel export is a Free-plan promise, and school names broke it ──
+// Sheet names come from section names, which a school types. book_append_sheet
+// throws on a duplicate or a forbidden character, and the caller dropped the
+// promise — so the menu closed and no file appeared, with nothing said.
+import { safeSheetName } from './src/lib/sheetNames'
+
+const shUsed = () => new Set<string>()
+
+let u = shUsed()
+ok(safeSheetName('I-A', u) === 'I-A', 'an ordinary name is left alone')
+ok(safeSheetName('I-A', u) === 'I-A (2)', 'a second section with the same name is disambiguated')
+ok(safeSheetName('I-A', u) === 'I-A (3)', 'and a third')
+
+// This app deliberately allows duplicate names (lib/nameConflicts warns rather
+// than blocks), so export has to cope with what the school is allowed to type.
+u = shUsed()
+ok(safeSheetName('I-A', u) === 'I-A' && safeSheetName('i-a', u) === 'i-a (2)',
+  'names differing only in case still collide, because Excel treats them as one')
+
+// Excel truncates at 31, so two long names can collide after truncation.
+u = shUsed()
+const long1 = safeSheetName('Class I-A Morning Shift Section Alpha', u)
+const long2 = safeSheetName('Class I-A Morning Shift Section Beta', u)
+ok(long1.length <= 31 && long2.length <= 31, 'both stay within the 31-character limit')
+ok(long1 !== long2, 'and they do not collide after truncation')
+ok(long2.endsWith('(2)'), 'the suffix survives, because the STEM is trimmed to make room for it')
+
+// : \ / ? * [ ] are rejected by Excel. "I-A/B" is a normal combined class.
+u = shUsed()
+for (const bad of ['I-A/B', 'I-A\B', 'I-A [Main]', 'Grade I: A', 'What? A*']) {
+  const out = safeSheetName(bad, u)
+  ok(!/[:\/?*[\]]/.test(out), `"${bad}" comes back without characters Excel forbids`)
+}
+
+// A blank name must still produce something addressable, twice over.
+u = shUsed()
+ok(safeSheetName('', u) === 'Sheet' && safeSheetName('   ', u) === 'Sheet (2)',
+  'blank names fall back to Sheet and still de-duplicate')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

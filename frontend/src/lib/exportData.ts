@@ -5,6 +5,7 @@
  */
 import { useAuthStore } from '@/store/authStore'
 import { useTimetableStore } from '@/store/timetableStore'
+import { safeSheetName } from './sheetNames'
 
 export interface ExportSheet {
   name: string
@@ -16,9 +17,10 @@ export interface ExportSheet {
 export async function exportSheetsToXLSX(filename: string, sheets: ExportSheet[]): Promise<void> {
   const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
+  const used = new Set<string>()
   for (const s of sheets) {
     const ws = XLSX.utils.aoa_to_sheet(s.rows.length ? s.rows : [['(no data)']])
-    XLSX.utils.book_append_sheet(wb, ws, (s.name || 'Sheet').slice(0, 31))
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName(s.name, used))
   }
   XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`)
 }
@@ -46,3 +48,4 @@ export function institutionInfo(): { name: string; logo?: string; address?: stri
   return { name, logo, address, isPaid }
 }
 
+export { safeSheetName } from './sheetNames'
