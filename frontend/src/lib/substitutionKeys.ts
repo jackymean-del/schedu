@@ -22,7 +22,7 @@
  * overlay is dated. A surface that shows the template without a date therefore
  * shows no substitutions, which is right: a template has no covers.
  */
-import { DAY_NAMES } from './days'
+import { DAY_NAMES, sameDay } from './days'
 
 /**
  * Local calendar date as YYYY-MM-DD.
@@ -73,7 +73,11 @@ export function migrateWeekdaySubs(
   for (const [key, value] of Object.entries(source)) {
     if (isDatedSubKey(key)) { next[key] = value; continue }
     const parts = key.split('|')
-    const idx = parts.length === 3 ? DAY_NAMES.findIndex(d => d === (parts[1] ?? '').toUpperCase()) : -1
+    // sameDay, not equality: lib/days documents that day keys arrive as
+    // 'MONDAY', 'Mon' or 'monday' depending on which generation of the wizard
+    // or which pasted spreadsheet wrote them. An exact match migrated two of
+    // those three and left the school's covers behind.
+    const idx = parts.length === 3 ? DAY_NAMES.findIndex(d => sameDay(d, parts[1] ?? '')) : -1
     if (idx < 0) { next[key] = value; continue }
     const when = new Date(sunday)
     when.setDate(when.getDate() + idx)

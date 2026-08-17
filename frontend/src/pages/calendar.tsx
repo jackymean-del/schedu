@@ -10,7 +10,7 @@
  */
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { subKey, localISO } from '@/lib/substitutionKeys'
-import { DAY_NAMES } from '@/lib/days'
+import { DAY_NAMES, sameDay } from '@/lib/days'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import {
@@ -271,7 +271,7 @@ export function CalendarPage() {
    * which is what the weekday keys used to do.
    */
   const dateOfWeekday = (day: string): string => {
-    const idx = DAY_NAMES.findIndex(d => d === (day ?? '').toUpperCase())
+    const idx = DAY_NAMES.findIndex(d => sameDay(d, day ?? ''))
     if (idx < 0) return isoDate
     const sunday = new Date(date)
     sunday.setDate(sunday.getDate() - sunday.getDay())

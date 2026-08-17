@@ -27,7 +27,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { subKey, localISO } from '@/lib/substitutionKeys'
-import { DAY_NAMES } from '@/lib/days'
+import { DAY_NAMES, sameDay } from '@/lib/days'
 import type { Period, Section, Staff, Subject } from "@/types"
 import type { ClassTimetable, TeacherSchedule } from "@/types"
 import type { BlockedSlot, DynamicLearningGroup } from "@/lib/schedulingEngine"
@@ -794,7 +794,7 @@ export function CalendarView({
    * curDate — and a cover belongs to a date, not to every Monday.
    */
   const dateOfWeekday = useCallback((dayKey:string):string => {
-    const idx = DAY_NAMES.findIndex(d => d === (dayKey ?? '').toUpperCase())
+    const idx = DAY_NAMES.findIndex(d => sameDay(d, dayKey ?? ''))
     const d = new Date(curDate)
     d.setDate(d.getDate() - d.getDay() + (idx < 0 ? d.getDay() : idx))
     return localISO(d)

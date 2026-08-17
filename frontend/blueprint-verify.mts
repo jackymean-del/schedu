@@ -2486,6 +2486,36 @@ const subsOriginal: any = { defaults: { maxPeriodsPerDay: 4 } }
 withSubstitutionDefaults(subsOriginal)
 ok(subsOriginal.weights === undefined && Object.keys(subsOriginal.defaults).length === 1,
   'the caller\'s stored object is left exactly as it was')
+// ── Day keys arrive in three spellings, and all three have to work ──
+// lib/days says so in a comment and provides sameDay for it: keys have been
+// written by several generations of the wizard and by pasted spreadsheets, so
+// 'MONDAY', 'Mon' and 'monday' all occur. Code that compares them with === gets
+// two of the three right, which is the worst possible outcome — it looks fine
+// on the developer's data and silently drops somebody else's.
+const dcWed = new Date(2026, 7, 19)   // Wednesday 19 Aug 2026
+for (const spelling of ['MONDAY', 'Mon', 'monday', 'mon', 'Monday']) {
+  const r = migrateWeekdaySubs({ [`I-A|${spelling}|p1`]: 'Ravi Kumar' }, dcWed)
+  ok(r.migrated === 1, `a legacy key spelled "${spelling}" migrates`)
+  ok(r.next['I-A|2026-08-17|p1'] === 'Ravi Kumar', `and lands on the same Monday whatever the spelling`)
+}
+
+// The three-letter comparison must not collide two different days: Sunday and
+// Saturday, Tuesday and Thursday are the pairs that would hurt.
+const dcAll = migrateWeekdaySubs({
+  'A|Sun|p': 'sun', 'A|Sat|p': 'sat', 'A|Tue|p': 'tue', 'A|Thu|p': 'thu',
+}, dcWed)
+ok(dcAll.migrated === 4, 'every abbreviated day migrates')
+ok(dcAll.next['A|2026-08-16|p'] === 'sun' && dcAll.next['A|2026-08-22|p'] === 'sat',
+  'Sun and Sat stay distinct')
+ok(dcAll.next['A|2026-08-18|p'] === 'tue' && dcAll.next['A|2026-08-20|p'] === 'thu',
+  'Tue and Thu stay distinct')
+
+// Something that is not a day at all still must not be guessed at.
+ok(migrateWeekdaySubs({ 'A|Mo|p': 'x' }, dcWed).migrated === 0, 'a two-letter fragment is not a day')
+ok(migrateWeekdaySubs({ 'A|Moonday|p': 'x' }, dcWed).migrated === 0,
+  "'Moonday' truncates to MOO, so it is not silently filed as Monday")
+ok(migrateWeekdaySubs({ 'A|Mondayy|p': 'x' }, dcWed).next['A|2026-08-17|p'] === 'x',
+  'while a trailing typo after MON still resolves, which is what a three-letter compare means')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never
