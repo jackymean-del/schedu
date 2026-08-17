@@ -15,6 +15,7 @@
  * everywhere without anyone logging it per subject.
  */
 import { useMemo, useState } from 'react'
+import { localISO } from '@/lib/days'
 import { useHolidays, holidayImpact, totalHolidayHours, weekdayOf } from '@/lib/holidays'
 import { useTimetableStore } from '@/store/timetableStore'
 import { ScopePicker, describeScope } from '@/components/ScopePicker'
@@ -30,7 +31,9 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
 
   const sectionNames: string[] = sections.map((s: any) => s.name).filter(Boolean)
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Local calendar: a holiday declared before 05:30 in India would otherwise
+  // default to YESTERDAY, cancelling a day that has already been taught.
+  const [date, setDate] = useState(() => localISO(new Date()))
   const [name, setName] = useState('')
   // Empty = whole school. Most holidays are; a class trip or board exam is not.
   const [scope, setScope] = useState<string[]>([])

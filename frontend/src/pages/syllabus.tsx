@@ -11,6 +11,7 @@
  * and drive Live Mode.
  */
 import { useMemo, useState } from 'react'
+import { localISO } from '@/lib/days'
 import { PageHeader } from '@/components/layout/PageHeader'
 import {
   useSyllabus, planKey, requiredHours, coveredHours, remainingHours, coveragePct,
@@ -908,7 +909,7 @@ function BorrowReplaceCard({ onPick }: { onPick: (subject: string, section: stri
     // The donor gives the time up (recorded as a deliberate reallocation, not a
     // loss to circumstance) and the lagging subject receives it.
     logLostSession(s.donor, s.section, {
-      date: new Date().toISOString().slice(0, 10),
+      date: localISO(new Date()),
       hours: s.hours, reason: 'other',
       note: `Slot lent to ${s.lagging}`,
     })
@@ -982,7 +983,7 @@ function LostSessionsCard({
   onAdd: (s: Omit<LostSession, 'id'>) => void
   onRemove: (id: string) => void
 }) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => localISO(new Date()))
   const [hours, setHours] = useState<number | ''>('')
   const [reason, setReason] = useState<LostSession['reason']>('holiday')
   const [note, setNote] = useState('')

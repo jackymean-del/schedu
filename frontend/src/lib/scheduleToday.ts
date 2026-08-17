@@ -7,13 +7,13 @@
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
 import { subKey } from './substitutionKeys'
 
-import { DAY_NAMES } from './days'
+import { DAY_NAMES, localISO } from './days'
 export { DAY_NAMES as DAY_KEY } from './days'
 const DAY_KEY = DAY_NAMES
 
-export function toISODate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+/** Local-calendar ISO date. Kept as a named export for existing callers; the
+ *  single definition lives in lib/days. */
+export const toISODate = localISO
 
 export interface TodayPeriodRow {
   id: string; name: string; startMin: number; endMin: number; isBreak: boolean

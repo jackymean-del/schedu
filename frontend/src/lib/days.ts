@@ -33,3 +33,18 @@ export function weekdayOf(isoDate: string): string {
 
 /** Weekday name for a Date. Local calendar, never UTC. */
 export const dayNameOf = (d: Date) => DAY_NAMES[d.getDay()]
+
+/**
+ * A Date as YYYY-MM-DD on the LOCAL calendar.
+ *
+ * Never `toISOString().slice(0, 10)`: that converts to UTC first, so the date
+ * is wrong for part of every day in every timezone that is not UTC. India is
+ * UTC+5:30, so from midnight until 05:29 local it reports YESTERDAY — a
+ * principal declaring an unexpected holiday at 6am would have filed it against
+ * the previous day and left today's lessons running. West of Greenwich the
+ * error runs the other way, late in the evening.
+ */
+export function localISO(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}

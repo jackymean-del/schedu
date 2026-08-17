@@ -22,19 +22,11 @@
  * overlay is dated. A surface that shows the template without a date therefore
  * shows no substitutions, which is right: a template has no covers.
  */
-import { DAY_NAMES, sameDay } from './days'
+import { DAY_NAMES, sameDay, localISO } from './days'
 
-/**
- * Local calendar date as YYYY-MM-DD.
- *
- * Never toISOString(): that converts to UTC first, so any evening east of
- * Greenwich (India included) reports tomorrow, and a cover arranged on Monday
- * evening would be filed against Tuesday.
- */
-export function localISO(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
+// The local-calendar date helper lives in lib/days with the other calendar
+// facts; re-exported here because this module's callers reach for it.
+export { localISO } from './days'
 
 /** The key a substitution is stored under. */
 export const subKey = (section: string, isoDate: string, periodId: string) =>

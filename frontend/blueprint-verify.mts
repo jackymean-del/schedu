@@ -2574,6 +2574,32 @@ for (const bad of ['I-A/B', 'I-A\B', 'I-A [Main]', 'Grade I: A', 'What? A*']) {
 u = shUsed()
 ok(safeSheetName('', u) === 'Sheet' && safeSheetName('   ', u) === 'Sheet (2)',
   'blank names fall back to Sheet and still de-duplicate')
+// ── Dates are the school's calendar day, not UTC's ──
+// Three places used `new Date().toISOString().slice(0, 10)`, which converts to
+// UTC first. India is UTC+5:30, so from midnight until 05:29 local that returns
+// YESTERDAY — a principal declaring an unexpected holiday at 6am would have
+// filed it against the previous day and left today's lessons running.
+import { localISO as tzISO } from './src/lib/days'
+
+// Reads the LOCAL calendar, so this holds in every timezone the app runs in.
+ok(tzISO(new Date(2026, 7, 17, 0, 30)) === '2026-08-17', 'just after local midnight is still that day')
+ok(tzISO(new Date(2026, 7, 17, 5, 0)) === '2026-08-17', 'early morning, the window where UTC drifts in India')
+ok(tzISO(new Date(2026, 7, 17, 23, 30)) === '2026-08-17', 'and late evening, the window where it drifts the other way')
+
+// Every hour of a day must report that same day — the property toISOString breaks.
+let tzWrong = 0
+for (let h = 0; h < 24; h++) if (tzISO(new Date(2026, 0, 5, h, 30)) !== '2026-01-05') tzWrong++
+ok(tzWrong === 0, 'every hour of a day reports that day')
+
+ok(tzISO(new Date(2026, 0, 5)) === '2026-01-05', 'single-digit months and days are zero-padded')
+ok(tzISO(new Date(2026, 11, 31)) === '2026-12-31', 'the last day of the year is not rolled over')
+
+// One definition: the other two exports must BE it, or they will drift apart
+// exactly like the six day-name lists this module was created to replace.
+import { toISODate as tzToISODate } from './src/lib/scheduleToday'
+import { localISO as tzFromSubKeys } from './src/lib/substitutionKeys'
+ok(tzToISODate === tzISO, 'scheduleToday.toISODate is the same function, not a copy')
+ok(tzFromSubKeys === tzISO, 'substitutionKeys.localISO is the same function, not a copy')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never
