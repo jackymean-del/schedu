@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useDialog } from '@/hooks/useDialog'
 import { institutionInfo, SCHEDU_MARK, type ExportSheet } from '@/lib/exportData'
 
 /** Institution header (always printed, foreground): logo + name + address + title + session. */
@@ -91,17 +92,31 @@ export function PrintPreview({ open, title, session, subtitle, items, onClose }:
   items: PrintItem[]
   onClose: () => void
 }) {
+  // The body is its own component so useDialog mounts WITH the overlay. Called
+  // from here it would bind Escape and move focus for the whole life of
+  // whatever page happens to render a print button.
+  if (!open) return null
+  return <PrintPreviewBody title={title} session={session} subtitle={subtitle} items={items} onClose={onClose} />
+}
+
+function PrintPreviewBody({ title, session, subtitle, items, onClose }: {
+  title: string
+  session?: string
+  subtitle?: string
+  items: PrintItem[]
+  onClose: () => void
+}) {
   const [paperSaving, setPaperSaving] = useState(true)
+  // A full-screen overlay IS a modal: it covers the page, so Tab must stay
+  // inside it and a screen reader has to be told it opened. Previously it had
+  // no role at all and focus was left behind it, on a page nobody could see.
+  // useDialog also owns Escape, replacing the hand-rolled listener here.
+  const { dialogProps } = useDialog<HTMLDivElement>({ onClose, label: `Print preview: ${title}` })
 
   useEffect(() => {
-    if (!open) return
     document.body.setAttribute('data-print-doc', 'on')
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => { window.removeEventListener('keydown', onKey); document.body.removeAttribute('data-print-doc') }
-  }, [open, onClose])
-
-  if (!open) return null
+    return () => { document.body.removeAttribute('data-print-doc') }
+  }, [])
 
   const doPrint = () => {
     // Margin only — the printer dialog owns paper size + orientation.
@@ -112,7 +127,7 @@ export function PrintPreview({ open, title, session, subtitle, items, onClose }:
   }
 
   return createPortal(
-    <div className="schedu-print-overlay">
+    <div className="schedu-print-overlay" {...dialogProps}>
       <div className="schedu-print-toolbar no-print">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#13111E' }}>Print preview</span>
@@ -135,8 +150,10 @@ export function PrintPreview({ open, title, session, subtitle, items, onClose }:
 
       <div className="schedu-print-scroll">
         <div className="schedu-print-root" data-saving={paperSaving ? 'true' : 'false'}>
-          {items.map(it => (
-            <div className="schedu-print-entity" key={it.key}>
+          {items.map((it, i) => (
+            // Suffixed: two sections may legitimately share a name, and React
+            // asks for unique keys even though it renders them either way.
+            <div className="schedu-print-entity" key={`${it.key}|${i}`}>
               <InstitutionHeader title={title} session={session} />
               {it.node}
               <PrintFooter />
