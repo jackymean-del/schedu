@@ -600,7 +600,10 @@ export function CalendarPage() {
       if (c?.teacher && c.teacher !== absent) busy.add(c.teacher)
     }
     Object.entries(tb.substitutions).forEach(([k, v]) => {
-      const [, d, pid] = k.split('|'); if (d === dayKey && pid === periodId) busy.add(v)
+      // The middle segment is a DATE now, not a weekday. Compared against
+      // dayKey this never matched, so nobody counted as already covering and
+      // one teacher could be offered for two sections in the same period.
+      const [, d, pid] = k.split('|'); if (d === isoDate && pid === periodId) busy.add(v)
     })
     const pIdx = tbClassPeriods.findIndex((p: any) => p.id === periodId)
     // Wall-clock interval of the slot being covered (owning schedule's bell).
@@ -744,7 +747,7 @@ export function CalendarPage() {
     const usedAtClock: Record<string, Set<string>> = {}   // startMin → names taken, blocks overlap double-book
     for (const slot of slotsOf(teacher)) {
       const map = (bySid[slot.sid] ??= { ...bundleById(slot.sid).substitutions })
-      const key = `${slot.section}|${dayKey}|${slot.periodId}`
+      const key = subKey(slot.section, isoDate, slot.periodId)
       if (map[key]) continue
       const clock = String(slot.startMin)
       const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
