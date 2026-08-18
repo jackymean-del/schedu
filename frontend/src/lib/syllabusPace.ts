@@ -41,7 +41,7 @@ import type { ClassTimetable } from '@/types'
 import type { SyllabusPlan } from './syllabusTracking'
 import { requiredHours, planKey, contentFraction, hasContentSignal as planHasContent } from './syllabusTracking'
 import type { Holiday } from './holidays'
-import { DAY_NAMES, sameDay } from './days'
+import { DAY_NAMES, sameDay, localISO } from './days'
 
 
 const toDate = (s: string) => new Date(`${(s ?? '').slice(0, 10)}T00:00:00`)
@@ -53,7 +53,7 @@ const toDate = (s: string) => new Date(`${(s ?? '').slice(0, 10)}T00:00:00`)
  * silently mis-dated holidays and double-counted "today".
  */
 const iso = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  localISO(d)
 
 /** Neighbouring days via calendar arithmetic, so DST shifts can't skew them. */
 const shiftDay = (s: string, by: number) => {

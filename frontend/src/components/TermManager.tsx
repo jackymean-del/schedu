@@ -11,6 +11,7 @@
  * replacing it, and why declaring none keeps today's behaviour exactly.
  */
 import { useMemo, useState } from 'react'
+import { localISO } from '@/lib/days'
 import {
   useAcademicTerms, overlappingTerms, termGaps, termOn, type AcademicTerm,
 } from '@/lib/academicTerms'
@@ -20,7 +21,7 @@ const ACCENT = '#7C6FE0'
 
 const todayISO = () => {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return localISO(d)
 }
 
 const fmt = (s: string) =>

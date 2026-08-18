@@ -73,7 +73,7 @@ export function SyllabusPage() {
   const terms = useAcademicTerms(s => s.terms)
   const todayISO = useMemo(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return localISO(d)
   }, [])
   const [pickedTermId, setPickedTermId] = useState<string>('')
   // Land on the term the school is actually in, but only once terms exist and

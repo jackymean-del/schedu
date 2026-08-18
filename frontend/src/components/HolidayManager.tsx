@@ -228,7 +228,7 @@ export function normaliseDate(s: string): string | null {
 }
 function isRealDate(iso: string): boolean {
   const d = new Date(`${iso}T00:00:00`)
-  return !isNaN(d.getTime()) && iso === `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return !isNaN(d.getTime()) && iso === localISO(d)
 }
 
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#4B5275', marginBottom: 5 }

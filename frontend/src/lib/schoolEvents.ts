@@ -26,6 +26,7 @@
  * would silently rewrite a school's numbers. New events ask.
  */
 import { create } from 'zustand'
+import { localISO } from './days'
 import { persist } from 'zustand/middleware'
 import type { Holiday } from './holidays'
 import { migrateLegacyLists, legacyKeysFor, mergeById } from './schoolScope'
@@ -86,7 +87,7 @@ const day = (s: string | undefined) => (s ?? '').slice(0, 10)
 function nextDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00`)
   d.setDate(d.getDate() + 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return localISO(d)
 }
 
 /**

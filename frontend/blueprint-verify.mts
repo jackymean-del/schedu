@@ -2600,6 +2600,18 @@ import { toISODate as tzToISODate } from './src/lib/scheduleToday'
 import { localISO as tzFromSubKeys } from './src/lib/substitutionKeys'
 ok(tzToISODate === tzISO, 'scheduleToday.toISODate is the same function, not a copy')
 ok(tzFromSubKeys === tzISO, 'substitutionKeys.localISO is the same function, not a copy')
+
+// The formatter existed nine more times, verbatim, in components/, lib/ and
+// pages/. Every one was correct — which is exactly how the six day-name lists
+// that created lib/days started out. This asserts the count stays at one.
+import { readFileSync as tzRead } from 'node:fs'
+import { globSync as tzGlob } from 'node:fs'
+const tzInline = tzGlob('src/**/*.{ts,tsx}')
+  // Shape, not spelling: the first attempt hard-coded the variable name `d`,
+  // so re-introducing the same expression with `now` slipped straight past it.
+  .filter((f: string) => /getFullYear\(\)\}-\$\{String\(\w+\.getMonth\(\) \+ 1\)/.test(tzRead(f, 'utf8')))
+ok(tzInline.length === 0,
+  `no file re-implements the local-ISO formatter inline (found: ${tzInline.join(', ') || 'none'})`)
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

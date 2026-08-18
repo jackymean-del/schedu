@@ -19,6 +19,7 @@
  * period length would quietly mis-price every schedule but one.
  */
 import { planKey } from './syllabusTracking'
+import { localISO } from './days'
 import { scheduledHoursBetween } from './syllabusPace'
 import type { ScheduleBundle } from './activeSchedules'
 import type { Holiday } from './holidays'
@@ -187,7 +188,7 @@ export function futureHoursByPlan(
 function nextDay(iso: string): string {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00`)
   d.setDate(d.getDate() + 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return localISO(d)
 }
 
 /** One (section, subject, teacher) the timetable actually assigns. */

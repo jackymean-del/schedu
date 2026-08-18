@@ -15,6 +15,7 @@
  * assembling its own and drifting the first time a fifth source appears.
  */
 import { useMemo } from 'react'
+import { localISO } from './days'
 import { useSyllabus, withHolidayImpact, withLostImpact, withAllocatedHours, type SyllabusPlan } from './syllabusTracking'
 import { useHolidays, holidayImpact, type Holiday } from './holidays'
 import { useSubCoverage, coverageLoss, hoursNotSpent, uncoveredAbsenceLoss } from './substitutionCoverage'
@@ -172,7 +173,7 @@ export function useEffectiveCoverage(term?: AcademicTerm | null): EffectiveCover
   const teaching = useMemo(() => teachingMap(bundles), [bundles])
   const todayISO = useMemo(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return localISO(d)
   }, [])
   // A holiday means the period didn't run, so it is neither time spent nor time
   // still to come.

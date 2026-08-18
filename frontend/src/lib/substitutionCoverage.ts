@@ -43,7 +43,7 @@
  * syllabusTracking.withLostImpact.
  */
 import { create } from 'zustand'
-import { DAY_NAMES, sameDay } from './days'
+import { DAY_NAMES, sameDay, localISO } from './days'
 import { persist } from 'zustand/middleware'
 import type { ClassTimetable } from '@/types'
 import { planKey } from './syllabusTracking'
@@ -216,7 +216,7 @@ export function bonusSessions(records: SubCoverageRecord[]): Record<string, Bonu
 }
 
 const isoOf = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  localISO(d)
 
 /**
  * The absence nobody covered.

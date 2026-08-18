@@ -11,7 +11,6 @@
  * lives in lib/smartboard so it can be tested at 7am, mid-lesson and midnight.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { localISO } from '@/lib/substitutionKeys'
 import { useAuthStore } from '@/store/authStore'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -21,11 +20,7 @@ import { useHolidays } from '@/lib/holidays'
 import { useSchoolEvents, teachingSuspendedOn } from '@/lib/schoolEvents'
 import { boardNow, boardRows, uncoveredRows, soonestRings } from '@/lib/smartboard'
 import { fmtRingTime } from '@/lib/bellSchedule'
-import { DAY_NAMES as DAY_KEY } from '@/lib/days'
-
-
-const toISO = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+import { DAY_NAMES as DAY_KEY, localISO } from '@/lib/days'
 
 const INK = '#0B0A12'
 const CARD = '#16141F'
@@ -64,7 +59,7 @@ export function BoardPage() {
     }]
   }, [uid, openTT])
 
-  const isoDate = toISO(now)
+  const isoDate = localISO(now)
   const dayKey = DAY_KEY[now.getDay()]
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
