@@ -2666,6 +2666,28 @@ const dupTight = dupSubjects(dupBuild(['Anita Sharma', 'Anita Sharma'], 3))
 ok(dupTight.size === 1,
   'but sharing a name, one subject gets NO periods at all — the worst form of this')
 ok(!dupTight.has('English'), 'and which subject loses is decided by solve order, not by the school')
+// The solver now says so when it has merged two people into one, because an
+// incomplete timetable otherwise looks like the school is simply short-staffed.
+const dupConf = (names: [string, string]) => solveTimetable(dupBuild(names, 3)).conflicts
+  .filter((c: any) => /named/.test(c.message ?? ''))
+
+ok(dupConf(['Anita Sharma', 'Bela Rao']).length === 0, 'distinct names raise nothing')
+const dupWarned = dupConf(['Anita Sharma', 'Anita Sharma'])
+ok(dupWarned.length === 1, 'a shared name is reported once, not once per teacher')
+ok(/2 teachers are named/.test(dupWarned[0].message), 'the message says how many share it')
+ok(/Anita Sharma/.test(dupWarned[0].message), 'and which name')
+ok(/single weekly cap/.test(dupWarned[0].message) && /left unassigned/.test(dupWarned[0].message),
+  'and states the consequence that actually bites: merged caps, lessons unplaced')
+ok(dupWarned[0].severity === 'warning', 'a warning — the timetable produced is still usable')
+
+// Matched the way every other name comparison in this codebase is.
+// The solver keys its maps by the RAW name, so these are two people to it and
+// nothing merges — warning here would be a false alarm. Verified against the
+// solver rather than assumed: this fixture places 6 periods, not 3.
+ok(dupConf(['Anita Sharma', ' anita sharma ']).length === 0,
+  'names differing only by case or spacing are NOT merged by the solver, so nothing is reported')
+ok(solveTimetable(dupBuild(['Anita Sharma', ' anita sharma '], 3)).classTT['I-A'] !== undefined,
+  'and that fixture still schedules — the two caps stay separate')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

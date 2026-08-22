@@ -1354,6 +1354,38 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // Uses the same optional-block-aware logic as the exported detectConflicts()
   // to avoid false positives where multiple sections share one optional block.
   const conflicts: Conflict[] = []
+
+  // Two staff sharing a name are ONE teacher here: every load, availability
+  // and subject map in this solver is keyed by name. Their weekly caps merge
+  // into one, so lessons that two people could have covered go unplaced —
+  // and with a tight cap a whole subject can end up with no periods at all.
+  //
+  // Not repaired here: keying this solver by id is a change to every one of
+  // those maps, and a mistake in them produces a wrong timetable that still
+  // looks plausible. Reported instead, so an incomplete result explains
+  // itself rather than looking like the school simply lacks staff.
+  {
+    // EXACT match, deliberately. Every map in this solver is keyed by the raw
+    // name, so 'Anita Sharma' and ' anita sharma ' are two different people
+    // here and nothing merges — warning about those would be a false alarm.
+    // lib/nameConflicts folds case for the same rows and is also right: leave
+    // and cover DO match case-insensitively. Two foldings, two questions.
+    const seen = new Map<string, number>()
+    for (const st of staff) {
+      const key = st?.name ?? ''
+      if (key) seen.set(key, (seen.get(key) ?? 0) + 1)
+    }
+    for (const [key, count] of seen) {
+      if (count < 2) continue
+      const shown = key
+      conflicts.push({
+        type: 'rule-violation',
+        severity: 'warning',
+        teacher: shown,
+        message: `${count} teachers are named "${shown}" — the scheduler treats them as one person on a single weekly cap, so some of their lessons may be left unassigned. Give them distinguishing names and regenerate.`,
+      })
+    }
+  }
   classPeriods.forEach(p => {
     workDays.forEach(day => {
       const teacherMap: Record<string, string> = {}
