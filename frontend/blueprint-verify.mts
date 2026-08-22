@@ -2044,6 +2044,8 @@ const nameWarn = conflictWarning('teacher', conflicts)!
 ok(nameWarn.includes('Anita Sharma'), 'the warning names the clash')
 ok(/marking one absent marks both/.test(nameWarn) && /\. [A-Z]/.test(nameWarn),
   'and states what it actually costs, as a sentence — leave, cover and workload are name-matched')
+ok(/ONE teacher on a single weekly cap/.test(nameWarn),
+  'and leads with the cost the solver imposes: lessons left unstaffed, which is worse than the roster conflation')
 ok(/syllabus coverage/i.test(conflictWarning('subject', conflicts)!),
   'each kind gets its own consequence, in the school\'s terms')
 ok(/double-booked/.test(conflictWarning('room', conflicts)!), 'venues clash-detect by name')
@@ -2612,6 +2614,58 @@ const tzInline = tzGlob('src/**/*.{ts,tsx}')
   .filter((f: string) => /getFullYear\(\)\}-\$\{String\(\w+\.getMonth\(\) \+ 1\)/.test(tzRead(f, 'utf8')))
 ok(tzInline.length === 0,
   `no file re-implements the local-ISO formatter inline (found: ${tzInline.join(', ') || 'none'})`)
+// ── Two teachers with one name are one teacher to the SOLVER ──
+// lib/nameConflicts warns rather than blocks, because a school may genuinely
+// employ two people called Anita Sharma. This pins what that costs at
+// generation time, which is more than the roster-level conflation the banner
+// originally described: the two share a single weekly cap, so lessons go
+// unplaced — and when the cap is tight an entire subject gets nothing.
+const dupBuild = (names: [string, string], cap: number) => ({
+  sections: [{ id: 's1', name: 'I-A', grade: 'I' }],
+  staff: [
+    { id: 't1', name: names[0], shortName: 'A1', subjects: ['English'], classes: [], isClassTeacher: '', maxPeriodsPerWeek: cap },
+    { id: 't2', name: names[1], shortName: 'A2', subjects: ['Physics'], classes: [], isClassTeacher: '', maxPeriodsPerWeek: cap },
+  ],
+  subjects: [
+    { id: 'x1', name: 'English', periodsPerWeek: 5, maxPeriodsPerDay: 2 },
+    { id: 'x2', name: 'Physics', periodsPerWeek: 5, maxPeriodsPerDay: 2 },
+  ],
+  periods: Array.from({ length: 4 }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, type: 'class', duration: 40, shiftable: false })),
+  workDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY'], requirements: [],
+}) as any
+const dupPlaced = (input: any) => {
+  const out = solveTimetable(input)
+  let n = 0
+  for (const sec of Object.keys(out.classTT ?? {}))
+    for (const d of Object.keys(out.classTT[sec] ?? {}))
+      for (const p of Object.keys(out.classTT[sec][d] ?? {})) if (out.classTT[sec][d][p]?.teacher) n++
+  return n
+}
+const dupSubjects = (input: any) => {
+  const out = solveTimetable(input)
+  const s = new Set<string>()
+  for (const sec of Object.keys(out.classTT ?? {}))
+    for (const d of Object.keys(out.classTT[sec] ?? {}))
+      for (const p of Object.keys(out.classTT[sec][d] ?? {})) {
+        const c: any = out.classTT[sec][d][p]
+        if (c?.subject && c.teacher) s.add(c.subject)
+      }
+  return s
+}
+
+// The fixtures are identical apart from the two names, so any difference is
+// the collision and nothing else.
+ok(dupPlaced(dupBuild(['Anita Sharma', 'Bela Rao'], 5)) === 10,
+  'two distinct teachers with a cap of 5 each cover the whole 10-period demand')
+ok(dupPlaced(dupBuild(['Anita Sharma', 'Anita Sharma'], 5)) === 6,
+  'the SAME two teachers sharing a name cover only 6 — they are one person to the solver')
+
+ok(dupSubjects(dupBuild(['Anita Sharma', 'Bela Rao'], 3)).size === 2,
+  'with a tighter cap and distinct names, both subjects still get taught')
+const dupTight = dupSubjects(dupBuild(['Anita Sharma', 'Anita Sharma'], 3))
+ok(dupTight.size === 1,
+  'but sharing a name, one subject gets NO periods at all — the worst form of this')
+ok(!dupTight.has('English'), 'and which subject loses is decided by solve order, not by the school')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never
