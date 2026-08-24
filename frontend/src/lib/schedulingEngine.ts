@@ -522,6 +522,12 @@ export function extractDynamicLearningGroups(
   return out
 }
 
+/** Who a teacher IS for scheduling purposes. Availability and load belong to
+ *  a person, not to a label: two staff called 'Anita Sharma' are two people
+ *  with two weekly caps. Falls back to the name only when a record has no
+ *  id, which is the old shape and no worse than it was. */
+const tKey = (st: { id?: string; name?: string }) => st?.id || st?.name || ''
+
 /**
  * The per-day teaching cap in force for one teacher — their own figure if set,
  * otherwise derived from their weekly cap so the two can never contradict each
@@ -570,11 +576,41 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     workDays.forEach(day => { classTT[sec.name][day] = {} })
   })
 
+  // ── Who a teacher IS, for the solver's own bookkeeping ──
+  //
+  // Availability and load belong to a PERSON. Keying them by name made two
+  // staff called 'Anita Sharma' share one weekly cap, so lessons two people
+  // could have covered went unplaced — and with a tight cap a subject could
+  // end up with no periods at all.
+  //
+  // Cells still carry the NAME, because everything downstream — substitutions,
+  // leave, cover, the rename cascade — is name-keyed by design. Cells this
+  // solver writes also carry teacherId, so a re-solve can tell the two apart.
+  // Name → every key that answers to it. Used only where the data gives us a
+  // bare name (an existing cell, the availability matrix, an optional block).
+  const keysByName = new Map<string, string[]>()
+  staff.forEach(st => {
+    const n = st?.name ?? ''
+    if (!n) return
+    keysByName.set(n, [...(keysByName.get(n) ?? []), tKey(st)])
+  })
+  /** Keys a bare name could mean. One name, one person: exact. Two people
+   *  sharing a name: BOTH, because the name cannot say which, and treating
+   *  both as busy never double-books somebody. */
+  const keysFor = (name: string | undefined): string[] => keysByName.get(name ?? '') ?? (name ? [name] : [])
+
+  /** The person a placed cell refers to. Cells this solver writes carry
+   *  teacherId; older ones only have a name, so fall back to resolving it —
+   *  ambiguous only when two staff share a name, which is the case that was
+   *  already broken. */
+  const cellKeys = (cell: { teacher?: string; teacherId?: string } | undefined): string[] =>
+    cell?.teacherId ? [cell.teacherId] : keysFor(cell?.teacher)
+
   // Build teacher availability map
   const teacherBusy: Record<string, Record<string, Set<string>>> = {}
   staff.forEach(st => {
-    teacherBusy[st.name] = {}
-    workDays.forEach(day => { teacherBusy[st.name][day] = new Set() })
+    teacherBusy[tKey(st)] = {}
+    workDays.forEach(day => { teacherBusy[tKey(st)][day] = new Set() })
   })
 
   // Pre-mark 'blocked' slots from the availability matrix as permanently busy.
@@ -584,10 +620,14 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       Object.entries(dayMap).forEach(([day, periodMap]) => {
         Object.entries(periodMap).forEach(([periodId, status]) => {
           if (status === 'blocked') {
-            if (!teacherBusy[tName]) {
-              teacherBusy[tName] = Object.fromEntries(workDays.map(d => [d, new Set<string>()]))
+            // The UI records availability against a NAME, so it applies to every
+            // person answering to it — marking both never double-books anyone.
+            for (const k of keysFor(tName)) {
+              if (!teacherBusy[k]) {
+                teacherBusy[k] = Object.fromEntries(workDays.map(d => [d, new Set<string>()]))
+              }
+              teacherBusy[k][day]?.add(periodId)
             }
-            teacherBusy[tName][day]?.add(periodId)
           }
         })
       })
@@ -743,13 +783,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
   // Running per-teacher trackers (updated as we place)
   const teacherWeeklyLoad: Record<string, number> = {}
-  staff.forEach(t => { teacherWeeklyLoad[t.name] = 0 })
+  staff.forEach(t => { teacherWeeklyLoad[tKey(t)] = 0 })
   // Subjects each teacher has already taught (for vertical continuity)
   const teacherSubjectSet: Record<string, Set<string>> = {}
-  staff.forEach(t => { teacherSubjectSet[t.name] = new Set() })
+  staff.forEach(t => { teacherSubjectSet[tKey(t)] = new Set() })
   // Sections each teacher has been seen in (for section familiarity)
   const teacherSectionSet: Record<string, Set<string>> = {}
-  staff.forEach(t => { teacherSectionSet[t.name] = new Set() })
+  staff.forEach(t => { teacherSectionSet[tKey(t)] = new Set() })
 
   // Class teacher map — resolve IDs to names (UI stores staff.id, engine needs staff.name)
   const classTeacherMap: Record<string, string> = {}
@@ -882,7 +922,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
     const slotOk = (day: string, pid: string): boolean => {
       if (!block.sectionNames.every(sn => !sectionOffDays.get(sn)?.has(day) && !classTT[sn]?.[day]?.[pid])) return false
-      if (!block.options.every(o => !o.teacher || !teacherBusy[o.teacher]?.[day]?.has(pid))) return false
+      if (!block.options.every(o => !o.teacher || keysFor(o.teacher).every(k => !teacherBusy[k]?.[day]?.has(pid)))) return false
       if (blockRoom && sections.some(s => classTT[s.name]?.[day]?.[pid]?.room === blockRoom)) return false
       return true
     }
@@ -930,7 +970,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         } as any
       })
       block.options.forEach(opt => {
-        if (opt.teacher) { ensureBusy(opt.teacher); teacherBusy[opt.teacher][day].add(periodId) }
+        if (opt.teacher) for (const k of keysFor(opt.teacher)) { ensureBusy(k); teacherBusy[k][day].add(periodId) }
       })
       // AND (parallel split) IS the subjects' period → count toward quota and cap
       // the target so Pass 2 won't also schedule them individually.
@@ -955,7 +995,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   sections.forEach((sec) => {
     const ctName = classTeacherMap[sec.name]
     if (!ctName) return
-    ensureBusy(ctName)
+    const ctKeys = keysFor(ctName); ctKeys.forEach(ensureBusy)
     const ctStaff = staff.find(s => s.name === ctName)
     // Pick a subject this teacher can actually teach for this section —
     // PREFER one that is genuinely taught here (target quota > 0), so the
@@ -983,14 +1023,14 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       const sec_state = sec.scope?.cells?.[day]?.[p.id] ?? 'allowed'
       const ct_state = (ctStaff as any)?.scope?.cells?.[day]?.[p.id] ?? 'allowed'
       if (sec_state === 'locked' || ct_state === 'locked') return
-      if (!teacherBusy[ctName][day].has(p.id)) {
+      if (ctKeys.every(k => !teacherBusy[k][day].has(p.id))) {
         classTT[sec.name][day][p.id] = {
           subject: ctSubject,
           teacher: ctName,
           room: sec.room,
           isClassTeacher: true,
         }
-        teacherBusy[ctName][day].add(p.id)
+        ctKeys.forEach(k => teacherBusy[k][day].add(p.id))
         subjectCount[sec.name][ctSubject] = (subjectCount[sec.name][ctSubject] ?? 0) + 1
       }
     })
@@ -1120,16 +1160,16 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         const teacherLoadToday: Record<string, number> = {}
         Object.values(classTT).forEach(secData => {
           Object.values(secData[day] ?? {}).forEach((cell: any) => {
-            if (cell?.teacher) teacherLoadToday[cell.teacher] = (teacherLoadToday[cell.teacher] ?? 0) + 1
+            for (const k of cellKeys(cell)) teacherLoadToday[k] = (teacherLoadToday[k] ?? 0) + 1
           })
         })
 
         const isAvailable = (st: any) => {
-          if (teacherBusy[st.name]?.[day]?.has(period.id)) return false
+          if (teacherBusy[tKey(st)]?.[day]?.has(period.id)) return false
           // PER-DAY workload cap (Blueprint v6 Step 0). A HARD constraint, not
           // the -3 score nudge today's load used to get: "no more than 5 periods
           // a day" has to mean it, or it isn't a cap.
-          if (atDailyLimit(teacherLoadToday[st.name] ?? 0, dailyCapFor(st, workDays.length))) return false
+          if (atDailyLimit(teacherLoadToday[tKey(st)] ?? 0, dailyCapFor(st, workDays.length))) return false
           // TEACHER scope hard exclusion
           const tScope = (st as any).scope
           if (tScope) {
@@ -1213,7 +1253,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           //   − consecutive same-subject taught by same teacher
           const scoreTeacher = (st: any): number => {
             let score = 0
-            const name = st.name
+            const name = tKey(st)
             const weeklyLoad = teacherWeeklyLoad[name] ?? 0
             const todayLoad = teacherLoadToday[name] ?? 0
             const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
@@ -1251,7 +1291,10 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             const prev = classPeriods[pi - 1]
             if (prev) {
               const prevCell: any = classTT[sec.name]?.[day]?.[prev.id]
-              if (prevCell?.teacher === name && prevCell?.subject === chosenSub.name) score -= 8
+              // Identity, not label: `name` is this person's key now, while the
+              // cell records a NAME. Comparing the two silently never matched,
+              // which quietly disabled this penalty for every school.
+              if (cellKeys(prevCell).includes(name) && prevCell?.subject === chosenSub.name) score -= 8
             }
 
             return score
@@ -1285,7 +1328,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             penalties.push({ constraint: 'teacher-scope-disabled', penalty: 10, details: `${teacher.name} marked disabled at ${day} ${period.id}` })
           }
 
-          ensureBusy(teacher.name)
+          ensureBusy(tKey(teacher))
 
           // ── Consecutive session placement (Xs=Yp / doublePeriods) ───────────
           //   If this subject is configured as a multi-period session block,
@@ -1302,11 +1345,11 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               spanPeriods.slice(0, -1).every(cp => adjList.includes(cp.id))
             const allFree = spanPeriods.length === span && adjOk &&
               spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
-              spanPeriods.every(cp => !teacherBusy[teacher.name][day].has(cp.id))
+              spanPeriods.every(cp => !teacherBusy[tKey(teacher)][day].has(cp.id))
             if (allFree) {
               spanPeriods.forEach(cp => {
-                classTT[sec.name][day][cp.id] = { subject: chosenSub.name, teacher: teacher.name, room: sec.room }
-                teacherBusy[teacher.name][day].add(cp.id)
+                classTT[sec.name][day][cp.id] = { subject: chosenSub.name, teacher: teacher.name, teacherId: teacher.id, room: sec.room }
+                teacherBusy[tKey(teacher)][day].add(cp.id)
               })
               subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + span
               placed = true
@@ -1318,14 +1361,15 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           classTT[sec.name][day][period.id] = {
             subject: chosenSub.name,
             teacher: teacher.name,
+            teacherId: teacher.id,
             room: sec.room,
           }
-          teacherBusy[teacher.name][day].add(period.id)
+          teacherBusy[tKey(teacher)][day].add(period.id)
           subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + 1
           // ── AI trackers: bump load + record subject/section pairing ──
-          teacherWeeklyLoad[teacher.name] = (teacherWeeklyLoad[teacher.name] ?? 0) + 1
-          teacherSubjectSet[teacher.name]?.add(chosenSub.name)
-          teacherSectionSet[teacher.name]?.add(sec.name)
+          teacherWeeklyLoad[tKey(teacher)] = (teacherWeeklyLoad[tKey(teacher)] ?? 0) + 1
+          teacherSubjectSet[tKey(teacher)]?.add(chosenSub.name)
+          teacherSectionSet[tKey(teacher)]?.add(sec.name)
           placed = true
           break
         }
@@ -1355,37 +1399,15 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // to avoid false positives where multiple sections share one optional block.
   const conflicts: Conflict[] = []
 
-  // Two staff sharing a name are ONE teacher here: every load, availability
-  // and subject map in this solver is keyed by name. Their weekly caps merge
-  // into one, so lessons that two people could have covered go unplaced —
-  // and with a tight cap a whole subject can end up with no periods at all.
+  // Two staff sharing a name used to be ONE teacher here, because every load
+  // and availability map was keyed by name: their weekly caps merged and
+  // lessons went unplaced. They are now tracked per person (see tKey), so no
+  // conflict is raised for it — the timetable is simply correct.
   //
-  // Not repaired here: keying this solver by id is a change to every one of
-  // those maps, and a mistake in them produces a wrong timetable that still
-  // looks plausible. Reported instead, so an incomplete result explains
-  // itself rather than looking like the school simply lacks staff.
-  {
-    // EXACT match, deliberately. Every map in this solver is keyed by the raw
-    // name, so 'Anita Sharma' and ' anita sharma ' are two different people
-    // here and nothing merges — warning about those would be a false alarm.
-    // lib/nameConflicts folds case for the same rows and is also right: leave
-    // and cover DO match case-insensitively. Two foldings, two questions.
-    const seen = new Map<string, number>()
-    for (const st of staff) {
-      const key = st?.name ?? ''
-      if (key) seen.set(key, (seen.get(key) ?? 0) + 1)
-    }
-    for (const [key, count] of seen) {
-      if (count < 2) continue
-      const shown = key
-      conflicts.push({
-        type: 'rule-violation',
-        severity: 'warning',
-        teacher: shown,
-        message: `${count} teachers are named "${shown}" — the scheduler treats them as one person on a single weekly cap, so some of their lessons may be left unassigned. Give them distinguishing names and regenerate.`,
-      })
-    }
-  }
+  // Sharing a name still matters elsewhere: leave, cover and workload match
+  // by name, so marking one absent marks both. lib/nameConflicts warns about
+  // that in Master Data, which is where it can be fixed.
+
   classPeriods.forEach(p => {
     workDays.forEach(day => {
       const teacherMap: Record<string, string> = {}
@@ -1430,7 +1452,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     }
     // Per-teacher overload penalties — exceeded individual max
     staff.forEach(t => {
-      const load = teacherWeeklyLoad[t.name] ?? 0
+      const load = teacherWeeklyLoad[tKey(t)] ?? 0
       const max = (t as any).maxPeriodsPerWeek ?? normCap
       if (load > max) {
         penalties.push({
@@ -1652,6 +1674,16 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   // violations) was still returned and applied.
   const before = measureLoads(input.classTT, sections, staff, workDays, classPeriods, normCap)
 
+  // Same identity rules as the solver: a person, not a label. See tKey.
+  const keysByName = new Map<string, string[]>()
+  staff.forEach(st => {
+    const n = st?.name ?? ''
+    if (n) keysByName.set(n, [...(keysByName.get(n) ?? []), tKey(st)])
+  })
+  const keysFor = (name: string | undefined): string[] => keysByName.get(name ?? '') ?? (name ? [name] : [])
+  const cellKeys = (cell: { teacher?: string; teacherId?: string } | undefined): string[] =>
+    cell?.teacherId ? [cell.teacherId] : keysFor(cell?.teacher)
+
   // Deep-clone classTT — we mutate the clone, never the caller's data
   const classTT: ClassTimetable = JSON.parse(JSON.stringify(input.classTT))
 
@@ -1664,7 +1696,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       teacherBusy[name] = Object.fromEntries(workDays.map(d => [d, new Set<string>()]))
     }
   }
-  staff.forEach(st => ensureBusy(st.name))
+  staff.forEach(st => ensureBusy(tKey(st)))
 
   type WorkItem = {
     secName: string; day: string; periodId: string
@@ -1681,8 +1713,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
         if (!cell?.subject) return
         if (cell.optionalBlockId || cell.isClassTeacher) {
           if (cell.teacher) {
-            ensureBusy(cell.teacher)
-            teacherBusy[cell.teacher]?.[day]?.add(period.id)
+            for (const k of cellKeys(cell)) { ensureBusy(k); teacherBusy[k]?.[day]?.add(period.id) }
           }
         } else {
           const prevTeacher = cell.teacher ?? ''
@@ -1695,11 +1726,11 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
 
   // ── Phase 2: load tracking state ──
   const teacherWeeklyLoad: Record<string, number> = {}
-  staff.forEach(t => { teacherWeeklyLoad[t.name] = 0 })
+  staff.forEach(t => { teacherWeeklyLoad[tKey(t)] = 0 })
   const teacherSubjectSet: Record<string, Set<string>> = {}
-  staff.forEach(t => { teacherSubjectSet[t.name] = new Set() })
+  staff.forEach(t => { teacherSubjectSet[tKey(t)] = new Set() })
   const teacherSectionSet: Record<string, Set<string>> = {}
-  staff.forEach(t => { teacherSectionSet[t.name] = new Set() })
+  staff.forEach(t => { teacherSectionSet[tKey(t)] = new Set() })
 
   // Target weekly load per teacher (mirrors the main solver formula)
   const subjectAllocations = input.subjectAllocations ?? {}
@@ -1731,7 +1762,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     })
 
     const isAvailable = (st: Staff): boolean => {
-      if (teacherBusy[st.name]?.[day]?.has(periodId)) return false
+      if (teacherBusy[tKey(st)]?.[day]?.has(periodId)) return false
       // PER-DAY workload cap — hard, same as Phase 2.
       if (atDailyLimit(loadTodayForCap[st.name] ?? 0, dailyCapFor(st, workDays.length))) return false
       const tScope = (st as any).scope
@@ -1760,7 +1791,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     // as the main solver).
     const underCap = (st: Staff): boolean => {
       const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
-      return maxWeek <= 0 || (teacherWeeklyLoad[st.name] ?? 0) < maxWeek
+      return maxWeek <= 0 || (teacherWeeklyLoad[tKey(st)] ?? 0) < maxWeek
     }
     const pickTier = (pool: Staff[]): Staff[] => {
       const capped = pool.filter(underCap)
@@ -1778,7 +1809,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     const teacherLoadToday: Record<string, number> = {}
     Object.values(classTT).forEach(sd => {
       Object.values((sd as any)[day] ?? {}).forEach((c: any) => {
-        if (c?.teacher) teacherLoadToday[c.teacher] = (teacherLoadToday[c.teacher] ?? 0) + 1
+        for (const k of cellKeys(c)) teacherLoadToday[k] = (teacherLoadToday[k] ?? 0) + 1
       })
     })
 
@@ -1786,7 +1817,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     const prevPeriod = periodIdx > 0 ? classPeriods[periodIdx - 1] : null
 
     const scoreTeacher = (st: Staff): number => {
-      const name = st.name
+      const name = tKey(st)
       let s = 0
       const wkLoad  = teacherWeeklyLoad[name] ?? 0
       const dayLoad = teacherLoadToday[name] ?? 0
@@ -1808,7 +1839,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       }
       if (prevPeriod) {
         const prevCell: any = classTT[secName]?.[day]?.[prevPeriod.id]
-        if (prevCell?.teacher === name && prevCell?.subject === subject) s -= 8
+        if (cellKeys(prevCell).includes(name) && prevCell?.subject === subject) s -= 8
       }
       return s
     }
@@ -1822,12 +1853,13 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     ;(classTT[secName][day] as any)[periodId] = {
       ...(classTT[secName][day] as any)[periodId],
       teacher: teacher.name,
+      teacherId: teacher.id,
     }
-    ensureBusy(teacher.name)
-    teacherBusy[teacher.name][day].add(periodId)
-    teacherWeeklyLoad[teacher.name] = (teacherWeeklyLoad[teacher.name] ?? 0) + 1
-    teacherSubjectSet[teacher.name]?.add(subject)
-    teacherSectionSet[teacher.name]?.add(secName)
+    ensureBusy(tKey(teacher))
+    teacherBusy[tKey(teacher)][day].add(periodId)
+    teacherWeeklyLoad[tKey(teacher)] = (teacherWeeklyLoad[tKey(teacher)] ?? 0) + 1
+    teacherSubjectSet[tKey(teacher)]?.add(subject)
+    teacherSectionSet[tKey(teacher)]?.add(secName)
     // "Reassigned" = the teacher actually changed. Re-picking the incumbent
     // is not a change — counting it made the banner claim absurd numbers.
     if (teacher.name !== prevTeacher) reassignedCount++
@@ -1850,7 +1882,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       })
     }
     staff.forEach(t => {
-      const load = teacherWeeklyLoad[t.name] ?? 0
+      const load = teacherWeeklyLoad[tKey(t)] ?? 0
       const max = (t as any).maxPeriodsPerWeek ?? normCap
       if (load > max) {
         penalties.push({

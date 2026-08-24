@@ -2044,8 +2044,6 @@ const nameWarn = conflictWarning('teacher', conflicts)!
 ok(nameWarn.includes('Anita Sharma'), 'the warning names the clash')
 ok(/marking one absent marks both/.test(nameWarn) && /\. [A-Z]/.test(nameWarn),
   'and states what it actually costs, as a sentence — leave, cover and workload are name-matched')
-ok(/ONE teacher on a single weekly cap/.test(nameWarn),
-  'and leads with the cost the solver imposes: lessons left unstaffed, which is worse than the roster conflation')
 ok(/syllabus coverage/i.test(conflictWarning('subject', conflicts)!),
   'each kind gets its own consequence, in the school\'s terms')
 ok(/double-booked/.test(conflictWarning('room', conflicts)!), 'venues clash-detect by name')
@@ -2654,40 +2652,76 @@ const dupSubjects = (input: any) => {
 }
 
 // The fixtures are identical apart from the two names, so any difference is
-// the collision and nothing else.
+// the collision and nothing else. There must now be none: the solver tracks
+// availability and load per PERSON, so two people who share a name keep two
+// separate weekly caps.
 ok(dupPlaced(dupBuild(['Anita Sharma', 'Bela Rao'], 5)) === 10,
   'two distinct teachers with a cap of 5 each cover the whole 10-period demand')
-ok(dupPlaced(dupBuild(['Anita Sharma', 'Anita Sharma'], 5)) === 6,
-  'the SAME two teachers sharing a name cover only 6 — they are one person to the solver')
+ok(dupPlaced(dupBuild(['Anita Sharma', 'Anita Sharma'], 5)) === 10,
+  'and the SAME two sharing a name cover it too — they are no longer one person')
 
+// The version that used to hurt most: with a tight cap a whole subject got
+// nothing, because both teachers' periods came out of one budget.
 ok(dupSubjects(dupBuild(['Anita Sharma', 'Bela Rao'], 3)).size === 2,
   'with a tighter cap and distinct names, both subjects still get taught')
 const dupTight = dupSubjects(dupBuild(['Anita Sharma', 'Anita Sharma'], 3))
-ok(dupTight.size === 1,
-  'but sharing a name, one subject gets NO periods at all — the worst form of this')
-ok(!dupTight.has('English'), 'and which subject loses is decided by solve order, not by the school')
-// The solver now says so when it has merged two people into one, because an
-// incomplete timetable otherwise looks like the school is simply short-staffed.
+ok(dupTight.size === 2, 'and sharing a name no longer starves one subject of every period')
+ok(dupTight.has('English'), 'the subject that used to lose everything is taught')
+
+// Cells the solver writes now name the person as well as the label, which is
+// what lets a re-solve tell two same-named teachers apart.
+const dupCells = solveTimetable(dupBuild(['Anita Sharma', 'Anita Sharma'], 5)).classTT['I-A']
+const dupIds = new Set<string>()
+for (const day of Object.keys(dupCells ?? {}))
+  for (const pid of Object.keys(dupCells[day] ?? {})) {
+    const c: any = dupCells[day][pid]
+    if (c?.teacherId) dupIds.add(c.teacherId)
+  }
+ok(dupIds.size === 2, 'both people appear in the timetable under their own id, though they share a name')
+
+// The solver used to report the merge, because it could not avoid it. It no
+// longer merges, so it says nothing — a warning about a problem that does not
+// happen trains people to ignore warnings that do.
 const dupConf = (names: [string, string]) => solveTimetable(dupBuild(names, 3)).conflicts
   .filter((c: any) => /named/.test(c.message ?? ''))
-
 ok(dupConf(['Anita Sharma', 'Bela Rao']).length === 0, 'distinct names raise nothing')
-const dupWarned = dupConf(['Anita Sharma', 'Anita Sharma'])
-ok(dupWarned.length === 1, 'a shared name is reported once, not once per teacher')
-ok(/2 teachers are named/.test(dupWarned[0].message), 'the message says how many share it')
-ok(/Anita Sharma/.test(dupWarned[0].message), 'and which name')
-ok(/single weekly cap/.test(dupWarned[0].message) && /left unassigned/.test(dupWarned[0].message),
-  'and states the consequence that actually bites: merged caps, lessons unplaced')
-ok(dupWarned[0].severity === 'warning', 'a warning — the timetable produced is still usable')
+ok(dupConf(['Anita Sharma', 'Anita Sharma']).length === 0,
+  'and neither does a shared name, now that it costs the timetable nothing')
 
-// Matched the way every other name comparison in this codebase is.
-// The solver keys its maps by the RAW name, so these are two people to it and
-// nothing merges — warning here would be a false alarm. Verified against the
-// solver rather than assumed: this fixture places 6 periods, not 3.
-ok(dupConf(['Anita Sharma', ' anita sharma ']).length === 0,
-  'names differing only by case or spacing are NOT merged by the solver, so nothing is reported')
-ok(solveTimetable(dupBuild(['Anita Sharma', ' anita sharma '], 3)).classTT['I-A'] !== undefined,
-  'and that fixture still schedules — the two caps stay separate')
+// ── Keying the solver by person must not change anybody else's timetable ──
+// Availability and load now key on staff.id rather than staff.name. For a
+// school with ordinary distinct names that must be a no-op, and the proof is
+// that making the key equal the name changes nothing: same school, ids that
+// differ from names vs ids identical to them, same timetable.
+//
+// It has to run on the BIG fixture. A small one passes either way — I wrote
+// this against six sections first and it did not notice the bug it exists to
+// catch, because the penalty it guards never changed an outcome at that size.
+const idShape = (staffIds: (i: number) => string) => {
+  const out = solveTimetable({ ...engInput, staff: engStaff.map((st: any, i: number) => ({ ...st, id: staffIds(i) })) })
+  const flat: string[] = []
+  for (const sec of Object.keys(out.classTT).sort())
+    for (const d of Object.keys(out.classTT[sec]).sort())
+      for (const p of Object.keys(out.classTT[sec][d]).sort()) {
+        const c: any = out.classTT[sec][d][p]
+        flat.push(`${sec}|${d}|${p}=${c?.subject ?? ''}/${c?.teacher ?? ''}`)
+      }
+  return flat.join(';')
+}
+ok(idShape(i => `staff-${i}`) === idShape(i => `Teacher ${i + 1}`),
+  'across 40 sections, ids unrelated to names give exactly the timetable that ids equal to names gives')
+
+// The identity must also reach the cells, or a re-solve cannot tell two
+// same-named teachers apart.
+let idStamped = 0, idTotal = 0
+for (const sec of Object.keys(engOut.classTT))
+  for (const d of Object.keys(engOut.classTT[sec]))
+    for (const p of Object.keys(engOut.classTT[sec][d])) {
+      const c: any = engOut.classTT[sec][d][p]
+      if (c?.teacher) { idTotal++; if (c.teacherId) idStamped++ }
+    }
+ok(idTotal > 1000 && idStamped === idTotal, `every placed lesson records who taught it (${idStamped}/${idTotal})`)
+
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

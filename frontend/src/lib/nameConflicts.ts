@@ -65,7 +65,7 @@ export function isDuplicateName<T>(rows: T[], nameOf: (row: T) => string | undef
 
 /** What each kind of collision actually costs, in the school's own terms. */
 const COST: Record<string, string> = {
-  teacher: 'the scheduler treats them as ONE teacher on a single weekly cap, so lessons can be left unstaffed — and leave, cover and workload are matched by name too, so marking one absent marks both',
+  teacher: 'leave, cover and workload are matched by name, so the two will be treated as one person — marking one absent marks both. (Generation itself is safe: the scheduler tracks them separately.)',
   subject: 'syllabus coverage is keyed by name, so both will share one set of chapters and hours',
   room: 'clash detection is by name, so two different venues will look like one double-booked room',
   section: 'a class name keys its whole timetable, so the two cannot hold separate schedules',
