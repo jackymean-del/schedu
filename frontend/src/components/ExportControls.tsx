@@ -80,7 +80,7 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
       {/* Prominent Print button — opens the shared preview */}
       <button onClick={openPreview}
         title="Print this page"
-        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', border: 'none', borderRadius: 8, background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,111,224,0.35)' }}>
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', border: 'none', borderRadius: 8, background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,111,224,0.35)' }}>
         🖨️ Print
       </button>
 

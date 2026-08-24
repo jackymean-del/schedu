@@ -434,7 +434,7 @@ export function SubjectsGrid({
         id: makeId(), name: `Subject ${subjects.length + 1}`,
         shortName: `S${subjects.length + 1}`, category: 'Core',
         periodsPerWeek: 4, sessionDuration: 45, maxPeriodsPerDay: 2,
-        isOptional: false, requiresLab: false, color: '#7C6FE0',
+        isOptional: false, requiresLab: false, color: '#685DBC',
         sections: [], classConfigs: [],
       } as any)}
       toolbar={{ add: true, importCSV: true, exportCSV: true, paste: true, search: true, transpose: true, bulkActions: true }}

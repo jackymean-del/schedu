@@ -117,9 +117,9 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes spin { to { transform: rotate(360deg) } }
         .reg-input { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
-        .reg-input:focus { border-color: #7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
+        .reg-input:focus { border-color: #685DBC; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
         .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; cursor: pointer; appearance: auto; transition: border-color 0.15s; }
-        .reg-select:focus { border-color: #7C6FE0; }
+        .reg-select:focus { border-color: #685DBC; }
         .reg-google:hover { border-color: #6B7079 !important; background: #F9FAFB !important; }
       `}</style>
 
@@ -132,7 +132,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
               <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
             </svg>
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', color: '#13111E' }}>
-              sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
+              sched<span style={{ color: '#685DBC', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
             </span>
           </a>
         </div>
@@ -178,7 +178,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
               <p style={{ textAlign: 'center', fontSize: 13, color: '#69707E', marginTop: 18 }}>
                 Didn’t get it?{' '}
                 <button type="button" onClick={() => { setError(''); onResend().catch(err => setError(authErrorMessage(err))) }}
-                  style={{ color: '#7C6FE0', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
+                  style={{ color: '#685DBC', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
                   Resend code
                 </button>
               </p>
@@ -275,7 +275,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
 
               <p style={{ textAlign: 'center', fontSize: 13, color: '#69707E', marginTop: 20 }}>
                 Already have an account?{' '}
-                <a href="/login" style={{ color: '#7C6FE0', fontWeight: 600, textDecoration: 'none' }}>Sign in</a>
+                <a href="/login" style={{ color: '#685DBC', fontWeight: 600, textDecoration: 'none' }}>Sign in</a>
               </p>
             </>
           )}

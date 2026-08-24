@@ -74,7 +74,7 @@ function inferType(t: Staff, assignmentCount: number): TeacherType {
 }
 
 const TYPE_STYLE: Record<TeacherType, { bg: string; fg: string; border: string }> = {
-  'Specialist':    { bg: '#EDE9FF', fg: '#7C6FE0', border: '#C4B5FD' },
+  'Specialist':    { bg: '#EDE9FF', fg: '#685DBC', border: '#C4B5FD' },
   'Class Teacher': { bg: '#DCFCE7', fg: '#15803D', border: '#BBF7D0' },
   'Activity':      { bg: '#FEF3C7', fg: '#92400E', border: '#FDE68A' },
 }
@@ -202,7 +202,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
             style={{
               padding: '4px 11px', borderRadius: 20, border: 'none', cursor: 'pointer',
               fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
-              background: filter === f ? '#7C6FE0' : '#F0EDFF',
+              background: filter === f ? '#685DBC' : '#F0EDFF',
               color: filter === f ? '#fff' : '#4B5275',
             }}>
             {f}
@@ -278,13 +278,13 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           fontSize: 10, fontWeight: 800, color: '#6D6A8A',
           letterSpacing: '0.1em', textTransform: 'uppercase' as const,
         }}>
-          <button onClick={() => toggleSort('name')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'name' ? '#7C6FE0' : 'inherit' }}>
+          <button onClick={() => toggleSort('name')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'name' ? '#685DBC' : 'inherit' }}>
             Teacher <SortIcon field="name" />
           </button>
-          <button onClick={() => toggleSort('load')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'load' ? '#7C6FE0' : 'inherit' }}>
+          <button onClick={() => toggleSort('load')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'load' ? '#685DBC' : 'inherit' }}>
             Weekly Load <SortIcon field="load" />
           </button>
-          <button onClick={() => toggleSort('subjects')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'subjects' ? '#7C6FE0' : 'inherit' }}>
+          <button onClick={() => toggleSort('subjects')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'inherit', fontWeight: 'inherit', color: sortField === 'subjects' ? '#685DBC' : 'inherit' }}>
             Assignments <SortIcon field="subjects" />
           </button>
         </div>
@@ -317,7 +317,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
           background: '#F8F7FF', borderRadius: 8, border: '1px solid #E8E4FF',
           fontSize: 10, color: '#4B5275', alignItems: 'center',
         }}>
-          <BarChart3 size={12} color="#7C6FE0" />
+          <BarChart3 size={12} color="#685DBC" />
           <span>
             {rows.filter((r: any) => r.load > 0).length} active teachers ·{' '}
             Avg {rows.length > 0 ? (displayMode === 'hours'
@@ -408,7 +408,7 @@ function NormDefaultsBar({
             style={{
               all: 'unset', cursor: 'pointer', padding: '2px 9px',
               fontSize: 10, fontWeight: 700,
-              background: unit === u ? '#7C6FE0' : '#fff',
+              background: unit === u ? '#685DBC' : '#fff',
               color: unit === u ? '#fff' : '#6D6A8A',
             }}>
             {u === 'periods' ? 'Periods' : 'Hours'}
@@ -434,14 +434,14 @@ function NormDefaultsBar({
       )}
       <div style={{ flex: 1 }} />
       {overriddenCount > 0 && (
-        <span style={{ color: '#7C6FE0', fontWeight: 700 }}>
+        <span style={{ color: '#685DBC', fontWeight: 700 }}>
           {overriddenCount} teacher{overriddenCount > 1 ? 's' : ''} overridden
         </span>
       )}
       <button onClick={onEditNorm}
         style={{
           padding: '3px 10px', borderRadius: 6, border: '1px solid #E4E0FF',
-          background: '#fff', fontSize: 10.5, fontWeight: 700, color: '#7C6FE0',
+          background: '#fff', fontSize: 10.5, fontWeight: 700, color: '#685DBC',
           cursor: 'pointer', fontFamily: 'inherit',
         }}>
         Set custom loads
@@ -591,7 +591,7 @@ function TeacherRow({
         <div style={{ marginTop: 4, fontSize: 9, color: '#B8B4D4' }}>
           {Math.round(pct)}% of {fmtLoad(max)} · max {caps.perDay}p/day
           {overridden
-            ? <> · <span style={{ color: '#7C6FE0', fontWeight: 700 }}>custom</span></>
+            ? <> · <span style={{ color: '#685DBC', fontWeight: 700 }}>custom</span></>
             : ' · norm'}
         </div>
       </div>
@@ -639,7 +639,7 @@ function TeacherRow({
                   marginLeft: 'auto', flexShrink: 0,
                   padding: '1px 7px', borderRadius: 10,
                   background: '#F8F7FF', border: '1px solid #E8E4FF',
-                  fontSize: 10, fontWeight: 700, color: '#7C6FE0',
+                  fontSize: 10, fontWeight: 700, color: '#685DBC',
                   fontFamily: "'DM Mono', monospace",
                 }}>
                   {displayMode === 'hours' ? toHourMin(totalPeriods, periodMinutes) : `${totalPeriods}p`}

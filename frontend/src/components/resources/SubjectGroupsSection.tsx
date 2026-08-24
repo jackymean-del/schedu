@@ -198,7 +198,7 @@ export interface SubjectAndOrGroup {
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const OR_BG   = '#FFFBEB'; const OR_BDR  = '#FDE68A'; const OR_TEXT  = '#92400E'; const OR_TAG  = '#D97706'
-const AND_BG  = '#EDE9FF'; const AND_BDR = '#C4B5FD'; const AND_TEXT = '#3730A3'; const AND_TAG = '#7C6FE0'
+const AND_BG  = '#EDE9FF'; const AND_BDR = '#C4B5FD'; const AND_TEXT = '#3730A3'; const AND_TAG = '#685DBC'
 
 function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 
@@ -528,13 +528,13 @@ function GroupModal({
                 {sections.map(s => (
                   <span key={s} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
-                    background: '#fff', border: '1.5px solid #7C6FE0', borderRadius: 5,
+                    background: '#fff', border: '1.5px solid #685DBC', borderRadius: 5,
                     padding: '2px 7px', fontSize: 11, fontWeight: 700, color: '#4C1D95',
                   }}>
                     {s}
                     <button onClick={() => toggleSec(s)} style={{
                       background: 'none', border: 'none', cursor: 'pointer',
-                      color: '#7C6FE0', padding: 0, lineHeight: 1, fontSize: 12, opacity: 0.7,
+                      color: '#685DBC', padding: 0, lineHeight: 1, fontSize: 12, opacity: 0.7,
                     }}>✕</button>
                   </span>
                 ))}
@@ -581,7 +581,7 @@ function GroupModal({
                   }}
                     onMouseEnter={e => {
                       e.currentTarget.style.background = '#EDE9FF'
-                      e.currentTarget.style.borderColor = '#7C6FE0'
+                      e.currentTarget.style.borderColor = '#685DBC'
                       e.currentTarget.style.color = '#4C1D95'
                     }}
                     onMouseLeave={e => {
@@ -632,7 +632,7 @@ function GroupModal({
             }}
             style={{
               padding: '8px 22px', borderRadius: 7, border: 'none',
-              background: canSave ? '#7C6FE0' : '#E5E7EB',
+              background: canSave ? '#685DBC' : '#E5E7EB',
               color: canSave ? '#fff' : '#6B7079',
               fontSize: 13, fontWeight: 700,
               cursor: canSave ? 'pointer' : 'default',
@@ -734,7 +734,7 @@ export function SubjectGroupsSection({
           {groups.length > 0 && (
             <span style={{
               fontSize: 10, fontWeight: 700, padding: '1px 7px 2px', borderRadius: 10,
-              background: '#EDE9FF', color: '#7C6FE0',
+              background: '#EDE9FF', color: '#685DBC',
             }}>{groups.length}</span>
           )}
           {open ? <ChevronUp size={13} color="#6B7079" /> : <ChevronDown size={13} color="#6B7079" />}
@@ -910,7 +910,7 @@ export function SubjectGroupsSection({
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '7px 16px', borderRadius: 7,
               border: '1.5px dashed #C4B5FD', background: '#F5F3FF',
-              color: '#7C6FE0', fontSize: 12, fontWeight: 700,
+              color: '#685DBC', fontSize: 12, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
               onMouseEnter={e => (e.currentTarget.style.background = '#EDE9FF')}

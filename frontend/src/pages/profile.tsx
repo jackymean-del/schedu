@@ -22,7 +22,7 @@ export function ProfilePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#7C6FE0,#A78BFA)',
+              background: 'linear-gradient(135deg,#685DBC,#A78BFA)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 22, color: '#fff', fontWeight: 800,
               flexShrink: 0,
@@ -56,7 +56,7 @@ export function ProfilePage() {
             onClick={() => { try { (window as any).Clerk?.openUserProfile?.() } catch { /* noop */ } }}
             style={{
               padding: '8px 18px', borderRadius: 8, border: '1px solid #DDD8FF',
-              background: '#F5F2FF', color: '#7C6FE0',
+              background: '#F5F2FF', color: '#685DBC',
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >

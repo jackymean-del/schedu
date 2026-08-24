@@ -16,7 +16,7 @@ import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useOrgProfile, isOrgProfileComplete } from '@/store/orgProfile'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 /** Routes that are public or part of signing in — never nudge on these. */
 const PUBLIC_PREFIXES = [

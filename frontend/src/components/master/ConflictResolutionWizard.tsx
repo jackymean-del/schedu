@@ -308,7 +308,7 @@ export function ConflictResolutionWizard({
       {/* Progress bar */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 10.5, color: '#6D6A8A' }}>
-          <span style={{ fontWeight: 700, color: '#7C6FE0' }}>
+          <span style={{ fontWeight: 700, color: '#685DBC' }}>
             Conflict {currentIdx + 1} of {conflicts.length}
           </span>
           <span>{resolvedSet.size} resolved · {skippedSet.size} skipped</span>
@@ -317,7 +317,7 @@ export function ConflictResolutionWizard({
           <div style={{
             height: '100%',
             width: `${progressPct}%`,
-            background: 'linear-gradient(90deg, #7C6FE0, #A78BFA)',
+            background: 'linear-gradient(90deg, #685DBC, #A78BFA)',
             transition: 'width 0.3s',
           }} />
         </div>
@@ -366,7 +366,7 @@ export function ConflictResolutionWizard({
       {/* Resolution options */}
       {options.length > 0 ? (
         <>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#7C6FE0', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#685DBC', marginBottom: 8 }}>
             Resolution Options
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7, marginBottom: 16 }}>
@@ -380,7 +380,7 @@ export function ConflictResolutionWizard({
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 10,
                     padding: '10px 12px', borderRadius: 9, textAlign: 'left' as const,
-                    border: isSelected ? '2px solid #7C6FE0' : '1.5px solid #ECEAFB',
+                    border: isSelected ? '2px solid #685DBC' : '1.5px solid #ECEAFB',
                     background: isSelected ? '#EDE9FF' : '#FAFAFE',
                     cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'border-color 0.15s, background 0.15s',
@@ -389,8 +389,8 @@ export function ConflictResolutionWizard({
                   {/* Selection indicator */}
                   <div style={{
                     width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                    border: isSelected ? '4px solid #7C6FE0' : '1.5px solid #D8D2FF',
-                    background: isSelected ? '#7C6FE0' : '#fff',
+                    border: isSelected ? '4px solid #685DBC' : '1.5px solid #D8D2FF',
+                    background: isSelected ? '#685DBC' : '#fff',
                     transition: 'all 0.15s',
                   }} />
                   <div style={{ flex: 1 }}>
@@ -413,7 +413,7 @@ export function ConflictResolutionWizard({
                       {opt.detail}
                     </div>
                   </div>
-                  {isSelected && <ArrowRight size={14} color="#7C6FE0" style={{ flexShrink: 0, marginTop: 2 }} />}
+                  {isSelected && <ArrowRight size={14} color="#685DBC" style={{ flexShrink: 0, marginTop: 2 }} />}
                 </button>
               )
             })}
@@ -523,7 +523,7 @@ function Backdrop({ children, onClose, label = 'Resolve conflicts' }: {
             background: '#EDE9FF',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Wand2 size={14} color="#7C6FE0" />
+            <Wand2 size={14} color="#685DBC" />
           </div>
           <span style={{ fontSize: 14, fontWeight: 800, color: '#13111E' }}>
             Conflict Resolution
@@ -552,7 +552,7 @@ function Meta({ icon, label }: { icon: React.ReactNode; label: string }) {
 const btnPrimary: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 5,
   padding: '7px 14px', borderRadius: 8, border: 'none',
-  background: '#7C6FE0', color: '#fff',
+  background: '#685DBC', color: '#fff',
   fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
   fontFamily: 'inherit',
 }

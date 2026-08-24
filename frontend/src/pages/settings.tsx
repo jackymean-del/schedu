@@ -23,7 +23,7 @@ import {
 } from '@/lib/countryHours'
 
 const KINDS = ['School', 'College', 'University', 'Coaching / Training Center', 'Company', 'Hospital', 'NGO', 'Government', 'Other']
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 export function SettingsPage() {
   const { user, logout } = useAuthStore()

@@ -255,7 +255,7 @@ export function buildPrintHTML(options: ExportOptions): string {
     .section-title {
       font-size: 16px;
       font-weight: 800;
-      color: #7C6FE0;
+      color: #685DBC;
       margin-bottom: 14px;
       padding-bottom: 6px;
       border-bottom: 2px solid #EDE9FF;
@@ -276,7 +276,7 @@ export function buildPrintHTML(options: ExportOptions): string {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #7C6FE0;
+      color: #685DBC;
       text-align: center;
     }
     .period-label {

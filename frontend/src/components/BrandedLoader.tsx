@@ -27,7 +27,7 @@ export function BrandedLoader({ label = 'Loading…' }: { label?: string }) {
       `}</style>
 
       <div style={{
-        width: 64, height: 64, borderRadius: 18, background: '#7C6FE0',
+        width: 64, height: 64, borderRadius: 18, background: '#685DBC',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 8px 24px rgba(124,111,224,0.30)',
       }}>

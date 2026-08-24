@@ -324,7 +324,7 @@ function AddRow({ onAdd, existingStreams }: {
             value={stream} onChange={e => setStream(e.target.value)}
             placeholder="Stream (opt.)"
             list={streamListId}
-            style={{ ...inp, width: 120, fontSize: 11.5, color: '#7C6FE0' }}
+            style={{ ...inp, width: 120, fontSize: 11.5, color: '#685DBC' }}
           />
           <datalist id={streamListId}>
             {existingStreams.map(s => <option key={s} value={s} />)}
@@ -1197,7 +1197,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
+            color: sortAZ ? '#685DBC' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>
@@ -1321,7 +1321,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
               <button onClick={smartCreate}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '14px 22px', borderRadius: 12, border: 'none', background: '#7C6FE0', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', minWidth: 200, boxShadow: '0 4px 14px rgba(124,111,224,0.32)' }}>
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '14px 22px', borderRadius: 12, border: 'none', background: '#685DBC', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', minWidth: 200, boxShadow: '0 4px 14px rgba(124,111,224,0.32)' }}>
                 <span style={{ fontSize: 14, fontWeight: 800 }}>✨ Let me create smartly</span>
                 <span style={{ fontSize: 11.5, opacity: 0.9 }}>Classes for your whole range</span>
               </button>

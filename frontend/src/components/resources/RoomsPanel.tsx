@@ -55,7 +55,7 @@ const TYPE_META: Record<string, { color: string }> = {
   Hall:           { color: '#8B5CF6' },
   Gym:            { color: '#14B8A6' },
   'Staff Room':   { color: '#69707E' },
-  Other:          { color: '#7C6FE0' },
+  Other:          { color: '#685DBC' },
 }
 
 const inp: React.CSSProperties = {
@@ -367,7 +367,7 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
               onClick={() => onUpdate({ parallelEnabled: !parallel })}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
-                padding: '2px 7px', borderRadius: 4, border: `1px solid ${parallel ? '#7C6FE0' : '#DDD8FF'}`,
+                padding: '2px 7px', borderRadius: 4, border: `1px solid ${parallel ? '#685DBC' : '#DDD8FF'}`,
                 background: parallel ? '#EDE9FF' : 'transparent',
                 color: parallel ? P_D : '#B4ADDD',
                 fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
@@ -647,7 +647,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
+            color: sortAZ ? '#685DBC' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>

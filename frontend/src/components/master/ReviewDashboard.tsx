@@ -357,7 +357,7 @@ export function ReviewDashboard({
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 13px', borderRadius: 8,
                 border: '1.5px solid #D8D2FF', background: '#F8F7FF',
-                color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                color: '#685DBC', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
             >
@@ -368,7 +368,7 @@ export function ReviewDashboard({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 14px', borderRadius: 8, border: 'none',
-                background: 'linear-gradient(135deg, #7C6FE0 0%, #9B8EF5 100%)',
+                background: 'linear-gradient(135deg, #685DBC 0%, #9B8EF5 100%)',
                 color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer',
                 fontFamily: 'inherit', letterSpacing: '0.04em',
                 boxShadow: '0 2px 8px rgba(124,111,224,0.30)',
@@ -380,7 +380,7 @@ export function ReviewDashboard({
         }
       >
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
-          <Stat icon={<Users2 size={14} />}    color="#7C6FE0" label="Classes"   value={sections.length} />
+          <Stat icon={<Users2 size={14} />}    color="#685DBC" label="Classes"   value={sections.length} />
           <Stat icon={<BookOpen size={14} />}  color="#9B8EF5" label="Subjects"  value={subjects.length} />
           <Stat icon={<Users2 size={14} />}    color="#D4920E" label="Teachers"  value={staff.length} />
           <Stat icon={<Building2 size={14} />} color="#D946EF" label="Rooms"     value={rooms.length} />
@@ -412,7 +412,7 @@ export function ReviewDashboard({
                 <div style={{ flex: 1, height: 14, background: '#F5F2FF', borderRadius: 4, overflow: 'hidden', position: 'relative' as const }}>
                   <div style={{
                     height: '100%', width: `${pct}%`,
-                    background: overStudent ? '#DC2626' : status === 'over' ? '#DC2626' : status === 'tight' ? '#D4920E' : status === 'ok' ? '#0A8136' : '#7C6FE0',
+                    background: overStudent ? '#DC2626' : status === 'over' ? '#DC2626' : status === 'tight' ? '#D4920E' : status === 'ok' ? '#0A8136' : '#685DBC',
                     transition: 'width 0.25s',
                   }} />
                 </div>
@@ -452,7 +452,7 @@ export function ReviewDashboard({
         }
       >
         <div style={{ display: 'flex', flexWrap: 'wrap' as const, alignItems: 'center', gap: 12, marginBottom: 12, fontSize: 11 }}>
-          <Tag label="Mean"    value={loadStats.mean.toFixed(1)} color="#7C6FE0" />
+          <Tag label="Mean"    value={loadStats.mean.toFixed(1)} color="#685DBC" />
           <Tag label="Min"     value={String(loadStats.min)}     color="#0EA5E9" />
           <Tag label="Max"     value={String(loadStats.max)}     color="#D4920E" />
           <Tag label="Stddev"  value={loadStats.stddev.toFixed(2)} color="#9B8EF5" />
@@ -467,7 +467,7 @@ export function ReviewDashboard({
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '5px 11px', borderRadius: 7,
               background: reoptimizing ? '#F5F2FF' : '#EDE9FF',
-              color: '#7C6FE0', border: '1px solid #D8D2FF',
+              color: '#685DBC', border: '1px solid #D8D2FF',
               fontSize: 10.5, fontWeight: 700, cursor: reoptimizing ? 'default' : 'pointer',
               fontFamily: 'inherit', opacity: reoptimizing ? 0.7 : 1,
             }}
@@ -481,7 +481,7 @@ export function ReviewDashboard({
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '5px 11px', borderRadius: 7,
-              background: '#F8F7FF', color: '#7C6FE0', border: '1px solid #E4E0FF',
+              background: '#F8F7FF', color: '#685DBC', border: '1px solid #E4E0FF',
               fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -536,7 +536,7 @@ export function ReviewDashboard({
                 <div style={{ flex: 1, height: 10, background: '#F5F2FF', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', width: `${pct}%`,
-                    background: overloaded ? '#DC2626' : t.load === 0 ? '#D8D2FF' : '#7C6FE0',
+                    background: overloaded ? '#DC2626' : t.load === 0 ? '#D8D2FF' : '#685DBC',
                     transition: 'width 0.25s',
                   }} />
                 </div>
@@ -610,7 +610,7 @@ export function ReviewDashboard({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 padding: '5px 11px', borderRadius: 6,
-                background: '#7C6FE0', color: '#fff', border: 'none',
+                background: '#685DBC', color: '#fff', border: 'none',
                 fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'inherit', letterSpacing: '0.02em',
               }}
@@ -922,7 +922,7 @@ function Card({ title, icon, accent, action, children }: {
       padding: '14px 16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <div style={{ color: accent ?? '#7C6FE0', display: 'flex' }}>{icon}</div>
+        <div style={{ color: accent ?? '#685DBC', display: 'flex' }}>{icon}</div>
         <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#4B5275' }}>
           {title}
         </span>
@@ -1093,7 +1093,7 @@ function FixCard({ fix }: { fix: FixSuggestion }) {
   const store = useTimetableStore() as any
 
   const categoryStyle: Record<string, { bg: string; fg: string }> = {
-    rebalance: { bg: '#EDE9FF', fg: '#7C6FE0' },
+    rebalance: { bg: '#EDE9FF', fg: '#685DBC' },
     reassign:  { bg: '#DBEAFE', fg: '#1D4ED8' },
     unscope:   { bg: '#FEF3C7', fg: '#92400E' },
     manual:    { bg: '#F1F5F9', fg: '#475569' },

@@ -78,7 +78,7 @@ export function GuidePage() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 800, color: done ? '#059669' : '#7C6FE0',
+                    fontSize: 10, fontWeight: 800, color: done ? '#059669' : '#685DBC',
                     background: done ? '#D1FAE5' : '#EDE9FF',
                     padding: '2px 8px', borderRadius: 20,
                   }}>Step {step.n}</span>
@@ -90,7 +90,7 @@ export function GuidePage() {
                   <a href={step.cta.href} style={{
                     display: 'inline-block', marginTop: 10,
                     padding: '6px 16px', borderRadius: 8,
-                    background: done ? '#F0FDF4' : '#7C6FE0',
+                    background: done ? '#F0FDF4' : '#685DBC',
                     color: done ? '#059669' : '#fff',
                     fontSize: 12.5, fontWeight: 700, textDecoration: 'none',
                     border: done ? '1px solid #A7F3D0' : 'none',

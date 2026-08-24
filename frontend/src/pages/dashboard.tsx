@@ -494,7 +494,7 @@ function CreateTimetableModal({
           transition: border-color 0.15s, box-shadow 0.15s;
         }
         .ct-input:focus {
-          border-color: #7C6FE0;
+          border-color: #685DBC;
           box-shadow: 0 0 0 3px rgba(124,111,224,0.12);
         }
         .ct-num {
@@ -507,7 +507,7 @@ function CreateTimetableModal({
           transition: border-color 0.15s, box-shadow 0.15s;
         }
         .ct-num:focus {
-          border-color: #7C6FE0;
+          border-color: #685DBC;
           box-shadow: 0 0 0 3px rgba(124,111,224,0.12);
         }
         .ct-select {
@@ -518,7 +518,7 @@ function CreateTimetableModal({
           appearance: auto;
           transition: border-color 0.15s;
         }
-        .ct-select:focus { border-color: #7C6FE0; }
+        .ct-select:focus { border-color: #685DBC; }
         .ct-board-chip {
           padding: 6px 14px; border-radius: 6px;
           font-size: 13px; font-weight: 500;
@@ -852,7 +852,7 @@ function EditTimetableModal({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Pencil size={16} color="#7C6FE0" />
+              <Pencil size={16} color="#685DBC" />
               <h2 style={{ fontSize: 17, fontWeight: 700, color: '#13111E', margin: 0 }}>Edit schedule</h2>
             </div>
             <p style={{ fontSize: 13, color: '#69707E', margin: 0 }}>
@@ -883,7 +883,7 @@ function EditTimetableModal({
               background: '#fff', outline: 'none', boxSizing: 'border-box',
               transition: 'border-color 0.15s, box-shadow 0.15s',
             }}
-            onFocus={e => { e.currentTarget.style.borderColor = '#7C6FE0'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,111,224,0.12)' }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#685DBC'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,111,224,0.12)' }}
             onBlur={e => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.boxShadow = 'none' }}
           />
         </div>
@@ -898,7 +898,7 @@ function EditTimetableModal({
               <label style={lbl}>{f.label} <span style={{ color: '#EF4444' }}>*</span></label>
               <input type="date" value={f.val} onChange={e => f.set(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', border: '1px solid #D1D5DB', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', color: '#13111E', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#7C6FE0')}
+                onFocus={e => (e.currentTarget.style.borderColor = '#685DBC')}
                 onBlur={e => (e.currentTarget.style.borderColor = '#D1D5DB')}
               />
               <div style={{ fontSize: 12, color: '#6B7079', marginTop: 4 }}>{fmt(f.val)}</div>
@@ -978,7 +978,7 @@ function EditTimetableModal({
                     color: f.value ? '#13111E' : '#767384',
                     borderColor: f.value ? '#E5E7EB' : '#EDE9FF',
                   }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#7C6FE0')}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#685DBC')}
                   onBlur={e => (e.currentTarget.style.borderColor = f.value ? '#E5E7EB' : '#EDE9FF')}
                 />
                 {!f.value && (
@@ -1003,13 +1003,13 @@ function EditTimetableModal({
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#D1D5DB' }}
           >Cancel</button>
           <button onClick={handleSave} style={{
-            padding: '9px 22px', borderRadius: 8, border: 'none', background: '#7C6FE0',
+            padding: '9px 22px', borderRadius: 8, border: 'none', background: '#685DBC',
             fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
             display: 'inline-flex', alignItems: 'center', gap: 7,
             boxShadow: '0 2px 10px rgba(124,111,224,0.3)',
           }}
             onMouseEnter={e => (e.currentTarget.style.background = '#6358C4')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#7C6FE0')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#685DBC')}
           >Save changes</button>
         </div>
 
@@ -1552,7 +1552,7 @@ export function DashboardPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7,
                   padding: '10px 18px', borderRadius: 10, border: 'none',
-                  background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)',
+                  background: 'linear-gradient(135deg,#685DBC,#5D4FCF)',
                   fontSize: 14, fontWeight: 700, color: '#fff',
                   cursor: 'pointer', fontFamily: 'inherit',
                   boxShadow: '0 6px 16px rgba(124,111,224,0.28)',
@@ -1664,7 +1664,7 @@ export function DashboardPage() {
                       flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <CalendarDays size={16} color={tt.status === 'draft' ? '#7C6FE0' : '#69707E'} />
+                      <CalendarDays size={16} color={tt.status === 'draft' ? '#685DBC' : '#69707E'} />
                     </div>
 
                     {/* Name + meta */}
@@ -1682,7 +1682,7 @@ export function DashboardPage() {
                             display: 'inline-flex', alignItems: 'center', gap: 3,
                             padding: '1px 7px', borderRadius: 10,
                             background: '#F0EDFF', border: '1px solid #C4B5FD',
-                            fontSize: 11, fontWeight: 600, color: '#7C6FE0',
+                            fontSize: 11, fontWeight: 600, color: '#685DBC',
                             flexShrink: 0,
                           }}>
                             Step {tt.wizardStep} · {stepLabelFor(tt.wizardStep)}
@@ -1746,7 +1746,7 @@ export function DashboardPage() {
                         background: 'transparent', border: '1px solid transparent',
                         cursor: 'pointer', color: '#D1D5DB', transition: 'all 0.13s',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.color = '#7C6FE0'; e.currentTarget.style.borderColor = '#C4B5FD'; e.currentTarget.style.background = '#F5F3FF' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#685DBC'; e.currentTarget.style.borderColor = '#C4B5FD'; e.currentTarget.style.background = '#F5F3FF' }}
                       onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
                     >
                       <Pencil size={13} />
@@ -1762,7 +1762,7 @@ export function DashboardPage() {
                         background: 'transparent', border: '1px solid transparent',
                         cursor: 'pointer', color: '#D1D5DB', transition: 'all 0.13s',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.color = '#7C6FE0'; e.currentTarget.style.borderColor = '#C4B5FD'; e.currentTarget.style.background = '#F5F3FF' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#685DBC'; e.currentTarget.style.borderColor = '#C4B5FD'; e.currentTarget.style.background = '#F5F3FF' }}
                       onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
                     >
                       <Copy size={13} />

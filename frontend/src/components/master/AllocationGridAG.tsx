@@ -311,7 +311,7 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
           }}
         />
         <button onClick={commit} title="Apply (Enter)" style={{
-          width: 30, borderRadius: 7, border: 'none', background: '#7C6FE0', color: '#fff',
+          width: 30, borderRadius: 7, border: 'none', background: '#685DBC', color: '#fff',
           cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         }}><Check size={14} strokeWidth={2.5} /></button>
       </div>
@@ -344,7 +344,7 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
         {QUICK_CHIPS.map(c => (
           <button key={c} onClick={() => setText(c)} style={{
             padding: '2px 8px', borderRadius: 11, cursor: 'pointer',
-            border: `1px solid ${text === c ? '#7C6FE0' : '#E4E0FF'}`,
+            border: `1px solid ${text === c ? '#685DBC' : '#E4E0FF'}`,
             background: text === c ? '#EDE9FF' : '#fff',
             color: text === c ? '#6358C4' : '#6B6891',
             fontSize: 10.5, fontWeight: 700, fontFamily: "'DM Mono', monospace",
@@ -1153,7 +1153,7 @@ export function AllocationGridAG({
           // different from a derived one — otherwise "why didn't this change?"
           // has no answer on screen.
           if (manualRef.current?.[sn]?.[sub.name]) {
-            return { borderLeft: '2px solid #7C6FE0', fontWeight: 700 } as Record<string, string | number>
+            return { borderLeft: '2px solid #685DBC', fontWeight: 700 } as Record<string, string | number>
           }
           return null
         },

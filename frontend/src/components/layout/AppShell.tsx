@@ -154,14 +154,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }}>
           {open && (
             <a href="/dashboard" style={{ textDecoration: 'none', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 26, height: 26, borderRadius: 7, background: '#7C6FE0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ width: 26, height: 26, borderRadius: 7, background: '#685DBC', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="15" height="15" viewBox="0 0 52 52" fill="none">
                   <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
                   <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
                 </svg>
               </span>
               <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
-                sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
+                sched<span style={{ color: '#685DBC', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
               </span>
             </a>
           )}
@@ -192,10 +192,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       display: 'flex', alignItems: 'center', gap: open ? 11 : 0,
                       justifyContent: open ? 'flex-start' : 'center',
                       padding: open ? '9px 10px' : '10px 0', margin: '0 0 2px', borderRadius: 9,
-                      background: isActive ? '#EDE9FF' : 'none', color: isActive ? '#7C6FE0' : '#4B5563',
+                      background: isActive ? '#EDE9FF' : 'none', color: isActive ? '#685DBC' : '#4B5563',
                       overflow: 'hidden', minWidth: 0,
                     }}>
-                    <Icon size={18} style={{ flexShrink: 0, color: isActive ? '#7C6FE0' : '#6D6A8A' }} />
+                    <Icon size={18} style={{ flexShrink: 0, color: isActive ? '#685DBC' : '#6D6A8A' }} />
                     {open && <span style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, whiteSpace: 'nowrap' }}>{item.label}</span>}
                   </a>
                 )
@@ -209,7 +209,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: open ? 10 : 0, justifyContent: open ? 'flex-start' : 'center', marginBottom: open ? 8 : 0 }}>
             <button onClick={CLERK_ENABLED ? openUserProfile : undefined}
               title={CLERK_ENABLED ? 'Edit profile' : undefined}
-              style={{ width: 32, height: 32, borderRadius: '50%', background: '#7C6FE0', color: '#fff', border: 'none', cursor: CLERK_ENABLED ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+              style={{ width: 32, height: 32, borderRadius: '50%', background: '#685DBC', color: '#fff', border: 'none', cursor: CLERK_ENABLED ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
               {initials}
             </button>
             {open && (
@@ -228,15 +228,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {open && (
             <a href="/subscription" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F9F8FF', borderRadius: 9, border: '1px solid #EDE9FF', padding: '7px 10px', textDecoration: 'none', gap: 8 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                <Zap size={13} color="#7C6FE0" />
+                <Zap size={13} color="#685DBC" />
                 {/* An "Upgrade" button that leads to a page with nothing to buy
                     is a dead end, so it only appears once payments are live. */}
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#7C6FE0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#685DBC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {billingLive ? 'Free Plan' : 'Free — early access'}
                 </span>
               </span>
               {billingLive && (
-                <span className="as-upgrade" style={{ padding: '4px 12px', borderRadius: 6, background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700 }}>Upgrade</span>
+                <span className="as-upgrade" style={{ padding: '4px 12px', borderRadius: 6, background: '#685DBC', color: '#fff', fontSize: 12, fontWeight: 700 }}>Upgrade</span>
               )}
             </a>
           )}

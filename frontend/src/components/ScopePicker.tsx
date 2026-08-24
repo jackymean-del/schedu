@@ -14,7 +14,7 @@
  */
 import { classOfSection } from '@/lib/syllabusTracking'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 export interface ScopeGroup { cls: string; sections: string[] }
 

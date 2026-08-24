@@ -34,7 +34,7 @@ interface Props {
 }
 
 const TONE: Record<PulseState, { dot: string; glow: string; wash: string }> = {
-  setup:     { dot: '#7C6FE0', glow: 'rgba(124,111,224,0.28)', wash: 'linear-gradient(120deg,#FBFAFF,#F3F0FF)' },
+  setup:     { dot: '#685DBC', glow: 'rgba(124,111,224,0.28)', wash: 'linear-gradient(120deg,#FBFAFF,#F3F0FF)' },
   rest:      { dot: '#6B7079', glow: 'rgba(156,163,175,0.22)', wash: 'linear-gradient(120deg,#FBFBFC,#F4F5F7)' },
   attention: { dot: '#EA580C', glow: 'rgba(234,88,12,0.26)',   wash: 'linear-gradient(120deg,#FFFDFB,#FFF4EC)' },
   covered:   { dot: '#2563EB', glow: 'rgba(37,99,235,0.22)',   wash: 'linear-gradient(120deg,#FBFCFF,#EEF4FF)' },

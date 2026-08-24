@@ -230,7 +230,7 @@ export function categoryLabel(c: FactorCategory): string {
 /** Category → colour for UI badges */
 export function categoryColor(c: FactorCategory): { bg: string; fg: string } {
   switch (c) {
-    case 'expertise':      return { bg: '#EDE9FF', fg: '#7C6FE0' }
+    case 'expertise':      return { bg: '#EDE9FF', fg: '#685DBC' }
     case 'continuity':     return { bg: '#DBEAFE', fg: '#1D4ED8' }
     case 'familiarity':    return { bg: '#DCFCE7', fg: '#15803D' }
     case 'workload':       return { bg: '#F0FDF4', fg: '#0A8136' }

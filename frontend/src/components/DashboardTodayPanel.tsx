@@ -65,7 +65,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
           gap: 12, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid #F1F1F4',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CalendarClock size={16} color="#7C6FE0" />
+            <CalendarClock size={16} color="#685DBC" />
             <div>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', margin: 0 }}>Today</h2>
               <div style={{ fontSize: 12, color: '#6B7079', marginTop: 1 }}>
@@ -75,7 +75,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
           </div>
           <a href="/timetable" style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 9, background: '#7C6FE0', color: '#fff',
+            padding: '8px 14px', borderRadius: 9, background: '#685DBC', color: '#fff',
             fontSize: 13, fontWeight: 700, textDecoration: 'none',
           }}>
             Open full editor <ExternalLink size={13} />

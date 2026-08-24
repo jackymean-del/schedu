@@ -895,7 +895,7 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
           {message}
         </div>
         <button onClick={onClose} style={{
-          marginTop:18, width:"100%", padding:"9px", background:"#7C6FE0",
+          marginTop:18, width:"100%", padding:"9px", background:"#685DBC",
           color:"#fff", border:"none", borderRadius:8,
           fontSize:13, fontWeight:700, cursor:"pointer",
         }}>Got it</button>
@@ -1007,7 +1007,7 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
       onDrop={canDrag ? e => { e.preventDefault(); onDrop?.() } : undefined}
       style={{ background:bg, color, fontSize:10, fontWeight:700, padding:"6px 4px",
         border: isDragOver ? "2.5px dashed #A78BFA"
-          : isDragSrc  ? "2px dashed #7C6FE0"
+          : isDragSrc  ? "2px dashed #685DBC"
           : isSwapped  ? "2px solid #eab308"
           : "1px solid #E8E4FF",
         textAlign:"center", minWidth:80, position:"relative" as const,
@@ -1024,7 +1024,7 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
       {breakGroupLabel && <div style={{ fontSize:7, fontWeight:600, color:"#475569", background:"#EEF2FF", borderRadius:3, padding:"1px 4px", marginTop:2, letterSpacing:"0.2px", whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.3 }}>{breakGroupLabel}</div>}
       {canDrag && (
         <div className="period-col-drag"
-          style={{ fontSize:11, color: isDragOver?"rgba(255,255,255,0.95)":isDragSrc?"#4338ca":"#7C6FE0",
+          style={{ fontSize:11, color: isDragOver?"rgba(255,255,255,0.95)":isDragSrc?"#4338ca":"#685DBC",
             marginTop:2, lineHeight:1, letterSpacing:"-1px" }} title="Drag to swap column">↔</div>
       )}
     </th>
@@ -1034,7 +1034,7 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
 // ── Break cell ─────────────────────────────────────────────
 const BreakCell = React.memo(function BreakCell({ p }: { p:Period }) {
   const bg = p.type==="fixed-start"?"#eff6ff":p.type==="lunch"?"#fffbeb":p.type==="break"?"#fefce8":p.type==="fixed-end"?"#f0fdf4":"#FAFAFE"
-  const color = p.type==="fixed-start"?"#3b82f6":p.type==="lunch"?"#D4920E":p.type==="break"?"#ca8a04":"#7C6FE0"
+  const color = p.type==="fixed-start"?"#3b82f6":p.type==="lunch"?"#D4920E":p.type==="break"?"#ca8a04":"#685DBC"
   return (
     <td style={{ background:bg, color, fontSize:9, fontWeight:600, textAlign:"center", padding:"4px 2px", border:"1px solid #E8E4FF", fontStyle:"italic", whiteSpace:"nowrap" }}>{p.name}</td>
   )
@@ -1089,7 +1089,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         <div className={isSrc ? "tt-drag-src" : undefined}
           draggable={isDraggable}
           onDragStart={isDraggable ? onDragStart : undefined}
-          style={{ borderRadius:5, padding:"3px 5px", minHeight:44, background:"linear-gradient(135deg,#F5F2FF 0%,#FAFAFE 100%)", borderLeft:"3px solid #7C6FE0", border:"1px solid #D8D2FF", position:"relative" as const, cursor:isDraggable?(isDropTarget?"default":"grab"):onClick?"pointer":"default" }}>
+          style={{ borderRadius:5, padding:"3px 5px", minHeight:44, background:"linear-gradient(135deg,#F5F2FF 0%,#FAFAFE 100%)", borderLeft:"3px solid #685DBC", border:"1px solid #D8D2FF", position:"relative" as const, cursor:isDraggable?(isDropTarget?"default":"grab"):onClick?"pointer":"default" }}>
           {absentHighlight && <span style={{ position:"absolute" as const, top:2, left:3, fontSize:8, color:"#D4920E" }}>⚠</span>}
           <div style={{ fontSize:7, fontWeight:800, letterSpacing:"0.08em", color:"#8B7FE8", textTransform:"uppercase" as const, marginBottom:2 }}>Parallel groups</div>
           {options.map((opt, i) => {
@@ -1099,7 +1099,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
                 {i > 0 && (
                   <div style={{ display:"flex", alignItems:"center", gap:4, margin:"2px 0" }}>
                     <span style={{ flex:1, height:1, background:"#E4DEFF" }} />
-                    <span style={{ fontSize:7, fontWeight:800, color: sepLabel==='AND' ? '#7C6FE0' : '#9B8EF5', letterSpacing:"0.06em" }}>{sepLabel}</span>
+                    <span style={{ fontSize:7, fontWeight:800, color: sepLabel==='AND' ? '#685DBC' : '#9B8EF5', letterSpacing:"0.06em" }}>{sepLabel}</span>
                     <span style={{ flex:1, height:1, background:"#E4DEFF" }} />
                   </div>
                 )}
@@ -1141,7 +1141,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{dSub(subject)}</div>
         {showTeacher && effectiveTeacher && (
           <div style={{ fontSize:9, opacity:0.75, marginTop:2, display:"flex", alignItems:"center", gap:3 }}>
-            {isClassTeacher && <span style={{ color:"#7C6FE0" }}>★</span>}
+            {isClassTeacher && <span style={{ color:"#685DBC" }}>★</span>}
             {isSub ? <span style={{ color:"#D4920E" }}>🔄 {dTch(subTeacher)}</span> : dTch(effectiveTeacher)}
           </div>
         )}
@@ -1155,7 +1155,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
               style={{ width:16, height:16, borderRadius:"50%", border:"none", background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>✕</button>
           )}
           {isDraggable && (
-            <div style={{ width:14, height:14, borderRadius:3, background:"rgba(124,111,224,0.2)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"grab", fontSize:8, color:"#7C6FE0" }}
+            <div style={{ width:14, height:14, borderRadius:3, background:"rgba(124,111,224,0.2)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"grab", fontSize:8, color:"#685DBC" }}
               title="Drag to swap">⠿</div>
           )}
         </div>
@@ -1186,7 +1186,7 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
         {cell.conflict && <span style={{ position:"absolute" as const, top:2, right:3, fontSize:8, color:"#dc2626" }}>⚠</span>}
         <div style={{ fontSize:10, fontWeight:700, lineHeight:1.3 }}>{cell.sectionName}</div>
         <div style={{ fontSize:9, color:"#475569", marginTop:2 }}>{subjDisp}</div>
-        {cell.isClassTeacher && <div style={{ fontSize:8, color:"#7C6FE0" }}>★ Class Teacher</div>}
+        {cell.isClassTeacher && <div style={{ fontSize:8, color:"#685DBC" }}>★ Class Teacher</div>}
         {showRoom && cell.room && <div style={{ fontSize:8, opacity:0.55 }}>{shortNames?shortRoomName(cell.room):cell.room}</div>}
       </div>
       {editMode && (
@@ -1197,7 +1197,7 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
               style={{ width:16, height:16, borderRadius:"50%", border:"none", background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>✕</button>
           )}
           {onDragStart && (
-            <div style={{ width:14, height:14, borderRadius:3, background:"rgba(124,111,224,0.2)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"grab", fontSize:8, color:"#7C6FE0" }} title="Drag to swap">⠿</div>
+            <div style={{ width:14, height:14, borderRadius:3, background:"rgba(124,111,224,0.2)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"grab", fontSize:8, color:"#685DBC" }} title="Drag to swap">⠿</div>
           )}
         </div>
       )}
@@ -2239,14 +2239,14 @@ export function TimetablePage() {
                         cursor: canDragCT ? "grab" : "default",
                         opacity: isDimCT ? 0.35 : isSrcCT ? 0.52 : 1,
                         userSelect:"none" as const,
-                        border: isOverCT ? "2.5px dashed #A78BFA" : isSrcCT ? "2px dashed #7C6FE0" : isSwapCT ? "2px solid #eab308" : "1px solid #E8E4FF",
+                        border: isOverCT ? "2.5px dashed #A78BFA" : isSrcCT ? "2px dashed #685DBC" : isSwapCT ? "2px solid #eab308" : "1px solid #E8E4FF",
                         background: isOverCT ? "#6358C4" : isSrcCT ? "#e0e7ff" : isSwapCT ? "#fefce8" : undefined,
                         boxShadow: isOverCT ? "inset 0 0 0 2px #A78BFA" : isSwapCT ? "0 0 0 2px #fbbf2466" : "none",
                         transition:"background 0.12s, opacity 0.15s",
                       }}>
                       <div style={{ fontWeight:700, fontSize:11, color: isOverCT ? "#fff" : isSwapCT ? "#78350f" : isBreak?"#D4920E":"#1e293b" }}>{p.name}</div>
                       {times && <div style={{ fontSize:9, color: isOverCT ? "rgba(255,255,255,0.75)" : "#6D6A8A" }}>{times.start} → {times.end}</div>}
-                      {canDragCT && <div style={{ fontSize: isHovCT||isSrcCT ? 14 : 10, color: isOverCT?"rgba(255,255,255,0.95)":isSrcCT?"#4338ca":isHovCT?"#7C6FE0":"#C4BFEA", marginTop:1, transition:"font-size 0.1s, color 0.1s", letterSpacing:"-1px" }} title="Drag to swap row">↔</div>}
+                      {canDragCT && <div style={{ fontSize: isHovCT||isSrcCT ? 14 : 10, color: isOverCT?"rgba(255,255,255,0.95)":isSrcCT?"#4338ca":isHovCT?"#685DBC":"#C4BFEA", marginTop:1, transition:"font-size 0.1s, color 0.1s", letterSpacing:"-1px" }} title="Drag to swap row">↔</div>}
                     </td>
                     {usedDays.map(day => {
                       const isDayOff = offDaysT.has(day)
@@ -2370,7 +2370,7 @@ export function TimetablePage() {
     // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
     const draggedCellTeacher = dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.teacher : null
     const isSameTeacherDrag  = isDragging && draggedCellTeacher === tn
-    const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
+    const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#685DBC"
     const assignedStr = teacherSubjectSummary(tn)
       || ((st?.subjects ?? []).filter(s => s.includes("::")).map(s => { const [cls,sub]=s.split("::"); return `${cls}: ${sub}` }).join(" · ") || (st?.subjects??[]).join(", ") || "—")
 
@@ -2387,7 +2387,7 @@ export function TimetablePage() {
       <div>
         <div style={{ padding:"12px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF" }}>
           <div style={{ display:"grid", gridTemplateColumns:"auto 1fr auto", gap:16, alignItems:"start" }}>
-            <div style={{ width:42, height:42, borderRadius:"50%", background:"#7C6FE0", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, fontWeight:700 }}>{tn[0]}</div>
+            <div style={{ width:42, height:42, borderRadius:"50%", background:"#685DBC", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, fontWeight:700 }}>{tn[0]}</div>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'Plus Jakarta Sans',Georgia,serif" }}>{tn}</div>
               {st?.role && <div style={{ fontSize:11, color:"#4B5275" }}>{st.role}</div>}
@@ -2583,7 +2583,7 @@ export function TimetablePage() {
     // Teacher view drag: ALL periods of the SAME teacher are droppable (not just same section)
     const draggedCellTeacher = dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.teacher : null
     const isSameTeacherDrag  = isDragging && draggedCellTeacher === tn
-    const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#7C6FE0"
+    const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#685DBC"
 
     // ── Use pre-computed teacher cache (same data as normal view) ──
     const cwBreaksTTT    = cwBreaksGlobal
@@ -3350,7 +3350,7 @@ export function TimetablePage() {
       }}
       style={{
         width:268, background:"#fff",
-        borderLeft: dragItem ? "2px dashed #7C6FE0" : "1px solid #E8E4FF",
+        borderLeft: dragItem ? "2px dashed #685DBC" : "1px solid #E8E4FF",
         display:"flex", flexDirection:"column" as const, flexShrink:0, overflow:"hidden",
         boxShadow: dragItem ? "inset 0 0 0 2px rgba(124,111,224,0.18)" : undefined,
       }}>
@@ -3365,7 +3365,7 @@ export function TimetablePage() {
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <button onClick={() => setNewLessonOpen(o => !o)}
             title="Create a lesson — it lands here until you drag it onto the grid"
-            style={{ padding:"4px 10px", borderRadius:6, border:"none", background: newLessonOpen ? "#4338ca" : "#7C6FE0", color:"#fff", fontSize:10.5, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
+            style={{ padding:"4px 10px", borderRadius:6, border:"none", background: newLessonOpen ? "#4338ca" : "#685DBC", color:"#fff", fontSize:10.5, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
             + Lesson
           </button>
           <button onClick={() => setPoolPanelOpen(false)} style={{ border:"none", background:"none", fontSize:16, cursor:"pointer", color:"#6D64C0", lineHeight:1 }}>✕</button>
@@ -3373,7 +3373,7 @@ export function TimetablePage() {
       </div>
 
       {/* Hint */}
-      <div style={{ padding:"7px 12px 7px", background:"#F5F2FF", borderBottom:"1px solid #E8E4FF", fontSize:10, color:"#7C6FE0", lineHeight:1.4 }}>
+      <div style={{ padding:"7px 12px 7px", background:"#F5F2FF", borderBottom:"1px solid #E8E4FF", fontSize:10, color:"#685DBC", lineHeight:1.4 }}>
         {dragItem ? "Drop here to bench it — the lesson comes off the grid." : "Drag a lesson onto a cell to send it on, or drag a placed lesson here to bench it."}
       </div>
 
@@ -3405,7 +3405,7 @@ export function TimetablePage() {
                 updateAdhocPool([...adhocPool, { id: Date.now().toString(36), section: sec, subject: sub, teacher: tch || undefined }])
                 setNewLessonOpen(false)
               }}
-              style={{ padding:"6px 0", borderRadius:6, border:"none", background:"#7C6FE0", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
+              style={{ padding:"6px 0", borderRadius:6, border:"none", background:"#685DBC", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
               Add to bench
             </button>
           </div>
@@ -3453,7 +3453,7 @@ export function TimetablePage() {
                 {poolData.map(s => <option key={s.section} value={s.section}>{s.section}</option>)}
               </select>
               {autoClass && (
-                <span title="Auto-filtered by current view" style={{ fontSize:9, color:"#7C6FE0", background:"#EDE9FF", padding:"1px 5px", borderRadius:4, flexShrink:0, fontWeight:600 }}>⇌ view</span>
+                <span title="Auto-filtered by current view" style={{ fontSize:9, color:"#685DBC", background:"#EDE9FF", padding:"1px 5px", borderRadius:4, flexShrink:0, fontWeight:600 }}>⇌ view</span>
               )}
             </div>
 
@@ -3466,7 +3466,7 @@ export function TimetablePage() {
                 {staff.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
               {autoTeacher && (
-                <span title="Auto-filtered by current teacher view" style={{ fontSize:9, color:"#7C6FE0", background:"#EDE9FF", padding:"1px 5px", borderRadius:4, flexShrink:0, fontWeight:600 }}>⇌ view</span>
+                <span title="Auto-filtered by current teacher view" style={{ fontSize:9, color:"#685DBC", background:"#EDE9FF", padding:"1px 5px", borderRadius:4, flexShrink:0, fontWeight:600 }}>⇌ view</span>
               )}
             </div>
 
@@ -3522,12 +3522,12 @@ export function TimetablePage() {
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ fontSize:11, fontWeight:700, color:"#4338ca" }}>{sec.section}</span>
                   {poolFilterTeacher !== 'ALL' && (
-                    <span style={{ fontSize:9, color:"#7C6FE0", background:"#EDE9FF", padding:"1px 5px", borderRadius:4, fontWeight:600 }}>
+                    <span style={{ fontSize:9, color:"#685DBC", background:"#EDE9FF", padding:"1px 5px", borderRadius:4, fontWeight:600 }}>
                       {poolFilterTeacher}
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize:9, color:"#7C6FE0", padding:"1px 6px", background:"#EDE9FF", borderRadius:8, fontWeight:600 }}>
+                <span style={{ fontSize:9, color:"#685DBC", padding:"1px 6px", background:"#EDE9FF", borderRadius:8, fontWeight:600 }}>
                   {sec.subjects.reduce((t,s) => t+s.deficit, 0)} needed
                 </span>
               </div>
@@ -3633,13 +3633,13 @@ export function TimetablePage() {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"calc(100vh - 52px)", flexDirection:"column" as const, gap:16 }}>
       <div style={{ fontSize:48 }}>📅</div>
       <div style={{ fontSize:18, color:"#4B5275", fontFamily:"'Plus Jakarta Sans',Georgia,serif" }}>No schedule generated yet</div>
-      <button onClick={() => window.location.href="/wizard"} style={{ padding:"10px 24px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>✨ Go to Wizard</button>
+      <button onClick={() => window.location.href="/wizard"} style={{ padding:"10px 24px", borderRadius:8, border:"none", background:"#685DBC", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>✨ Go to Wizard</button>
     </div>
   )
 
   // ── Toolbar button helper ────────────────────────────────
   const TBtn = (active: boolean, onClick: ()=>void, label: string, icon?: string) => (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 11px", borderRadius:6, border:`1px solid ${active?"#7C6FE0":"#E8E4FF"}`, background:active?"#EDE9FF":"#fff", color:active?"#7C6FE0":"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer", whiteSpace:"nowrap" as const }}>
+    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 11px", borderRadius:6, border:`1px solid ${active?"#685DBC":"#E8E4FF"}`, background:active?"#EDE9FF":"#fff", color:active?"#685DBC":"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer", whiteSpace:"nowrap" as const }}>
       {icon && <span>{icon}</span>}{label}
     </button>
   )
@@ -3802,7 +3802,7 @@ export function TimetablePage() {
           <div style={{ display:"flex", alignItems:"center", padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
             <button onClick={() => setBackSyncOpen(true)}
               title="Push the current timetable back to your Allocation plan, and print/download the Class & Faculty allocation"
-              style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", border:"1px solid #E4E0FF", borderRadius:6, background:"#F8F7FF", color:"#7C6FE0", fontSize:11.5, fontWeight:600, cursor:"pointer" }}>
+              style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", border:"1px solid #E4E0FF", borderRadius:6, background:"#F8F7FF", color:"#685DBC", fontSize:11.5, fontWeight:600, cursor:"pointer" }}>
               ⇄ Backward Sync
             </button>
           </div>
@@ -3883,7 +3883,7 @@ export function TimetablePage() {
                     ] as const).map(([val, label, desc]) => (
                       <label key={val}
                         style={{ display:"flex", gap:10, alignItems:"flex-start", padding:"10px 12px", marginTop:8, borderRadius:10,
-                          border:`1.5px solid ${shareVisibility===val ? "#7C6FE0" : "#E8E4FF"}`,
+                          border:`1.5px solid ${shareVisibility===val ? "#685DBC" : "#E8E4FF"}`,
                           background: shareVisibility===val ? "#F8F7FF" : "#fff", cursor:"pointer" }}>
                         <input type="radio" name="share-vis" checked={shareVisibility===val}
                           onChange={() => setShareVisibility(val)} style={{ marginTop:3 }} />
@@ -3913,7 +3913,7 @@ export function TimetablePage() {
                         Cancel
                       </button>
                       <button onClick={createLink} disabled={sharing}
-                        style={{ padding:"8px 18px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:12.5, fontWeight:700, cursor: sharing?"default":"pointer", opacity: sharing?0.6:1 }}>
+                        style={{ padding:"8px 18px", borderRadius:8, border:"none", background:"#685DBC", color:"#fff", fontSize:12.5, fontWeight:700, cursor: sharing?"default":"pointer", opacity: sharing?0.6:1 }}>
                         {sharing ? "Creating…" : "Create link"}
                       </button>
                     </div>
@@ -3929,13 +3929,13 @@ export function TimetablePage() {
                       <input readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}
                         style={{ flex:1, padding:"10px 12px", borderRadius:8, border:"1px solid #E8E4FF", background:"#FAFAFE", fontSize:12.5, color:"#13111E" }} />
                       <button onClick={() => { navigator.clipboard?.writeText(shareUrl); setShareCopied(true); setTimeout(()=>setShareCopied(false), 1800) }}
-                        style={{ padding:"10px 16px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:12.5, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" as const }}>
+                        style={{ padding:"10px 16px", borderRadius:8, border:"none", background:"#685DBC", color:"#fff", fontSize:12.5, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" as const }}>
                         {shareCopied ? "Copied!" : "Copy"}
                       </button>
                     </div>
                     <div style={{ marginTop:14, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <a href={shareUrl} target="_blank" rel="noreferrer"
-                        style={{ fontSize:12, fontWeight:600, color:"#7C6FE0", textDecoration:"none" }}>
+                        style={{ fontSize:12, fontWeight:600, color:"#685DBC", textDecoration:"none" }}>
                         Open in new tab →
                       </a>
                       <button onClick={closeShare}
@@ -3952,14 +3952,14 @@ export function TimetablePage() {
           {/* ── Insights + Legend ── */}
           <div style={{ display:"flex", alignItems:"center", gap:6, padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
             <button onClick={() => setShowInsights(v=>!v)}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showInsights?"#7C6FE0":"#E5EBF5"}`, borderRadius:6,
-                background:showInsights?"#EDE9FF":"#fff", color:showInsights?"#7C6FE0":"#64748b", fontSize:11, fontWeight:showInsights?700:400, cursor:"pointer" }}>
+              style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showInsights?"#685DBC":"#E5EBF5"}`, borderRadius:6,
+                background:showInsights?"#EDE9FF":"#fff", color:showInsights?"#685DBC":"#64748b", fontSize:11, fontWeight:showInsights?700:400, cursor:"pointer" }}>
               📊 Insights
             </button>
             <div style={{ position:"relative" as const }}>
               <button onClick={() => setShowLegend(v=>!v)} title="What the colours & symbols mean"
-                style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showLegend?"#7C6FE0":"#E5EBF5"}`, borderRadius:6,
-                  background:showLegend?"#EDE9FF":"#fff", color:showLegend?"#7C6FE0":"#64748b", fontSize:11, fontWeight:showLegend?700:400, cursor:"pointer" }}>
+                style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showLegend?"#685DBC":"#E5EBF5"}`, borderRadius:6,
+                  background:showLegend?"#EDE9FF":"#fff", color:showLegend?"#685DBC":"#64748b", fontSize:11, fontWeight:showLegend?700:400, cursor:"pointer" }}>
                 ⓘ Legend
               </button>
               {showLegend && (
@@ -3968,10 +3968,10 @@ export function TimetablePage() {
                     background:"#fff", border:"1px solid #E5EBF5", borderRadius:10, boxShadow:"0 8px 30px rgba(0,0,0,0.12)", padding:"12px 14px" }}>
                   <div style={{ fontSize:10, fontWeight:800, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:8 }}>Legend</div>
                   {([
-                    ["▌", "Parallel groups — students share one slot", "#7C6FE0"],
-                    ["AND", "Parallel split — students divide into groups", "#7C6FE0"],
+                    ["▌", "Parallel groups — students share one slot", "#685DBC"],
+                    ["AND", "Parallel split — students divide into groups", "#685DBC"],
                     ["OR", "Rotation — one subject runs per slot", "#D97706"],
-                    ["★", "Class teacher's period", "#7C6FE0"],
+                    ["★", "Class teacher's period", "#685DBC"],
                     ["🔄", "Substituted teacher", "#D4920E"],
                     ["⚠", "Conflict / over capacity", "#DC2626"],
                   ] as const).map(([sym, txt, col], i) => (
@@ -4013,7 +4013,7 @@ export function TimetablePage() {
               </>
             ) : (
               <button onClick={() => setPublishConfirm(true)}
-                style={{ padding:"5px 14px", borderRadius:6, border:"none", background:"#7C6FE0", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                style={{ padding:"5px 14px", borderRadius:6, border:"none", background:"#685DBC", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                 Publish
               </button>
             )}
@@ -4050,7 +4050,7 @@ export function TimetablePage() {
                   })}
                   style={{ padding:"4px 11px", borderRadius:6, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit",
                     background: active ? "#fff" : "transparent",
-                    color: active ? "#7C6FE0" : "#6D6A8A",
+                    color: active ? "#685DBC" : "#6D6A8A",
                     boxShadow: active ? "0 1px 4px rgba(124,111,224,0.18)" : "none" }}>
                   {label}
                 </button>
@@ -4071,7 +4071,7 @@ export function TimetablePage() {
           </button>
           <button onClick={() => setPoolPanelOpen(o => !o)}
             title="The Bench — every unplaced lesson waits here"
-            style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#7C6FE0":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
+            style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#685DBC":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
             🪑 Bench{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
           </button>
           <div style={{ flex:1 }} />
@@ -4220,7 +4220,7 @@ export function TimetablePage() {
                         Slots for {subAbsentTeacher} on {DAY_SHORT[subAbsentDay]??subAbsentDay}
                       </div>
                       <button onClick={autoFillBest}
-                        style={{ padding:"4px 10px", borderRadius:6, border:"1px solid #7C6FE0", background:"#EDE9FF", color:"#7C6FE0", fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                        style={{ padding:"4px 10px", borderRadius:6, border:"1px solid #685DBC", background:"#EDE9FF", color:"#685DBC", fontSize:10, fontWeight:600, cursor:"pointer" }}>
                         ⚡ Auto-fill best
                       </button>
                     </div>
@@ -4246,9 +4246,9 @@ export function TimetablePage() {
                               const isSelected = selected === cand.st.name
                               return (
                                 <div key={cand.st.id}
-                                  style={{ padding:"7px 10px", borderRadius:7, border:`1.5px solid ${isSelected?"#7C6FE0":cand.isBusy?"#fca5a5":"#E8E4FF"}`, background:isSelected?"#EDE9FF":cand.isBusy?"#fff5f5":"#fff", display:"flex", alignItems:"center", gap:8 }}>
+                                  style={{ padding:"7px 10px", borderRadius:7, border:`1.5px solid ${isSelected?"#685DBC":cand.isBusy?"#fca5a5":"#E8E4FF"}`, background:isSelected?"#EDE9FF":cand.isBusy?"#fff5f5":"#fff", display:"flex", alignItems:"center", gap:8 }}>
                                   {/* Avatar */}
-                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#7C6FE0":"#6D6A8A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
+                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#685DBC":"#6D6A8A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
                                     {cand.st.name[0]}
                                   </div>
                                   {/* Info */}
@@ -4256,21 +4256,21 @@ export function TimetablePage() {
                                     <div style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{cand.st.name}</div>
                                     {cand.st.role && <div style={{ fontSize:9, color:"#4B5275" }}>{cand.st.role}</div>}
                                     <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginTop:2 }}>
-                                      {cand.subjectMatch && <span style={{ padding:"1px 5px", borderRadius:4, background:"#f0fdf4", color:"#7C6FE0", fontSize:8, fontWeight:600 }}>★ Subject match</span>}
+                                      {cand.subjectMatch && <span style={{ padding:"1px 5px", borderRadius:4, background:"#f0fdf4", color:"#685DBC", fontSize:8, fontWeight:600 }}>★ Subject match</span>}
                                       {cand.isBusy && <span style={{ padding:"1px 5px", borderRadius:4, background:"#fff7ed", color:"#D4920E", fontSize:8, fontWeight:600 }}>⚠️ Busy</span>}
                                     </div>
                                     {/* Workload bar */}
                                     <div style={{ marginTop:3 }}>
                                       <div style={{ fontSize:8, color:"#6D6A8A", marginBottom:1 }}>{cand.workloadToday} today · {cand.workloadWeek}/{cand.maxW} week · Subbed {cand.subFreq}× term</div>
                                       <div style={{ height:3, background:"#E8E4FF", borderRadius:2, overflow:"hidden" }}>
-                                        <div style={{ height:"100%", width:`${Math.min(100, Math.round(cand.workloadWeek/cand.maxW*100))}%`, background: cand.workloadWeek/cand.maxW > 0.9 ? "#dc2626" : "#7C6FE0", borderRadius:2 }} />
+                                        <div style={{ height:"100%", width:`${Math.min(100, Math.round(cand.workloadWeek/cand.maxW*100))}%`, background: cand.workloadWeek/cand.maxW > 0.9 ? "#dc2626" : "#685DBC", borderRadius:2 }} />
                                       </div>
                                     </div>
                                   </div>
                                   {/* Select button */}
                                   <button
                                     onClick={() => setSubAssignments(prev => isSelected ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== slot.periodId)) : { ...prev, [slot.periodId]: cand.st.name })}
-                                    style={{ padding:"4px 8px", borderRadius:5, border:"none", background:isSelected?"#7C6FE0":"#E8E4FF", color:isSelected?"#fff":"#374151", fontSize:10, fontWeight:600, cursor:"pointer", flexShrink:0 }}>
+                                    style={{ padding:"4px 8px", borderRadius:5, border:"none", background:isSelected?"#685DBC":"#E8E4FF", color:isSelected?"#fff":"#374151", fontSize:10, fontWeight:600, cursor:"pointer", flexShrink:0 }}>
                                     {isSelected ? "✓" : "Select"}
                                   </button>
                                 </div>
@@ -4438,7 +4438,7 @@ export function TimetablePage() {
             }}>
               {/* Title */}
               <div style={{ fontSize:16, fontWeight:800, color:"#13111E", marginBottom:4 }}>
-                Swap: <span style={{ color:"#7C6FE0" }}>{pA.name}</span>{" ↔ "}<span style={{ color:"#7C6FE0" }}>{pB.name}</span>
+                Swap: <span style={{ color:"#685DBC" }}>{pA.name}</span>{" ↔ "}<span style={{ color:"#685DBC" }}>{pB.name}</span>
               </div>
               <div style={{ fontSize:11, color:"#6D6A8A", marginBottom:16 }}>
                 {bothClass
@@ -4457,17 +4457,17 @@ export function TimetablePage() {
                       { value:"all"     as const, label:"All sections",                sub:`${sections.length} section${sections.length!==1?"s":""}`, count:sections.length },
                     ]).map(opt => (
                       <label key={opt.value} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", borderRadius:8,
-                        border:`1.5px solid ${swapScope===opt.value?"#7C6FE0":"#E8E4FF"}`,
+                        border:`1.5px solid ${swapScope===opt.value?"#685DBC":"#E8E4FF"}`,
                         background:swapScope===opt.value?"#F5F2FF":"#fff", cursor:"pointer" }}>
                         <input type="radio" name="swap-scope" value={opt.value}
                           checked={swapScope===opt.value}
                           onChange={() => setSwapScope(opt.value)}
-                          style={{ accentColor:"#7C6FE0" }} />
+                          style={{ accentColor:"#685DBC" }} />
                         <div>
                           <div style={{ fontSize:12, fontWeight:600, color:"#1e293b" }}>{opt.label}</div>
                           <div style={{ fontSize:10, color:"#6D6A8A" }}>{opt.sub}</div>
                         </div>
-                        <div style={{ marginLeft:"auto", fontSize:11, fontWeight:700, color:"#7C6FE0", background:"#EDE9FF", padding:"2px 8px", borderRadius:8 }}>{opt.count}</div>
+                        <div style={{ marginLeft:"auto", fontSize:11, fontWeight:700, color:"#685DBC", background:"#EDE9FF", padding:"2px 8px", borderRadius:8 }}>{opt.count}</div>
                       </label>
                     ))}
                   </div>
@@ -4504,7 +4504,7 @@ export function TimetablePage() {
                   </button>
                 )}
                 <button onClick={() => applyShift(false)}
-                  style={{ padding:"8px 16px", border:"none", borderRadius:7, background:"#7C6FE0", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  style={{ padding:"8px 16px", border:"none", borderRadius:7, background:"#685DBC", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>
                   {noConflicts ? "Apply Swap" : "Proceed Anyway"}
                 </button>
               </div>
@@ -4553,7 +4553,7 @@ export function TimetablePage() {
                 Cancel
               </button>
               <button onClick={() => { setTimetableStatus("published"); markActiveTimetablePublished(); setPublishConfirm(false) }}
-                style={{ padding:"9px 24px", borderRadius:8, border:"none", background:"#7C6FE0", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 14px rgba(124,111,224,0.3)" }}>
+                style={{ padding:"9px 24px", borderRadius:8, border:"none", background:"#685DBC", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 14px rgba(124,111,224,0.3)" }}>
                 ✅ Publish
               </button>
             </div>

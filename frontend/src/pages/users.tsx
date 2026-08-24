@@ -18,7 +18,7 @@ import { useMembers, canDemote, ROLE_ORDER, ROLE_HINTS, type Member } from '@/st
 import { ROLE_LABELS, useCan, type Role } from '@/lib/permissions'
 import { Trash2, ShieldCheck, Info } from 'lucide-react'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 const ROLE_STYLE: Record<Role, { bg: string; fg: string }> = {
   admin:   { bg: '#EDE9FF', fg: '#4B41C4' },
   teacher: { bg: '#DCFCE7', fg: '#15803D' },

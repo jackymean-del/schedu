@@ -28,7 +28,7 @@ const BEHAVIOR_STYLE: Record<string, { bg: string; fg: string; label: string }> 
   SAME_STREAM_ONLY:    { bg: '#FFF7ED', fg: '#C2410C', label: 'Same stream' },
   SAME_GRADE_STREAM:   { bg: '#FCE7F3', fg: '#9D174D', label: 'Grade + stream' },
   CROSS_GRADE_ALLOWED: { bg: '#DBEAFE', fg: '#1D4ED8', label: 'Cross grade' },
-  FLEXIBLE_GROUPING:   { bg: '#EDE9FF', fg: '#7C6FE0', label: 'Flexible' },
+  FLEXIBLE_GROUPING:   { bg: '#EDE9FF', fg: '#685DBC', label: 'Flexible' },
 }
 
 interface Props {
@@ -95,14 +95,14 @@ export function DLGInspector({ dlgs, periods, rooms = [] }: Props) {
         background: 'linear-gradient(135deg, #EDE9FF 0%, #FAFAFE 100%)',
         border: '1px solid #D8D2FF', borderRadius: 10,
       }}>
-        <Layers size={14} color="#7C6FE0" />
+        <Layers size={14} color="#685DBC" />
         <span style={{
           fontSize: 10, fontWeight: 800, letterSpacing: '0.14em',
-          textTransform: 'uppercase' as const, color: '#7C6FE0',
+          textTransform: 'uppercase' as const, color: '#685DBC',
         }}>
           DLG Inspector
         </span>
-        <StatPill label="Groups"   value={dlgs.length} color="#7C6FE0" />
+        <StatPill label="Groups"   value={dlgs.length} color="#685DBC" />
         <StatPill label="Blocks"   value={totalBlocks} color="#9B8EF5" />
         <StatPill label="Sections" value={totalSectionsServed} color="#0EA5E9" />
         {splitBlocks > 0 && (
@@ -169,14 +169,14 @@ function BlockCard({
       }}>
         <span style={{
           padding: '3px 10px', borderRadius: 10,
-          background: '#EDE9FF', color: '#7C6FE0',
+          background: '#EDE9FF', color: '#685DBC',
           fontSize: 10.5, fontWeight: 800, letterSpacing: '0.04em',
           fontFamily: "'DM Mono', monospace",
         }}>
           BLOCK {index}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#13111E' }}>
-          <CalendarIcon size={11} color="#7C6FE0" />
+          <CalendarIcon size={11} color="#685DBC" />
           {DAY_LABEL[block.day] ?? block.day} · {periodName}
         </span>
         <span style={{ color: '#D8D2FF' }}>·</span>
@@ -200,7 +200,7 @@ function BlockCard({
         {allSections.map(s => (
           <span key={s} style={{
             padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
-            background: '#fff', color: '#7C6FE0', border: '1px solid #D8D2FF',
+            background: '#fff', color: '#685DBC', border: '1px solid #D8D2FF',
             letterSpacing: '0.03em',
           }}>
             {s}

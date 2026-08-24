@@ -160,13 +160,13 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
           borderRadius: '16px 16px 0 0',
         }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 9, background: '#7C6FE0',
+            width: 36, height: 36, borderRadius: 9, background: '#685DBC',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Users size={16} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#7C6FE0' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#685DBC' }}>
               Edit Allocation
             </div>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.3px', marginTop: 2 }}>
@@ -240,7 +240,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                       <td style={{ padding: '6px 6px 6px 8px', fontWeight: 800, fontSize: 11,
                         color: '#4B3FCE', letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <ChevronsDown size={12} color="#7C6FE0" />
+                          <ChevronsDown size={12} color="#685DBC" />
                           {grade || 'Sections'}
                           <span style={{ fontWeight: 500, fontSize: 10, color: '#9B8EF5' }}>
                             ({gradeRows.length} section{gradeRows.length !== 1 ? 's' : ''})
@@ -296,7 +296,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                               style={{
                                 background: 'transparent', border: '1px solid #C4BAF5',
                                 borderRadius: 5, padding: '2px 5px',
-                                cursor: 'pointer', color: '#7C6FE0', fontSize: 9,
+                                cursor: 'pointer', color: '#685DBC', fontSize: 9,
                                 fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2,
                               }}
                               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#EDE9FF'}
@@ -384,7 +384,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                                 style={{
                                   background: 'transparent', border: '1px solid #ECEAFB',
                                   borderRadius: 5, padding: '2px 5px',
-                                  cursor: 'pointer', color: '#7C6FE0',
+                                  cursor: 'pointer', color: '#685DBC',
                                   display: 'inline-flex', alignItems: 'center',
                                 }}
                                 onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#F5F2FF'}
@@ -456,7 +456,7 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
 const btnPri: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6,
   padding: '8px 14px', borderRadius: 8, border: 'none',
-  background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700,
+  background: '#685DBC', color: '#fff', fontSize: 12, fontWeight: 700,
   fontFamily: 'inherit',
 }
 const btnGhost: React.CSSProperties = {
@@ -467,6 +467,6 @@ const btnGhost: React.CSSProperties = {
 const btnSubtle: React.CSSProperties = {
   padding: '5px 10px', borderRadius: 6,
   border: '1px solid #ECEAFB', background: '#FAFAFE',
-  color: '#7C6FE0', fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
+  color: '#685DBC', fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
   fontFamily: 'inherit',
 }

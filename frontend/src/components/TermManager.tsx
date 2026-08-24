@@ -17,7 +17,7 @@ import {
 } from '@/lib/academicTerms'
 import { Trash2, Plus, CalendarRange } from 'lucide-react'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 const todayISO = () => {
   const d = new Date()

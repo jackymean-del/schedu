@@ -49,7 +49,7 @@ export function DemoPage() {
     }}>
       <div style={{
         width: 72, height: 72, borderRadius: 18,
-        background: 'linear-gradient(135deg, #9B8EF5, #7C6FE0)',
+        background: 'linear-gradient(135deg, #9B8EF5, #685DBC)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: '#fff', boxShadow: '0 8px 20px rgba(124,111,224,0.3)',
       }}>
@@ -65,7 +65,7 @@ export function DemoPage() {
       <button onClick={loadDemo} style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '14px 32px', borderRadius: 10, fontSize: 16, fontWeight: 600,
-        background: '#7C6FE0', color: '#fff', border: 'none',
+        background: '#685DBC', color: '#fff', border: 'none',
         cursor: 'pointer', transition: 'all 0.18s',
         boxShadow: '0 4px 14px rgba(124,111,224,0.35)',
       }}

@@ -26,7 +26,7 @@ import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSectio
 
 // ── constants & helpers ────────────────────────────────────────────────────────
 
-const PALETTE = ['#7C6FE0', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#8B5CF6', '#06B6D4']
+const PALETTE = ['#685DBC', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#8B5CF6', '#06B6D4']
 function colColor(i: number) { return PALETTE[i % PALETTE.length] }
 function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 
@@ -491,7 +491,7 @@ function ParallelGroupCard({
       </div>
       <div style={{ padding: '7px 9px' }}>
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
-          {secs.map(sn => <span key={sn} style={{ padding: '1px 6px', borderRadius: 7, background: '#EDE9FF', color: '#7C6FE0', fontSize: 9, fontWeight: 700, border: '1px solid #C4B5FD' }}>{sn}</span>)}
+          {secs.map(sn => <span key={sn} style={{ padding: '1px 6px', borderRadius: 7, background: '#EDE9FF', color: '#685DBC', fontSize: 9, fontWeight: 700, border: '1px solid #C4B5FD' }}>{sn}</span>)}
         </div>
         <div style={{ fontSize: 10, color: '#6D6A8A', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
           <Users size={9} /> {tg.totalStrength} students
@@ -687,7 +687,7 @@ function BlockCard({
     <div ref={ref} style={{ border: '1.5px solid #E4E0FF', borderRadius: 12, background: '#fff', marginBottom: 16, boxShadow: '0 1px 3px rgba(124,111,224,0.06)', overflow: 'hidden' }}>
       {/* block header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: '#F3F1FF', borderBottom: '1px solid #E8E4FF', flexWrap: 'wrap' }}>
-        <Layers size={14} color="#7C6FE0" style={{ flexShrink: 0 }} />
+        <Layers size={14} color="#685DBC" style={{ flexShrink: 0 }} />
         <input value={block.blockName} onChange={e => renameBlock(e.target.value)} placeholder="Block name (class-group or custom)…"
           style={{ flex: 1, minWidth: 120, padding: '3px 7px', borderRadius: 5, border: '1.5px solid transparent', background: 'transparent', fontSize: 13, fontWeight: 800, color: '#13111E', outline: 'none', fontFamily: 'inherit' }}
           onFocus={e => { e.currentTarget.style.border = '1.5px solid #C4B5FD'; e.currentTarget.style.background = '#fff' }}
@@ -705,7 +705,7 @@ function BlockCard({
           ))}
         </div>
 
-        <button onClick={addCombo} title="Add another combination (a new optional group)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#7C6FE0', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', padding: '5px 11px', fontSize: 10.5, fontWeight: 800, fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 2px 6px rgba(124,111,224,0.35)' }}>
+        <button onClick={addCombo} title="Add another combination (a new optional group)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#685DBC', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', padding: '5px 11px', fontSize: 10.5, fontWeight: 800, fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 2px 6px rgba(124,111,224,0.35)' }}>
           <Plus size={13} /> Add combo
         </button>
         <button onClick={onDeleteBlock} title="Delete this block (all its combinations)" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 3, flexShrink: 0 }}>
@@ -866,7 +866,7 @@ function BlockCard({
                       return (
                         <button key={v} onClick={() => setComboScope(combo.id, { ...cs, [dim.key]: v })} style={{
                           padding: '2px 7px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                          background: active ? (v === 'same' ? '#7C6FE0' : '#F59E0B') : '#fff',
+                          background: active ? (v === 'same' ? '#685DBC' : '#F59E0B') : '#fff',
                           color: active ? '#fff' : '#767384',
                         }}>{v === 'same' ? 'Same' : 'Cross'}</button>
                       )
@@ -885,7 +885,7 @@ function BlockCard({
           style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 7, border: '1.5px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
           <Wand2 size={12} /> Split evenly
         </button>
-        <button onClick={generate} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)', flexShrink: 0 }}>
+        <button onClick={generate} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)', flexShrink: 0 }}>
           <RefreshCw size={13} /> Generate groups
         </button>
         <div style={{ flex: 1 }} />
@@ -897,7 +897,7 @@ function BlockCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 7px' }}>
             <span style={{ fontSize: 9.5, fontWeight: 800, color: '#6D6A8A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Parallel groups ({allGenerated.length})</span>
             <button onClick={() => setGroupsCollapsed(c => !c)} title={groupsCollapsed ? 'Show groups' : 'Hide groups'}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 6, border: '1.5px solid #E4E0FF', background: '#fff', color: '#7C6FE0', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 6, border: '1.5px solid #E4E0FF', background: '#fff', color: '#685DBC', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               {groupsCollapsed ? <Eye size={11} /> : <EyeOff size={11} />}{groupsCollapsed ? 'Show' : 'Hide'}
               <ChevronDown size={12} style={{ transform: groupsCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform .15s' }} />
             </button>
@@ -1070,12 +1070,12 @@ export function StepStudentGroups() {
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Layers size={20} color="#7C6FE0" />
+          <Layers size={20} color="#685DBC" />
         </div>
         <div style={{ flex: 1 }}>
           <h2 style={{ fontFamily: "'Plus Jakarta Sans', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-            Define <em style={{ color: '#7C6FE0' }}>AND combinations</em> (each optional group splits a section in parallel) and{' '}
+            Define <em style={{ color: '#685DBC' }}>AND combinations</em> (each optional group splits a section in parallel) and{' '}
             <em style={{ color: '#D97706' }}>OR elective slots</em> (pick one of many).
           </div>
         </div>
@@ -1089,9 +1089,9 @@ export function StepStudentGroups() {
             <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: 'none', cursor: 'pointer',
               background: 'transparent', fontFamily: 'inherit', fontSize: 13, fontWeight: active ? 700 : 500,
-              color: active ? '#7C6FE0' : '#6D6A8A', borderBottom: active ? '3px solid #7C6FE0' : '3px solid transparent', marginBottom: -2,
+              color: active ? '#685DBC' : '#6D6A8A', borderBottom: active ? '3px solid #685DBC' : '3px solid transparent', marginBottom: -2,
             }}>
-              <span style={{ color: active ? '#7C6FE0' : '#C4B5FD' }}>{tab.icon}</span>{tab.label}
+              <span style={{ color: active ? '#685DBC' : '#C4B5FD' }}>{tab.icon}</span>{tab.label}
             </button>
           )
         })}
@@ -1111,7 +1111,7 @@ export function StepStudentGroups() {
             <button onClick={runAiSuggest} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Sparkles size={13} color="#D97706" /> HI Suggest
             </button>
-            <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
+            <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
               <Plus size={13} /> New block
             </button>
           </div>
@@ -1119,9 +1119,9 @@ export function StepStudentGroups() {
           {/* user guide */}
           <div style={{ marginBottom: 16, borderRadius: 10, border: '1px solid #C4B5FD', background: 'linear-gradient(135deg, #F5F2FF, #FAFAFE)', overflow: 'hidden' }}>
             <button onClick={() => setShowGuide(g => !g)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Info size={15} color="#7C6FE0" />
+              <Info size={15} color="#685DBC" />
               <span style={{ fontSize: 12.5, fontWeight: 800, color: '#4C1D95', flex: 1, textAlign: 'left' }}>How to build a combination — quick guide</span>
-              <ChevronDown size={16} color="#7C6FE0" style={{ transform: showGuide ? 'none' : 'rotate(-90deg)', transition: 'transform .15s' }} />
+              <ChevronDown size={16} color="#685DBC" style={{ transform: showGuide ? 'none' : 'rotate(-90deg)', transition: 'transform .15s' }} />
             </button>
             {showGuide && (
               <div style={{ padding: '4px 14px 14px' }}>
@@ -1135,7 +1135,7 @@ export function StepStudentGroups() {
                     { n: 6, t: 'Review & assign rooms', d: 'Each generated group shows its sections & size — set a Room, delete a single group, or hit “Show / Hide” to preview.' },
                   ].map(s => (
                     <div key={s.n} style={{ display: 'flex', gap: 8 }}>
-                      <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: '#7C6FE0', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.n}</div>
+                      <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: '#685DBC', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.n}</div>
                       <div>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#13111E', marginBottom: 2 }}>{s.t}</div>
                         <div style={{ fontSize: 10.5, color: '#69707E', lineHeight: 1.45 }}>{s.d}</div>
@@ -1150,17 +1150,17 @@ export function StepStudentGroups() {
           {/* global merge */}
           {groups.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 14, borderRadius: 9, background: '#F5F2FF', border: '1px solid #E8E4FF', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#7C6FE0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Global merge:</span>
+              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#685DBC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Global merge:</span>
               {SCOPE_DIMS.map(dim => (
                 <div key={dim.key} title={dim.desc} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 5px', background: '#fff' }}>{dim.label}</span>
                   {(['same', 'cross'] as const).map(v => {
                     const active = globalScope[dim.key] === v
-                    return <button key={v} onClick={() => setGlobalScope(s => ({ ...s, [dim.key]: v }))} style={{ padding: '2px 7px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: active ? (v === 'same' ? '#7C6FE0' : '#F59E0B') : '#fff', color: active ? '#fff' : '#767384' }}>{v === 'same' ? 'Same' : 'Cross'}</button>
+                    return <button key={v} onClick={() => setGlobalScope(s => ({ ...s, [dim.key]: v }))} style={{ padding: '2px 7px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: active ? (v === 'same' ? '#685DBC' : '#F59E0B') : '#fff', color: active ? '#fff' : '#767384' }}>{v === 'same' ? 'Same' : 'Cross'}</button>
                   })}
                 </div>
               ))}
-              <button onClick={() => applyGlobalScope(globalScope)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => applyGlobalScope(globalScope)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: '#685DBC', color: '#fff', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Apply to all {blocks.length} block{blocks.length !== 1 ? 's' : ''}
               </button>
             </div>
@@ -1186,7 +1186,7 @@ export function StepStudentGroups() {
               <div style={{ fontSize: 12, color: '#B8B4D4', marginBottom: 16, lineHeight: 1.6 }}>
                 Click <strong>HI Suggest</strong> to auto-build blocks from your electives, or <strong>New block</strong> to start one.
               </div>
-              <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
+              <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
                 <Plus size={14} /> New block
               </button>
             </div>
@@ -1199,11 +1199,11 @@ export function StepStudentGroups() {
           {/* summary */}
           {groups.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, padding: '10px 14px', borderRadius: 8, background: '#F5F2FF', border: '1px solid #E8E4FF' }}>
-              <Zap size={13} color="#7C6FE0" />
-              <span style={{ fontSize: 11, color: '#7C6FE0', fontWeight: 600, flex: 1 }}>
+              <Zap size={13} color="#685DBC" />
+              <span style={{ fontSize: 11, color: '#685DBC', fontWeight: 600, flex: 1 }}>
                 {totalGenerated} teaching group{totalGenerated !== 1 ? 's' : ''} across {blocks.length} block{blocks.length !== 1 ? 's' : ''}
               </span>
-              <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms, staff) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#7C6FE0', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms, staff) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#685DBC', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <RefreshCw size={11} /> Generate all
               </button>
             </div>
@@ -1218,7 +1218,7 @@ export function StepStudentGroups() {
             <button onClick={() => setActiveTab('or')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               OR Groups <Shuffle size={13} />
             </button>
-            <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
+            <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
               Next: Mapping <ChevronRight size={14} />
             </button>
           </div>
@@ -1261,7 +1261,7 @@ export function StepStudentGroups() {
               <ChevronLeft size={14} /> AND Groups
             </button>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #7C6FE0, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
+            <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
               Next: Mapping <ChevronRight size={14} />
             </button>
           </div>

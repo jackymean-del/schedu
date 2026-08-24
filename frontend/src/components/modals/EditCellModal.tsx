@@ -31,7 +31,7 @@ const SUBJECT_COLORS = [
 
 // ── Colours for group mode ────────────────────────────────────────────────────
 const OR_C  = { bg: "#FFFBEB", bdr: "#FDE68A", text: "#92400E", tag: "#D97706" }
-const AND_C = { bg: "#EDE9FF", bdr: "#C4B5FD", text: "#3730A3", tag: "#7C6FE0" }
+const AND_C = { bg: "#EDE9FF", bdr: "#C4B5FD", text: "#3730A3", tag: "#685DBC" }
 
 type CellMode = "single" | "OR" | "AND"
 type GroupAsgn = { teacher: string; room: string }
@@ -344,7 +344,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
               ✏️ Edit Period
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3, fontFamily: "monospace" }}>
-              <span style={{ color: "#7C6FE0", fontWeight: 600 }}>{target.section}</span>
+              <span style={{ color: "#685DBC", fontWeight: 600 }}>{target.section}</span>
               {" · "}{DAY_LABEL[target.day] ?? target.day}
               {" · "}{periodObj?.name ?? target.periodId}
             </div>
@@ -373,7 +373,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                 return (
                   <button key={m} onClick={() => { setMode(m); setUseTextInput(false) }} style={{
                     flex: 1, padding: "7px 0", borderRadius: 7, cursor: "pointer",
-                    border: `2px solid ${active ? (col?.tag ?? "#7C6FE0") : "#e2e8f0"}`,
+                    border: `2px solid ${active ? (col?.tag ?? "#685DBC") : "#e2e8f0"}`,
                     background: active ? (col?.bg ?? "#EDE9FF") : "#f8fafc",
                     color: active ? (col?.text ?? "#4338CA") : "#64748b",
                     fontSize: 11, fontWeight: active ? 800 : 500, fontFamily: "inherit",
@@ -894,7 +894,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
               style={{
                 padding: "8px 22px", borderRadius: 7, border: "none",
                 background: canSave
-                  ? ((conflictWith || hasGroupConflict) ? "#D4920E" : "#7C6FE0")
+                  ? ((conflictWith || hasGroupConflict) ? "#D4920E" : "#685DBC")
                   : "#e2e8f0",
                 color: canSave ? "#fff" : "#94a3b8",
                 fontSize: 12, fontWeight: 700,

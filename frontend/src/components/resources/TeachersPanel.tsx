@@ -364,7 +364,7 @@ function ShortNameCell({ value, onSave }: { value?: string; onSave: (v: string) 
   return (
     <span onClick={() => setE(true)} title="Short name for calendar (e.g. MR, JD) • Click to edit"
       style={{
-        cursor: 'text', fontSize: 10, fontWeight: 500, color: '#7C6FE0', padding: '2px 4px', borderRadius: 3,
+        cursor: 'text', fontSize: 10, fontWeight: 500, color: '#685DBC', padding: '2px 4px', borderRadius: 3,
         display: 'inline-block', background: displayValue === '(auto)' ? 'transparent' : '#F0ECFE',
         border: '0.5px dashed #D4CEFF'
       }}
@@ -778,7 +778,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
+            color: sortAZ ? '#685DBC' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >↑Z Sort</button>

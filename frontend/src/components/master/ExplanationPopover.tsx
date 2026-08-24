@@ -30,7 +30,7 @@ export function ExplanationInfoIcon({
   const score = explanation.score
   const tone =
     score >= 80 ? '#0A8136' :
-    score >= 40 ? '#7C6FE0' :
+    score >= 40 ? '#685DBC' :
     score >= 0  ? '#D4920E' : '#DC2626'
 
   return (
@@ -100,7 +100,7 @@ export function ExplanationCard({
 
   const tone =
     score >= 80 ? '#0A8136' :
-    score >= 40 ? '#7C6FE0' :
+    score >= 40 ? '#685DBC' :
     score >= 0  ? '#D4920E' : '#DC2626'
 
   return (
@@ -113,10 +113,10 @@ export function ExplanationCard({
         borderRadius: '12px 12px 0 0',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <Sparkles size={12} color="#7C6FE0" />
+          <Sparkles size={12} color="#685DBC" />
           <span style={{
             fontSize: 9, fontWeight: 800, letterSpacing: '0.16em',
-            textTransform: 'uppercase' as const, color: '#7C6FE0',
+            textTransform: 'uppercase' as const, color: '#685DBC',
           }}>
             Why this assignment?
           </span>

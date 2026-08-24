@@ -690,7 +690,7 @@ function ClassSlotsExpanded({
         {/* Say where these numbers come from, so a read-only field reads as
             derived rather than broken. */}
         <span style={{ fontWeight: 500, textTransform: 'none', fontSize: 9.5, color: '#A9A4C6' }}>
-          · auto-derived from the curriculum norm · edit on <strong style={{ color: '#7C6FE0' }}>Mapping</strong>
+          · auto-derived from the curriculum norm · edit on <strong style={{ color: '#685DBC' }}>Mapping</strong>
         </span>
         {sub.isOptional && (
           <span style={{ marginLeft: 4, fontSize: 9.5, fontWeight: 700, color: P, background: P_L, border: `1px solid ${P_B}`, borderRadius: 4, padding: '1px 7px' }}>
@@ -1529,7 +1529,7 @@ export function SubjectsPanel({
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
             border: `1.5px solid ${sortAZ ? P : '#E4E0FF'}`,
             background: sortAZ ? '#EDE9FF' : '#FAFAFE',
-            color: sortAZ ? '#7C6FE0' : '#6D6A8A',
+            color: sortAZ ? '#685DBC' : '#6D6A8A',
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
           }}
         >

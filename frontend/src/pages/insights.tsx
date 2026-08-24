@@ -110,7 +110,7 @@ export function InsightsPage() {
           <>
             {/* Summary cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12, marginBottom: 16 }}>
-              <Stat icon={<UserMinus size={16} />} label="Total Leaves" value={reports.totals.leaves} tint="#7C6FE0" />
+              <Stat icon={<UserMinus size={16} />} label="Total Leaves" value={reports.totals.leaves} tint="#685DBC" />
               <Stat icon={<CheckCircle2 size={16} />} label="Substitutes" value={reports.totals.substitutes} tint="#0A8136" />
               <Stat icon={<XCircle size={16} />} label="Cancelled" value={reports.totals.cancelled} tint="#DC2626" red={reports.totals.cancelled > 0} />
               <Stat icon={<CalendarDays size={16} />} label="Leave Days" value={reports.totals.leaveDays} tint="#D97706" />
@@ -122,7 +122,7 @@ export function InsightsPage() {
               {RANGES.map(r => (
                 <button key={r.key} onClick={() => setRangeKey(r.key)}
                   style={{ padding: '7px 14px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
-                    background: rangeKey === r.key ? '#7C6FE0' : '#fff', color: rangeKey === r.key ? '#fff' : '#69707E',
+                    background: rangeKey === r.key ? '#685DBC' : '#fff', color: rangeKey === r.key ? '#fff' : '#69707E',
                     boxShadow: rangeKey === r.key ? '0 2px 8px rgba(124,111,224,0.28)' : '0 1px 2px rgba(0,0,0,0.04)' }}>
                   {r.label}
                 </button>
@@ -135,7 +135,7 @@ export function InsightsPage() {
                 <button key={t.key} onClick={() => setTab(t.key)}
                   style={{ padding: '8px 15px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
                     display: 'inline-flex', alignItems: 'center', gap: 7,
-                    background: tab === t.key ? '#7C6FE0' : 'transparent', color: tab === t.key ? '#fff' : '#4B5275' }}>
+                    background: tab === t.key ? '#685DBC' : 'transparent', color: tab === t.key ? '#fff' : '#4B5275' }}>
                   <span style={{ color: tab === t.key ? '#fff' : '#6D6A8A' }}>{t.icon}</span>{t.label}
                 </button>
               ))}
@@ -156,7 +156,7 @@ export function InsightsPage() {
                   <Highlight label="Coverage rate" value={coverageRate === null ? '—' : `${coverageRate}%`}
                     sub={coverageRate === null ? 'No absences' : `${reports.totals.substitutes} of ${reports.totals.substitutes + reports.totals.cancelled} periods covered`}
                     tint={coverageRate !== null && coverageRate < 80 ? '#DC2626' : '#0A8136'} />
-                  <Highlight label="Most affected faculty" value={reports.mostAffectedFaculty?.name ?? '—'} sub={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} periods` : ''} tint="#7C6FE0" />
+                  <Highlight label="Most affected faculty" value={reports.mostAffectedFaculty?.name ?? '—'} sub={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} periods` : ''} tint="#685DBC" />
                   <Highlight label="Most affected class" value={reports.mostAffectedClass?.name ?? '—'} sub={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} periods` : ''} tint="#2563EB" />
                   <Highlight label="Top cancel reason" value={reports.topReason?.reason ?? '—'} sub={reports.topReason ? `${reports.topReason.count} lessons` : ''} tint="#D97706" />
                 </div>
@@ -215,10 +215,10 @@ function TrendsChart({ points, tall }: { points: TrendPoint[]; tall?: boolean })
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 700, color: '#13111E' }}>
-          <TrendingUp size={15} color="#7C6FE0" /> Trends
+          <TrendingUp size={15} color="#685DBC" /> Trends
         </div>
         <Legend color="#EA580C" label={`Leaves: ${totalLeaves}`} />
-        <Legend color="#7C6FE0" label={`Substitutes: ${totalSubs}`} />
+        <Legend color="#685DBC" label={`Substitutes: ${totalSubs}`} />
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} preserveAspectRatio="xMidYMid meet">
         {[0, 0.25, 0.5, 0.75, 1].map(f => (
@@ -228,11 +228,11 @@ function TrendsChart({ points, tall }: { points: TrendPoint[]; tall?: boolean })
           </g>
         ))}
         <path d={path('leaves')} fill="none" stroke="#EA580C" strokeWidth={2} strokeLinejoin="round" />
-        <path d={path('substitutes')} fill="none" stroke="#7C6FE0" strokeWidth={2} strokeLinejoin="round" />
+        <path d={path('substitutes')} fill="none" stroke="#685DBC" strokeWidth={2} strokeLinejoin="round" />
         {points.map((p, i) => (
           <g key={i}>
             <circle cx={x(i)} cy={y(p.leaves)} r={2.5} fill="#EA580C" />
-            <circle cx={x(i)} cy={y(p.substitutes)} r={2.5} fill="#7C6FE0" />
+            <circle cx={x(i)} cy={y(p.substitutes)} r={2.5} fill="#685DBC" />
           </g>
         ))}
         {labelIdx.map(i => (
@@ -299,7 +299,7 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
   )
 }
 function LeaveTypes({ types, total }: { types: { type: string; count: number }[]; total: number }) {
-  const COLORS = ['#7C6FE0', '#2563EB', '#0A8136', '#D97706', '#DB2777', '#0891B2']
+  const COLORS = ['#685DBC', '#2563EB', '#0A8136', '#D97706', '#DB2777', '#0891B2']
   const max = Math.max(1, ...types.map(t => t.count))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -332,7 +332,7 @@ function Empty() {
       <BarChart3 size={30} color="#C9C3EC" />
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '12px 0 6px' }}>No data yet</h3>
       <p style={{ fontSize: 13, color: '#6D6A8A', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar — analytics will build from there.</p>
-      <a href="/calendar" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#7C6FE0', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>Go to Calendar</a>
+      <a href="/calendar" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#685DBC', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>Go to Calendar</a>
     </div>
   )
 }

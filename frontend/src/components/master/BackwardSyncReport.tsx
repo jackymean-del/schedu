@@ -146,7 +146,7 @@ export function BackwardSyncReport({
       <div style={{ width: '100%', maxWidth: 860, maxHeight: '90vh', overflow: 'auto', background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
         {/* Header */}
         <div style={{ position: 'sticky', top: 0, background: '#fff', borderBottom: '1px solid #EEE', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, zIndex: 1 }}>
-          <ArrowLeftRight size={17} color="#7C6FE0" />
+          <ArrowLeftRight size={17} color="#685DBC" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E' }}>Backward Sync &amp; Allocation Report</div>
             <div style={{ fontSize: 11.5, color: '#6D6A8A' }}>What the current timetable implies for your Class &amp; Faculty allocation.</div>
@@ -161,11 +161,11 @@ export function BackwardSyncReport({
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-            <button onClick={doBackwardSync} style={btn(synced ? '#DCFCE7' : 'linear-gradient(135deg,#7C6FE0,#9B8EF5)', synced ? '#067647' : '#fff')}>
+            <button onClick={doBackwardSync} style={btn(synced ? '#DCFCE7' : 'linear-gradient(135deg,#685DBC,#9B8EF5)', synced ? '#067647' : '#fff')}>
               {synced ? <><Check size={14} /> Synced to Allocation plan</> : <><ArrowLeftRight size={14} /> Backward Sync to Allocation</>}
             </button>
-            <button onClick={doPrint} style={btn('#F8F7FF', '#7C6FE0')}><Printer size={14} /> Print</button>
-            <button onClick={doDownloadCSV} style={btn('#F8F7FF', '#7C6FE0')}><Download size={14} /> Download CSV</button>
+            <button onClick={doPrint} style={btn('#F8F7FF', '#685DBC')}><Printer size={14} /> Print</button>
+            <button onClick={doDownloadCSV} style={btn('#F8F7FF', '#685DBC')}><Download size={14} /> Download CSV</button>
           </div>
           {synced && (
             <div style={{ fontSize: 11.5, color: '#067647', marginBottom: 14 }}>

@@ -89,12 +89,12 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
   const first = history[0].score
   const last  = history[history.length - 1].score
   const delta = last - first
-  const trendTone = delta < 0 ? '#0A8136' : delta > 0 ? '#DC2626' : '#7C6FE0'
+  const trendTone = delta < 0 ? '#0A8136' : delta > 0 ? '#DC2626' : '#685DBC'
   const trendIcon = delta < 0
     ? <TrendingDown size={12} color="#0A8136" />
     : delta > 0
       ? <TrendingUp size={12} color="#DC2626" />
-      : <Minus size={12} color="#7C6FE0" />
+      : <Minus size={12} color="#685DBC" />
 
   // Hovered point metadata
   const hoveredPoint  = hoveredIdx !== null ? history[hoveredIdx] : null

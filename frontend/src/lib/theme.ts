@@ -3,7 +3,7 @@
  *
  * Import from here (or from components/resources/shared.tsx, which re-exports
  * BRAND as P/P_D/P_L/P_B for back-compat). Do NOT hard-code purple hexes:
- * the brand purple is #7C6FE0 and its dark/light/border variants below.
+ * the brand purple is #685DBC and its dark/light/border variants below.
  *
  * Category palettes (room types, class groups, calendar accents) are
  * intentionally multi-coloured and live next to their feature code —
@@ -12,7 +12,7 @@
 
 export const BRAND = {
   /** Primary brand purple — buttons, links, active states, accents */
-  primary:      '#7C6FE0',
+  primary:      '#685DBC',
   /** Darker variant — hover states, emphasised text on light purple */
   primaryDark:  '#6358C4',
   /** Light tint — selected/active backgrounds, chips */

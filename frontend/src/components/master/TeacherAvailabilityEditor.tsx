@@ -195,7 +195,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
         }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10,
-            background: '#EDE9FF', color: '#7C6FE0',
+            background: '#EDE9FF', color: '#685DBC',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Users2 size={16} />
@@ -529,7 +529,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
             onClick={onClose}
             style={{
               padding: '8px 22px', borderRadius: 9, border: 'none',
-              background: '#7C6FE0', color: '#fff',
+              background: '#685DBC', color: '#fff',
               fontSize: 12, fontWeight: 800, cursor: 'pointer',
               fontFamily: 'inherit',
             }}
@@ -567,7 +567,7 @@ function BulkBtn({
 const thStyle: React.CSSProperties = {
   padding: '7px 10px',
   fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em',
-  textTransform: 'uppercase', color: '#7C6FE0',
+  textTransform: 'uppercase', color: '#685DBC',
   background: '#F8F7FF', border: '1px solid #ECEAFB',
   textAlign: 'left',
 }

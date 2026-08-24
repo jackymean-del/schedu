@@ -76,7 +76,7 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes spin { to { transform: rotate(360deg) } }
         .si-input { width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; background: #fff; color: #13111E; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
-        .si-input:focus { border-color: #7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
+        .si-input:focus { border-color: #685DBC; box-shadow: 0 0 0 3px rgba(124,111,224,0.10); }
         .si-btn-outline { transition: background 0.15s, border-color 0.15s; }
         .si-btn-outline:hover:not(:disabled) { background: #F9FAFB !important; border-color: #6B7079 !important; }
       `}</style>
@@ -92,7 +92,7 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
               <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
             </svg>
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: '-0.4px', color: '#13111E' }}>
-              sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans', Georgia, serif", fontStyle: 'italic' }}>U</span>
+              sched<span style={{ color: '#685DBC', fontFamily: "'Plus Jakarta Sans', Georgia, serif", fontStyle: 'italic' }}>U</span>
             </span>
           </a>
           <p style={{ fontSize: 13, color: '#69707E', marginTop: 2 }}>Human-Intelligence scheduling — built from real experience</p>
@@ -119,10 +119,10 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
-              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ accentColor: '#7C6FE0', width: 15, height: 15, cursor: 'pointer' }} />
+              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ accentColor: '#685DBC', width: 15, height: 15, cursor: 'pointer' }} />
               Keep me signed in for 30 days
             </label>
-            <a href="#" style={{ fontSize: 13, color: '#7C6FE0', textDecoration: 'none', fontWeight: 500, whiteSpace: 'nowrap' }}>Forgot password?</a>
+            <a href="#" style={{ fontSize: 13, color: '#685DBC', textDecoration: 'none', fontWeight: 500, whiteSpace: 'nowrap' }}>Forgot password?</a>
           </div>
 
           {error && (
@@ -151,14 +151,14 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
         {/* Sign up link */}
         <p style={{ textAlign: 'center', fontSize: 13, color: '#69707E', marginTop: 20 }}>
           No account yet?{' '}
-          <a href="/register" style={{ color: '#7C6FE0', fontWeight: 600, textDecoration: 'none' }}>Sign up free</a>
+          <a href="/register" style={{ color: '#685DBC', fontWeight: 600, textDecoration: 'none' }}>Sign up free</a>
         </p>
 
         {/* SSO banner */}
         <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 8, background: '#F8F7FF', border: '1px solid #E8E4FF', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#69707E' }}>
           <Info size={14} color="#6D6A8A" style={{ flexShrink: 0 }} />
           <span>SSO available for Enterprise plans.{' '}
-            <a href="#" style={{ color: '#7C6FE0', fontWeight: 600, textDecoration: 'none' }}>Configure SSO →</a>
+            <a href="#" style={{ color: '#685DBC', fontWeight: 600, textDecoration: 'none' }}>Configure SSO →</a>
           </span>
         </div>
 

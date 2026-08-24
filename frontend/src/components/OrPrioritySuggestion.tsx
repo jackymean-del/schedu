@@ -66,7 +66,7 @@ export function OrPrioritySuggestion({
   return (
     <div style={{ border: '1px solid #E4E0FF', borderRadius: 10, background: '#fff', padding: 14, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <Shuffle size={14} color="#7C6FE0" />
+        <Shuffle size={14} color="#685DBC" />
         <div style={{ fontSize: 13, fontWeight: 800, color: '#13111E' }}>Which subject needs the slot?</div>
       </div>
       <p style={{ fontSize: 11.5, color: '#6D6A8A', margin: '0 0 10px' }}>
@@ -101,7 +101,7 @@ export function OrPrioritySuggestion({
                     {s.hasPlan ? (
                       <>
                         <div style={{ flex: 1, height: 6, background: '#EDE9FF', borderRadius: 3, overflow: 'hidden', maxWidth: 160 }}>
-                          <div style={{ height: '100%', width: `${s.pct}%`, background: s.pct >= 100 ? '#0A8136' : '#7C6FE0' }} />
+                          <div style={{ height: '100%', width: `${s.pct}%`, background: s.pct >= 100 ? '#0A8136' : '#685DBC' }} />
                         </div>
                         <span style={{ fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>
                           {s.pct}% · <strong style={{ color: s.remaining > 0 ? '#B45309' : '#067647' }}>{s.remaining} h left</strong>
@@ -121,7 +121,7 @@ export function OrPrioritySuggestion({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 10, fontSize: 11, color: '#6D6A8A' }}>
         <Info size={12} style={{ flexShrink: 0, marginTop: 1 }} />
         <span>
-          Record required hours or chapters on the <a href="/syllabus" style={{ color: '#7C6FE0', fontWeight: 700 }}>Syllabus</a> page
+          Record required hours or chapters on the <a href="/syllabus" style={{ color: '#685DBC', fontWeight: 700 }}>Syllabus</a> page
           to widen this. Subjects with no syllabus data are never ranked above ones that have it.
         </span>
       </div>

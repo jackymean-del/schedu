@@ -119,14 +119,14 @@ const ACCENT_PALETTE: Array<{ accent: string; bg: string }> = [
   { accent:"#6366F1", bg:"#EEF2FF" }, // indigo
   { accent:"#D97706", bg:"#FEF3C7" }, // dark-amber
   { accent:"#059669", bg:"#D1FAE5" }, // emerald
-  { accent:"#7C6FE0", bg:"#F5F3FF" }, // violet
+  { accent:"#685DBC", bg:"#F5F3FF" }, // violet
   { accent:"#BE185D", bg:"#FCE7F3" }, // deep-pink
   { accent:"#0369A1", bg:"#E0F2FE" }, // sky
 ]
 
 const _colorCache = new Map<string, { accent:string; bg:string }>()
 function subjectColor(name: string): { accent:string; bg:string } {
-  if (!name) return { accent:"#7C6FE0", bg:"#F0EDFF" }
+  if (!name) return { accent:"#685DBC", bg:"#F0EDFF" }
   const k = name.toLowerCase().trim()
   if (_colorCache.has(k)) return _colorCache.get(k)!
   const h = k.split("").reduce((a,c) => (a*31 + c.charCodeAt(0)) & 0xFFFF, 0)
@@ -397,7 +397,7 @@ function DetailPanel({d,tf,onClose,onEdit}:{
             <div>
               <div style={{ fontSize:9, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.07em" }}>{lbl as string}</div>
               <div style={{ fontSize:12, fontWeight:600, color:"#1e293b", marginTop:2 }}>{val as string}</div>
-              {sub&&<div style={{ fontSize:9, color:"#7C6FE0", fontWeight:600, marginTop:2 }}>{sub as string}</div>}
+              {sub&&<div style={{ fontSize:9, color:"#685DBC", fontWeight:600, marginTop:2 }}>{sub as string}</div>}
             </div>
           </div>
         ))}
@@ -406,7 +406,7 @@ function DetailPanel({d,tf,onClose,onEdit}:{
         <div style={{ padding:"10px 14px", borderTop:"1px solid #E8E4FF" }}>
           <button onClick={onEdit} style={{
             width:"100%", padding:"8px", border:"none", borderRadius:7,
-            background:"#7C6FE0", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer",
+            background:"#685DBC", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer",
           }}>Edit Cell</button>
         </div>
       )}
@@ -625,7 +625,7 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
           {message}
         </div>
         <button onClick={onClose} style={{
-          marginTop:18, width:"100%", padding:"9px", background:"#7C6FE0",
+          marginTop:18, width:"100%", padding:"9px", background:"#685DBC",
           color:"#fff", border:"none", borderRadius:8,
           fontSize:13, fontWeight:700, cursor:"pointer",
         }}>Got it</button>
@@ -1938,12 +1938,12 @@ export function CalendarView({
             {/* Entity name banner */}
             <div style={{
               padding:"9px 14px", background:"#F5F2FF",
-              borderBottom:"2px solid #7C6FE0",
+              borderBottom:"2px solid #685DBC",
               display:"flex", alignItems:"center", gap:10,
             }}>
               <span style={{ fontSize:15, fontWeight:900, color:"#13111E" }}>{selectedEntity}</span>
               <span style={{
-                fontSize:10, fontWeight:600, color:"#7C6FE0",
+                fontSize:10, fontWeight:600, color:"#685DBC",
                 textTransform:"uppercase" as const, letterSpacing:"0.06em",
               }}>{viewMode} · Weekly View</span>
             </div>
@@ -1978,7 +1978,7 @@ export function CalendarView({
                     display:"flex", flexDirection:"column" as const,
                     alignItems:"center", justifyContent:"center",
                   }}>
-                    <span style={{ fontSize:12, fontWeight:800, color:isT2?"#7C6FE0":"#374151" }}>
+                    <span style={{ fontSize:12, fontWeight:800, color:isT2?"#685DBC":"#374151" }}>
                       {DAY_SHORT[day]??day.slice(0,3)}
                     </span>
                     {absent&&<span style={{ fontSize:7.5, color:"#B45309", fontWeight:700, marginTop:1 }}>absent</span>}
@@ -2042,15 +2042,15 @@ export function CalendarView({
                     borderRight:"1px solid #F1F5F9", padding:"3px 4px",
                     background:!isM?"#F8FAFC":tF?"#F5F2FF":abs?"#FFFBEB":"#fff",
                     cursor:"pointer", opacity:isM?1:0.3,
-                    outline:iS?"2px solid #7C6FE0":"none", outlineOffset:-2,
+                    outline:iS?"2px solid #685DBC":"none", outlineOffset:-2,
                   }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
                     <span style={{
                       width:20,height:20,borderRadius:"50%",display:"inline-flex",
                       alignItems:"center",justifyContent:"center",
                       fontSize:10,fontWeight:700,
-                      background:tF?"#7C6FE0":"transparent",
-                      color:tF?"#fff":"#7C6FE0",
+                      background:tF?"#685DBC":"transparent",
+                      color:tF?"#fff":"#685DBC",
                     }}>{day.getDate()}</span>
                     {abs&&<span style={{ fontSize:8,color:"#B45309",fontWeight:700 }}>⚠</span>}
                   </div>
@@ -2098,7 +2098,7 @@ export function CalendarView({
               <button key={m} onClick={()=>setCalMode(m)}
                 style={{
                   padding:"4px 11px", border:"none",
-                  background:calMode===m?"#7C6FE0":"#fff",
+                  background:calMode===m?"#685DBC":"#fff",
                   color:calMode===m?"#fff":"#64748b",
                   fontSize:10.5, fontWeight:calMode===m?700:400, cursor:"pointer",
                 }}>{lbl}</button>
@@ -2151,7 +2151,7 @@ export function CalendarView({
             title={showBreaks ? "Hide Assembly & breaks — show teaching periods only" : "Show Assembly, short breaks & lunch"}
             style={{
               display:"flex", alignItems:"center", gap:5, padding:"4px 10px",
-              border:`1px solid ${showBreaks?"#7C6FE0":"#E5EBF5"}`, borderRadius:6,
+              border:`1px solid ${showBreaks?"#685DBC":"#E5EBF5"}`, borderRadius:6,
               background:showBreaks?"#EDE9FF":"#fff", color:showBreaks?"#4B5275":"#94A3B8",
               fontSize:10.5, fontWeight:600, cursor:"pointer",
             }}>
@@ -2169,7 +2169,7 @@ export function CalendarView({
                 <button key={d} onClick={()=>setDensity(d)}
                   style={{
                     padding:"3px 9px",border:"none",cursor:"pointer",
-                    background:density===d?"#7C6FE0":"#fff",
+                    background:density===d?"#685DBC":"#fff",
                     color:density===d?"#fff":"#64748b",
                     fontSize:9.5,fontWeight:density===d?700:400,
                   }}>{lbl}</button>
@@ -2187,7 +2187,7 @@ export function CalendarView({
                 <button key={z} onClick={()=>setZoom(z)}
                   style={{
                     padding:"3px 9px",border:"none",cursor:"pointer",
-                    background:zoom===z?"#7C6FE0":"#fff",
+                    background:zoom===z?"#685DBC":"#fff",
                     color:zoom===z?"#fff":"#64748b",
                     fontSize:9.5,fontWeight:zoom===z?700:400,
                   }}>{z}</button>

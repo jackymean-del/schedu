@@ -31,7 +31,7 @@ import {
   type WorkloadUnit, type WorkloadSpan,
 } from '@/lib/facultyWorkload'
 
-const P = '#7C6FE0'
+const P = '#685DBC'
 
 interface Row {
   key: string
@@ -245,7 +245,7 @@ export function WorkloadNormModal({
         boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
       }}>
         {/* Header */}
-        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#685DBC,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ color: '#fff' }}>
             <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7 }}>
               <ShieldCheck size={16} /> Custom workload
@@ -390,7 +390,7 @@ export function WorkloadNormModal({
             style={{
               padding: '9px 22px', borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 800,
               cursor: dirty ? 'pointer' : 'not-allowed', fontFamily: 'inherit', color: '#fff',
-              background: dirty ? 'linear-gradient(135deg,#7C6FE0,#5D4FCF)' : '#D8D3EC',
+              background: dirty ? 'linear-gradient(135deg,#685DBC,#5D4FCF)' : '#D8D3EC',
             }}>
             Save workload
           </button>

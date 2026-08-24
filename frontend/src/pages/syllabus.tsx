@@ -39,7 +39,7 @@ const DIMS: Array<{ k: Dim; label: string }> = [
   { k: 'teacher', label: 'Faculty-wise' },
 ]
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 /** Sentinel for the term picker's "whole schedule" option — an empty value would
  *  be indistinguishable from "nothing chosen yet", which means the default. */

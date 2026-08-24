@@ -6,7 +6,7 @@ export function RouteLoadingFallback() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{
         width: 34, height: 34, borderRadius: '50%',
-        border: '3px solid #ECE9FB', borderTopColor: '#7C6FE0',
+        border: '3px solid #ECE9FB', borderTopColor: '#685DBC',
         animation: 'route-spin 0.7s linear infinite',
       }} />
       <style>{`@keyframes route-spin { to { transform: rotate(360deg) } }`}</style>

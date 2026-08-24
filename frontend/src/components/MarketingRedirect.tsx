@@ -67,7 +67,7 @@ export function MarketingRedirect() {
             onClick={refetch}
             style={{
               padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: '#7C6FE0', color: '#fff', fontSize: 13.5, fontWeight: 700,
+              background: '#685DBC', color: '#fff', fontSize: 13.5, fontWeight: 700,
               fontFamily: 'inherit',
             }}
           >

@@ -135,7 +135,7 @@ export function SubscriptionPage() {
         name: 'schedU',
         description: interval === 'yearly' ? 'schedU Pro — Annual' : 'schedU Pro — Monthly',
         prefill: { name: user?.name || '', email: user?.email || '' },
-        theme: { color: '#7C6FE0' },
+        theme: { color: '#685DBC' },
         handler: () => { setBusy(false); void pollActivation() },
         modal: { ondismiss: () => setBusy(false) },
       })
@@ -175,10 +175,10 @@ export function SubscriptionPage() {
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Current plan — real account state */}
-        <div style={{ background: isPro ? '#13111E' : '#EDE9FF', border: `2px solid ${isPro ? '#A78BFA' : '#7C6FE0'}`, borderRadius: 14, padding: '18px 22px' }}>
+        <div style={{ background: isPro ? '#13111E' : '#EDE9FF', border: `2px solid ${isPro ? '#A78BFA' : '#685DBC'}`, borderRadius: 14, padding: '18px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Zap size={16} color={isPro ? '#A78BFA' : '#7C6FE0'} />
-            <span style={{ fontSize: 12, fontWeight: 800, color: isPro ? '#A78BFA' : '#7C6FE0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <Zap size={16} color={isPro ? '#A78BFA' : '#685DBC'} />
+            <span style={{ fontSize: 12, fontWeight: 800, color: isPro ? '#A78BFA' : '#685DBC', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Current plan
             </span>
           </div>
@@ -238,7 +238,7 @@ export function SubscriptionPage() {
         {!isPro && !billingEnabled && (
           <div style={{
             background: 'linear-gradient(135deg,#EDE9FF,#F8F7FF)',
-            border: '2px solid #7C6FE0', borderRadius: 14, padding: '22px 24px', textAlign: 'center',
+            border: '2px solid #685DBC', borderRadius: 14, padding: '22px 24px', textAlign: 'center',
           }}>
             <div style={{ fontSize: 19, fontWeight: 900, color: '#13111E', marginBottom: 6 }}>
               Free for a limited time
@@ -263,7 +263,7 @@ export function SubscriptionPage() {
                     style={{
                       padding: '7px 18px', borderRadius: 999, border: 'none', cursor: 'pointer',
                       fontSize: 12.5, fontWeight: 700,
-                      background: interval === opt ? 'linear-gradient(135deg,#7C6FE0,#A78BFA)' : 'transparent',
+                      background: interval === opt ? 'linear-gradient(135deg,#685DBC,#A78BFA)' : 'transparent',
                       color: interval === opt ? '#fff' : '#4B5275',
                     }}>
                     {opt === 'monthly' ? 'Monthly' : 'Yearly'}
@@ -277,24 +277,24 @@ export function SubscriptionPage() {
               {/* Free */}
               <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#13111E', marginBottom: 4 }}>Free</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: '#7C6FE0', marginBottom: 16 }}>
+                <div style={{ fontSize: 24, fontWeight: 900, color: '#685DBC', marginBottom: 16 }}>
                   {money(0)} <span style={{ fontSize: 13, fontWeight: 500, color: '#6D6A8A' }}>/ month</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {FREE_FEATURES.map(f => (
                     <div key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={14} color="#7C6FE0" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <CheckCircle2 size={14} color="#685DBC" style={{ flexShrink: 0, marginTop: 1 }} />
                       <span style={{ fontSize: 12.5, color: '#4B5275' }}>{f}</span>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 18, padding: '8px 16px', borderRadius: 8, background: '#EDE9FF', color: '#7C6FE0', fontSize: 12.5, fontWeight: 700, textAlign: 'center' }}>
+                <div style={{ marginTop: 18, padding: '8px 16px', borderRadius: 8, background: '#EDE9FF', color: '#685DBC', fontSize: 12.5, fontWeight: 700, textAlign: 'center' }}>
                   Current plan
                 </div>
               </div>
 
               {/* Pro */}
-              <div style={{ background: '#13111E', border: '2px solid #7C6FE0', borderRadius: 14, padding: 20, position: 'relative' }}>
+              <div style={{ background: '#13111E', border: '2px solid #685DBC', borderRadius: 14, padding: 20, position: 'relative' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Pro</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                   <span style={{
@@ -339,7 +339,7 @@ export function SubscriptionPage() {
                   disabled={busy || !billingEnabled}
                   style={{
                     marginTop: 18, width: '100%', padding: '10px 16px', borderRadius: 8,
-                    background: billingEnabled ? 'linear-gradient(135deg,#7C6FE0,#A78BFA)' : '#3A3550',
+                    background: billingEnabled ? 'linear-gradient(135deg,#685DBC,#A78BFA)' : '#3A3550',
                     color: billingEnabled ? '#fff' : '#8B87AD', fontSize: 13, fontWeight: 800, border: 'none',
                     cursor: busy ? 'wait' : billingEnabled ? 'pointer' : 'not-allowed',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -365,12 +365,12 @@ export function SubscriptionPage() {
         {!isPro && (
           <p style={{ fontSize: 12, color: '#6D6A8A', textAlign: 'center', margin: 0 }}>
             Need <strong style={{ color: '#4B5275' }}>more than 70 sections</strong> or multiple campuses?{' '}
-            <a href="mailto:hello@bhusku.com" style={{ color: '#7C6FE0', fontWeight: 600 }}>Talk to us about a Custom plan</a>.
+            <a href="mailto:hello@bhusku.com" style={{ color: '#685DBC', fontWeight: 600 }}>Talk to us about a Custom plan</a>.
           </p>
         )}
 
         <p style={{ fontSize: 12, color: '#6D6A8A', textAlign: 'center', margin: 0 }}>
-          Questions? Reach out via <a href="/support" style={{ color: '#7C6FE0', fontWeight: 600 }}>Help &amp; Support</a>.
+          Questions? Reach out via <a href="/support" style={{ color: '#685DBC', fontWeight: 600 }}>Help &amp; Support</a>.
         </p>
       </div>
 

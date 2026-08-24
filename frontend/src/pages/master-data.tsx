@@ -144,7 +144,7 @@ export function MasterDataPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <div style={{
               padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-              background: '#EDE9FF', color: '#7C6FE0', border: '1px solid #D8D2FF',
+              background: '#EDE9FF', color: '#685DBC', border: '1px solid #D8D2FF',
               display: 'flex', alignItems: 'center', gap: 5,
             }}>
               <Sparkles size={11} /> Spreadsheet mode
@@ -169,7 +169,7 @@ export function MasterDataPage() {
               <button key={t.key} onClick={() => setTab(t.key)}
                 style={{
                   flex: '0 1 auto', padding: '8px 16px', borderRadius: 8,
-                  border: 'none', background: active ? '#7C6FE0' : 'transparent',
+                  border: 'none', background: active ? '#685DBC' : 'transparent',
                   color: active ? '#fff' : '#4B5275',
                   fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -180,7 +180,7 @@ export function MasterDataPage() {
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
                   background: active ? 'rgba(255,255,255,0.22)' : '#F5F2FF',
-                  color: active ? '#fff' : '#7C6FE0',
+                  color: active ? '#fff' : '#685DBC',
                   fontFamily: "'DM Mono', monospace",
                 }}>{t.count}</span>
               </button>

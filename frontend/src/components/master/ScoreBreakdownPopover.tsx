@@ -43,7 +43,7 @@ export const CONSTRAINT_LABEL: Record<string, string> = {
 }
 
 export const CONSTRAINT_COLOR: Record<string, { bg: string; fg: string }> = {
-  'workload-imbalance':      { bg: '#EDE9FF', fg: '#7C6FE0' },
+  'workload-imbalance':      { bg: '#EDE9FF', fg: '#685DBC' },
   'teacher-overload':        { bg: '#FEE2E2', fg: '#991B1B' },
   'subject-scope-locked':    { bg: '#FEE2E2', fg: '#DC2626' },
   'section-scope-disabled':  { bg: '#FEF3C7', fg: '#92400E' },
@@ -162,7 +162,7 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '3px 10px', borderRadius: 12,
-          background: '#EDE9FF', color: '#7C6FE0',
+          background: '#EDE9FF', color: '#685DBC',
           border: '1px solid #D8D2FF',
           fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
           fontFamily: 'inherit',
@@ -204,8 +204,8 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
               borderBottom: '1px solid #F3F1FF',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Activity size={12} color="#7C6FE0" />
-                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase' as const, color: '#7C6FE0' }}>
+                <Activity size={12} color="#685DBC" />
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase' as const, color: '#685DBC' }}>
                   Score Breakdown
                 </span>
               </div>
@@ -371,8 +371,8 @@ function TabBtn({
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: '3px 10px', borderRadius: 6,
-        background: active ? '#7C6FE0' : 'transparent',
-        color: active ? '#fff' : disabled ? '#C4C0E0' : '#7C6FE0',
+        background: active ? '#685DBC' : 'transparent',
+        color: active ? '#fff' : disabled ? '#C4C0E0' : '#685DBC',
         border: active ? 'none' : '1px solid #ECEAFB',
         fontSize: 10, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit', letterSpacing: '0.04em',

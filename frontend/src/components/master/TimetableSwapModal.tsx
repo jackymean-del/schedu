@@ -248,7 +248,7 @@ export function TimetableSwapModal({
         }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10,
-            background: '#EDE9FF', color: '#7C6FE0',
+            background: '#EDE9FF', color: '#685DBC',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <ArrowLeftRight size={16} />
@@ -300,7 +300,7 @@ export function TimetableSwapModal({
             display: 'flex', alignItems: 'center', gap: 16,
             fontSize: 10.5, flexShrink: 0,
           }}>
-            <span style={{ fontWeight: 800, color: '#7C6FE0' }}>
+            <span style={{ fontWeight: 800, color: '#685DBC' }}>
               ✦ Holding: {(workingTT[selectedSection]?.[held.day]?.[held.periodId] as any)?.subject}
             </span>
             <LegendDot color="#DCFCE7" border="#86EFAC" label="Safe to place" />
@@ -311,7 +311,7 @@ export function TimetableSwapModal({
               style={{
                 marginLeft: 'auto', padding: '3px 10px', borderRadius: 6,
                 border: '1px solid #D8D2FF', background: '#fff',
-                color: '#7C6FE0', fontSize: 10, fontWeight: 700,
+                color: '#685DBC', fontSize: 10, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -491,7 +491,7 @@ function GridCell({
       onClick={onClick}
       style={{
         padding: 4,
-        border: isHeld ? '2px solid #7C6FE0' : overlayBorder,
+        border: isHeld ? '2px solid #685DBC' : overlayBorder,
         background: isHeld ? '#F5F3FF' : overlayBg,
         cursor: isHeld ? 'default' : canPickUp ? 'grab' : hint === 'break' ? 'not-allowed' : hint ? 'pointer' : 'default',
         transition: 'background 0.1s, border-color 0.1s',
@@ -580,7 +580,7 @@ function ChangeRow({ change, index }: { change: PendingChange; index: number }) 
         fontSize: 8, fontWeight: 800, letterSpacing: '0.06em',
         padding: '1px 5px', borderRadius: 4,
         background: change.kind === 'swap' ? '#EDE9FF' : '#DCFCE7',
-        color: change.kind === 'swap' ? '#7C6FE0' : '#15803D',
+        color: change.kind === 'swap' ? '#685DBC' : '#15803D',
         flexShrink: 0,
       }}>
         {change.kind.toUpperCase()}
@@ -665,7 +665,7 @@ const closeBtn: React.CSSProperties = {
 const primaryBtn: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6,
   padding: '7px 18px', borderRadius: 8, border: 'none',
-  background: '#7C6FE0', color: '#fff',
+  background: '#685DBC', color: '#fff',
   fontSize: 12, fontWeight: 800,
   fontFamily: 'inherit', letterSpacing: '0.02em',
   transition: 'opacity 0.12s',
@@ -674,7 +674,7 @@ const primaryBtn: React.CSSProperties = {
 const thStyle: React.CSSProperties = {
   padding: '7px 10px',
   fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em',
-  textTransform: 'uppercase', color: '#7C6FE0',
+  textTransform: 'uppercase', color: '#685DBC',
   background: '#F8F7FF', border: '1px solid #ECEAFB',
   textAlign: 'left',
 }

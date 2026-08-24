@@ -980,7 +980,7 @@ export function CalendarPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 11, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CalendarDays size={20} color="#7C6FE0" />
+              <CalendarDays size={20} color="#685DBC" />
             </div>
             <div>
               <h1 style={{ fontSize: 24, fontWeight: 800, color: '#13111E', margin: 0, letterSpacing: '-0.4px' }}>Calendar</h1>
@@ -1000,7 +1000,7 @@ export function CalendarPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   padding: '11px 20px', borderRadius: 11, border: 'none',
-                  background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', color: '#fff',
+                  background: 'linear-gradient(135deg,#685DBC,#5D4FCF)', color: '#fff',
                   fontSize: 14.5, fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 6px 16px rgba(124,111,224,0.32)',
                 }}
@@ -1801,7 +1801,7 @@ function LiveBoard(props: {
               {following ? 'Live' : 'Paused'}
             </span>
           )}
-          <button onClick={onNow} style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #E3DEF7', background: '#fff', fontSize: 12.5, fontWeight: 700, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit' }}>Now</button>
+          <button onClick={onNow} style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #E3DEF7', background: '#fff', fontSize: 12.5, fontWeight: 700, color: '#685DBC', cursor: 'pointer', fontFamily: 'inherit' }}>Now</button>
         </div>
       </div>
 
@@ -1913,7 +1913,7 @@ function LiveBoard(props: {
                             padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
                             fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
                             background: freeSort === key ? '#fff' : 'transparent',
-                            color: freeSort === key ? '#7C6FE0' : '#6D6A8A',
+                            color: freeSort === key ? '#685DBC' : '#6D6A8A',
                             boxShadow: freeSort === key ? '0 1px 4px rgba(124,111,224,0.18)' : 'none',
                           }}>
                           {label}
@@ -2086,8 +2086,8 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
         {/* handle — the moment can legitimately sit outside the school day
             (before/after hours while following the clock), so pin the handle
             to the track's edge rather than letting it render off-scale. */}
-        <div style={{ position: 'absolute', left: `${handlePct}%`, top: -3, bottom: -3, width: 3, background: '#7C6FE0', borderRadius: 3, transform: 'translateX(-50%)', pointerEvents: 'none', boxShadow: '0 0 0 3px rgba(124,111,224,0.18)' }} />
-        <div style={{ position: 'absolute', left: `${handlePct}%`, top: '50%', width: 15, height: 15, background: '#7C6FE0', borderRadius: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', border: '2.5px solid #fff', boxShadow: '0 2px 6px rgba(124,111,224,0.4)' }} />
+        <div style={{ position: 'absolute', left: `${handlePct}%`, top: -3, bottom: -3, width: 3, background: '#685DBC', borderRadius: 3, transform: 'translateX(-50%)', pointerEvents: 'none', boxShadow: '0 0 0 3px rgba(124,111,224,0.18)' }} />
+        <div style={{ position: 'absolute', left: `${handlePct}%`, top: '50%', width: 15, height: 15, background: '#685DBC', borderRadius: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', border: '2.5px solid #fff', boxShadow: '0 2px 6px rgba(124,111,224,0.4)' }} />
       </div>
       <div style={{ position: 'relative', height: 14, marginTop: 3 }}>
         {hours.map(t => (
@@ -2167,7 +2167,7 @@ function EmptyState() {
       <div style={{ fontSize: 38, marginBottom: 12 }}>🗓️</div>
       <h3 style={{ fontSize: 17, fontWeight: 800, color: '#13111E', margin: '0 0 6px' }}>No schedule generated yet</h3>
       <p style={{ fontSize: 13.5, color: '#6D6A8A', margin: '0 0 18px' }}>Complete the wizard to generate a schedule — it will appear here automatically.</p>
-      <a href="/dashboard" style={{ display: 'inline-block', padding: '10px 22px', background: '#7C6FE0', color: '#fff', borderRadius: 10, fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>Go to Dashboard</a>
+      <a href="/dashboard" style={{ display: 'inline-block', padding: '10px 22px', background: '#685DBC', color: '#fff', borderRadius: 10, fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>Go to Dashboard</a>
     </div>
   )
 }
@@ -2257,21 +2257,21 @@ function MonthGrid({
                 position: 'relative',
                 minHeight: 96, borderRadius: 10, padding: 8, cursor: c ? 'pointer' : 'default',
                 background: isHoliday ? '#FFFBEB' : isToday ? '#F1ECFF' : c ? '#FBFAFF' : 'transparent',
-                border: isHoliday ? '1.5px solid #FDE68A' : isToday ? '1.5px solid #7C6FE0' : c ? '1px solid #F2F0FB' : 'none',
+                border: isHoliday ? '1.5px solid #FDE68A' : isToday ? '1.5px solid #685DBC' : c ? '1px solid #F2F0FB' : 'none',
               }}>
               {c && (
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: isToday ? 800 : 600, color: isToday ? '#7C6FE0' : '#13111E' }}>{c}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: isToday ? 800 : 600, color: isToday ? '#685DBC' : '#13111E' }}>{c}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {st && st.sessions > 0 && !wholeSchoolOff && (
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#7C6FE0', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#685DBC', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
                     )}
                     {isAdmin && (
                       <button className="cal-mark-btn" title="Mark this day — holiday or event"
                         onClick={e => { e.stopPropagation(); setMarkOn(iso) }}
                         style={{
                           width: 18, height: 18, borderRadius: 6, border: '1px solid #E0DBF2', background: '#fff',
-                          color: '#7C6FE0', fontSize: 12, fontWeight: 800, lineHeight: 1, cursor: 'pointer',
+                          color: '#685DBC', fontSize: 12, fontWeight: 800, lineHeight: 1, cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit',
                         }}>+</button>
                     )}
@@ -2367,7 +2367,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
         display: 'flex', flexDirection: 'column',
         background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
       }}>
-        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#685DBC,#5D4FCF)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ color: '#fff' }}>
             <div style={{ fontSize: 16, fontWeight: 800 }}>Mark this day</div>
             <div style={{ fontSize: 12, opacity: 0.85 }}>{pretty}</div>
@@ -2481,7 +2481,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div {...dialogProps} style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)', outline: 'none' }}>
         {/* header */}
-        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#685DBC,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
             <CalendarDays size={20} />
             <span style={{ fontSize: 18, fontWeight: 800 }}>Add Event</span>
@@ -2573,7 +2573,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
           <button onClick={onClose} style={{ padding: '11px 22px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 14, fontWeight: 700, color: '#4B5275', cursor: 'pointer' }}>Cancel</button>
           <button onClick={create} disabled={!valid}
             style={{ padding: '11px 26px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 800, cursor: valid ? 'pointer' : 'not-allowed',
-              background: valid ? 'linear-gradient(135deg,#7C6FE0,#5D4FCF)' : '#D8D3EC', color: '#fff',
+              background: valid ? 'linear-gradient(135deg,#685DBC,#5D4FCF)' : '#D8D3EC', color: '#fff',
               boxShadow: valid ? '0 6px 16px rgba(124,111,224,0.32)' : 'none' }}>Create</button>
         </div>
       </div>
@@ -2674,7 +2674,7 @@ function MarkLeaveModal({ teacher, date, onClose, onMark }: {
 const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: string; bg: string }> = {
   exact:   { label: 'Exact Match',    color: '#0A8136', bg: '#DCFCE7' },
   class:   { label: 'Knows Class',    color: '#2563EB', bg: '#E8F0FF' },
-  subject: { label: 'Knows Subject',  color: '#7C6FE0', bg: '#EDE9FF' },
+  subject: { label: 'Knows Subject',  color: '#685DBC', bg: '#EDE9FF' },
 }
 
 // ── Substitute panel ───────────────────────────────────────────
@@ -2713,7 +2713,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
             {slots.length > 0 && showRanking && (
               <button onClick={onAutoAssign}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 800,
-                  background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', color: '#fff', boxShadow: '0 6px 16px rgba(124,111,224,0.3)' }}>
+                  background: 'linear-gradient(135deg,#685DBC,#5D4FCF)', color: '#fff', boxShadow: '0 6px 16px rgba(124,111,224,0.3)' }}>
                 <Zap size={16} /> Auto-Assign
               </button>
             )}
@@ -3036,7 +3036,7 @@ const pillBtn = (active: boolean): React.CSSProperties => ({
   padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
   fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
   background: active ? '#fff' : 'transparent',
-  color: active ? '#7C6FE0' : '#6D6A8A',
+  color: active ? '#685DBC' : '#6D6A8A',
   boxShadow: active ? '0 2px 6px rgba(124,111,224,0.18)' : 'none',
 })
 const inp: React.CSSProperties = {

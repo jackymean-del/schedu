@@ -42,7 +42,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TabKey = 'classes' | 'subjects' | 'teachers' | 'rooms'
 
-const P   = '#7C6FE0'
+const P   = '#685DBC'
 const P_D = '#6358C4'
 const P_L = '#EDE9FF'
 

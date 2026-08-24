@@ -157,7 +157,7 @@ const TOK = {
   textMid: '#555555',
   textOn: '#1A1A1A',
   // Brand accent (toolbar, selection)
-  accent: '#7C6FE0',
+  accent: '#685DBC',
   accentBg: '#EDE9FF',
   accentSoft: '#F5F2FF',
   // Cell selection — Excel blue

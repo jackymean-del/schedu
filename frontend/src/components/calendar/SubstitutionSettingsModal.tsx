@@ -58,7 +58,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
         {/* Header */}
         <div style={{ background: '#fff', borderBottom: '1px solid #ECE9FB', padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 38, height: 38, borderRadius: 10, background: '#EDE9FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Settings2 size={18} color="#7C6FE0" /></span>
+            <span style={{ width: 38, height: 38, borderRadius: 10, background: '#EDE9FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Settings2 size={18} color="#685DBC" /></span>
             <div>
               <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E' }}>Substitution Settings</div>
               <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>Controls how Calendar ranks and auto-picks substitutes</div>
@@ -70,7 +70,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
         <div style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {/* ── Auto-Suggestions ── */}
-          <Section title="Auto-Suggestions" icon={<SlidersHorizontal size={15} color="#7C6FE0" />} open={open.auto} onToggle={() => toggle('auto')}>
+          <Section title="Auto-Suggestions" icon={<SlidersHorizontal size={15} color="#685DBC" />} open={open.auto} onToggle={() => toggle('auto')}>
             <Row label="Enable Auto-Suggestions" hint="Show substitute suggestions based on scoring algorithm">
               <Switch checked={settings.defaults.autoSuggestionsEnabled} onChange={v => setDefault('autoSuggestionsEnabled', v)} />
             </Row>
@@ -89,7 +89,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
           </Section>
 
           {/* ── Scoring Priorities ── */}
-          <Section title="Scoring Priorities" icon={<Scale size={15} color="#7C6FE0" />} open={open.scoring} onToggle={() => toggle('scoring')}>
+          <Section title="Scoring Priorities" icon={<Scale size={15} color="#685DBC" />} open={open.scoring} onToggle={() => toggle('scoring')}>
             <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#1D4ED8', marginBottom: 14 }}>
               Set how much each factor matters when suggesting substitutes. Higher priority means that factor is weighted more heavily.
             </div>
@@ -107,7 +107,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
           </Section>
 
           {/* ── Default Limits ── */}
-          <Section title="Default Limits" icon={<Scale size={15} color="#7C6FE0" />} open={open.limits} onToggle={() => toggle('limits')}>
+          <Section title="Default Limits" icon={<Scale size={15} color="#685DBC" />} open={open.limits} onToggle={() => toggle('limits')}>
             <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#1D4ED8', marginBottom: 14 }}>
               Applied to all faculty by default. Override per person in Faculty Settings below.
             </div>
@@ -127,7 +127,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
           </Section>
 
           {/* ── Faculty Settings ── */}
-          <Section title="Faculty Settings" icon={<Users size={15} color="#7C6FE0" />} open={open.faculty} onToggle={() => toggle('faculty')}
+          <Section title="Faculty Settings" icon={<Users size={15} color="#685DBC" />} open={open.faculty} onToggle={() => toggle('faculty')}
             badge={`${staff.length} faculty`}>
             <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#1D4ED8', marginBottom: 12 }}>
               Configure which faculty can be assigned as substitutes and set individual limits. Blank cells use the defaults above.
@@ -167,7 +167,7 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
                         style={{
                           padding: '3px 10px', borderRadius: 6, border: 'none', cursor: ov.canSub ? 'pointer' : 'not-allowed',
                           fontSize: 10.5, fontWeight: 700, opacity: ov.canSub ? 1 : 0.4,
-                          background: ov.autoAssign ? '#EDE9FF' : '#F1F1F4', color: ov.autoAssign ? '#7C6FE0' : '#6B7079',
+                          background: ov.autoAssign ? '#EDE9FF' : '#F1F1F4', color: ov.autoAssign ? '#685DBC' : '#6B7079',
                         }}>
                         {ov.autoAssign ? 'Auto' : 'Manual'}
                       </button>
@@ -199,7 +199,7 @@ function Section({ title, icon, open, onToggle, badge, children }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           {icon}
           <span style={{ fontSize: 14.5, fontWeight: 800, color: '#13111E' }}>{title}</span>
-          {badge && <span style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', background: '#EDE9FF', padding: '2px 9px', borderRadius: 20 }}>{badge}</span>}
+          {badge && <span style={{ fontSize: 11, fontWeight: 700, color: '#685DBC', background: '#EDE9FF', padding: '2px 9px', borderRadius: 20 }}>{badge}</span>}
         </div>
         {open ? <ChevronUp size={16} color="#777391" /> : <ChevronDown size={16} color="#777391" />}
       </button>
@@ -224,7 +224,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   return (
     <button onClick={() => onChange(!checked)} style={{
       width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
-      background: checked ? '#7C6FE0' : '#E5E1F4', position: 'relative', transition: 'background .15s',
+      background: checked ? '#685DBC' : '#E5E1F4', position: 'relative', transition: 'background .15s',
     }}>
       <span style={{
         position: 'absolute', top: 3, left: checked ? 21 : 3, width: 18, height: 18, borderRadius: 9,
@@ -241,7 +241,7 @@ function WeightField({ label, hint, value, onChange, compact }: {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ fontSize: compact ? 12.5 : 13.5, fontWeight: 700, color: '#13111E' }}>{label}</span>
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', background: '#EDE9FF', padding: '2px 8px', borderRadius: 20 }}>{WEIGHT_LABEL[value]}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#685DBC', background: '#EDE9FF', padding: '2px 8px', borderRadius: 20 }}>{WEIGHT_LABEL[value]}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
         {WEIGHT_LEVELS.map(level => (
@@ -249,9 +249,9 @@ function WeightField({ label, hint, value, onChange, compact }: {
             style={{
               padding: compact ? '6px 4px' : '8px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
               fontSize: compact ? 11 : 12, fontWeight: 700,
-              border: value === level ? '1.5px solid #7C6FE0' : '1.5px solid #E5E1F4',
+              border: value === level ? '1.5px solid #685DBC' : '1.5px solid #E5E1F4',
               background: value === level ? '#F5F3FF' : '#fff',
-              color: value === level ? '#7C6FE0' : '#69707E',
+              color: value === level ? '#685DBC' : '#69707E',
             }}>
             {WEIGHT_LABEL[level]}
           </button>

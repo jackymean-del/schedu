@@ -255,7 +255,7 @@ export function ResourceGlobalStyles() {
         background: #FAFAFE !important;
       }
       .rp-inp:focus {
-        border-color: #7C6FE0 !important;
+        border-color: #685DBC !important;
         box-shadow: 0 0 0 3px rgba(124,111,224,0.2) !important;
         outline: none !important;
         background: #fff !important;
@@ -266,7 +266,7 @@ export function ResourceGlobalStyles() {
       }
       .rp-sel:hover  { border-color: #A89FEC !important; }
       .rp-sel:focus  {
-        border-color: #7C6FE0 !important;
+        border-color: #685DBC !important;
         box-shadow: 0 0 0 3px rgba(124,111,224,0.2) !important;
         outline: none !important;
       }

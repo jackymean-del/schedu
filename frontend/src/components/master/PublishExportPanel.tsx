@@ -69,7 +69,7 @@ const FORMATS: Format[] = [
     icon: <Users2 size={20} />,
     label: 'Teacher Schedules',
     sublabel: 'One sheet per teacher · XLSX',
-    accent: '#7C6FE0',
+    accent: '#685DBC',
     bg: '#F5F3FF',
     border: '#DDD6FE',
   },
@@ -262,7 +262,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
         }}>
           <div style={{
             width: 32, height: 32, borderRadius: 9,
-            background: '#EDE9FF', color: '#7C6FE0',
+            background: '#EDE9FF', color: '#685DBC',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Download size={16} />
@@ -482,7 +482,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               padding: '8px 18px', borderRadius: 9, border: 'none',
-              background: exporting || selected.size === 0 ? '#C4C0F0' : '#7C6FE0',
+              background: exporting || selected.size === 0 ? '#C4C0F0' : '#685DBC',
               color: '#fff',
               fontSize: 12, fontWeight: 800, cursor: exporting || selected.size === 0 ? 'default' : 'pointer',
               fontFamily: 'inherit', letterSpacing: '0.02em',
@@ -512,7 +512,7 @@ function ToggleChip({
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 7,
         padding: '6px 12px', borderRadius: 20,
-        border: `1.5px solid ${value ? '#7C6FE0' : '#D8D2FF'}`,
+        border: `1.5px solid ${value ? '#685DBC' : '#D8D2FF'}`,
         background: value ? '#EDE9FF' : '#FAFAFE',
         color: value ? '#5B4FBA' : '#6D6A8A',
         fontSize: 11, fontWeight: 600,
@@ -523,7 +523,7 @@ function ToggleChip({
       }}
     >
       {value
-        ? <ToggleRight size={14} color="#7C6FE0" />
+        ? <ToggleRight size={14} color="#685DBC" />
         : <ToggleLeft  size={14} color="#C4C0F0" />}
       {label}
     </button>

@@ -31,7 +31,7 @@ export function parseCellSubject(raw: string): ParsedCell {
 
 // ── Colours ────────────────────────────────────────────────────────────────────
 const OR_CHIP  = { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E', tag: '#D97706' }
-const AND_CHIP = { bg: '#EDE9FF', border: '#C4B5FD', text: '#3730A3', tag: '#7C6FE0' }
+const AND_CHIP = { bg: '#EDE9FF', border: '#C4B5FD', text: '#3730A3', tag: '#685DBC' }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function GroupCell({

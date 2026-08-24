@@ -348,7 +348,7 @@ export function Step6Generate() {
         @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.25} }
         @keyframes gen-glow  { 0%,100%{ box-shadow: 0 6px 26px rgba(124,111,224,0.35) } 50%{ box-shadow: 0 6px 34px rgba(124,111,224,0.55) } }
         .g6-input { width:100%; padding:10px 13px; border:1.5px solid #E8E4FF; border-radius:10px; font-size:13.5px; outline:none; box-sizing:border-box; background:#fff; font-family:inherit; color:#13111E; transition: border-color .15s, box-shadow .15s; }
-        .g6-input:focus { border-color:#7C6FE0; box-shadow: 0 0 0 3px rgba(124,111,224,0.13); }
+        .g6-input:focus { border-color:#685DBC; box-shadow: 0 0 0 3px rgba(124,111,224,0.13); }
         .g6-gen:hover { filter: brightness(1.05); }
         .g6-ghost:hover { background:#F8F7FF; }
       `}</style>
@@ -490,7 +490,7 @@ export function Step6Generate() {
           border:"1px solid #2C2844", padding:"12px 16px", textAlign:"left" as const,
           boxShadow:"0 16px 44px rgba(19,17,30,0.28)",
         }}>
-          <div style={{ fontSize:9.5, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"#7C6FE0", marginBottom:8 }}>
+          <div style={{ fontSize:9.5, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"#685DBC", marginBottom:8 }}>
             ● Solver — placing real lessons
           </div>
           <div style={{ display:"flex", flexDirection:"column" as const, gap:5 }}>

@@ -23,7 +23,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
     }}>
       {/* schedU Fader-U mark + wordmark (typographic bhusku attribution) */}
       <a href={isAuthenticated ? '/dashboard' : '/'} style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none', flexShrink:0 }}>
-        <div style={{ width:32, height:32, borderRadius:8, background:'#7C6FE0', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ width:32, height:32, borderRadius:8, background:'#685DBC', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <svg width="19" height="19" viewBox="0 0 52 52" fill="none">
             <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
             <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
@@ -32,7 +32,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
         <div>
           <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#6D6A8A', lineHeight: 1, marginBottom: 2 }}>by bhusku</div>
           <div style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.5px', lineHeight: 1 }}>
-            Sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic', fontSize: 17 }}>U</span>
+            Sched<span style={{ color: '#685DBC', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic', fontSize: 17 }}>U</span>
           </div>
         </div>
       </a>
@@ -45,7 +45,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div key={i} style={{
                   width: i + 1 === step ? 16 : 6, height:6, borderRadius:3,
-                  background: i + 1 < step ? '#7C6FE0' : i + 1 === step ? '#9B8EF5' : '#D8D2FF',
+                  background: i + 1 < step ? '#685DBC' : i + 1 === step ? '#9B8EF5' : '#D8D2FF',
                   transition:'all 0.2s',
                 }} />
               ))}
@@ -69,7 +69,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
               </a>
             )}
             <div style={{ display:'flex', alignItems:'center', gap:9, padding:'5px 11px', background:'#F5F2FF', borderRadius:8, border:'1px solid #E8E4FF' }}>
-              <div style={{ width:26, height:26, borderRadius:'50%', background:'#7C6FE0', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:700, flexShrink:0 }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:'#685DBC', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:700, flexShrink:0 }}>
                 {user.name[0].toUpperCase()}
               </div>
               <div style={{ lineHeight:1.2 }}>
@@ -90,7 +90,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
               </button>
             </a>
             <a href="/wizard" style={{ textDecoration:'none' }}>
-              <button style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:7, background:'#7C6FE0', color:'#fff', border:'none', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+              <button style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:7, background:'#685DBC', color:'#fff', border:'none', fontSize:12, fontWeight:600, cursor:'pointer' }}>
                 <Sparkles size={12} /> Get started
               </button>
             </a>

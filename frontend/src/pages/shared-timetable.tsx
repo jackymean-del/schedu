@@ -112,18 +112,18 @@ export function SharedTimetablePage() {
       {/* Slim header */}
       <header className="flex items-center justify-between border-b border-[#F0EDFF] px-6 py-3.5">
         <a href="/" className="flex items-center gap-2 no-underline">
-          <span className="flex size-7 items-center justify-center rounded-[8px] bg-[#7C6FE0]">
+          <span className="flex size-7 items-center justify-center rounded-[8px] bg-[#685DBC]">
             <svg width="15" height="15" viewBox="0 0 52 52" fill="none">
               <path d="M 16 9 L 16 30 A 10 10 0 0 0 36 30 L 36 22" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" />
               <circle cx="36" cy="12.5" r="4.5" fill="#D4920E" />
             </svg>
           </span>
           <span className="text-[15px] font-black tracking-[-0.3px]">
-            sched<span className="italic text-[#7C6FE0]">U</span>
+            sched<span className="italic text-[#685DBC]">U</span>
           </span>
         </a>
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-[#EDE9FF] px-2.5 py-1 text-[11px] font-semibold text-[#7C6FE0]">View only</span>
+          <span className="rounded-full bg-[#EDE9FF] px-2.5 py-1 text-[11px] font-semibold text-[#685DBC]">View only</span>
           <a href={appStartHref()} className="rounded-[8px] bg-[#13111E] px-4 py-2 text-[12px] font-semibold text-white no-underline">
             Create your own
           </a>
@@ -150,12 +150,12 @@ export function SharedTimetablePage() {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@institution.edu"
-                    className="w-full rounded-lg border border-[#E8E4FF] bg-white px-3.5 py-[11px] text-sm text-[#13111E] outline-none focus:border-[#7C6FE0]"
+                    className="w-full rounded-lg border border-[#E8E4FF] bg-white px-3.5 py-[11px] text-sm text-[#13111E] outline-none focus:border-[#685DBC]"
                   />
                   <button
                     type="submit"
                     disabled={unlocking}
-                    className="rounded-[9px] bg-[#7C6FE0] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-[9px] bg-[#685DBC] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {unlocking ? 'Sending…' : 'Send me a code'}
                   </button>
@@ -174,12 +174,12 @@ export function SharedTimetablePage() {
                     value={code}
                     onChange={e => setCode(e.target.value)}
                     placeholder="123456"
-                    className="w-full rounded-lg border border-[#E8E4FF] bg-white px-3.5 py-[11px] text-center text-lg tracking-[0.3em] text-[#13111E] outline-none focus:border-[#7C6FE0]"
+                    className="w-full rounded-lg border border-[#E8E4FF] bg-white px-3.5 py-[11px] text-center text-lg tracking-[0.3em] text-[#13111E] outline-none focus:border-[#685DBC]"
                   />
                   <button
                     type="submit"
                     disabled={unlocking}
-                    className="rounded-[9px] bg-[#7C6FE0] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-[9px] bg-[#685DBC] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {unlocking ? 'Checking…' : 'View schedule'}
                   </button>
@@ -187,7 +187,7 @@ export function SharedTimetablePage() {
                   <button
                     type="button"
                     onClick={() => { setGateStep('email'); setCode(''); setAccessError('') }}
-                    className="text-[12px] font-semibold text-[#7C6FE0]"
+                    className="text-[12px] font-semibold text-[#685DBC]"
                   >
                     Use a different email
                   </button>
@@ -204,7 +204,7 @@ export function SharedTimetablePage() {
             <p className="mt-2 text-[15px] leading-[1.7] text-[#6D6A8A]">
               This share link is invalid or has expired.
             </p>
-            <a href="/" className="mt-6 inline-block rounded-[9px] bg-[#7C6FE0] px-6 py-3 text-sm font-bold text-white no-underline">
+            <a href="/" className="mt-6 inline-block rounded-[9px] bg-[#685DBC] px-6 py-3 text-sm font-bold text-white no-underline">
               Go to schedU
             </a>
           </div>
@@ -259,7 +259,7 @@ export function SharedTimetablePage() {
                                 {cell ? (
                                   <>
                                     <div className="font-bold text-[#13111E]">{cell.subject}</div>
-                                    {cell.teacher && <div className="text-[10px] text-[#7C6FE0]">{cell.teacher}</div>}
+                                    {cell.teacher && <div className="text-[10px] text-[#685DBC]">{cell.teacher}</div>}
                                     {cell.room && <div className="text-[10px] text-[#6D6A8A]">{cell.room}</div>}
                                   </>
                                 ) : (
@@ -281,7 +281,7 @@ export function SharedTimetablePage() {
 
       <footer className="border-t border-[#F0EDFF] px-6 py-4 text-center text-[12px] text-[#6D6A8A]">
         Shared via{' '}
-        <a href="/" className="font-semibold text-[#7C6FE0] no-underline">schedU</a> — human-intelligence timetable scheduling
+        <a href="/" className="font-semibold text-[#685DBC] no-underline">schedU</a> — human-intelligence timetable scheduling
       </footer>
     </div>
   )

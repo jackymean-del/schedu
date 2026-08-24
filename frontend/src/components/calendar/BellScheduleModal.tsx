@@ -18,7 +18,7 @@ import { Bell, X, Printer } from 'lucide-react'
 import { bellColumns, bellGrid, fmtRingTime, rangeLabel, type BellColumn } from '@/lib/bellSchedule'
 import type { Period } from '@/types'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 /** A block-wise (per-shift) timetable: each block has its own clock. */
 export interface BellBlock {
@@ -120,7 +120,7 @@ export function BellScheduleModal({
           giving it to the backdrop would tell a screen reader the dialog
           covers the whole viewport. */}
       <div {...dialogProps} style={{ width: '100%', maxWidth: 760, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)', outline: 'none' }}>
-        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#7C6FE0,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#685DBC,#5D4FCF)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
             <Bell size={20} />
             <span style={{ fontSize: 18, fontWeight: 800 }}>Bell schedule</span>

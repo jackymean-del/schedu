@@ -91,10 +91,10 @@ export function PageHeader({
               onClick={() => onTabChange?.(t.key)}
               style={{
                 padding: '8px 14px', border: 'none', cursor: 'pointer',
-                borderBottom: activeTab === t.key ? '2px solid #7C6FE0' : '2px solid transparent',
+                borderBottom: activeTab === t.key ? '2px solid #685DBC' : '2px solid transparent',
                 background: 'transparent', marginBottom: -1,
                 fontSize: 12, fontWeight: activeTab === t.key ? 700 : 400,
-                color: activeTab === t.key ? '#7C6FE0' : '#69707e',
+                color: activeTab === t.key ? '#685DBC' : '#69707e',
                 display: 'flex', alignItems: 'center', gap: 6,
                 transition: 'color 0.1s',
               }}
@@ -105,7 +105,7 @@ export function PageHeader({
                   fontSize: 10, fontWeight: 700,
                   padding: '1px 6px', borderRadius: 10,
                   background: activeTab === t.key ? '#EDE9FF' : '#f3f4f6',
-                  color: activeTab === t.key ? '#7C6FE0' : '#69707e',
+                  color: activeTab === t.key ? '#685DBC' : '#69707e',
                 }}>
                   {t.count}
                 </span>

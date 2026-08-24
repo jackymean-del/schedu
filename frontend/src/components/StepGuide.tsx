@@ -7,7 +7,7 @@
 import { useGuidePrefs } from '@/store/guidePrefs'
 import { Sparkles, X, HelpCircle } from 'lucide-react'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 export function StepGuide({
   title,

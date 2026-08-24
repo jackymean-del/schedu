@@ -131,7 +131,7 @@ function WizardSetupGate() {
         </p>
         <a href="/dashboard?new=1" style={{
           display: 'inline-block', padding: '11px 22px', borderRadius: 9,
-          background: '#7C6FE0', color: '#fff', fontSize: 13.5, fontWeight: 700, textDecoration: 'none',
+          background: '#685DBC', color: '#fff', fontSize: 13.5, fontWeight: 700, textDecoration: 'none',
         }}>+ Create a schedule</a>
       </div>
     </div>
@@ -190,7 +190,7 @@ export function WizardPage() {
             <circle cx="36" cy="12.5" r="4.5" fill="#D4920E"/>
           </svg>
           <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.3px', color: '#13111E' }}>
-            sched<span style={{ color: '#7C6FE0', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
+            sched<span style={{ color: '#685DBC', fontFamily: "'Plus Jakarta Sans',Georgia,serif", fontStyle: 'italic' }}>U</span>
           </span>
         </span>
         <span style={{ color: '#D1D5DB' }}>|</span>
@@ -233,7 +233,7 @@ export function WizardPage() {
                   {/* Circle */}
                   <div style={{
                     width: 30, height: 30, borderRadius: '50%',
-                    background: active ? '#7C6FE0' : done ? '#7C6FE0' : '#fff',
+                    background: active ? '#685DBC' : done ? '#685DBC' : '#fff',
                     border: active || done ? 'none' : '1.5px solid #D1D5DB',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
@@ -250,7 +250,7 @@ export function WizardPage() {
                   <div style={{
                     fontSize: 11,
                     fontWeight: active ? 600 : 400,
-                    color: active ? '#13111E' : done ? '#7C6FE0' : '#6B7079',
+                    color: active ? '#13111E' : done ? '#685DBC' : '#6B7079',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
                   }}>
@@ -263,7 +263,7 @@ export function WizardPage() {
                   <div style={{
                     flex: 1,
                     height: 1.5,
-                    background: done ? '#7C6FE0' : '#E5E7EB',
+                    background: done ? '#685DBC' : '#E5E7EB',
                     margin: '0 6px',
                     marginBottom: 20,   // vertically aligned with circle centers
                     transition: 'background 0.3s',

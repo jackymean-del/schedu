@@ -71,17 +71,17 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
           borderRadius: '16px 16px 0 0',
         }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 9, background: '#7C6FE0',
+            width: 36, height: 36, borderRadius: 9, background: '#685DBC',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Trophy size={16} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#7C6FE0' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#685DBC' }}>
               Compare Candidates
             </div>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.3px', marginTop: 2 }}>
-              Who should teach <span style={{ color: '#7C6FE0' }}>{section.name} · {subject.name}</span>?
+              Who should teach <span style={{ color: '#685DBC' }}>{section.name} · {subject.name}</span>?
             </div>
             <div style={{ fontSize: 11, color: '#4B5275', marginTop: 3 }}>
               {ranked.length} teacher{ranked.length !== 1 ? 's' : ''} ranked by HI score. Click <strong style={{ color: '#13111E' }}>Assign</strong> to override.
@@ -155,13 +155,13 @@ function CandidateRow({
   const score = cand.explanation.score
   const tone =
     score >= 80 ? '#0A8136' :
-    score >= 40 ? '#7C6FE0' :
+    score >= 40 ? '#685DBC' :
     score >= 0  ? '#D4920E' : '#DC2626'
 
   const loadColor =
     cand.loadStatus === 'overload'    ? '#DC2626' :
     cand.loadStatus === 'over-target' ? '#D4920E' :
-    cand.loadStatus === 'near-target' ? '#0A8136' : '#7C6FE0'
+    cand.loadStatus === 'near-target' ? '#0A8136' : '#685DBC'
 
   const max = teacherWeeklyCap(cand.teacher as any)
   const canTake = cand.projectedDelta > 0
@@ -266,7 +266,7 @@ function CandidateRow({
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '7px 14px', borderRadius: 8, border: 'none',
-                  background: isTop ? tone : '#7C6FE0',
+                  background: isTop ? tone : '#685DBC',
                   color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
                 }}>

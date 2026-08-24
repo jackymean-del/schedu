@@ -48,7 +48,7 @@ const DEFAULT_WORK_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY
 
 // Band display names + colors for Capacity Engine sidebar
 const BANDS = [
-  { key: 'pre',       label: 'Pre-primary',  color: '#7C6FE0' },
+  { key: 'pre',       label: 'Pre-primary',  color: '#685DBC' },
   { key: 'primary',   label: 'Primary',       color: '#0A8136' },
   { key: 'middle',    label: 'Middle',        color: '#2563EB' },
   { key: 'secondary', label: 'Secondary',     color: '#D97706' },
@@ -756,11 +756,11 @@ export function StepAllocation() {
     <>
       {/* Sort toggles */}
       <button onClick={() => setSortRowsAZ(p => !p)} title={sortRowsAZ ? 'Rows sorted A→Z (click to reset)' : 'Sort rows (sections) A→Z'}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, border: `1px solid ${sortRowsAZ ? '#7C6FE0' : '#EEECF8'}`, background: sortRowsAZ ? '#EDE9FF' : 'transparent', color: sortRowsAZ ? '#7C6FE0' : '#A8A4C0', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, border: `1px solid ${sortRowsAZ ? '#685DBC' : '#EEECF8'}`, background: sortRowsAZ ? '#EDE9FF' : 'transparent', color: sortRowsAZ ? '#685DBC' : '#A8A4C0', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
         ↕ Rows
       </button>
       <button onClick={() => setSortColsAZ(p => !p)} title={sortColsAZ ? 'Columns sorted A→Z (click to reset)' : 'Sort columns (subjects) A→Z'}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, border: `1px solid ${sortColsAZ ? '#7C6FE0' : '#EEECF8'}`, background: sortColsAZ ? '#EDE9FF' : 'transparent', color: sortColsAZ ? '#7C6FE0' : '#A8A4C0', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, border: `1px solid ${sortColsAZ ? '#685DBC' : '#EEECF8'}`, background: sortColsAZ ? '#EDE9FF' : 'transparent', color: sortColsAZ ? '#685DBC' : '#A8A4C0', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
         ↔ Cols
       </button>
 
@@ -770,8 +770,8 @@ export function StepAllocation() {
           <button key={m} onClick={() => setDisplayMode(m)} style={{
             padding: '2px 10px 3px', border: 'none', cursor: 'pointer',
             background: 'transparent',
-            color: displayMode === m ? '#7C6FE0' : '#A8A4C0',
-            borderBottom: displayMode === m ? '1.5px solid #7C6FE0' : '1.5px solid transparent',
+            color: displayMode === m ? '#685DBC' : '#A8A4C0',
+            borderBottom: displayMode === m ? '1.5px solid #685DBC' : '1.5px solid transparent',
             marginBottom: -1.5,
             fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit',
             transition: 'color 0.12s',
@@ -868,7 +868,7 @@ export function StepAllocation() {
                   padding: '5px 13px', borderRadius: 6,
                   border: syncDone ? '1px solid #BBF7D0' : syncing ? '1px solid #DDD8FF' : '1px solid #BBF7D0',
                   background: syncDone ? '#DCFCE7' : syncing ? '#F5F3FF' : '#F0FDF4',
-                  color: syncDone ? '#15803D' : syncing ? '#7C6FE0' : '#15803D',
+                  color: syncDone ? '#15803D' : syncing ? '#685DBC' : '#15803D',
                   fontSize: 11.5, fontWeight: 700,
                   cursor: syncing ? 'default' : 'pointer',
                   fontFamily: 'inherit', whiteSpace: 'nowrap' as const,
@@ -1117,13 +1117,13 @@ function SubTab({ active, onClick, icon, label }: {
   return (
     <button onClick={onClick} style={{
       padding: '6px 14px', border: 'none', cursor: 'pointer', background: 'transparent',
-      color: active ? '#7C6FE0' : '#69707E', fontFamily: 'inherit',
+      color: active ? '#685DBC' : '#69707E', fontFamily: 'inherit',
       fontSize: 11.5, fontWeight: active ? 700 : 500,
-      borderBottom: active ? '2px solid #7C6FE0' : '2px solid transparent',
+      borderBottom: active ? '2px solid #685DBC' : '2px solid transparent',
       display: 'inline-flex', alignItems: 'center', gap: 5,
       marginBottom: -1, transition: 'all 0.1s',
     }}>
-      <span style={{ color: active ? '#7C6FE0' : '#A0A0B8' }}>{icon}</span>
+      <span style={{ color: active ? '#685DBC' : '#A0A0B8' }}>{icon}</span>
       {label}
     </button>
   )
@@ -1166,7 +1166,7 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
             <span style={{
               minWidth: 52, padding: '3px 8px', borderRadius: 6, textAlign: 'center' as const,
               fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 800,
-              background: '#F0EDFF', color: '#7C6FE0', border: '1px solid #E0DBFF',
+              background: '#F0EDFF', color: '#685DBC', border: '1px solid #E0DBFF',
             }}>{it.syntax}</span>
             <span style={{ fontSize: 10.5, color: '#4B5275' }}>{it.desc}</span>
           </div>
@@ -1219,7 +1219,7 @@ function WorkloadNormPanel({
   return (
     <div style={{ background: '#fff', border: '1px solid #E8E4FF', borderRadius: 12, padding: 13 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-        <ShieldCheck size={14} color="#7C6FE0" />
+        <ShieldCheck size={14} color="#685DBC" />
         <span style={{ fontSize: 12.5, fontWeight: 800, color: '#13111E' }}>Workload norm</span>
       </div>
       <div style={{ fontSize: 10.5, color: '#9896B5', marginBottom: 9 }}>
@@ -1269,7 +1269,7 @@ function WorkloadNormPanel({
         style={{
           display: 'inline-block', marginTop: 9, padding: '5px 11px', borderRadius: 7,
           border: '1px solid #E4E0FF', background: '#F8F7FF',
-          fontSize: 10.5, fontWeight: 700, color: '#7C6FE0',
+          fontSize: 10.5, fontWeight: 700, color: '#685DBC',
           cursor: 'pointer', fontFamily: 'inherit',
         }}>
         Set custom loads
@@ -1373,7 +1373,7 @@ function AINotesPanel({
   if (sections.length === 0) return null
 
   return (
-    <SideCard title="HI notes" icon={<Sparkles size={13} color="#7C6FE0" />}>
+    <SideCard title="HI notes" icon={<Sparkles size={13} color="#685DBC" />}>
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
         {notes.map((n, i) => (
           <NoteItem key={i} kind={n.kind} text={n.text} />
@@ -1450,7 +1450,7 @@ function AIAllocationNotesPanel({
   }, [staff, teacherAllocations])
 
   return (
-    <SideCard title="HI allocation notes" icon={<Sparkles size={13} color="#7C6FE0" />}>
+    <SideCard title="HI allocation notes" icon={<Sparkles size={13} color="#685DBC" />}>
       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
         {notes.map((n, i) => <NoteItem key={i} kind={n.kind} text={n.text} />)}
       </div>
@@ -1742,7 +1742,7 @@ function SideCard({ title, icon, children }: {
         textTransform: 'uppercase' as const, color: '#4B5275',
         marginBottom: 10,
       }}>
-        {icon && <span style={{ color: '#7C6FE0' }}>{icon}</span>}
+        {icon && <span style={{ color: '#685DBC' }}>{icon}</span>}
         {title}
       </div>
       {children}
@@ -1783,7 +1783,7 @@ function btnPrimary(enabled: boolean): React.CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 7,
     padding: '9px 20px', borderRadius: 8, border: 'none',
-    background: enabled ? 'linear-gradient(135deg, #7C6FE0, #9B8EF5)' : '#E8E4FF',
+    background: enabled ? 'linear-gradient(135deg, #685DBC, #9B8EF5)' : '#E8E4FF',
     color: enabled ? '#fff' : '#B8B4D4',
     fontSize: 12, fontWeight: 700, cursor: enabled ? 'pointer' : 'not-allowed',
     fontFamily: 'inherit',

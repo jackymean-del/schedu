@@ -186,9 +186,9 @@ function FilterBar({
     border: '1px solid transparent',
   }
   const tone = (on: boolean, strong = false): React.CSSProperties => ({
-    background:  on ? (strong ? '#7C6FE0' : '#EDE9FF') : '#F8F7FF',
-    color:       on ? (strong ? '#fff'    : '#7C6FE0') : '#6D6A8A',
-    borderColor: on ? '#7C6FE0' : '#E8E4FF',
+    background:  on ? (strong ? '#685DBC' : '#EDE9FF') : '#F8F7FF',
+    color:       on ? (strong ? '#fff'    : '#685DBC') : '#6D6A8A',
+    borderColor: on ? '#685DBC' : '#E8E4FF',
   })
   const rowLabel: React.CSSProperties = {
     fontSize: 9.5, fontWeight: 800, color: '#6D6A8A',
@@ -545,12 +545,12 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
               <FileCsvIcon size={13} /> CSV
             </button>
             <button onClick={handlePrint} title="Print / Save as PDF — A4 portrait & landscape"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', border: 'none', background: '#685DBC', color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Printer size={13} /> Print / PDF
             </button>
           </div>
           <button onClick={onClose}
-            style={{ display: 'inline-flex', padding: 8, borderRadius: 8, border: 'none', background: '#F0EDFF', cursor: 'pointer', color: '#7C6FE0' }}>
+            style={{ display: 'inline-flex', padding: 8, borderRadius: 8, border: 'none', background: '#F0EDFF', cursor: 'pointer', color: '#685DBC' }}>
             <X size={16} />
           </button>
         </div>
@@ -561,8 +561,8 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               padding: '10px 18px', border: 'none', cursor: 'pointer', background: 'transparent',
               fontSize: 12, fontWeight: activeTab === tab ? 800 : 600,
-              color: activeTab === tab ? '#7C6FE0' : '#4B5275', fontFamily: 'inherit',
-              borderBottom: activeTab === tab ? '2px solid #7C6FE0' : '2px solid transparent',
+              color: activeTab === tab ? '#685DBC' : '#4B5275', fontFamily: 'inherit',
+              borderBottom: activeTab === tab ? '2px solid #685DBC' : '2px solid transparent',
               marginBottom: -2,
             }}>
               {tab === 'class' ? 'Class-wise' : tab === 'subject' ? 'Subject-wise' : tab === 'teacher' ? 'Teacher-wise' : 'Room-wise'}
@@ -618,7 +618,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                             </td>
                           )
                         })}
-                        <td style={{ ...tdNum, fontWeight: 800, color: '#7C6FE0', borderLeft: '2px solid #E8E4FF' }}>
+                        <td style={{ ...tdNum, fontWeight: 800, color: '#685DBC', borderLeft: '2px solid #E8E4FF' }}>
                           {fmtPeriods(row.__total, displayMode, periodMinutes)}
                         </td>
                       </tr>
@@ -635,7 +635,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                           </td>
                         )
                       })}
-                      <td style={{ ...tdNum, fontWeight: 800, color: '#7C6FE0', borderLeft: '2px solid #E8E4FF' }}>
+                      <td style={{ ...tdNum, fontWeight: 800, color: '#685DBC', borderLeft: '2px solid #E8E4FF' }}>
                         {fmtPeriods(filteredClassRows.reduce((a: number, r: any) => a + (r.__total ?? 0), 0), displayMode, periodMinutes)}
                       </td>
                     </tr>
@@ -675,7 +675,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                           <td style={{ ...tdStyle, fontWeight: 700, color: '#13111E' }}>{row.subject}</td>
                           <td style={{ ...tdNum, color: '#6D6A8A' }}>{fmtPeriods(row.periodsPerWeek, displayMode, periodMinutes)}</td>
                           <td style={{ ...tdNum }}>{row.sectionCount}</td>
-                          <td style={{ ...tdNum, fontWeight: 800, color: '#7C6FE0' }}>
+                          <td style={{ ...tdNum, fontWeight: 800, color: '#685DBC' }}>
                             {fmtPeriods(row.total, displayMode, periodMinutes)}
                           </td>
                           <td style={{ ...tdStyle, fontSize: 11, color: '#4B5275' }}>
@@ -772,7 +772,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                   <tfoot>
                     <tr style={{ background: '#F8F7FF', borderTop: '2px solid #E8E4FF' }}>
                       <td style={{ ...tdStyle, fontWeight: 800, fontSize: 11, color: '#6D6A8A', textTransform: 'uppercase' }}>Total</td>
-                      <td style={{ ...tdNum, fontWeight: 800, color: '#7C6FE0' }}>
+                      <td style={{ ...tdNum, fontWeight: 800, color: '#685DBC' }}>
                         {fmtPeriods(filteredTeacherRows.reduce((a: number, r: any) => a + r.total, 0), displayMode, periodMinutes)}
                       </td>
                       <td style={{ ...tdNum, color: '#6D6A8A' }}>
@@ -819,14 +819,14 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                             <td style={{ ...tdStyle, fontWeight: 700, color: '#13111E' }}>{row.room}</td>
                             <td style={{ ...tdStyle, color: '#4B5275' }}>
                               {row.roomType ? (
-                                <span style={{ padding: '1px 7px', borderRadius: 6, fontSize: 10, background: '#F0EDFF', color: '#7C6FE0', fontWeight: 700 }}>
+                                <span style={{ padding: '1px 7px', borderRadius: 6, fontSize: 10, background: '#F0EDFF', color: '#685DBC', fontWeight: 700 }}>
                                   {row.roomType}
                                 </span>
                               ) : <span style={{ color: '#D1D5DB' }}>—</span>}
                             </td>
                             <td style={{ ...tdNum }}>{row.capacity > 0 ? row.capacity : <span style={{ color: '#D1D5DB' }}>—</span>}</td>
                             <td style={{ ...tdNum }}>{row.subjectCount || <span style={{ color: '#D1D5DB' }}>—</span>}</td>
-                            <td style={{ ...tdNum, fontWeight: 800, color: row.totalPeriods > 0 ? '#7C6FE0' : '#D1D5DB' }}>
+                            <td style={{ ...tdNum, fontWeight: 800, color: row.totalPeriods > 0 ? '#685DBC' : '#D1D5DB' }}>
                               {fmtPeriods(row.totalPeriods, displayMode, periodMinutes)}
                             </td>
                             <td style={{ ...tdStyle, fontSize: 11 }}>
@@ -842,7 +842,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                                     }}>
                                       {sub}
                                       {(row.perSubject[sub] ?? 0) > 0 && (
-                                        <span style={{ marginLeft: 4, color: '#7C6FE0' }}>
+                                        <span style={{ marginLeft: 4, color: '#685DBC' }}>
                                           ({fmtPeriods(row.perSubject[sub], displayMode, periodMinutes)})
                                         </span>
                                       )}
@@ -858,7 +858,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                         <tr style={{ background: '#F8F7FF', borderTop: '2px solid #E8E4FF' }}>
                           <td style={{ ...tdStyle, fontWeight: 800, fontSize: 11, color: '#6D6A8A', textTransform: 'uppercase' }}>Total</td>
                           <td colSpan={3} />
-                          <td style={{ ...tdNum, fontWeight: 800, color: '#7C6FE0' }}>
+                          <td style={{ ...tdNum, fontWeight: 800, color: '#685DBC' }}>
                             {fmtPeriods(filteredRoomRows.reduce((a: number, r: any) => a + r.totalPeriods, 0), displayMode, periodMinutes)}
                           </td>
                           <td />

@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react'
 import { useBlockDistance, pairKey, allPairs, missingPairs } from '@/lib/blockDistance'
 import { Plus, X, Route } from 'lucide-react'
 
-const P = '#7C6FE0'
+const P = '#685DBC'
 
 export function BlockDistanceMatrix({ venueBuildings }: { venueBuildings: string[] }) {
   const { blocks, distances, addBlock, removeBlock, setDistance, setBlocks } = useBlockDistance()

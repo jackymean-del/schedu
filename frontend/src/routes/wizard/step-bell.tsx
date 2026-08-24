@@ -88,7 +88,7 @@ const CLASSES = [
 ]
 
 const CLASS_GROUPS = [
-  { group: 'Pre-Primary',      desc: 'Nursery–UKG',   color: '#7C6FE0', bg: '#F5F3FF' },
+  { group: 'Pre-Primary',      desc: 'Nursery–UKG',   color: '#685DBC', bg: '#F5F3FF' },
   { group: 'Primary',          desc: 'Class I–V',      color: '#1D4ED8', bg: '#EFF6FF' },
   { group: 'Middle',           desc: 'Class VI–VIII',  color: '#059669', bg: '#F0FDF4' },
   { group: 'Senior',           desc: 'Class IX–X',     color: '#D97706', bg: '#FFFBEB' },
@@ -132,9 +132,9 @@ function predictNext(lastLabel: string, lastGroup: string) {
 
 // Colour palette for custom groups — [ink, paper]
 const GROUP_PALETTE: Array<[string, string]> = [
-  ['#7C6FE0','#F5F3FF'], ['#1D4ED8','#EFF6FF'], ['#059669','#F0FDF4'],
+  ['#685DBC','#F5F3FF'], ['#1D4ED8','#EFF6FF'], ['#059669','#F0FDF4'],
   ['#D97706','#FFFBEB'], ['#DC2626','#FFF1F2'], ['#0891B2','#ECFEFF'],
-  ['#7C6FE0','#FDF4FF'], ['#65A30D','#F7FEE7'], ['#9333EA','#FAF5FF'],
+  ['#685DBC','#FDF4FF'], ['#65A30D','#F7FEE7'], ['#9333EA','#FAF5FF'],
   ['#374151','#F9FAFB'],
 ]
 
@@ -201,7 +201,7 @@ function canonicalizeClasses(classes: typeof CLASSES): typeof CLASSES {
 
 // ── Type metadata ──────────────────────────────────────────────
 const TYPE_META: Record<RowType, { label: string; bg: string; fg: string; border: string; line: string }> = {
-  assembly:     { label: 'Assembly',    bg: '#EDE9FF', fg: '#7C6FE0', border: '#C4B5FD', line: '#7C6FE0' },
+  assembly:     { label: 'Assembly',    bg: '#EDE9FF', fg: '#685DBC', border: '#C4B5FD', line: '#685DBC' },
   teaching:     { label: 'Teaching',    bg: '#DBEAFE', fg: '#1D4ED8', border: '#BFDBFE', line: '#3B82F6' },
   'short-break':{ label: 'Short Break', bg: '#F0FDF4', fg: '#15803D', border: '#BBF7D0', line: '#22C55E' },
   lunch:        { label: 'Lunch',       bg: '#FEF3C7', fg: '#D97706', border: '#FDE68A', line: '#F59E0B' },
@@ -227,7 +227,7 @@ const SCHOOL_HOUR_STANDARDS = {
     periodDurSuggested: 25, periodDurRange: [20, 30] as [number, number],
     maxPeriodsSuggested: 5, maxPeriodsRange: [4, 6] as [number, number],
     lunchDur: 30,
-    color: '#7C6FE0', bg: '#F5F3FF', border: '#C4B5FD',
+    color: '#685DBC', bg: '#F5F3FF', border: '#C4B5FD',
     source: 'NEP 2020 Foundational Stage · WHO',
     note: 'Play-based learning. Short attention spans — sessions of 20–30 min with frequent activity breaks.',
   },
@@ -1327,8 +1327,8 @@ function ClasswiseBreaksPanel({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#7C6FE0', marginBottom: 4 }}>
-            <Sparkles size={13} color="#7C6FE0" /> Class-wise Breaks
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#685DBC', marginBottom: 4 }}>
+            <Sparkles size={13} color="#685DBC" /> Class-wise Breaks
           </div>
           <p style={{ fontSize: 12, color: '#69707E', margin: 0, lineHeight: 1.5 }}>
             Choose <strong>which classes</strong> have a break and set its <strong>break timing</strong> —
@@ -1458,7 +1458,7 @@ function ClasswiseBreaksPanel({
                     width: '100%', padding: '5px 7px',
                     border: '1px solid #C4B5FD', borderRadius: 6,
                     fontSize: 12, fontFamily: 'inherit', outline: 'none',
-                    background: '#F8F7FF', color: '#7C6FE0', fontWeight: 600,
+                    background: '#F8F7FF', color: '#685DBC', fontWeight: 600,
                     cursor: 'pointer', marginBottom: 5,
                   }}
                 >
@@ -1504,14 +1504,14 @@ function ClasswiseBreaksPanel({
                       type="time"
                       value={row.customStartTime}
                       onChange={e => updateBreak(row.id, { customStartTime: e.target.value })}
-                      style={{ flex: 1, padding: '3px 5px', border: '1px solid #C4B5FD', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#F8F7FF', color: '#7C6FE0' }}
+                      style={{ flex: 1, padding: '3px 5px', border: '1px solid #C4B5FD', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#F8F7FF', color: '#685DBC' }}
                     />
                     <span style={{ fontSize: 10, color: '#6B7079' }}>start</span>
                   </div>
                 )}
 
                 {/* Calculated time hint */}
-                <div style={{ fontSize: 10, color: '#7C6FE0', fontFamily: "'DM Mono',monospace" }}>
+                <div style={{ fontSize: 10, color: '#685DBC', fontFamily: "'DM Mono',monospace" }}>
                   {fmt12(bStart, use12h)} → {fmt12(bEnd, use12h)}
                 </div>
               </div>
@@ -1559,7 +1559,7 @@ function ClasswiseBreaksPanel({
         display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: '5px 12px', borderRadius: 7,
         border: '1px solid #C4B5FD', background: 'transparent',
-        color: '#7C6FE0', fontSize: 11, fontWeight: 600,
+        color: '#685DBC', fontSize: 11, fontWeight: 600,
         cursor: 'pointer', fontFamily: 'inherit', marginBottom: 14,
       }}>
         <Plus size={10} /> Add break
@@ -1581,7 +1581,7 @@ function ClasswiseBreaksPanel({
         <button onClick={onGenerate} disabled={cwRows.length === 0} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '7px 18px', borderRadius: 7, border: 'none',
-          background: cwRows.length > 0 ? '#7C6FE0' : '#E5E7EB',
+          background: cwRows.length > 0 ? '#685DBC' : '#E5E7EB',
           color: cwRows.length > 0 ? '#fff' : '#6B7079',
           fontSize: 12, fontWeight: 700,
           cursor: cwRows.length > 0 ? 'pointer' : 'default', fontFamily: 'inherit',
@@ -1655,7 +1655,7 @@ function ClassPicker({
       <button ref={btnRef} onClick={() => setOpenId(isOpen ? null : rowId)} style={{
         padding: '3px 9px', borderRadius: 6, border: '1px solid #E5E7EB',
         background: isAll ? '#F0EDFF' : isNone ? '#FFF' : '#F9FAFB',
-        fontSize: 11, fontWeight: 600, color: isAll ? '#7C6FE0' : '#374151',
+        fontSize: 11, fontWeight: 600, color: isAll ? '#685DBC' : '#374151',
         cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', gap: 4, maxWidth: 120, overflow: 'hidden',
       }}>
@@ -1691,7 +1691,7 @@ function ClassPicker({
             <input type="checkbox" checked={isAll}
               ref={el => { if (el) el.indeterminate = !isAll && !isNone }}
               onChange={() => onChange(isAll ? [] : [...allClassKeys])}
-              style={{ accentColor: '#7C6FE0', flexShrink: 0 }} />
+              style={{ accentColor: '#685DBC', flexShrink: 0 }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: '#13111E' }}>All classes</span>
           </label>
 
@@ -1889,7 +1889,7 @@ function GapRow({
                 display: 'inline-flex', alignItems: 'center', gap: 3,
                 padding: '2px 9px', borderRadius: 12,
                 border: '1px solid #C4B5FD', background: '#F5F3FF',
-                color: '#7C6FE0', fontSize: 10, fontWeight: 600,
+                color: '#685DBC', fontSize: 10, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>
               <Sparkles size={8} /> Split
@@ -2061,7 +2061,7 @@ export function StepBell() {
     // Unique streams with distinct colours
     const allStreams = [...new Set([...gradeStreams.values()].flatMap(s => [...s]))]
     const STREAM_COLORS = [
-      { color: '#7C6FE0', bg: '#F0EDFF' }, { color: '#059669', bg: '#D1FAE5' },
+      { color: '#685DBC', bg: '#F0EDFF' }, { color: '#059669', bg: '#D1FAE5' },
       { color: '#D97706', bg: '#FEF3C7' }, { color: '#DC2626', bg: '#FEE2E2' },
       { color: '#2563EB', bg: '#DBEAFE' }, { color: '#9333EA', bg: '#F5F3FF' },
     ]
@@ -3631,13 +3631,13 @@ export function StepBell() {
     <div style={{ padding: '20px 28px 32px', maxWidth: 1280, margin: '0 auto', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif" }}>
       <style>{`
         .b-input { padding:8px 10px;border:1px solid #E5E7EB;border-radius:7px;font-size:13px;font-family:inherit;color:#13111E;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s; }
-        .b-input:focus { border-color:#7C6FE0;box-shadow:0 0 0 3px rgba(124,111,224,.10); }
+        .b-input:focus { border-color:#685DBC;box-shadow:0 0 0 3px rgba(124,111,224,.10); }
         .b-end-display:hover { border-color:#C4B5FD !important;cursor:pointer; }
         .b-cell { padding:4px 7px;border:1px solid transparent;border-radius:5px;font-size:13px;font-family:inherit;color:#13111E;background:transparent;outline:none;width:100%;transition:border-color .12s,background .12s; }
         .b-cell:hover  { border-color:#E5E7EB;background:#F9FAFB; }
-        .b-cell:focus  { border-color:#7C6FE0;background:#fff;box-shadow:0 0 0 2px rgba(124,111,224,.08); }
+        .b-cell:focus  { border-color:#685DBC;background:#fff;box-shadow:0 0 0 2px rgba(124,111,224,.08); }
         .b-dur { padding:4px 6px;border:1px solid #E5E7EB;border-radius:5px;font-size:12px;font-family:'DM Mono',monospace;color:#13111E;background:#F9FAFB;outline:none;width:52px;text-align:center;transition:border-color .12s; }
-        .b-dur:focus { border-color:#7C6FE0;background:#fff; }
+        .b-dur:focus { border-color:#685DBC;background:#fff; }
         .b-row { border-bottom:1px solid #F3F4F6; }
         .b-row:last-child { border-bottom:none; }
         .b-row:hover .b-del { opacity:1 !important; }
@@ -3690,7 +3690,7 @@ export function StepBell() {
                       return (
                         <button key={val} onClick={() => setAreaMode(val)} style={{
                           flex: 1, textAlign: 'left', padding: '9px 11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
-                          border: active ? '2px solid #7C6FE0' : '1.5px solid #E5E7EB', background: active ? '#F5F3FF' : '#fff',
+                          border: active ? '2px solid #685DBC' : '1.5px solid #E5E7EB', background: active ? '#F5F3FF' : '#fff',
                         }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#6358C4' : '#374151' }}>{label}</div>
                           <div style={{ fontSize: 10, color: '#6B7079', marginTop: 2 }}>{desc}</div>
@@ -3703,7 +3703,7 @@ export function StepBell() {
 
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={applyGuidedSetup} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#7C6FE0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
+                <button onClick={applyGuidedSetup} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
                   ✨ Build it for me
                   <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.85, marginTop: 2 }}>Smart staggered lunch · aligned bells · age-appropriate hours</div>
                 </button>
@@ -3723,7 +3723,7 @@ export function StepBell() {
               <span style={{ fontSize: 12, fontWeight: 700, color: '#4B5563' }}>{setupChoice === 'guided' ? 'Guided setup' : 'Manual setup'}</span>
               {distinctBlocks.length > 1 && <span style={{ fontSize: 11, color: '#6B7079' }}>· {areaMode === 'per-block' ? `${distinctBlocks.length} blocks` : 'one schedule'}</span>}
               <div style={{ flex: 1 }} />
-              <button onClick={() => setSetupChoice('choose')} style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Change</button>
+              <button onClick={() => setSetupChoice('choose')} style={{ fontSize: 11, fontWeight: 700, color: '#685DBC', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Change</button>
             </div>
           )}
 
@@ -3750,7 +3750,7 @@ export function StepBell() {
                   }}>
                     {mode === 'standard' ? 'Standard' : 'Advanced'}
                     {mode === 'advanced' && (
-                      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', color: '#7C6FE0', background: '#EDE9FF', padding: '2px 6px', borderRadius: 6 }}>HYBRID</span>
+                      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', color: '#685DBC', background: '#EDE9FF', padding: '2px 6px', borderRadius: 6 }}>HYBRID</span>
                     )}
                   </button>
                 )
@@ -3772,11 +3772,11 @@ export function StepBell() {
             <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
               {/* Card header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px', background: '#FAFAFA', borderBottom: '1px solid #F3F4F6' }}>
-                <Calendar size={13} color="#7C6FE0" />
+                <Calendar size={13} color="#685DBC" />
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Schedule Rhythm</span>
                 <span style={{
                   marginLeft: 'auto', fontSize: 10, fontWeight: 800, padding: '2px 9px',
-                  borderRadius: 10, background: '#EDE9FF', color: '#7C6FE0', letterSpacing: '0.03em',
+                  borderRadius: 10, background: '#EDE9FF', color: '#685DBC', letterSpacing: '0.03em',
                 }}>
                   {useDayNames ? `${rotationDays.length}-day rotation`
                     : cycleWeeks === 1 ? 'Weekly'
@@ -3799,10 +3799,10 @@ export function StepBell() {
                         if (next < cycleWeeks && varyByDay && Object.keys(dayRows).some(k => k.startsWith(`w${cycleWeeks}-`))) {
                           setConfirmDialog({ msg: `Reducing to ${next} week${next > 1 ? 's' : ''} will remove all custom schedules for Week ${cycleWeeks}. Continue?`, onConfirm: () => setCycleWeeks(next) })
                         } else { setCycleWeeks(next) }
-                      }} style={{ padding: '5px 11px', background: 'none', border: 'none', fontSize: 15, fontWeight: 700, color: cycleWeeks <= 1 ? '#D1D5DB' : '#7C6FE0', cursor: cycleWeeks <= 1 ? 'default' : 'pointer', fontFamily: 'inherit' }}>−</button>
+                      }} style={{ padding: '5px 11px', background: 'none', border: 'none', fontSize: 15, fontWeight: 700, color: cycleWeeks <= 1 ? '#D1D5DB' : '#685DBC', cursor: cycleWeeks <= 1 ? 'default' : 'pointer', fontFamily: 'inherit' }}>−</button>
                       <span style={{ padding: '5px 12px', fontSize: 14, fontWeight: 800, color: '#13111E', fontFamily: "'DM Mono',monospace", borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB', minWidth: 40, textAlign: 'center' }}>{cycleWeeks}</span>
                       <button onClick={() => setCycleWeeks(w => Math.min(12, w + 1))}
-                        style={{ padding: '5px 11px', background: 'none', border: 'none', fontSize: 15, fontWeight: 700, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit' }}>+</button>
+                        style={{ padding: '5px 11px', background: 'none', border: 'none', fontSize: 15, fontWeight: 700, color: '#685DBC', cursor: 'pointer', fontFamily: 'inherit' }}>+</button>
                     </div>
                     <span style={{ fontSize: 12, color: '#69707E' }}>{cycleWeeks === 1 ? 'week' : 'weeks'}</span>
                   </div>
@@ -3819,7 +3819,7 @@ export function StepBell() {
                         setConfirmDialog({ msg: 'Switching between "Use day names" and calendar-days mode will reset all per-day custom schedules. Continue?', onConfirm: apply })
                       } else { apply() }
                     }} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
-                    <div style={{ position: 'absolute', inset: 0, borderRadius: 9, background: useDayNames ? '#7C6FE0' : '#E5E7EB', transition: 'background .2s' }} />
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: 9, background: useDayNames ? '#685DBC' : '#E5E7EB', transition: 'background .2s' }} />
                     <div style={{ position: 'absolute', top: 2, left: useDayNames ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
                   </div>
                   <span style={{ fontSize: 12, color: '#374151' }}>Use day names <span style={{ color: '#6B7079' }}>(A/B, 8-day…)</span></span>
@@ -3850,7 +3850,7 @@ export function StepBell() {
                   {!useDayNames && cycleWeeks >= 3 && (
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer', userSelect: 'none' }}>
                       <input type="checkbox" checked={fixedDuration} onChange={e => setFixedDuration(e.target.checked)}
-                        style={{ accentColor: '#7C6FE0', width: 14, height: 14 }} />
+                        style={{ accentColor: '#685DBC', width: 14, height: 14 }} />
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Fixed duration (non-repeating)</span>
                       <span style={{ fontSize: 11, color: '#6B7079' }}>— runs once with a set start and end date</span>
                     </label>
@@ -3875,7 +3875,7 @@ export function StepBell() {
                         return (
                           <div key={w} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                             <span style={{
-                              fontSize: 11, fontWeight: 800, color: isCustom ? '#7C6FE0' : '#6B7079',
+                              fontSize: 11, fontWeight: 800, color: isCustom ? '#685DBC' : '#6B7079',
                               fontFamily: "'DM Mono',monospace", width: 24, flexShrink: 0,
                             }}>W{w}</span>
                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -3891,9 +3891,9 @@ export function StepBell() {
                                     setWeekWorkDays(prev => ({ ...prev, [w]: ordered }))
                                   }} style={{
                                     padding: '3px 9px', borderRadius: 14, fontSize: 11, fontWeight: 600,
-                                    border: on ? '1px solid #7C6FE0' : '1px solid #E5E7EB',
+                                    border: on ? '1px solid #685DBC' : '1px solid #E5E7EB',
                                     background: on ? '#EDE9FF' : '#fff',
-                                    color: on ? '#7C6FE0' : '#D1D5DB',
+                                    color: on ? '#685DBC' : '#D1D5DB',
                                     cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                                   }}>{d}</button>
                                 )
@@ -3924,7 +3924,7 @@ export function StepBell() {
                 <div style={{ marginTop: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Rotation Days</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0' }}>{rotationDays.length} days in rotation</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#685DBC' }}>{rotationDays.length} days in rotation</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '14px 1fr 56px 20px', gap: '6px 10px', alignItems: 'center', marginBottom: 4 }}>
                     <span />
@@ -3949,7 +3949,7 @@ export function StepBell() {
                     <button onClick={() => {
                       const n = rotationDays.length + 1
                       setRotationDays(d => [...d, { full: `Day ${n}`, short: `D${n}` }])
-                    }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2, background: 'none', border: 'none', cursor: 'pointer', color: '#7C6FE0', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', padding: 0 }}>
+                    }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2, background: 'none', border: 'none', cursor: 'pointer', color: '#685DBC', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', padding: 0 }}>
                       <Plus size={11} /> Add day
                     </button>
                   )}
@@ -3967,7 +3967,7 @@ export function StepBell() {
             <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
               {/* Card header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px', background: '#FAFAFA', borderBottom: '1px solid #F3F4F6' }}>
-                <Layers size={13} color="#7C6FE0" />
+                <Layers size={13} color="#685DBC" />
                 <input className="b-input" value={shiftName} onChange={e => setShiftName(e.target.value)}
                   placeholder="e.g. Main Shift"
                   style={{ fontWeight: 700, fontSize: 13, border: 'none', padding: '0', outline: 'none', background: 'transparent', flex: 1 }} />
@@ -4065,7 +4065,7 @@ export function StepBell() {
                         title={m === 'fixed' ? 'Every period exactly this length' : 'Periods can vary between P.Min and P.Max'}
                         style={{
                           flex: 1, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700,
-                          background: periodDurationMode === m ? '#7C6FE0' : '#fff',
+                          background: periodDurationMode === m ? '#685DBC' : '#fff',
                           color: periodDurationMode === m ? '#fff' : '#69707E',
                         }}>
                         {m === 'fixed' ? 'Fixed' : 'Range'}
@@ -4080,7 +4080,7 @@ export function StepBell() {
                     {!maxPeriodsAuto && (
                       <span onClick={() => { setMaxPeriodsAuto(true); recomputeAutoMaxPeriods() }}
                         title="Let Max/day be derived from the bell window again"
-                        style={{ color: '#7C6FE0', cursor: 'pointer', fontWeight: 700, fontSize: 9.5 }}>
+                        style={{ color: '#685DBC', cursor: 'pointer', fontWeight: 700, fontSize: 9.5 }}>
                         ↺ Auto
                       </span>
                     )}
@@ -4357,9 +4357,9 @@ export function StepBell() {
                     <button key={s.id} onClick={() => setActiveShiftId(s.id)} style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
                       padding: '4px 14px', borderRadius: 16, fontSize: 12, fontWeight: 700,
-                      border: active ? '1.5px solid #7C6FE0' : '1px solid #E5E7EB',
+                      border: active ? '1.5px solid #685DBC' : '1px solid #E5E7EB',
                       background: active ? '#EDE9FF' : '#fff',
-                      color: active ? '#7C6FE0' : '#6B7079',
+                      color: active ? '#685DBC' : '#6B7079',
                       cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                     }}>
                       {s.name}
@@ -4371,7 +4371,7 @@ export function StepBell() {
                         }} style={{
                           marginLeft: 1, width: 13, height: 13, borderRadius: '50%',
                           background: active ? '#C4B5FD' : '#E5E7EB',
-                          color: active ? '#7C6FE0' : '#6B7079',
+                          color: active ? '#685DBC' : '#6B7079',
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 9, fontWeight: 900, lineHeight: 1, cursor: 'pointer',
                         }}>×</span>
@@ -4383,7 +4383,7 @@ export function StepBell() {
                 <button onClick={addShift} title="Add Shift" style={{
                   width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
                   border: '1.5px dashed #C4B5FD', background: '#F5F3FF',
-                  color: '#7C6FE0', fontSize: 16, fontWeight: 700, lineHeight: 1,
+                  color: '#685DBC', fontSize: 16, fontWeight: 700, lineHeight: 1,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
                 }}>+</button>
@@ -4698,7 +4698,7 @@ export function StepBell() {
                 background: autoBellMode ? '#EDE9FF' : '#F3F4F6',
                 borderBottom: autoBellMode ? '1px solid #C4B5FD' : '1px solid #E5E7EB',
               }}>
-                <Sparkles size={14} color={autoBellMode ? '#7C6FE0' : '#6B7079'} />
+                <Sparkles size={14} color={autoBellMode ? '#685DBC' : '#6B7079'} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: autoBellMode ? '#6358C4' : '#69707E', flex: 1 }}>
                   Smart Timing
                 </span>
@@ -4707,7 +4707,7 @@ export function StepBell() {
                   onClick={() => setAutoBellMode(v => !v)}
                   style={{
                     width: 40, height: 22, borderRadius: 11, flexShrink: 0,
-                    background: autoBellMode ? '#7C6FE0' : '#D1D5DB',
+                    background: autoBellMode ? '#685DBC' : '#D1D5DB',
                     border: 'none', cursor: 'pointer', position: 'relative',
                     transition: 'background .15s',
                   }}
@@ -4743,7 +4743,7 @@ export function StepBell() {
                         return (
                           <button key={val} onClick={() => { setDayboarding(val === 'day'); setBellCustomized(false) }} style={{
                             flex: 1, textAlign: 'left', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-                            border: active ? '2px solid #7C6FE0' : '1.5px solid #E5E7EB', background: active ? '#fff' : '#FAFAFA',
+                            border: active ? '2px solid #685DBC' : '1.5px solid #E5E7EB', background: active ? '#fff' : '#FAFAFA',
                           }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#6358C4' : '#374151' }}>{label}</div>
                             <div style={{ fontSize: 10, color: '#6B7079', marginTop: 2 }}>{desc}</div>
@@ -5017,7 +5017,7 @@ export function StepBell() {
                             style={{
                               flex: 1, textAlign: 'left' as const,
                               padding: '11px 13px', borderRadius: 9, cursor: 'pointer',
-                              border: active ? `2px solid ${isSmart ? '#7C6FE0' : '#69707E'}` : '1.5px solid #E5E7EB',
+                              border: active ? `2px solid ${isSmart ? '#685DBC' : '#69707E'}` : '1.5px solid #E5E7EB',
                               background: active ? (isSmart ? '#F5F3FF' : '#F9FAFB') : '#fff',
                               fontFamily: 'inherit', transition: 'all .12s',
                             }}>
@@ -5033,7 +5033,7 @@ export function StepBell() {
                                 : 'All classes share one common lunch break slot.'}
                             </div>
                             {active && (
-                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSmart ? '#7C6FE0' : '#374151', marginTop: 6 }} />
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSmart ? '#685DBC' : '#374151', marginTop: 6 }} />
                             )}
                           </button>
                         )
@@ -5269,9 +5269,9 @@ export function StepBell() {
                   return (
                     <button key={s.id} onClick={() => setActiveShiftId(s.id)} style={{
                       padding: '3px 14px', borderRadius: 16, fontSize: 11, fontWeight: 700,
-                      border: active ? '1.5px solid #7C6FE0' : '1px solid #E5E7EB',
+                      border: active ? '1.5px solid #685DBC' : '1px solid #E5E7EB',
                       background: active ? '#EDE9FF' : '#fff',
-                      color: active ? '#7C6FE0' : '#6B7079',
+                      color: active ? '#685DBC' : '#6B7079',
                       cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                     }}>{s.name}</button>
                   )
@@ -5282,7 +5282,7 @@ export function StepBell() {
             {/* Section header + Vary-by-day toggle + Class-wise breaks button */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <Clock size={13} color="#7C6FE0" />
+                <Clock size={13} color="#685DBC" />
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
                   Bell Timing{isAdvanced && activeShift ? ` — ${activeShift.name}` : ''}
                 </span>
@@ -5305,7 +5305,7 @@ export function StepBell() {
                     title="Regenerate bell schedule now (applies current P.Max, Max/day, and all settings)"
                     onClick={() => runAutoGen()}
                     style={{
-                      fontSize: 11, fontWeight: 700, color: '#7C6FE0',
+                      fontSize: 11, fontWeight: 700, color: '#685DBC',
                       background: '#EDE9FF', border: '1px solid #C4B5FD',
                       borderRadius: 6, padding: '3px 10px', cursor: 'pointer',
                       fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -5320,10 +5320,10 @@ export function StepBell() {
                     <input type="checkbox" checked={varyByDay}
                       onChange={e => handleToggleVaryByDay(e.target.checked)}
                       style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
-                    <div style={{ position: 'absolute', inset: 0, borderRadius: 8, background: varyByDay ? '#7C6FE0' : '#E5E7EB', transition: 'background .2s' }} />
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: 8, background: varyByDay ? '#685DBC' : '#E5E7EB', transition: 'background .2s' }} />
                     <div style={{ position: 'absolute', top: 2, left: varyByDay ? 16 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: varyByDay ? '#7C6FE0' : '#6B7079', transition: 'color .15s' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: varyByDay ? '#685DBC' : '#6B7079', transition: 'color .15s' }}>
                     Vary by {useDayNames ? 'day' : 'weekday'}
                   </span>
                 </label>
@@ -5335,9 +5335,9 @@ export function StepBell() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '5px 13px', borderRadius: 7,
-                    border: showCwPanel ? '1.5px solid #7C6FE0' : '1.5px solid #C4B5FD',
-                    background: showCwPanel ? '#7C6FE0' : '#F8F7FF',
-                    color: showCwPanel ? '#fff' : '#7C6FE0',
+                    border: showCwPanel ? '1.5px solid #685DBC' : '1.5px solid #C4B5FD',
+                    background: showCwPanel ? '#685DBC' : '#F8F7FF',
+                    color: showCwPanel ? '#fff' : '#685DBC',
                     fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'all .15s',
                   }}
@@ -5378,7 +5378,7 @@ export function StepBell() {
                         </div>
                         {a.fix && (
                           <button onClick={a.fix.run}
-                            style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', background: '#fff', border: '1px solid #E9E3FF', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                            style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, color: '#685DBC', background: '#fff', border: '1px solid #E9E3FF', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                             {a.fix.label}
                           </button>
                         )}
@@ -5400,9 +5400,9 @@ export function StepBell() {
                   onClick={() => setBellViewFilter('all')}
                   style={{
                     padding: '3px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                    background: bellViewFilter === 'all' ? '#7C6FE0' : '#F3F4F6',
+                    background: bellViewFilter === 'all' ? '#685DBC' : '#F3F4F6',
                     color: bellViewFilter === 'all' ? '#fff' : '#69707E',
-                    border: bellViewFilter === 'all' ? '1.5px solid #7C6FE0' : '1.5px solid #E5E7EB',
+                    border: bellViewFilter === 'all' ? '1.5px solid #685DBC' : '1.5px solid #E5E7EB',
                     cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
                   }}>
                   All classes
@@ -5411,7 +5411,7 @@ export function StepBell() {
                 {activeClassGroups.map(g => {
                   const active = bellViewFilter === g.group
                   const std = SCHOOL_HOUR_STANDARDS[g.group as SchoolGroupKey]
-                  const color = std?.color ?? '#7C6FE0'
+                  const color = std?.color ?? '#685DBC'
                   const bg    = std?.bg    ?? '#F5F3FF'
                   const bord  = std?.border ?? '#C4B5FD'
                   return (
@@ -5488,7 +5488,7 @@ export function StepBell() {
                           if (di === 0) {
                             nodes.push(
                               <div key={`lbl-w${w}`} style={{
-                                fontSize: 10, fontWeight: 800, color: '#7C6FE0',
+                                fontSize: 10, fontWeight: 800, color: '#685DBC',
                                 fontFamily: "'DM Mono',monospace",
                                 display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 2,
                               }}>W{w}</div>
@@ -5503,16 +5503,16 @@ export function StepBell() {
                               title={isWorking ? `Week ${w} · ${d}${isCustom ? ' — custom schedule' : ''}` : 'Not a working day this week'}
                               style={{
                                 padding: '5px 0', borderRadius: 7, fontSize: 11, fontWeight: isActive ? 700 : 500,
-                                background: isActive ? '#7C6FE0' : isWorking ? (isCustom ? '#EDE9FF' : '#fff') : 'transparent',
-                                color: isActive ? '#fff' : isWorking ? (isCustom ? '#7C6FE0' : '#374151') : '#D1D5DB',
-                                border: isActive ? '1.5px solid #7C6FE0' : isWorking ? (isCustom ? '1px solid #C4B5FD' : '1px solid #E5E7EB') : '1px solid transparent',
+                                background: isActive ? '#685DBC' : isWorking ? (isCustom ? '#EDE9FF' : '#fff') : 'transparent',
+                                color: isActive ? '#fff' : isWorking ? (isCustom ? '#685DBC' : '#374151') : '#D1D5DB',
+                                border: isActive ? '1.5px solid #685DBC' : isWorking ? (isCustom ? '1px solid #C4B5FD' : '1px solid #E5E7EB') : '1px solid transparent',
                                 cursor: isWorking ? 'pointer' : 'default',
                                 fontFamily: 'inherit', transition: 'all .12s', textAlign: 'center',
                                 position: 'relative', lineHeight: 1,
                               }}>
                               {isWorking ? d.slice(0, 2) : '—'}
                               {isCustom && isWorking && !isActive && (
-                                <div style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#7C6FE0' }} />
+                                <div style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#685DBC' }} />
                               )}
                             </button>
                           )
@@ -5521,7 +5521,7 @@ export function StepBell() {
                       )}
                     </div>
                     {activeDayTab && (
-                      <div style={{ marginTop: 6, fontSize: 11, color: '#7C6FE0', fontWeight: 600 }}>
+                      <div style={{ marginTop: 6, fontSize: 11, color: '#685DBC', fontWeight: 600 }}>
                         ✎ Editing: <span style={{ fontFamily: "'DM Mono',monospace" }}>
                           {activeDayTab.replace(/^w(\d+)-(.+)$/, 'Week $1 · $2')}
                         </span>
@@ -5546,7 +5546,7 @@ export function StepBell() {
                             padding: '4px 14px', borderRadius: 6,
                             fontSize: 12, fontWeight: activeDayTab === k ? 700 : 500,
                             background: activeDayTab === k ? '#fff' : 'transparent',
-                            color: activeDayTab === k ? '#7C6FE0' : isCustom ? '#7C6FE0' : '#69707E',
+                            color: activeDayTab === k ? '#685DBC' : isCustom ? '#685DBC' : '#69707E',
                             border: activeDayTab === k ? '1px solid #DDD6FE' : '1px solid transparent',
                             boxShadow: activeDayTab === k ? '0 1px 4px rgba(124,111,224,.13)' : 'none',
                             cursor: 'pointer', fontFamily: 'inherit', transition: 'all .12s',
@@ -5554,7 +5554,7 @@ export function StepBell() {
                           }}>
                             {k}
                             {isCustom && activeDayTab !== k && (
-                              <span style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: '#7C6FE0' }} />
+                              <span style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: '#685DBC' }} />
                             )}
                           </button>
                         )
@@ -5611,8 +5611,8 @@ export function StepBell() {
                     })
                   }}
                   style={{
-                    padding: '4px 13px', borderRadius: 6, border: '1px solid #7C6FE0',
-                    background: '#F5F3FF', color: '#7C6FE0', fontSize: 11, fontWeight: 700,
+                    padding: '4px 13px', borderRadius: 6, border: '1px solid #685DBC',
+                    background: '#F5F3FF', color: '#685DBC', fontSize: 11, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                   Copy schedule →
@@ -5627,7 +5627,7 @@ export function StepBell() {
                 background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 9,
                 padding: '9px 14px', marginBottom: 8,
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#7C6FE0', flexShrink: 0, minWidth: 60 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#685DBC', flexShrink: 0, minWidth: 60 }}>
                   {activeDayTab.replace(/^w(\d+)-(.+)$/, 'Week $1 · $2')}
                 </span>
 
@@ -5641,8 +5641,8 @@ export function StepBell() {
                     onChange={e => setDayStartTimes(prev => ({ ...prev, [activeDayTab]: e.target.value }))}
                     style={{
                       padding: '4px 8px', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none',
-                      border: dayStartTimes[activeDayTab] ? '1.5px solid #7C6FE0' : '1px solid #DDD6FE',
-                      color: dayStartTimes[activeDayTab] ? '#7C6FE0' : '#374151',
+                      border: dayStartTimes[activeDayTab] ? '1.5px solid #685DBC' : '1px solid #DDD6FE',
+                      color: dayStartTimes[activeDayTab] ? '#685DBC' : '#374151',
                       background: '#fff', fontWeight: dayStartTimes[activeDayTab] ? 700 : 400,
                     }} />
                   {dayStartTimes[activeDayTab] && (
@@ -5669,14 +5669,14 @@ export function StepBell() {
                   <NumInput className="b-dur" value={activePeriodDur} min={10} max={240}
                     onChange={handlePeriodDurChange}
                     style={{
-                      border: dayPeriodDurs[activeDayTab] ? '1.5px solid #7C6FE0' : '1px solid #DDD6FE',
-                      color: dayPeriodDurs[activeDayTab] ? '#7C6FE0' : '#13111E',
+                      border: dayPeriodDurs[activeDayTab] ? '1.5px solid #685DBC' : '1px solid #DDD6FE',
+                      color: dayPeriodDurs[activeDayTab] ? '#685DBC' : '#13111E',
                       fontWeight: dayPeriodDurs[activeDayTab] ? 700 : 400,
                     }} />
                   <span style={{ fontSize: 11, color: '#6B7079' }}>min</span>
                   <button onClick={applyDurToAll}
                     title="Set every period row to this duration"
-                    style={{ fontSize: 10, color: '#7C6FE0', background: 'none', border: '1px solid #DDD6FE', borderRadius: 4, cursor: 'pointer', padding: '1px 6px', fontFamily: 'inherit', fontWeight: 600 }}>
+                    style={{ fontSize: 10, color: '#685DBC', background: 'none', border: '1px solid #DDD6FE', borderRadius: 4, cursor: 'pointer', padding: '1px 6px', fontFamily: 'inherit', fontWeight: 600 }}>
                     Apply all
                   </button>
                   {dayPeriodDurs[activeDayTab] && (
@@ -5707,7 +5707,7 @@ export function StepBell() {
                   <div key={i} title={i === 3 ? 'Each row\'s duration is independently editable — click the value to change it' : undefined}
                     style={{
                       fontSize: 11, fontWeight: 600, cursor: i === 3 ? 'help' : undefined,
-                      color: i === 3 ? '#7C6FE0' : (i === 5 && bellViewFilter !== 'all') ? '#7C6FE0' : '#69707E',
+                      color: i === 3 ? '#685DBC' : (i === 5 && bellViewFilter !== 'all') ? '#685DBC' : '#69707E',
                     }}>
                     {h}
                   </div>
@@ -5834,7 +5834,7 @@ export function StepBell() {
                         <NumInput className="b-dur" value={row.duration} min={5} max={240}
                           onChange={d => updateRow(row.id, { duration: d })}
                           style={row.type === 'teaching' && row.duration !== activePeriodDur
-                            ? { border: '1.5px solid #7C6FE0', color: '#7C6FE0', fontWeight: 700 }
+                            ? { border: '1.5px solid #685DBC', color: '#685DBC', fontWeight: 700 }
                             : undefined}
                         />
                         <select
@@ -5887,7 +5887,7 @@ export function StepBell() {
               <div style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid #F3F4F6', borderRadius: '0 0 10px 10px' }}>
                 <button onClick={handleAISuggest} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7,
-                  border: '1px solid #C4B5FD', background: '#F5F3FF', fontSize: 12, fontWeight: 600, color: '#7C6FE0', cursor: 'pointer', fontFamily: 'inherit',
+                  border: '1px solid #C4B5FD', background: '#F5F3FF', fontSize: 12, fontWeight: 600, color: '#685DBC', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
                   <Sparkles size={12} /> HI suggest
                 </button>

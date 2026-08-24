@@ -231,18 +231,18 @@ export function ScopeMatrixModal({
           display: 'flex', alignItems: 'center', gap: 12,
           background: 'linear-gradient(135deg, #EDE9FF 0%, #FAFAFE 100%)', borderRadius: '16px 16px 0 0',
         }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: '#7C6FE0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: '#685DBC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Lock size={16} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#7C6FE0' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#685DBC' }}>
               Scope · {entityKind}
             </div>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#13111E', letterSpacing: '-0.3px' }}>
               {entityName}
             </div>
             <div style={{ fontSize: 11, color: '#4B5275', marginTop: 2 }}>
-              Where in the week is this {entityKind.toLowerCase()} <em style={{ color: '#7C6FE0' }}>structurally allowed</em>?
+              Where in the week is this {entityKind.toLowerCase()} <em style={{ color: '#685DBC' }}>structurally allowed</em>?
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#6D6A8A', display: 'flex' }}>
@@ -259,7 +259,7 @@ export function ScopeMatrixModal({
             padding: '10px 12px', background: '#F5F2FF', borderRadius: 8,
             border: '1px solid #ECEAFB', marginBottom: 14,
           }}>
-            <Info size={13} color="#7C6FE0" style={{ marginTop: 1, flexShrink: 0 }} />
+            <Info size={13} color="#685DBC" style={{ marginTop: 1, flexShrink: 0 }} />
             <div style={{ fontSize: 11.5, color: '#4B5275', lineHeight: 1.6 }}>
               <strong style={{ color: '#13111E' }}>Click a cell</strong> to cycle: Allowed → Disabled → Locked.
               <strong style={{ color: '#13111E' }}> Click a row/column header</strong> to cycle the whole row/column.
@@ -270,7 +270,7 @@ export function ScopeMatrixModal({
           {/* Quick actions */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             <BulkBtn icon={<Check size={11} />} label="Allow all" onClick={allowAll} accent="#0A8136" />
-            {!isMultiWeek && <BulkBtn icon={<Ban size={11} />} label="Lock weekends" onClick={onlyWeekdays} accent="#7C6FE0" />}
+            {!isMultiWeek && <BulkBtn icon={<Ban size={11} />} label="Lock weekends" onClick={onlyWeekdays} accent="#685DBC" />}
             <BulkBtn icon={<Lock size={11} />} label="Lock all" onClick={lockAll} accent="#DC2626" />
             <div style={{ flex: 1 }} />
             <div style={{ display: 'flex', gap: 10, fontSize: 11, color: '#4B5275' }}>
@@ -289,14 +289,14 @@ export function ScopeMatrixModal({
                   Apply to &nbsp;
                   <span style={{
                     fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 700,
-                    padding: '1px 7px', borderRadius: 9, background: '#EDE9FF', color: '#7C6FE0',
+                    padding: '1px 7px', borderRadius: 9, background: '#EDE9FF', color: '#685DBC',
                   }}>
                     {selectedIds.size === entities.length ? `All ${entities.length}` : `${selectedIds.size} / ${entities.length}`}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button onClick={() => setSelectedIds(new Set(allIds))}
-                    style={{ fontSize: 10.5, fontWeight: 700, color: '#7C6FE0', border: '1px solid #DDDAFF', background: '#F5F2FF', borderRadius: 5, cursor: 'pointer', padding: '2px 8px' }}>
+                    style={{ fontSize: 10.5, fontWeight: 700, color: '#685DBC', border: '1px solid #DDDAFF', background: '#F5F2FF', borderRadius: 5, cursor: 'pointer', padding: '2px 8px' }}>
                     All
                   </button>
                   <button onClick={() => setSelectedIds(new Set())}
@@ -333,7 +333,7 @@ export function ScopeMatrixModal({
                           return next
                         })
                       }}
-                      style={{ accentColor: '#7C6FE0', width: 13, height: 13, flexShrink: 0 }}
+                      style={{ accentColor: '#685DBC', width: 13, height: 13, flexShrink: 0 }}
                     />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{ent.name}</span>
                   </label>
@@ -490,7 +490,7 @@ export function ScopeMatrixModal({
 const btnPri: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6,
   padding: '8px 14px', borderRadius: 8, border: 'none',
-  background: '#7C6FE0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+  background: '#685DBC', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
 }
 const btnGhost: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6,

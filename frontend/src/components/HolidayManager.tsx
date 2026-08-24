@@ -21,7 +21,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { ScopePicker, describeScope } from '@/components/ScopePicker'
 import { Trash2, Plus, Upload, CalendarDays } from 'lucide-react'
 
-const ACCENT = '#7C6FE0'
+const ACCENT = '#685DBC'
 
 export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
   const { holidays, addHoliday, removeHoliday } = useHolidays()

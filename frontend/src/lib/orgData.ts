@@ -461,5 +461,5 @@ export function getSubjectColor(subject: string): string {
     if (keys.some(k => u.includes(k))) return cls
   }
   // Default = lavender for unmatched subjects
-  return 'bg-[#EDE9FF] text-[#13111E] border-l-4 border-[#7C6FE0]'
+  return 'bg-[#EDE9FF] text-[#13111E] border-l-4 border-[#685DBC]'
 }

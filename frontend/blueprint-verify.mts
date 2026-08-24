@@ -2086,6 +2086,17 @@ ok(contrast('#767393', '#F5F2FF') < AA, 'the old muted purple did NOT meet AA on
 ok(contrast('#16A34A', '#FFFFFF') < AA, 'the old success green did NOT meet AA on white')
 ok(contrast('#9B97B8', '#FFFFFF') < AA, 'the old grid dim text did NOT meet AA on white')
 
+// The brand accent. #7C6FE0 failed in BOTH directions — as text on its own
+// lavender tints and as the background behind white button text — so a school
+// could not read the product's most-used colour either way round. #685DBC is
+// the same hue, 16% darker, and clears every case.
+for (const bg of ['#FFFFFF', '#EDE9FF', '#F0EDFF', '#F9F8FF']) {
+  ok(contrast('#685DBC', bg) >= AA, `brand #685DBC meets AA as text on ${bg}`)
+}
+ok(contrast('#FFFFFF', '#685DBC') >= AA, 'and white button text on the brand meets AA')
+ok(contrast('#7C6FE0', '#EDE9FF') < AA && contrast('#FFFFFF', '#7C6FE0') < AA,
+  'the old accent failed both ways — kept so the reason for the change is on the record')
+
 // #8B87AD stays: on the dark Pro card and the corridor board it is correct,
 // and darkening it there would make it worse, not better.
 ok(contrast('#8B87AD', '#13111E') >= AA, 'the dim purple is fine where it belongs — on dark')

@@ -48,7 +48,7 @@ function LinkCard({ icon, title, desc, href }: { icon: React.ReactNode; title: s
   return (
     <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
       style={{ textDecoration: 'none', background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 18, display: 'block' }}>
-      <div style={{ color: '#7C6FE0', marginBottom: 10 }}>{icon}</div>
+      <div style={{ color: '#685DBC', marginBottom: 10 }}>{icon}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#13111E' }}>{title}</div>
       <div style={{ fontSize: 12.5, color: '#6D6A8A', marginTop: 2 }}>{desc}</div>
     </a>
