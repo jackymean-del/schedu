@@ -78,7 +78,7 @@ export function InsightsPage() {
       ...duties.map(d => [d.date, d.periodName, d.kind, d.entity, d.title, d.note ?? ''])] },
     { name: 'Cancelled Lessons', rows: [['Date','Day','Period','Time','Subject','Faculty','Class','Reason'],
       ...reports.cancelled.map(e => [e.date, e.day, e.periodName, fmtClock(e.startMin), e.subject, e.faculty, e.section, e.reason ?? ''])] },
-    { name: 'Faculty Summary', rows: [['Faculty','Leave Days','Periods Missed','Covered','As Substitute'],
+    { name: 'Faculty Summary', rows: [['Faculty','School Days Missed','Periods Missed','Covered','As Substitute'],
       ...reports.facultyStats.map(f => [f.name, f.leaveDays, f.periodsMissed, f.periodsCovered, f.periodsAsSub])] },
     { name: 'Class Summary', rows: [['Class','Affected','Covered','Cancelled'],
       ...reports.classStats.map(c => [c.name, c.affected, c.covered, c.cancelled])] },
@@ -113,7 +113,7 @@ export function InsightsPage() {
               <Stat icon={<UserMinus size={16} />} label="Total Leaves" value={reports.totals.leaves} tint="#685DBC" />
               <Stat icon={<CheckCircle2 size={16} />} label="Substitutes" value={reports.totals.substitutes} tint="#0A8136" />
               <Stat icon={<XCircle size={16} />} label="Cancelled" value={reports.totals.cancelled} tint="#DC2626" red={reports.totals.cancelled > 0} />
-              <Stat icon={<CalendarDays size={16} />} label="Leave Days" value={reports.totals.leaveDays} tint="#D97706" />
+              <Stat icon={<CalendarDays size={16} />} label="School Days Missed" value={reports.totals.leaveDays} tint="#D97706" />
               <Stat icon={<Users size={16} />} label="Faculty on Leave" value={reports.totals.facultyOnLeave} tint="#2563EB" />
             </div>
 
@@ -166,7 +166,7 @@ export function InsightsPage() {
               <Card><TrendsChart points={reports.trends} tall /></Card>
             ) : tab === 'faculty' ? (
               <Card>
-                <Table head={['Faculty', 'Leave Days', 'Periods Missed', 'Covered', 'As Substitute']}
+                <Table head={['Faculty', 'School Days Missed', 'Periods Missed', 'Covered', 'As Substitute']}
                   rows={reports.facultyStats.map(f => [f.name, String(f.leaveDays), String(f.periodsMissed), String(f.periodsCovered), String(f.periodsAsSub)])} />
               </Card>
             ) : tab === 'class' ? (

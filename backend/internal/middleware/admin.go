@@ -47,6 +47,14 @@ func RequireAdmin() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		uid, _ := c.Locals("user_id").(string)
 		if uid == "" || !admins[uid] {
+			// The refusal names the caller's OWN id. Enabling these endpoints means
+			// putting that id in ADMIN_CLERK_IDS, and finding it otherwise means
+			// digging through the Clerk dashboard for a value the request already
+			// carries. Telling you your own id discloses nothing you did not send.
+			if uid != "" {
+				return fiber.NewError(fiber.StatusForbidden,
+					"this endpoint is restricted to administrators — add your id to ADMIN_CLERK_IDS to enable it: "+uid)
+			}
 			return fiber.NewError(fiber.StatusForbidden, "this endpoint is restricted to administrators")
 		}
 		return c.Next()

@@ -77,6 +77,36 @@ func TestRequireAdminRunsBeforeTheHandler(t *testing.T) {
 	}
 }
 
+// A refusal has to be actionable. Enabling these endpoints means putting the
+// caller's own id in ADMIN_CLERK_IDS, so the refusal says what that id is —
+// otherwise the only way to learn it is the Clerk dashboard, for a value the
+// request already carried.
+func TestRequireAdminRefusalNamesTheCallersOwnId(t *testing.T) {
+	t.Setenv("ADMIN_CLERK_IDS", "user_admin")
+
+	app := fiber.New()
+	app.Post("/curriculum/reset",
+		func(c fiber.Ctx) error { return c.SendString("reset") },
+		func(c fiber.Ctx) error { c.Locals("user_id", c.Get("X-Test-User")); return c.Next() },
+		RequireAdmin(),
+	)
+
+	req := httptest.NewRequest("POST", "/curriculum/reset", nil)
+	req.Header.Set("X-Test-User", "user_hopeful")
+	res, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if !strings.Contains(string(body), "user_hopeful") {
+		t.Errorf("refusal should name the caller's own id so it can be added; got %q", strings.TrimSpace(string(body)))
+	}
+	if !strings.Contains(string(body), "ADMIN_CLERK_IDS") {
+		t.Errorf("and should name the variable to put it in; got %q", strings.TrimSpace(string(body)))
+	}
+}
+
 // With no admins configured the route rejects everyone, including a caller with
 // a perfectly valid session. An empty allowlist is not an open one.
 func TestRequireAdminFailsClosedWhenUnset(t *testing.T) {

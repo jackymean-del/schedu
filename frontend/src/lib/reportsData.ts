@@ -107,6 +107,22 @@ export function computeReports(params: {
 
   const dates = eachDate(range)
 
+  // Days the school actually teaches. "Leave days" sits beside "Periods
+  // Missed", which counts teaching only, so counting calendar days made the
+  // row incoherent: a Friday-to-Monday absence read as 4 days lost next to the
+  // 2 teaching days it actually cost. A weekend is not a day the school lost,
+  // and not a day anybody had to arrange cover for.
+  //
+  // Holidays are NOT excluded — Reports is not given them. A holiday inside a
+  // leave still counts, which overstates by its length; wiring holidays in is
+  // the remaining half of this.
+  const teachingDays = new Set<string>(
+    ((sources[0]?.config?.workDays?.length ? sources[0].config.workDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']) as string[])
+      .map(d => String(d).slice(0, 3).toUpperCase()),
+  )
+  const schoolDates = dates.filter(iso =>
+    teachingDays.has(DAY_KEY[new Date(iso + 'T00:00:00').getDay()].slice(0, 3)))
+
   // Leave records touching the range — counted ONCE (schedule-independent).
   const rangedLeaves = leaves.filter(l => dates.some(d => leaveCoversDate(l, d)))
   const leaveTypeMap = new Map<string, number>()
@@ -115,7 +131,7 @@ export function computeReports(params: {
   for (const l of rangedLeaves) {
     facultyOnLeave.add(l.teacher)
     leaveTypeMap.set(l.type, (leaveTypeMap.get(l.type) ?? 0) + 1)
-    const days = dates.filter(d => leaveCoversDate(l, d)).length
+    const days = schoolDates.filter(d => leaveCoversDate(l, d)).length
     leaveDays += l.duration === 'half' ? days * 0.5 : days
   }
 
@@ -163,7 +179,7 @@ export function computeReports(params: {
     return facMap.get(name)!
   }
   for (const l of rangedLeaves) {
-    const days = dates.filter(d => leaveCoversDate(l, d)).length
+    const days = schoolDates.filter(d => leaveCoversDate(l, d)).length
     fac(l.teacher).leaveDays += l.duration === 'half' ? days * 0.5 : days
   }
   for (const e of events) {

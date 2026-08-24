@@ -2733,6 +2733,44 @@ for (const sec of Object.keys(engOut.classTT))
     }
 ok(idTotal > 1000 && idStamped === idTotal, `every placed lesson records who taught it (${idStamped}/${idTotal})`)
 
+import { computeReports } from './src/lib/reportsData'
+// ── "Leave days" means days the school lost, not days on a calendar ──
+// The figure sits beside "Periods Missed", which counts teaching only. Counting
+// calendar days made the row contradict itself: a Friday-to-Monday absence read
+// as 4 days lost next to the 2 teaching days it actually cost.
+const ldSrc = (workDays: string[]) => ({
+  sections: [{ id: 's1', name: 'I-A' }],
+  periods: [{ id: 'p1', name: 'P1', duration: 40 }],
+  classTT: { 'I-A': {
+    FRIDAY: { p1: { subject: 'Eng', teacher: 'Anita Sharma', room: 'R1' } },
+    MONDAY: { p1: { subject: 'Eng', teacher: 'Anita Sharma', room: 'R1' } },
+  } },
+  substitutions: {},
+  config: { startTime: '09:00', workDays },
+})
+const ldLeave = [{ id: 'L1', teacher: 'Anita Sharma', date: '2026-08-21', endDate: '2026-08-24',
+                   duration: 'long', type: 'Medical' }] as any[]
+const ldRange = { start: '2026-08-17', end: '2026-08-31' }
+const ldRun = (workDays: string[]) =>
+  computeReports({ leaves: ldLeave, range: ldRange, sources: [ldSrc(workDays)] as any })
+
+const ldFive = ldRun(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'])
+ok(ldFive.totals.leaveDays === 2, 'a Friday-to-Monday absence costs a five-day school 2 days, not 4')
+ok(ldFive.totals.leaveDays === ldFive.events.length,
+  'and it agrees with the periods missed beside it, which is the point')
+
+// A six-day school loses the Saturday, so the answer must come from the
+// school's own working days rather than a hardcoded Monday-to-Friday.
+ok(ldRun(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']).totals.leaveDays === 3,
+  'a six-day school loses the Saturday too')
+
+ok(ldFive.facultyStats[0].leaveDays === 2, 'the faculty row reports the same number as the total')
+
+const ldHalf = computeReports({
+  leaves: [{ id: 'H', teacher: 'Anita Sharma', date: '2026-08-21', duration: 'half', type: 'Personal' }] as any,
+  range: ldRange, sources: [ldSrc(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'])] as any,
+})
+ok(ldHalf.totals.leaveDays === 0.5, 'a half day on a teaching day counts as half')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never
