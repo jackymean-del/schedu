@@ -77,6 +77,10 @@ export interface ReportSource {
 export function computeReports(params: {
   leaves: CalLeave[]
   range: DateRange
+  /** Whole-school closures. A day nobody taught is not a day a teacher's
+   *  absence cost the school anything. Section-scoped holidays are ignored
+   *  here: the teacher may still have been due to teach another section. */
+  holidays?: Array<{ date: string; sections?: string[] }>
   /** Preferred: aggregate across all active schedules. */
   sources?: ReportSource[]
   /** Legacy single-schedule shape (kept for existing callers). */
@@ -86,7 +90,7 @@ export function computeReports(params: {
   sections?: any[]
   config?: any
 }): ReportsData {
-  const { leaves, range } = params
+  const { leaves, range, holidays = [] } = params
   const sources: ReportSource[] = params.sources ?? [{
     sections: params.sections ?? [], periods: params.periods ?? [],
     classTT: params.classTT ?? {}, substitutions: params.substitutions ?? {},
@@ -113,15 +117,17 @@ export function computeReports(params: {
   // 2 teaching days it actually cost. A weekend is not a day the school lost,
   // and not a day anybody had to arrange cover for.
   //
-  // Holidays are NOT excluded — Reports is not given them. A holiday inside a
-  // leave still counts, which overstates by its length; wiring holidays in is
-  // the remaining half of this.
   const teachingDays = new Set<string>(
     ((sources[0]?.config?.workDays?.length ? sources[0].config.workDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']) as string[])
       .map(d => String(d).slice(0, 3).toUpperCase()),
   )
+  // Whole-school closures only. A holiday scoped to some sections still leaves
+  // the rest of the school teaching, so it is not a day the school lost.
+  const closed = new Set(
+    holidays.filter(h => !h.sections?.length).map(h => (h.date ?? '').slice(0, 10)),
+  )
   const schoolDates = dates.filter(iso =>
-    teachingDays.has(DAY_KEY[new Date(iso + 'T00:00:00').getDay()].slice(0, 3)))
+    teachingDays.has(DAY_KEY[new Date(iso + 'T00:00:00').getDay()].slice(0, 3)) && !closed.has(iso))
 
   // Leave records touching the range — counted ONCE (schedule-independent).
   const rangedLeaves = leaves.filter(l => dates.some(d => leaveCoversDate(l, d)))

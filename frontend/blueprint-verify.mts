@@ -2794,6 +2794,39 @@ ok(/^#[0-9A-F]{6}$/i.test(scColor('Anything').accent), 'and it is a usable hex c
 
 // An empty name still has to return something renderable rather than crash.
 ok(/^#[0-9A-F]{6}$/i.test(scColor('').accent), 'a blank subject still gets a colour')
+// ── A day nobody taught is not a day the absence cost anything ──
+// "School Days Missed" already skipped weekends. Holidays were the other half:
+// a teacher away across a school closure had that closure counted against them.
+const hlSrc = {
+  sections: [{ id: 's1', name: 'I-A' }, { id: 's2', name: 'I-B' }],
+  periods: [{ id: 'p1', name: 'P1', duration: 40 }],
+  classTT: { 'I-A': {
+    MONDAY: { p1: { subject: 'Eng', teacher: 'Anita Sharma', room: 'R1' } },
+    TUESDAY: { p1: { subject: 'Eng', teacher: 'Anita Sharma', room: 'R1' } },
+    WEDNESDAY: { p1: { subject: 'Eng', teacher: 'Anita Sharma', room: 'R1' } },
+  } },
+  substitutions: {},
+  config: { startTime: '09:00', workDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] },
+}
+const hlLeave = [{ id: 'L1', teacher: 'Anita Sharma', date: '2026-08-17', endDate: '2026-08-19',
+                   duration: 'long', type: 'Medical' }] as any[]
+const hlRun = (holidays: any[]) => computeReports({
+  leaves: hlLeave, range: { start: '2026-08-17', end: '2026-08-21' },
+  sources: [hlSrc] as any, holidays,
+}).totals.leaveDays
+
+ok(hlRun([]) === 3, 'Monday to Wednesday away is three school days when the school was open')
+ok(hlRun([{ date: '2026-08-18', name: 'Founders Day' }]) === 2,
+  'a whole-school closure inside the absence does not count against the teacher')
+
+// Scoped closures are a different thing: the rest of the school still taught,
+// so the teacher could still have been due in front of a class.
+ok(hlRun([{ date: '2026-08-18', name: 'I-B trip', sections: ['I-B'] }]) === 3,
+  'a holiday for one section only is not a day the school was closed')
+
+// Holidays outside the leave must not move the figure at all.
+ok(hlRun([{ date: '2026-08-21', name: 'Later holiday' }]) === 3, 'a closure outside the absence changes nothing')
+ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ignored rather than throwing')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

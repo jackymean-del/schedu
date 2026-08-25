@@ -9,6 +9,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { useLeaves } from '@/lib/leaveUtils'
+import { useHolidays } from '@/lib/holidays'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
 import { useFreeAssignments, type FreeAssignment } from '@/lib/freeAssignments'
 import { loadActiveBundles } from '@/lib/activeSchedules'
@@ -33,6 +34,9 @@ export function InsightsPage() {
   const store = useTimetableStore() as any
   const uid = useAuthStore.getState().user?.id ?? ''
   const leaves = useLeaves(s => s.leaves)
+  // Whole-school closures, so a holiday inside a leave is not counted as a day
+  // the school lost twice over.
+  const holidays = useHolidays(s => s.holidays)
   const freeAssignments = useFreeAssignments(s => s.assignments)
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
@@ -51,8 +55,8 @@ export function InsightsPage() {
   const hasData = sources.some(s => s.sections.length > 0 && Object.keys(s.classTT).length > 0)
 
   const reports: ReportsData = useMemo(() => computeReports({
-    leaves, sources, range: rangeFor(rangeKey),
-  }), [uid, sources, rangeKey])
+    leaves, sources, holidays, range: rangeFor(rangeKey),
+  }), [uid, sources, holidays, rangeKey])
 
   // Extra duties (free-slot task assignments) in the selected range — same
   // date-scoped records the Calendar writes, so the audit trail is automatic.
