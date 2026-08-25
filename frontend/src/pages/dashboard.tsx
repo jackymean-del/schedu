@@ -1024,6 +1024,12 @@ function EditTimetableModal({
 export function DashboardPage() {
   const { user, logout, authReady } = useAuthStore()
   const org = useOrgProfile()
+  // Up here with the other hooks, NOT beside the code that uses it further
+  // down. Below, this component returns early while auth is still resolving —
+  // so a hook after that point runs on the second render and not the first,
+  // which is React's "rendered more hooks than during the previous render".
+  // That is the login transition exactly, and it took the whole page down.
+  const leaves = useLeaves(s => s.leaves)
   const store = useTimetableStore() as any
   const { sections, staff } = store
 
@@ -1432,7 +1438,6 @@ export function DashboardPage() {
   // cross-schedule venue clashes on the wall-clock axis. Snapshots are fresh
   // here because the mount effect saves the open schedule's snapshot first.
   const activeBundles = hasTimetables ? loadActiveBundles(user?.id ?? '') : []
-  const leaves = useLeaves(s => s.leaves)
   const multiActive = activeBundles.length > 1
   const todaySummary = !hasTimetables ? null
     : multiActive

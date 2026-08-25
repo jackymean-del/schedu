@@ -38,13 +38,19 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
 
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
+  // Every hook runs BEFORE the early return. This one sat after it, so the
+  // first render (empty store, no schedule yet) ran one hook fewer than the
+  // render after loadActiveTimetableIntoStore hydrated the schedule — which is
+  // React's "rendered more hooks than during the previous render", and it took
+  // the whole page down on the first load after signing in.
+  const leaves = useLeaves(s => s.leaves)
+
   const sections: any[] = store.sections ?? []
   const classTT = store.classTT ?? {}
   const hasSchedule = sections.length > 0 && Object.keys(classTT).length > 0
   if (!hasSchedule) return null
 
   const today = new Date()
-  const leaves = useLeaves(s => s.leaves)
   const h24 = (store.config?.timeFormat ?? '12h') === '24h'
   // When several schedules are active, the dashboard hands us the merged
   // summary so this panel and the Pulse always agree.

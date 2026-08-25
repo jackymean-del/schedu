@@ -2827,6 +2827,41 @@ ok(hlRun([{ date: '2026-08-18', name: 'I-B trip', sections: ['I-B'] }]) === 3,
 // Holidays outside the leave must not move the figure at all.
 ok(hlRun([{ date: '2026-08-21', name: 'Later holiday' }]) === 3, 'a closure outside the absence changes nothing')
 ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ignored rather than throwing')
+// ── No component may call a hook after it can return early ──
+// React counts hooks per render. A hook below an early return runs on some
+// renders and not others, and React kills the whole page with "rendered more
+// hooks than during the previous render". It cost a crash on the dashboard
+// immediately after signing in: the page returns early while auth resolves,
+// then ran one more hook once it had.
+//
+// This is a lint rule everywhere else; there is no eslint hook plugin wired
+// here, so the suite checks it directly.
+import { readFileSync as hkRead } from 'node:fs'
+import { globSync as hkGlob } from 'node:fs'
+
+const HOOK = /^\s{2}(const|let|var)?\s*[[{]?[\w,\s}\]]*=?\s*use[A-Z]\w*\s*[(<]/
+const EARLY = /^\s{2}(if\s*\(.*\)\s*)?return\b/
+const CLOSE = /^\}/
+const START = /^(export )?(function|const) [A-Z]\w*/
+
+const hkOffenders: string[] = []
+for (const file of hkGlob('src/**/*.tsx')) {
+  const lines = hkRead(file, 'utf8').split('\n')
+  let inComponent = false
+  let earlyAt: number | null = null
+  lines.forEach((line, i) => {
+    if (START.test(line)) { inComponent = true; earlyAt = null; return }
+    if (!inComponent) return
+    if (CLOSE.test(line)) { inComponent = false; earlyAt = null; return }
+    if (earlyAt === null && EARLY.test(line)) earlyAt = i + 1
+    else if (earlyAt !== null && HOOK.test(line)) {
+      hkOffenders.push(`${file}:${i + 1} (returns at line ${earlyAt}) — ${line.trim().slice(0, 50)}`)
+      earlyAt = null
+    }
+  })
+}
+ok(hkOffenders.length === 0,
+  `no component calls a hook after an early return${hkOffenders.length ? ':\n    ' + hkOffenders.join('\n    ') : ''}`)
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never
