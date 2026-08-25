@@ -274,7 +274,7 @@ export function generateShortName(name: string): string {
   }
   // Build acronym from meaningful words
   const stop = new Set(['and','the','of','in','for','a','an','&','/','to','by','at','&'])
-  const words = n.split(/[\s/&()+,\-]+/)
+  const words = n.split(/[\s/&()+,-]+/)
     .filter(w => w.length > 1 && !/^\d+$/.test(w) && !stop.has(w.toLowerCase()))
   if (words.length === 0) return n.slice(0, 5).toUpperCase()
   if (words.length === 1) {

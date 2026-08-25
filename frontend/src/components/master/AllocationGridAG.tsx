@@ -708,7 +708,7 @@ export function AllocationGridAG({
     if (storePeriodsArr.length) return storePeriodsArr
     try { return buildPeriodSequence(store.breaks ?? [], config?.periodsPerDay ?? 8) }
     catch { return [] }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [storePeriodsArr, store.breaks, config?.periodsPerDay])
   const workDays: string[] = config?.workDays ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
 

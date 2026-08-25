@@ -2082,7 +2082,7 @@ export function StepBell() {
     setCustomGroups((newGroups.length ? newGroups : CLASS_GROUPS) as typeof CLASS_GROUPS)
     setClassStreamMap(newStreamMap)
     setCustomStreams(newStreamDefs)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [storeSections])
 
   const activeClasses    = customClasses
@@ -2301,7 +2301,7 @@ export function StepBell() {
       if (dismissedDaySugs.includes(sug.id)) return false
       return true
     }),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   [workDays, activeClassKeys, dayOffRules, dismissedDaySugs])
 
   const applyDaySuggestion = (sug: DaySuggestion) => {
@@ -2513,7 +2513,7 @@ export function StepBell() {
   }, [isAdvanced, shifts, generateShiftRows, concurrentMode, lunchBreakDur, concurrentDur,
       startTime, schoolEndTime, maxPeriods, periodDur, smartLunchMode, effectiveLunchAP,
       activeClassGroups, activeClasses, morningBreak, morningBreakPos, morningBreakDur,
-      periodDurMin, dayboarding]) // eslint-disable-line react-hooks/exhaustive-deps
+      periodDurMin, dayboarding])  
 
   useEffect(() => {
     if (!autoBellMode) return

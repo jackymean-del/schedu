@@ -191,7 +191,7 @@ export function TimetableSwapModal({
     if (changes.length === 0) return
     // Replay all changes except the last
     const prev = changes.slice(0, -1)
-    let tt = deepCloneTT(classTT)
+    const tt = deepCloneTT(classTT)
     for (const ch of prev) applyChange(tt, selectedSection, ch)
     setWorkingTT(tt)
     setChanges(prev)

@@ -69,7 +69,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
   const [rows, setRows] = useState<Row[]>(() => buildRows())
   const [compareSection, setCompareSection] = useState<string | null>(null)
   // Reset rows if (teacher, subject) changes
-  useEffect(() => { setRows(buildRows()) /* eslint-disable-next-line */ }, [teacher, subject])
+  useEffect(() => { setRows(buildRows())   }, [teacher, subject])
 
   const totalThisTeacher = rows.reduce((a, r) => a + r.thisTeacher, 0)
   const hasUnsaved = useMemo(() => {

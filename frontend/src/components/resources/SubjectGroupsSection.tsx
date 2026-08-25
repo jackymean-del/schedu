@@ -680,7 +680,7 @@ export function SubjectGroupsSection({
   const openEdit = (g: SubjectAndOrGroup) => { setEditTarget(g); setModalOpen(true) }
 
   /** Open modal pre-filled with a suggestion (user can still edit before saving) */
-  const useSuggestion = (sug: SuggestionTemplate) => {
+  const applySuggestion = (sug: SuggestionTemplate) => {
     setEditTarget({
       id: '',          // blank id = treat as "new" in handleSave
       name: sug.label,
@@ -826,7 +826,7 @@ export function SubjectGroupsSection({
                         {/* Actions */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
                           <button
-                            onClick={() => useSuggestion(sug)}
+                            onClick={() => applySuggestion(sug)}
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: 4,
                               padding: '5px 10px', borderRadius: 6, border: 'none',

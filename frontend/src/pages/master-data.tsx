@@ -105,11 +105,13 @@ export function MasterDataPage() {
     return () => clearTimeout(t)
   }, [sections, staff, subjects, storedRooms, sectionStrengths])
 
-  // Auth gate
-  if (!user) { window.location.href = '/login'; return null }
-
   const directoryStaff = useDirectoryStore(s => s.staff)
   const directoryVenues = useDirectoryStore(s => s.venues)
+
+  // Auth gate — below every hook. Signing out flips `user` to null, and a gate
+  // above the hooks would drop two of them on that render: the same crash we
+  // shipped on sign-in.
+  if (!user) { window.location.href = '/login'; return null }
 
   const TABS: { key: Tab; label: string; icon: React.ReactNode; count: number }[] = [
     { key: 'classes',   label: 'Classes',   icon: <GraduationCap size={14} />, count: sections.length },

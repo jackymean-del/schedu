@@ -1484,7 +1484,7 @@ export function TimetablePage() {
       cache.set(tn, { cols, schedules, secNames })
     })
     return cache
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [staff, sections, classTT, classPeriods, periods, cwBreaksGlobal, config])
 
   // Uncovered periods — recomputes only when class timetable / periods change.

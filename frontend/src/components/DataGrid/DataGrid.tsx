@@ -521,7 +521,7 @@ export function DataGrid<T>({
         const end = selectionEnd ?? selection
         const r0 = Math.min(selection.r, end.r), r1 = Math.max(selection.r, end.r)
         const c0 = Math.min(selection.c, end.c), c1 = Math.max(selection.c, end.c)
-        let next = rows.slice()
+        const next = rows.slice()
         for (let r = r0; r <= r1; r++) {
           const origR = originalIndex(r)
           if (origR < 0) continue
@@ -634,7 +634,7 @@ export function DataGrid<T>({
     let added = 0
     lines.forEach((line, li) => {
       const cells = line.split(delim)
-      let targetFilteredR = anchor.r + li
+      const targetFilteredR = anchor.r + li
       // Grow rows if pasting past end
       while (targetFilteredR >= filteredRows.length && newRow) {
         next = [...next, newRow()]
@@ -670,7 +670,7 @@ export function DataGrid<T>({
     const end = selectionEnd ?? selection
     const r0 = Math.min(selection.r, end.r), r1 = Math.max(selection.r, end.r)
     const c0 = Math.min(selection.c, end.c), c1 = Math.max(selection.c, end.c)
-    let next = rows.slice()
+    const next = rows.slice()
     for (let r = r0; r <= r1; r++) {
       const origR = originalIndex(r)
       if (origR < 0) continue
@@ -720,7 +720,7 @@ export function DataGrid<T>({
     // Compute fill direction: down if to.r > from.r, right if to.c > from.c.
     // The fill rectangle EXTENDS from the source — the target overlaps the
     // source on one edge, so we need to skip those source cells.
-    let next = rows.slice()
+    const next = rows.slice()
 
     // Helper: collect raw string values from the source range along one axis
     const collectStrSeries = (axis: 'vertical' | 'horizontal'): string[] => {
@@ -841,7 +841,7 @@ export function DataGrid<T>({
     const r0 = Math.min(selection.r, end.r), r1 = Math.max(selection.r, end.r)
     const c0 = Math.min(selection.c, end.c), c1 = Math.max(selection.c, end.c)
     if (r1 <= r0) return
-    let next = rows.slice()
+    const next = rows.slice()
     for (let c = c0; c <= c1; c++) {
       const col = columns[c]
       if (col.readonly || col.type === 'computed') continue
@@ -890,7 +890,7 @@ export function DataGrid<T>({
       const colMap = headerCells.map(h =>
         columns.findIndex(c => c.label.toLowerCase() === h.toLowerCase())
       )
-      let next = rows.slice()
+      const next = rows.slice()
       aoa.slice(1).forEach(cells => {
         if (cells.every(c => c == null || String(c).trim() === '')) return
         let row = newRow ? newRow() : ({} as T)
@@ -943,7 +943,7 @@ export function DataGrid<T>({
       const colMap = headerCells.map(h =>
         columns.findIndex(c => c.label.toLowerCase() === h.trim().toLowerCase())
       )
-      let next = rows.slice()
+      const next = rows.slice()
       lines.slice(1).forEach(line => {
         const cells = parseCSVLine(line)
         // Append a fresh row, then fill it
@@ -1044,45 +1044,6 @@ export function DataGrid<T>({
     setSelection({ r: filteredRi + 1, c: 0 }); setSelectionEnd(null)
   }, [newRow, rows, originalIndex, onChange])
 
-  // ── Empty state ─────────────────────────────────────────
-  if (rows.length === 0) {
-    return (
-      <div style={{ background: TOK.containerBg, border: `1px solid ${TOK.containerBorder}`, borderRadius: TOK.radius, overflow: 'clip' as any }}>
-        <Toolbar
-          title={title} description={description} icon={icon}
-          tb={tb} search={search} setSearch={setSearch}
-          onAdd={newRow ? addRow : undefined}
-          onImport={() => fileRef.current?.click()}
-          onExport={exportCSV}
-          onImportXLSX={() => xlsxRef.current?.click()}
-          onExportXLSX={exportXLSX}
-          onPaste={() => setPasteOpen(true)}
-          onDirectPaste={() => {
-            navigator.clipboard?.readText()
-              .then(txt => { if (txt.trim()) applyPaste(txt, selection ?? { r: 0, c: 0 }) })
-              .catch(() => setPasteOpen(true))
-          }}
-          onTranspose={() => setTransposed(v => !v)}
-          onBulk={() => setBulkOpen(true)}
-          onAI={onAISuggestions}
-          canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
-        />
-      <input type="file" ref={fileRef} accept=".csv,.tsv,text/csv,text/tab-separated-values" style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) importCSV(f); e.target.value = '' }} />
-        <input type="file" ref={xlsxRef} accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) importXLSX(f); e.target.value = '' }} />
-        <div style={{ padding: '50px 24px', textAlign: 'center', color: TOK.textDim }}>
-          {emptyState ?? (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TOK.textOn, marginBottom: 4 }}>No data yet</div>
-              <div style={{ fontSize: 12 }}>Click <strong>+ Add Row</strong>, paste data, or import a CSV.</div>
-            </div>
-          )}
-        </div>
-        {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} onApplyFromStart={() => { applyPaste(pasteText, { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
-      </div>
-    )
-  }
 
   // ── v3.2: fill preview — compute cell count + mode during drag ──
   const fillPreview = useMemo(() => {
@@ -1194,6 +1155,49 @@ export function DataGrid<T>({
     })
     return out
   }, [columns, computedColWidths])
+
+  // ── Empty state ─────────────────────────────────────────
+  // Below every hook. It used to sit above the three memos just above, so the
+  // first row added to an empty grid changed the hook count mid-life and React
+  // tore the grid down.
+  if (rows.length === 0) {
+    return (
+      <div style={{ background: TOK.containerBg, border: `1px solid ${TOK.containerBorder}`, borderRadius: TOK.radius, overflow: 'clip' as any }}>
+        <Toolbar
+          title={title} description={description} icon={icon}
+          tb={tb} search={search} setSearch={setSearch}
+          onAdd={newRow ? addRow : undefined}
+          onImport={() => fileRef.current?.click()}
+          onExport={exportCSV}
+          onImportXLSX={() => xlsxRef.current?.click()}
+          onExportXLSX={exportXLSX}
+          onPaste={() => setPasteOpen(true)}
+          onDirectPaste={() => {
+            navigator.clipboard?.readText()
+              .then(txt => { if (txt.trim()) applyPaste(txt, selection ?? { r: 0, c: 0 }) })
+              .catch(() => setPasteOpen(true))
+          }}
+          onTranspose={() => setTransposed(v => !v)}
+          onBulk={() => setBulkOpen(true)}
+          onAI={onAISuggestions}
+          canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
+        />
+      <input type="file" ref={fileRef} accept=".csv,.tsv,text/csv,text/tab-separated-values" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) importCSV(f); e.target.value = '' }} />
+        <input type="file" ref={xlsxRef} accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) importXLSX(f); e.target.value = '' }} />
+        <div style={{ padding: '50px 24px', textAlign: 'center', color: TOK.textDim }}>
+          {emptyState ?? (
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TOK.textOn, marginBottom: 4 }}>No data yet</div>
+              <div style={{ fontSize: 12 }}>Click <strong>+ Add Row</strong>, paste data, or import a CSV.</div>
+            </div>
+          )}
+        </div>
+        {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} onApplyFromStart={() => { applyPaste(pasteText, { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
+      </div>
+    )
+  }
 
   // ── Cell / header style constants (Excel-exact) ──────────
   const thBase: React.CSSProperties = {
@@ -1898,7 +1902,7 @@ export function DataGrid<T>({
             }} />
             <CtxMenuItem icon={<X size={12}/>} label="Clear cells" onClick={() => {
               const r = ctxMenu.ri; const origR = originalIndex(r); if (origR < 0) { setCtxMenu(null); return }
-              let next = rows.slice()
+              const next = rows.slice()
               columns.forEach((col, _ci) => { if (!col.readonly && col.type !== 'computed') next[origR] = setCell(next[origR], col, col.type === 'number' ? 0 : '') })
               onChange(next); setCtxMenu(null)
             }} />

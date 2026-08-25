@@ -1138,7 +1138,7 @@ export function DashboardPage() {
         }
       }
     } catch { /* ignore storage errors */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [])  // run once on mount
 
   // Sync the active wizard's step from Zustand store into the list

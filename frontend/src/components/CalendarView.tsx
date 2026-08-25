@@ -413,8 +413,10 @@ function Block({
   onDragEnd?: ()=>void
   onClassTeacherDragAttempt?: (msg:string)=>void
 }) {
-  if (width <= 0) return null
+  // Hooks first — a zero-width block still has to run them, or React sees a
+  // different hook count on the render where the block gains width.
   const [hovered, setHovered] = useState(false)
+  if (width <= 0) return null
 
   // ── Break block ──────────────────────────────────────────────────────
   if (block.periodType !== "class") {

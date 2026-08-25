@@ -496,7 +496,7 @@ export function StepResourcesV2() {
     await sleep(480)
 
     // Pass 1 — assign with existing teachers (capped to board standard)
-    let workingStaff: any[] = (staff as any[]).map(t => ({ ...t, maxPeriodsPerWeek: maxPeriods }))
+    const workingStaff: any[] = (staff as any[]).map(t => ({ ...t, maxPeriodsPerWeek: maxPeriods }))
     let result = runAIAssignment(subjects, sections, workingStaff, rooms, board)
 
     // Pass 2 — for every gap, synthesize exactly the needed teachers and
