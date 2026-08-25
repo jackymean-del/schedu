@@ -2771,6 +2771,29 @@ const ldHalf = computeReports({
   range: ldRange, sources: [ldSrc(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'])] as any,
 })
 ok(ldHalf.totals.leaveDays === 0.5, 'a half day on a teaching day counts as half')
+// ── One subject, one colour, wherever it appears ──
+// lib/subjectColors documents "one colour per subject, identical everywhere it
+// appears (Live, Day grid, Month, the schedule view)". The schedule view had
+// its own palette and its own hash, so that was false for every subject
+// tested — six of six disagreed. There is one implementation now.
+import { subjectColor as scColor } from './src/lib/subjectColors'
+import { readFileSync as scRead } from 'node:fs'
+
+ok(!/ACCENT_PALETTE/.test(scRead('./src/components/CalendarView.tsx', 'utf8')),
+  'the schedule view no longer carries a second palette')
+
+// Normalised, because this app deliberately allows a name to be typed several
+// ways and colour is meant to identify the subject, not the spelling.
+ok(scColor('English').accent === scColor('english').accent, 'case does not change a subject colour')
+ok(scColor('English').accent === scColor('  English  ').accent, 'nor does stray whitespace')
+ok(scColor('Maths').accent !== scColor('Science').accent, 'different subjects still get different colours')
+
+// Deterministic: the same subject must not move between renders or sessions.
+ok(scColor('Physics').accent === scColor('Physics').accent, 'the same name always gives the same colour')
+ok(/^#[0-9A-F]{6}$/i.test(scColor('Anything').accent), 'and it is a usable hex colour')
+
+// An empty name still has to return something renderable rather than crash.
+ok(/^#[0-9A-F]{6}$/i.test(scColor('').accent), 'a blank subject still gets a colour')
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

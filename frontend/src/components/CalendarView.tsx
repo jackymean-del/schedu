@@ -26,6 +26,7 @@
  */
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react"
+import { subjectColor } from '@/lib/subjectColors'
 import { subKey, localISO } from '@/lib/substitutionKeys'
 import { DAY_NAMES, sameDay } from '@/lib/days'
 import type { Period, Section, Staff, Subject } from "@/types"
@@ -102,38 +103,11 @@ const PX_PER_MIN: Record<ZoomLevel, number> = { "60min": 2, "30min": 4, "15min":
 const TICK_INT:   Record<ZoomLevel, number> = { "60min": 60, "30min": 30, "15min": 15 }
 const MINOR_INT:  Record<ZoomLevel, number> = { "60min": 30, "30min": 15, "15min": 5  }
 
-// ─────────────────────────────────────────────
-// Soft accent colour palette — light bg + coloured left border, black text
-// ─────────────────────────────────────────────
-const ACCENT_PALETTE: Array<{ accent: string; bg: string }> = [
-  { accent:"#F97316", bg:"#FFF5EC" }, // orange
-  { accent:"#8B5CF6", bg:"#F3EFFE" }, // purple
-  { accent:"#10B981", bg:"#ECFDF5" }, // green
-  { accent:"#3B82F6", bg:"#EFF6FF" }, // blue
-  { accent:"#EF4444", bg:"#FEF2F2" }, // red
-  { accent:"#14B8A6", bg:"#F0FDFA" }, // teal
-  { accent:"#F59E0B", bg:"#FFFBEB" }, // amber
-  { accent:"#EC4899", bg:"#FDF2F8" }, // pink
-  { accent:"#06B6D4", bg:"#ECFEFF" }, // cyan
-  { accent:"#84CC16", bg:"#F7FEE7" }, // lime
-  { accent:"#6366F1", bg:"#EEF2FF" }, // indigo
-  { accent:"#D97706", bg:"#FEF3C7" }, // dark-amber
-  { accent:"#059669", bg:"#D1FAE5" }, // emerald
-  { accent:"#685DBC", bg:"#F5F3FF" }, // violet
-  { accent:"#BE185D", bg:"#FCE7F3" }, // deep-pink
-  { accent:"#0369A1", bg:"#E0F2FE" }, // sky
-]
-
-const _colorCache = new Map<string, { accent:string; bg:string }>()
-function subjectColor(name: string): { accent:string; bg:string } {
-  if (!name) return { accent:"#685DBC", bg:"#F0EDFF" }
-  const k = name.toLowerCase().trim()
-  if (_colorCache.has(k)) return _colorCache.get(k)!
-  const h = k.split("").reduce((a,c) => (a*31 + c.charCodeAt(0)) & 0xFFFF, 0)
-  const c = ACCENT_PALETTE[h % ACCENT_PALETTE.length]
-  _colorCache.set(k, c)
-  return c
-}
+// Subject colour comes from lib/subjectColors, the same engine the ops
+// calendar uses. This file had its own palette and its own hash, so a subject
+// was one colour here and a different one there — while that module's own
+// documentation promised "one colour per subject, identical everywhere it
+// appears", naming this very view. Six subjects out of six disagreed.
 
 function breakStyle(type: Period["type"]): { bg:string; border:string; text:string } {
   if (type==="lunch")       return { bg:"#FFFBEB", border:"#F6D860", text:"#92400E" }
