@@ -19,6 +19,10 @@ import { useLeaves, teachersOnLeaveOn } from '@/lib/leaveUtils'
 import { useHolidays } from '@/lib/holidays'
 import { useSchoolEvents, teachingSuspendedOn } from '@/lib/schoolEvents'
 import { boardNow, boardRows, uncoveredRows, soonestRings } from '@/lib/smartboard'
+import {
+  useBellRinger, RingFlash, NeedsTapBand, BellButton, BellPanel,
+} from '@/components/board/BellControls'
+import { useBellSettings } from '@/store/bellSettings'
 import { fmtRingTime } from '@/lib/bellSchedule'
 import { DAY_NAMES as DAY_KEY, localISO } from '@/lib/days'
 
@@ -97,7 +101,12 @@ export function BoardPage() {
   const teaching = rows.filter(r => r.subject)
   const multi = bundles.length > 1
 
-  const clock = now.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })
+  // The bell rings off the same rings the board counts down to, and stays
+  // quiet on a day the school is shut.
+  const bell = useBellRinger({ rings, dayKey, silent: state.state === 'closed' })
+  const [bellOpen, setBellOpen] = useState(false)
+  const bellEnabled = useBellSettings(b => b.enabled)
+
   const longDate = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
@@ -114,13 +123,16 @@ export function BoardPage() {
           </div>
           <div style={{ fontSize: 'clamp(13px, 1.3vw, 20px)', color: DIM, marginTop: 2 }}>{longDate}</div>
         </div>
-        <div style={{ fontSize: 'clamp(38px, 6.5vw, 96px)', fontWeight: 800, lineHeight: 1, letterSpacing: -2, fontVariantNumeric: 'tabular-nums' }}>
-          {clock}
-        </div>
+        <WallClock />
       </header>
 
       {/* The one line everyone looks for */}
       <StatusBand state={state} />
+
+      {/* Sound is on but the browser has not allowed it — say so, loudly, or
+          the bell fails where nobody is standing to notice. */}
+      {bell.needsTap && <NeedsTapBand onTap={bell.armNow} />}
+      {bell.flash && <RingFlash due={bell.flash} />}
 
       {/* Anything broken comes before anything routine. */}
       {uncovered.length > 0 && state.state === 'during' && (
@@ -193,9 +205,61 @@ export function BoardPage() {
         </div>
       )}
 
-      <div style={{ marginTop: 'auto', fontSize: 'clamp(10px, 0.9vw, 13px)', color: '#4A4560' }}>
-        Updates on its own · schedU
+      <div style={{
+        marginTop: 'auto', fontSize: 'clamp(10px, 0.9vw, 13px)', color: '#4A4560',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+      }}>
+        <span>Updates on its own · schedU</span>
+        <BellButton on={bellEnabled} onClick={() => setBellOpen(true)} />
       </div>
+      {bellOpen && <BellPanel rings={rings} onClose={() => setBellOpen(false)} />}
+    </div>
+  )
+}
+
+/**
+ * The clock, on its own heartbeat.
+ *
+ * The board re-derives the whole day when it ticks, which is why it ticks every
+ * fifteen seconds. A clock showing seconds has to tick sixty times a minute,
+ * and this screen is on all day on hardware that is usually a cheap stick PC —
+ * so the clock keeps its own interval and re-renders nothing but itself.
+ *
+ * Seconds are set smaller and dimmer than the time on purpose. The hour and
+ * minute are what someone reads from four metres; the seconds are for whoever
+ * is standing at the screen waiting for the bell, and at full size they would
+ * fight the thing everybody else is looking at.
+ */
+function WallClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    let t = 0
+    // Land on the second boundary rather than drifting a fraction behind it
+    // for the rest of the day.
+    const tick = () => {
+      setNow(new Date())
+      t = window.setTimeout(tick, 1000 - (Date.now() % 1000))
+    }
+    t = window.setTimeout(tick, 1000 - (Date.now() % 1000))
+    return () => window.clearTimeout(t)
+  }, [])
+
+  const h = now.getHours()
+  const h12 = h % 12 || 12
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', gap: '0.06em', lineHeight: 1,
+      fontVariantNumeric: 'tabular-nums', fontWeight: 800,
+    }}>
+      <span style={{ fontSize: 'clamp(38px, 6.5vw, 96px)', letterSpacing: -2 }}>
+        {h12}:{String(now.getMinutes()).padStart(2, '0')}
+      </span>
+      <span style={{ fontSize: 'clamp(17px, 2.5vw, 38px)', letterSpacing: -1, color: DIM }}>
+        :{String(now.getSeconds()).padStart(2, '0')}
+      </span>
+      <span style={{ fontSize: 'clamp(17px, 2.5vw, 38px)', letterSpacing: -1, marginLeft: '0.12em' }}>
+        {h >= 12 ? 'pm' : 'am'}
+      </span>
     </div>
   )
 }
