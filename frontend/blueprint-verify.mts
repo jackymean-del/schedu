@@ -2576,9 +2576,9 @@ ok(long2.endsWith('(2)'), 'the suffix survives, because the STEM is trimmed to m
 
 // : \ / ? * [ ] are rejected by Excel. "I-A/B" is a normal combined class.
 u = shUsed()
-for (const bad of ['I-A/B', 'I-A\B', 'I-A [Main]', 'Grade I: A', 'What? A*']) {
+for (const bad of ['I-A/B', 'I-A\\B', 'I-A [Main]', 'Grade I: A', 'What? A*']) {
   const out = safeSheetName(bad, u)
-  ok(!/[:\/?*[\]]/.test(out), `"${bad}" comes back without characters Excel forbids`)
+  ok(!/[:/?*[\]]/.test(out), `"${bad}" comes back without characters Excel forbids`)
 }
 
 // A blank name must still produce something addressable, twice over.
@@ -2834,34 +2834,24 @@ ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ign
 // immediately after signing in: the page returns early while auth resolves,
 // then ran one more hook once it had.
 //
-// This is a lint rule everywhere else; there is no eslint hook plugin wired
-// here, so the suite checks it directly.
-import { readFileSync as hkRead } from 'node:fs'
-import { globSync as hkGlob } from 'node:fs'
+// This used to be a regex scan of src/**/*.tsx. It reported clean while six
+// real violations sat in the tree — it only ever saw two-space-indented hooks
+// in top-level components, so nested components and indented hooks were
+// invisible. It has been replaced by the actual rule: eslint is wired up now
+// (eslint.config.js), and react-hooks/rules-of-hooks decides this properly.
+import { ESLint } from 'eslint'
 
-const HOOK = /^\s{2}(const|let|var)?\s*[[{]?[\w,\s}\]]*=?\s*use[A-Z]\w*\s*[(<]/
-const EARLY = /^\s{2}(if\s*\(.*\)\s*)?return\b/
-const CLOSE = /^\}/
-const START = /^(export )?(function|const) [A-Z]\w*/
+const hkResults = await new ESLint({
+  overrideConfig: { rules: { 'react-hooks/rules-of-hooks': 'error' } },
+}).lintFiles(['src/**/*.{ts,tsx}'])
+const hkOffenders = hkResults.flatMap(r =>
+  r.messages
+    .filter(m => m.ruleId === 'react-hooks/rules-of-hooks')
+    .map(m => `${r.filePath.split(/[\\/]/).slice(-2).join('/')}:${m.line} — ${m.message.slice(0, 70)}`))
 
-const hkOffenders: string[] = []
-for (const file of hkGlob('src/**/*.tsx')) {
-  const lines = hkRead(file, 'utf8').split('\n')
-  let inComponent = false
-  let earlyAt: number | null = null
-  lines.forEach((line, i) => {
-    if (START.test(line)) { inComponent = true; earlyAt = null; return }
-    if (!inComponent) return
-    if (CLOSE.test(line)) { inComponent = false; earlyAt = null; return }
-    if (earlyAt === null && EARLY.test(line)) earlyAt = i + 1
-    else if (earlyAt !== null && HOOK.test(line)) {
-      hkOffenders.push(`${file}:${i + 1} (returns at line ${earlyAt}) — ${line.trim().slice(0, 50)}`)
-      earlyAt = null
-    }
-  })
-}
 ok(hkOffenders.length === 0,
   `no component calls a hook after an early return${hkOffenders.length ? ':\n    ' + hkOffenders.join('\n    ') : ''}`)
+
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never

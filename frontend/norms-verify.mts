@@ -5,8 +5,9 @@
 import {
   bandForSection, studentNorms, teacherNorms, suggestAllocation,
   checkBellCompliance, computeTeacherRequirement, regionForCountry,
+  NORM_COUNTRIES,
 } from './src/lib/educationNorms.ts'
-import { ALL_COUNTRIES } from './src/lib/allCountries.ts'
+import { countryOptions } from './src/lib/countryHours.ts'
 
 let failures = 0
 const check = (ok: boolean, label: string, extra = '') => {
@@ -80,10 +81,14 @@ const r4 = computeTeacherRequirement(1260, 48, 'AU')
 check(r4.teachersNeeded === 63 && r4.status === 'over', 'Australia norms need 63 teachers for same demand (safe load 20)')
 
 // ── Global coverage: EVERY supported country resolves to a real norm ───────
+// This used to walk a world-wide country list (lib/allCountries), which was
+// deleted as dead code — taking this file's ability to run with it. The list
+// that matters is the one we actually claim coverage for (NORM_COUNTRIES),
+// cross-checked against the countries the settings picker can offer.
 const explicit = new Set(['IN', 'GB', 'US', 'AU'])
-let uncovered = 0
 const badBands: string[] = []
-for (const { code } of ALL_COUNTRIES) {
+let uncovered = 0
+for (const code of NORM_COUNTRIES) {
   const sn = studentNorms(code)
   const tn = teacherNorms(code)
   // Every band must have positive hours + days, teacher caps must be sane
@@ -94,8 +99,22 @@ for (const { code } of ALL_COUNTRIES) {
   // Non-explicit countries should hit a region, not the flat international default
   if (!explicit.has(code) && !regionForCountry(code)) uncovered++
 }
-check(badBands.length === 0, `every country returns valid student+teacher norms (${ALL_COUNTRIES.length} countries)`, badBands.length ? `bad: ${badBands.join(',')}` : 'all valid')
-check(uncovered === 0, `every non-explicit country maps to a REGION (not flat default)`, uncovered ? `${uncovered} fell through to INTL` : `${ALL_COUNTRIES.length - explicit.size} region-mapped`)
+check(badBands.length === 0, `every covered country returns valid student+teacher norms (${NORM_COUNTRIES.length} countries)`, badBands.length ? `bad: ${badBands.join(',')}` : 'all valid')
+check(uncovered === 0, `every non-explicit country maps to a REGION (not flat default)`, uncovered ? `${uncovered} fell through to INTL` : `${NORM_COUNTRIES.length - explicit.size} region-mapped`)
+
+// Anything the user can PICK in Settings must be covered — the two lists are
+// maintained separately (countryHours vs educationNorms), so they can drift.
+// 'OECD' is the average row, not a country.
+const pickable = countryOptions().map(o => o.code).filter(c => c !== 'OECD')
+const missing = pickable.filter(c => !NORM_COUNTRIES.includes(c))
+check(missing.length === 0, `every country the settings picker offers has a norm (${pickable.length} offered)`,
+  missing.length ? `no norm for: ${missing.join(',')}` : 'no drift between the two lists')
+
+// An unlisted code must still resolve, rather than throwing or returning empty
+const zz = studentNorms('ZZ')
+check(zz.bands.secondary.instructionalHoursYear > 0 && teacherNorms('ZZ').safeMaxPeriodsWeek > 0,
+  'an uncovered country still resolves via the international default')
+
 // Spot-check a few regions resolve sensibly
 check(studentNorms('JP').label.includes('East Asia'), 'Japan → East Asia region norm')
 check(studentNorms('BD').label.includes('South Asia'), 'Bangladesh → South Asia region norm')

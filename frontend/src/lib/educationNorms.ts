@@ -221,6 +221,17 @@ export function regionForCountry(country: string): Region | null {
 }
 
 /**
+ * Every country code this module has a real norm for: the explicit-statute
+ * countries plus every region-mapped one. A code outside this list still
+ * resolves — via the international default — it just isn't grounded in
+ * anything local. Exported so the coverage check can enumerate what we claim.
+ */
+export const NORM_COUNTRIES: string[] = [...new Set([
+  ...Object.keys(STUDENT_NORMS).filter(k => /^[A-Z]{2}$/.test(k)),
+  ...Object.keys(COUNTRY_REGION),
+])].sort()
+
+/**
  * Resolve student norms for a country (+ optional board, e.g. 'CBSE'/'ICSE').
  * Precedence: explicit board → explicit country → region → international.
  */
