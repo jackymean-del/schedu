@@ -191,7 +191,11 @@ function Section({ title, icon, open, onToggle, badge, children }: {
   title: string; icon: React.ReactNode; open: boolean; onToggle: () => void; badge?: string; children: React.ReactNode
 }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, overflow: 'hidden' }}>
+    // flexShrink: 0 because the scroll container is a column flexbox: without
+    // it every card is squeezed to fit the panel instead of the panel
+    // scrolling, and `overflow: hidden` then cuts the bottom off each one —
+    // "Max Suggestions to Show" and the Default Limits steppers vanished.
+    <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
       <button onClick={onToggle} style={{
         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
