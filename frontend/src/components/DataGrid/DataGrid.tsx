@@ -31,8 +31,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } fr
 import { safeSheetName } from '@/lib/sheetNames'
 // xlsx is loaded on demand (export/import click) — keeps it out of the main bundle
 import {
-  Plus, Upload, Download, ClipboardPaste, Search, RefreshCw,
-  Trash2, Copy, X, ArrowUpDown, Sparkles, ChevronDown,
+  Plus, Upload, Download, ClipboardPaste, Search, Trash2, Copy, X, ArrowUpDown, Sparkles, ChevronDown,
   Undo2, Redo2, Filter, FileSpreadsheet, ArrowDownToLine, FileText,
 } from 'lucide-react'
 
@@ -579,7 +578,15 @@ export function DataGrid<T>({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selection, selectionEnd, editing, moveSelection, columns, rows, filteredRows, originalIndex, getCell, setCell, onChange])
+    // applyPaste and applyFillDown are declared BELOW this effect, so they
+    // cannot be listed. They close over nothing this list is missing —
+    // rows, filteredRows, columns, originalIndex, getCell, setCell, onChange
+    // and newRow are all here — so the handler this captures is never working
+    // from data older than the listener itself. undo/redo keep their history
+    // in refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, selectionEnd, editing, moveSelection, columns, rows, filteredRows, originalIndex,
+      getCell, setCell, onChange, newRow, undo, redo])
 
   // Safety-net: if callback ref somehow didn't fire (e.g. re-render of same
   // editing cell), ensure the input is still focused after DOM commit.
@@ -1258,13 +1265,9 @@ export function DataGrid<T>({
   })
 
   // ── Main render ─────────────────────────────────────────
-  const visibleColumns = transposed
-    ? [{ key: '__field', label: 'Field', type: 'computed' as const, sticky: true, width: 140, readonly: true }, ...filteredRows.map((r, i) => ({ key: `__row${i}`, label: rowKey(r), readonly: true } as DataGridColumn<T>))]
-    : columns
-  // Transpose view: rows become a list of columns from the original
-  const transposedRows = transposed
-    ? columns.map(col => ({ __col: col } as any))
-    : null
+  // (The transposed view builds its own columns and rows inline below — the
+  // two consts that used to sit here were left over from an earlier version
+  // and nothing read them.)
 
   return (
     // overflow:'clip' clips to border-radius without creating a scroll container,
@@ -1972,7 +1975,6 @@ const rowActBtnDangerHover: React.CSSProperties = {
   border: `1px solid #FEE2E2`,
 }
 /** @deprecated use rowActBtn */
-const rowActIconBtn: React.CSSProperties = rowActBtnHover
 const rowMenuItemStyle: React.CSSProperties = {
   padding: '6px 12px', fontSize: 12, cursor: 'pointer',
   color: TOK.textOn, userSelect: 'none' as const,

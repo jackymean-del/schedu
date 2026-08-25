@@ -58,7 +58,6 @@ function getGrade(n: string) {
 }
 const GRADE_ORDER = ['Nursery','LKG','UKG','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
 function gradeKey(g: string) { const i = GRADE_ORDER.indexOf(g); return i >= 0 ? i : 100 + g.charCodeAt(0) }
-const ROLES   = ['Teacher','HoD','Coordinator','Principal','Vice Principal','Lab Incharge','Librarian']
 const ROLE_DISPLAY_ORDER = ['Principal','Vice Principal','HoD','Coordinator','Teacher','Senior Teacher','Lab Incharge','Librarian','Counselor','Admin Staff']
 const GENDERS = ['','female','male','other']
 

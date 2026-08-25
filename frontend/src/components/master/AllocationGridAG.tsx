@@ -18,6 +18,7 @@
  * We intentionally do not duplicate that stack.
  */
 
+import { DEFAULT_WORK_DAYS } from '@/lib/days'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 
@@ -691,6 +692,11 @@ interface Props {
 // Component
 // ─────────────────────────────────────────────────────────────────
 
+/** A shared empty fallback: `x ?? []` written inline is a new array every
+ *  render, and every memo built on it recomputes for a change that never
+ *  happened. */
+const NO_ROWS: any[] = []
+
 export function AllocationGridAG({
   displayMode = 'periods',
   periodMinutes = 40,
@@ -703,14 +709,14 @@ export function AllocationGridAG({
   // store.periods is only populated AFTER the first generation — on a fresh
   // wizard run derive the abstract sequence from the bell-step breaks so the
   // capacity engine (and the auto-suggest that depends on it) works first time.
-  const storePeriodsArr: Period[] = store.periods ?? []
+  const storePeriodsArr: Period[] = store.periods ?? NO_ROWS
   const periods: Period[] = useMemo(() => {
     if (storePeriodsArr.length) return storePeriodsArr
     try { return buildPeriodSequence(store.breaks ?? [], config?.periodsPerDay ?? 8) }
     catch { return [] }
    
   }, [storePeriodsArr, store.breaks, config?.periodsPerDay])
-  const workDays: string[] = config?.workDays ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+  const workDays: string[] = config?.workDays ?? DEFAULT_WORK_DAYS
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])
 
@@ -1167,6 +1173,10 @@ export function AllocationGridAG({
       return [...pinned, ...subjectCols]
     }
     return cols
+    // `store` is closed over only for its setters, and zustand keeps those
+    // stable for the life of the store — depending on the store object itself
+    // would rebuild every column on every unrelated state change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjects, gridContext, sortColsAZ])
 
   // ── Row data ──────────────────────────────────────────────────

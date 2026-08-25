@@ -196,6 +196,11 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string, isoDate: string) 
   return { cells, timeById, gridStart: lo, gridEnd: hi, isWorkDay: workUnion.has(dayKey), breaksByBundle }
 }
 
+/** Shared empty fallbacks — see the store reads below for why they are not
+ *  written inline. */
+const NO_ROWS: any[] = []
+const NO_MAP: Record<string, any> = {}
+
 export function CalendarPage() {
   const store = useTimetableStore() as any
   const uid = useAuthStore.getState().user?.id ?? ''
@@ -251,13 +256,16 @@ export function CalendarPage() {
   const activeScheduleId = getActiveTimetableId()
 
   // ── store-derived schedule data ──
-  const sections: any[] = store.sections ?? []
-  const staff: any[]    = store.staff ?? []
-  const rooms: any[]    = store.rooms ?? []
-  const subjects: any[] = store.subjects ?? store.legacySubjects ?? []
-  const periods: any[]  = store.periods ?? []
-  const classTT         = store.classTT ?? {}
-  const config          = store.config ?? {}
+  // The fallbacks are shared constants, not fresh literals: `store.x ?? []`
+  // mints a NEW array on every render whenever the store is empty, and every
+  // memo built on it then recomputes for a change that never happened.
+  const sections: any[] = store.sections ?? NO_ROWS
+  const staff: any[]    = store.staff ?? NO_ROWS
+  const rooms: any[]    = store.rooms ?? NO_ROWS
+  const subjects: any[] = store.subjects ?? store.legacySubjects ?? NO_ROWS
+  const periods: any[]  = store.periods ?? NO_ROWS
+  const classTT         = store.classTT ?? NO_MAP
+  const config          = store.config ?? NO_MAP
   const h24             = (config.timeFormat ?? '12h') === '24h'
 
   const dayKey = DAY_KEY[date.getDay()]
@@ -331,7 +339,6 @@ export function CalendarPage() {
   const dayStart = periods.length ? periodTimes[periods[0].id]?.startMin ?? 540 : 540
   const dayEnd   = periods.length ? periodTimes[periods[periods.length-1].id]?.endMin ?? 900 : 900
   const span     = Math.max(60, dayEnd - dayStart)
-  const trackW   = span * PX_PER_MIN
 
   // Hour ticks across the ruler.
   const ticks = useMemo(() => {
@@ -356,6 +363,9 @@ export function CalendarPage() {
   // Bumped after we write a substitution into another schedule's snapshot, so
   // the aggregated bundles (and every derived view) re-read that fresh map.
   const [subNonce, setSubNonce] = useState(0)
+  // activeScheduleId and subNonce are unused INSIDE the call on purpose: they
+  // are the signals that the snapshot on disk has changed under us.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const rawBundles = useMemo(() => loadActiveBundles(uid), [uid, activeScheduleId, subNonce])
   const activeCount = rawBundles.length
   const multiActive = activeCount > 1
@@ -465,7 +475,9 @@ export function CalendarPage() {
       }
     }
     return out
-  }, [multiActive, sources, dayKey])
+    // isoDate for the same reason gridData needs it, above: this reads the
+    // covers for a DATE, and the same weekday next week is a different day.
+  }, [multiActive, sources, dayKey, isoDate])
 
   const gridStart = gridData.gridStart
   const gridEnd   = gridData.gridEnd
@@ -907,7 +919,6 @@ export function CalendarPage() {
   const todayISO = toISODate(now)
   const viewingToday = toISODate(date) === todayISO
   const nowMin = now.getHours() * 60 + now.getMinutes()
-  const showCursor = view === 'day' && viewingToday && nowMin >= dayStart && nowMin <= dayEnd
   const cursorLeft = (nowMin - dayStart) * PX_PER_MIN
   // Day-grid cursor is relative to the grid's own (possibly wider) span.
   const gridShowCursor = view === 'day' && viewingToday && nowMin >= gridStart && nowMin <= gridEnd

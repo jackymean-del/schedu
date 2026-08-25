@@ -16,13 +16,13 @@ import { wizardStepLabel } from '@/lib/wizardSteps'
  *  and the past-the-end state are not wizard steps, so they say so. */
 const stepLabelFor = (n: number): string =>
   n === 0 ? 'Named' : (wizardStepLabel(n) || 'Complete')
-import { useAuthStore, openUserProfile } from '@/store/authStore'
+import { useAuthStore } from '@/store/authStore'
 import { CLERK_ENABLED } from '@/lib/clerk'
 import { useTimetableStore } from '@/store/timetableStore'
 import * as ttRepo from '@/api/timetables'
 import { BrandedLoader } from '@/components/BrandedLoader'
 import { useOrgProfile } from '@/store/orgProfile'
-import { parseGradeLevel, toRoman, tidyGradeLabel } from '@/lib/gradeParse'
+import { parseGradeLevel, toRoman } from '@/lib/gradeParse'
 import { distributeSections } from '@/lib/sectionDistribution'
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { GradeInput } from '@/components/GradeInput'
@@ -36,9 +36,8 @@ import {
   Home, CalendarDays, Calendar, BarChart2,
   Users, Database, Settings,
   LifeBuoy, BookOpen, Video,
-  Bell, Plus, Sparkles,
-  ChevronRight, ArrowRight, ChevronLeft,
-  Zap, X, Trash2, Pencil, LogOut, Copy,
+  Plus, Sparkles,
+  ArrowRight, X, Trash2, Pencil, Copy,
 } from 'lucide-react'
 
 // ── helpers ────────────────────────────────────────────────────
@@ -148,33 +147,6 @@ interface SideSection {
   items: SideItem[]
 }
 
-const SIDE_SECTIONS: SideSection[] = [
-  {
-    heading: 'WORKSPACE',
-    items: [
-      { key: 'dashboard', icon: Home,         label: 'Dashboard',  href: '/dashboard' },
-      { key: 'schedules', icon: CalendarDays, label: 'Schedules',  href: '/wizard'    },
-      { key: 'calendar',  icon: Calendar,     label: 'Calendar',   href: '/calendar'  },
-      { key: 'insights',  icon: BarChart2,    label: 'Insights',   href: '/insights'  },
-    ],
-  },
-  {
-    heading: 'ADMINISTRATION',
-    items: [
-      { key: 'users',     icon: Users,    label: 'Users',     href: '/users'       },
-      { key: 'resources', icon: Database, label: 'Resources', href: '/master-data' },
-      { key: 'settings',  icon: Settings, label: 'Settings',  href: '/settings'    },
-    ],
-  },
-  {
-    heading: 'HELP & SUPPORT',
-    items: [
-      { key: 'support', icon: LifeBuoy, label: 'Support Center', href: '/support'        },
-      { key: 'docs',    icon: BookOpen, label: 'Documentation',  href: 'https://schedu.bhusku.com/docs', external: true },
-      { key: 'demo',    icon: Video,    label: 'Book a Demo',    href: '/demo'                  },
-    ],
-  },
-]
 
 
 const STATUS_META = {
@@ -1502,7 +1474,6 @@ export function DashboardPage() {
   const teacherCount2 = multi ? multi.teachers : staff.length
   const venueCount    = multi ? multi.venues   : singleVenueCount
 
-  const SW = sidebarOpen ? W_EXPANDED : W_COLLAPSED
   const initials = (user.name ?? 'U')
     .split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
 

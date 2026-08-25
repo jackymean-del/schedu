@@ -4,14 +4,14 @@ import { weekdayOf } from '@/lib/days'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { TimetableOrphanBanner } from '@/components/TimetableOrphanBanner'
-import { useNamingTerms, plural, type Terms } from "@/lib/terms"
+import { useNamingTerms, plural } from "@/lib/terms"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
 import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
-import { shiftPeriod, rebuildTeacherTT } from "@/lib/aiEngine"
+import { rebuildTeacherTT } from "@/lib/aiEngine"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
@@ -1378,7 +1378,6 @@ export function TimetablePage() {
     setPrintJob({ type, scope: "individual" })
   }
 
-  const org = ORG_CONFIGS[config.orgType ?? "school"]
   const country = getCountry(config.countryCode ?? "IN")
 
   // ── Memoized derived values — avoid recomputation on every render ──────────

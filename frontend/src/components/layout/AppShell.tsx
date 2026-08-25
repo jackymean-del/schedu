@@ -14,8 +14,7 @@ import { useEffect, useState } from 'react'
 import { useBillingLive } from '@/lib/billingConfig'
 import {
   Home, CalendarDays, Calendar, BarChart2, Users, Database, Settings,
-  LifeBuoy, BookOpen, Video, ChevronLeft, ChevronRight, Zap, LogOut, Menu, X,
-} from 'lucide-react'
+  LifeBuoy, BookOpen, Video, ChevronLeft, ChevronRight, Zap, LogOut, Menu, } from 'lucide-react'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { CLERK_ENABLED } from '@/lib/clerk'
 

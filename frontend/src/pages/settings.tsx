@@ -214,7 +214,6 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
     ? refTeacher.hours
     : normTeacherHoursWeek(country, periodMinutes)
   const teacherPeriods = effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek)
-  const rowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 120px 140px', gap: 12, alignItems: 'center' }
 
   const nudgeText =
     nudge.reason === 'uncovered' ? `We don’t hold verified figures for this country, so the OECD average is shown. Enter your own values below.`

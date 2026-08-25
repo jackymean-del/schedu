@@ -144,7 +144,6 @@ export function WizardPage() {
   const { isAuthenticated, user } = useAuthStore()
 
   const CurrentStep = STEPS[step - 1] ?? StepBell
-  const total = STEPS.length
 
   // Blueprint v3, Step 7: "Publishing locks the wizard steps — Steps 1–6 become
   // read-only until a new schedule cycle is started." The steps stay visible and

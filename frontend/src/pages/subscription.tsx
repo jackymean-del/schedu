@@ -101,6 +101,9 @@ export function SubscriptionPage() {
     loadBillingCfg()
     // Authoritative billing status for the signed-in user.
     billingApi.status().then(r => setStatus(r.data)).catch(() => { /* fall back to auth store */ })
+    // Once, on mount: prices and billing status do not change while the page
+    // is open, and re-fetching them would be a request per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const refreshStatus = () => billingApi.status().then(r => setStatus(r.data)).catch(() => {})

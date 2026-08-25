@@ -1,4 +1,3 @@
-import { useEffect } from "react"
 import { useTimetableStore } from "@/store/timetableStore"
 import { generateSections, generateStaff, generateSubjects, generateBreaks } from "@/lib/orgData"
 import { buildPeriodSequence, generateTimetable, autoAssign } from "@/lib/aiEngine"

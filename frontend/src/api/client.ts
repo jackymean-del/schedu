@@ -4,7 +4,7 @@ import type {
   Organization, AcademicSession, SchedulingProfile,
   SchoolClass, Subject, Teacher, Classroom, Student,
   SectionSubjectStrength, InstructionalCluster, ParallelBlock,
-  BellSchedule, SessionInstance, AcademicCombination, SubjectRule,
+  BellSchedule, AcademicCombination, SubjectRule,
   PeriodAllocationResult, TeacherRequirementResult,
   TimetableStatus, WizardConfig,
 } from '@/types'

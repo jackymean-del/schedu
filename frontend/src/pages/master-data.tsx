@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore, saveActiveTimetableSnapshot } from '@/lib/ttRegistry'
+import { DEFAULT_WORK_DAYS } from '@/lib/days'
 import type { Subject, Section, Staff, SectionStrength, ScopeMatrix } from '@/types'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { ExportControls } from '@/components/ExportControls'
@@ -54,7 +55,7 @@ export function MasterDataPage() {
   } = store
   const setSubjects = store.setSubjects ?? store.setLegacySubjects
   const periods = store.periods ?? []
-  const workDays: string[] = config?.workDays ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+  const workDays: string[] = config?.workDays ?? DEFAULT_WORK_DAYS
 
   const [tab, setTab] = useState<Tab>('classes')
   const [scopeTarget, setScopeTarget] = useState<{ kind: string; entity: any } | null>(null)
@@ -88,6 +89,9 @@ export function MasterDataPage() {
       id: makeId(), name: s.room ?? `Room ${101 + i}`,
       type: 'Classroom', capacity: 40, building: 'Main Block', floor: 'Ground',
     })))
+    // setRooms is rebuilt every render; the seed is guarded by seededRooms and
+    // must stay one-shot, so it is deliberately not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storedRooms, sections])
 
   // ── Per-timetable resources ────────────────────────────────────

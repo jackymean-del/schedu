@@ -10,10 +10,9 @@ import {
   bandForSection, checkBellCompliance, computeTeacherRequirement, type GradeBand,
 } from "@/lib/educationNorms"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
-import { getCountry } from "@/lib/orgData"
-import type { OptionalBlock, OptionalOption, Period, ClassTimetable } from "@/types"
+import type { ClassTimetable } from "@/types"
 import { GraduationCap, Users, BookOpen, Building2, CalendarDays, Clock } from "lucide-react"
-import { P, P_D, P_L, P_B } from "@/components/resources/shared"
+import { P, P_L, P_B } from "@/components/resources/shared"
 
 type JobStatus = "idle" | "running" | "completed" | "failed"
 

@@ -22,7 +22,7 @@ import {
 import { SyllabusAlert } from '@/components/SyllabusAlert'
 import { useEffectiveCoverage } from '@/lib/effectiveCoverage'
 import { useAcademicTerms, defaultTerm } from '@/lib/academicTerms'
-import { compareSection, cascadeOptions, matchStaffName, teacherFor } from '@/lib/scheduleAllocation'
+import { compareSection, cascadeOptions, matchStaffName } from '@/lib/scheduleAllocation'
 import { useAuthStore } from '@/store/authStore'
 import { paceFor } from '@/lib/syllabusPace'
 import {
@@ -1099,6 +1099,12 @@ function CoverageDashboard({
     (skip === 'subject' || !fSubject || r.subject === fSubject) &&
     (skip === 'teacher' || !fTeacher || (r.teacher || '—') === fTeacher)
 
+  // `match` closes over the four filters and is rebuilt every render, so the
+  // memos below list what it actually READS instead of listing `match` — which
+  // would recompute all five on every keystroke anywhere on the page. The
+  // omissions are the point: classOpts must NOT react to fClass, or choosing a
+  // class would shrink the class dropdown to that one class.
+  /* eslint-disable react-hooks/exhaustive-deps */
   const rows = useMemo(() => allRows.filter(r => match(r)), [allRows, fClass, fSection, fSubject, fTeacher])
 
   // Each dropdown's options come from the rows the OTHER filters allow, so a
@@ -1111,6 +1117,7 @@ function CoverageDashboard({
   const sectionOpts = useMemo(() => uniqClasses(allRows.filter(r => match(r, 'section')).map(r => r.section)), [allRows, fClass, fSubject, fTeacher])
   const subjectOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'subject')).map(r => r.subject)), [allRows, fClass, fSection, fTeacher])
   const teacherOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'teacher')).map(r => r.teacher || '—')), [allRows, fClass, fSection, fSubject])
+  /* eslint-enable react-hooks/exhaustive-deps */
   const anyFilter = !!(fClass || fSection || fSubject || fTeacher)
   const clearAll = () => { setFClass(''); setFSection(''); setFSubject(''); setFTeacher('') }
 

@@ -91,7 +91,6 @@ const ENTITY_W     = 130   // entity label column px (sticky-left in timeline)
 const DAY_LABEL_W  = 54    // day label in matrix/all-matrix (sticky-left)
 const RULER_DAY_H  = 26    // day-name sub-row in header ("Mon")
 const RULER_TIME_H = 22    // time-ticks sub-row in header
-const RULER_H      = RULER_DAY_H + RULER_TIME_H
 const ROW_H_TL     = 66    // timeline / matrix row height
 const ROW_H_CP     = 36    // compact row height
 const GROUP_H      = 30    // entity-group header row height (Matrix all)
@@ -864,7 +863,7 @@ export function CalendarView({
       })
     })
     return slots
-  },[sections,periods,classwiseBreaks,dayStartMin])
+  },[sections,periods,classwiseBreaks,timesFor])
 
   // Per class-group full schedule (teaching + breaks) keyed by class key.
   const groupSchedules = useMemo(()=>{
@@ -880,7 +879,7 @@ export function CalendarView({
       m.set(k, sm)
     })
     return m
-  },[sections,periods,classwiseBreaks,dayStartMin])
+  },[sections,periods,classwiseBreaks,timesFor])
 
   // Unified matrix columns: Assembly + distinct teaching slots + FULL break
   // columns (e.g. Morning Break), sorted by start time. Partial/staggered
@@ -963,7 +962,7 @@ export function CalendarView({
         isSub, isClassTeacher:!!(cell?.isClassTeacher), absent,
       }
     })
-  },[classTT,periods,classwiseBreaks,substitutions,absentHighlights,dayStartMin,dateOfWeekday])
+  },[classTT,periods,classwiseBreaks,substitutions,absentHighlights,dateOfWeekday,timesFor])
 
   const buildTeacherBlocks = useCallback((tName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1039,7 +1038,7 @@ export function CalendarView({
     })
     addLunchBlocks(blocks, dayKey, {teacher:tName})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,absentHighlights,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks,dateOfWeekday])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,absentHighlights,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks,dateOfWeekday,timesFor])
 
   const buildRoomBlocks = useCallback((roomName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1107,7 +1106,7 @@ export function CalendarView({
     })
     addLunchBlocks(blocks, dayKey, {room:roomName})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks,dateOfWeekday])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,isFullBreak,repSecTimes,distinctTeachingSlots,addLunchBlocks,dateOfWeekday,timesFor])
 
   const buildSubjectBlocks = useCallback((subjectName:string, dayKey:string): TimeBlock[] => {
     const blocks:TimeBlock[]=[]
@@ -1149,7 +1148,7 @@ export function CalendarView({
     })
     addLunchBlocks(blocks, dayKey, {})
     return blocks.sort((a,b)=>a.startMin-b.startMin)
-  },[classTT,periods,classwiseBreaks,sections,substitutions,dayStartMin,isFullBreak,repSecTimes,addLunchBlocks,dateOfWeekday])
+  },[classTT,periods,classwiseBreaks,sections,substitutions,isFullBreak,repSecTimes,addLunchBlocks,dateOfWeekday,timesFor])
 
   // ── Get blocks for entity × day ──────────────────────────────────────
   const getEntityBlocks = useCallback((entityId:string, dayKey:string): TimeBlock[] => {

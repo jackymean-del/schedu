@@ -47,7 +47,12 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
   } = useTimetableStore()
   const org = ORG_CONFIGS[config.orgType ?? "school"]
 
-  const cell       = classTT[target.section]?.[target.day]?.[target.periodId] ?? {}
+  // Memoised: the `?? {}` minted a new object whenever the slot was empty,
+  // which is exactly when this modal is opened to fill one.
+  const cell       = useMemo(
+    () => classTT[target.section]?.[target.day]?.[target.periodId] ?? {},
+    [classTT, target.section, target.day, target.periodId],
+  )
   const section    = sections.find(s => s.name === target.section)
   const periodObj  = periods.find(p => p.id === target.periodId)
 

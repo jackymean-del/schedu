@@ -18,6 +18,20 @@ export const DAY_NAMES = [
 export type DayName = typeof DAY_NAMES[number]
 
 /**
+ * The working week to assume when a schedule has not been told otherwise.
+ * Six days, because that is the norm in the schools this is built for.
+ *
+ * A shared constant rather than a literal at each call site: written inline,
+ * `config?.workDays ?? [...]` hands back a NEW array every render, and every
+ * memo built on it recomputes for a change that never happened.
+ *
+ * Distinct from DAY_NAMES, which is Sunday-first because it is indexed by
+ * Date.getDay(). This one is a work week, in order, starting Monday.
+ */
+export const DEFAULT_WORK_DAYS: string[] =
+  ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+
+/**
  * Timetable day keys vary in the wild — 'MONDAY', 'Mon', 'monday' — because
  * they have been written by several generations of the wizard and by pasted
  * spreadsheets. Compare on the first three letters, case-insensitively.

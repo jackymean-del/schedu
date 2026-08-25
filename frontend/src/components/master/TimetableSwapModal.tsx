@@ -25,7 +25,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useDialog } from '@/hooks/useDialog'
 import type { ClassTimetable, Section, Staff, Period } from '@/types'
-import { X, ArrowLeftRight, CornerUpLeft, RotateCcw, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { X, ArrowLeftRight, CornerUpLeft, RotateCcw, CheckCircle2 } from 'lucide-react'
 
 // ─── Pastel subject palette (mirrors timetableExport.ts) ─────────────────────
 

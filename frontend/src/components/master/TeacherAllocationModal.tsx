@@ -68,7 +68,11 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
 
   const [rows, setRows] = useState<Row[]>(() => buildRows())
   const [compareSection, setCompareSection] = useState<string | null>(null)
-  // Reset rows if (teacher, subject) changes
+  // Reset rows if (teacher, subject) changes — and ONLY then. buildRows closes
+  // over the live allocations, so depending on it would rebuild the rows
+  // whenever anything else edited them, discarding the unsaved changes this
+  // modal is in the middle of tracking.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setRows(buildRows())   }, [teacher, subject])
 
   const totalThisTeacher = rows.reduce((a, r) => a + r.thisTeacher, 0)

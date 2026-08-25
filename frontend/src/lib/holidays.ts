@@ -17,7 +17,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ClassTimetable } from '@/types'
 import { planKey } from './syllabusTracking'
-import { DAY_NAMES, sameDay, weekdayOf } from './days'
+import { sameDay, weekdayOf } from './days'
 
 export { weekdayOf }
 

@@ -1,4 +1,4 @@
-import type { Section, Staff, Subject, Period, ClassTimetable, TeacherSchedule, TimetableCell, Conflict } from '@/types'
+import type { Section, Staff, Subject, Period, ClassTimetable, TeacherSchedule, Conflict } from '@/types'
 
 // ─── Build Period Sequence ────────────────────────────────
 export function buildPeriodSequence(breaks: Period[], periodsPerDay: number): Period[] {

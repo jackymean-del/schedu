@@ -1999,8 +1999,11 @@ for (const sec of Object.keys(shortOut.classTT ?? {}))
       shortLoad.set(c.teacher, (shortLoad.get(c.teacher) ?? 0) + 1)
     }
 
-ok(shortClashes === 0,
-  'an understaffed school still gets a LEGAL timetable — the engine leaves slots empty rather than double-booking')
+// shortPlaced is half the claim: a timetable with NO lessons in it also has no
+// double-bookings, so "legal" has to mean lessons were actually placed.
+ok(shortClashes === 0 && shortPlaced > 0,
+  'an understaffed school still gets a LEGAL timetable — the engine leaves slots empty rather than double-booking',
+  )
 ok([...shortLoad.values()].every(v => v <= 30),
   'and never solves the shortage by pushing a teacher past their cap')
 

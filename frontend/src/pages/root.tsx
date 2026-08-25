@@ -32,13 +32,6 @@ migrateLegacyNaming()
 
 // Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).
-const STEP_LABELS = [
-  'Resources',
-  'Shifts & Timing',
-  'Student Groups',
-  'Mapping',
-  'Generate',
-]
 
 export function RootLayout() {
   const step = useTimetableStore(s => s.step)

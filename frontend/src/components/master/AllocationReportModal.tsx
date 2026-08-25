@@ -283,10 +283,15 @@ function FilterBar({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+/** A shared empty fallback: `x ?? []` written inline is a new array every
+ *  render, and every memo built on it recomputes for a change that never
+ *  happened. */
+const NO_ROWS: any[] = []
+
 export function AllocationReportModal({ mode, onClose, displayMode = 'periods', periodMinutes = 40 }: Props) {
   const store        = useTimetableStore() as any
   const { sections, subjects, subjectAllocations, teacherAllocations, staff } = store
-  const storeRooms: any[] = (store as any).rooms ?? []
+  const storeRooms: any[] = (store as any).rooms ?? NO_ROWS
 
   // All four tabs shown in both modes
   const tabs: ReportTab[] = ['class', 'subject', 'teacher', 'room']

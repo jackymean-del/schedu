@@ -40,7 +40,7 @@ import type { GradeBand } from '@/lib/educationNorms'
 import { parseGradeLevel } from '@/lib/gradeParse'
 import {
   Plus, Sparkles, ChevronLeft, ChevronRight,
-  Trash2, Coffee, X, Calendar, Clock, AlertTriangle, SlidersHorizontal, Layers,
+  Trash2, Coffee, X, Calendar, Clock, AlertTriangle, Layers,
 } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -131,12 +131,6 @@ function predictNext(lastLabel: string, lastGroup: string) {
 }
 
 // Colour palette for custom groups — [ink, paper]
-const GROUP_PALETTE: Array<[string, string]> = [
-  ['#685DBC','#F5F3FF'], ['#1D4ED8','#EFF6FF'], ['#059669','#F0FDF4'],
-  ['#D97706','#FFFBEB'], ['#DC2626','#FFF1F2'], ['#0891B2','#ECFEFF'],
-  ['#685DBC','#FDF4FF'], ['#65A30D','#F7FEE7'], ['#9333EA','#FAF5FF'],
-  ['#374151','#F9FAFB'],
-]
 
 // Map a grade short-name to the bell-step group name
 function gradeToGroup(g: string): string {
@@ -2382,7 +2376,7 @@ export function StepBell() {
       concurrentPeriodMode: concurrentMode, concurrentPeriodDur: concurrentDur, lunchBreakDur,
       bellCustomized, setupChoice, areaMode, dayboarding,
     } as SavedBell))
-  }, [shiftName, startTime, use12h, periodDur, periodDurMin, maxPeriods, periodDurationMode, maxPeriodsAuto, workDays, rows,
+  }, [bellKey, shiftName, startTime, use12h, periodDur, periodDurMin, maxPeriods, periodDurationMode, maxPeriodsAuto, workDays, rows,
       cycleWeeks, useDayNames, cycleStartDate, fixedDuration, rotationDays,
       weekWorkDays, dayStartTimes, dayPeriodDurs, dayOffRules, cwRows, varyByDay, dayRows,
       scheduleMode, shifts, activeShiftId, shiftRows, customClasses, customGroups,

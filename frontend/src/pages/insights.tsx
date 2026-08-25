@@ -30,6 +30,11 @@ const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 function fmtDate(iso: string) { const d = new Date(iso + 'T00:00:00'); return `${DOW[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` }
 function fmtClock(min: number) { const h = Math.floor(min / 60) % 12 || 12, m = min % 60, ap = Math.floor(min / 60) >= 12 ? 'PM' : 'AM'; return `${h}:${String(m).padStart(2, '0')} ${ap}` }
 
+/** A shared empty fallback: `x ?? []` written inline is a new array every
+ *  render, and every memo built on it recomputes for a change that never
+ *  happened. */
+const NO_ROWS: any[] = []
+
 export function InsightsPage() {
   const store = useTimetableStore() as any
   const uid = useAuthStore.getState().user?.id ?? ''
@@ -43,20 +48,26 @@ export function InsightsPage() {
   const [tab, setTab] = useState<Tab>('summary')
   const [rangeKey, setRangeKey] = useState('month')
 
-  const sections = store.sections ?? []
+  const sections = store.sections ?? NO_ROWS
 
   // Analytics span every ACTIVE schedule (multi-active); a single active
   // reduces to one source built from the store — same numbers as before.
   const bundles = useMemo(() => loadActiveBundles(uid), [uid])
   const multiActive = bundles.length > 1
-  const sources: ReportSource[] = multiActive
+  // Memoised: rebuilt inline this was a new array on every render, so every
+  // report below recomputed whether or not anything had changed.
+  const sources: ReportSource[] = useMemo(() => multiActive
     ? bundles.map(b => ({ sections: b.sections, periods: b.periods, classTT: b.classTT, substitutions: b.substitutions, config: b.config }))
-    : [{ sections, periods: store.periods ?? [], classTT: store.classTT ?? {}, substitutions: store.substitutions ?? {}, config: store.config ?? {} }]
+    : [{ sections, periods: store.periods ?? [], classTT: store.classTT ?? {}, substitutions: store.substitutions ?? {}, config: store.config ?? {} }],
+    [multiActive, bundles, sections, store.periods, store.classTT, store.substitutions, store.config])
   const hasData = sources.some(s => s.sections.length > 0 && Object.keys(s.classTT).length > 0)
 
+  // `leaves` was read inside and missing from the deps: a newly recorded
+  // absence did not reach the reports until something else happened to
+  // invalidate them.
   const reports: ReportsData = useMemo(() => computeReports({
     leaves, sources, holidays, range: rangeFor(rangeKey),
-  }), [uid, sources, holidays, rangeKey])
+  }), [leaves, sources, holidays, rangeKey])
 
   // Extra duties (free-slot task assignments) in the selected range — same
   // date-scoped records the Calendar writes, so the audit trail is automatic.

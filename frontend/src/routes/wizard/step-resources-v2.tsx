@@ -17,7 +17,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
-import { generateStaff, generateSubjects, generateBreaks } from '@/lib/orgData'
+import { generateStaff, generateBreaks } from '@/lib/orgData'
 import type { Section, Subject, Staff } from '@/types'
 import { ScopeMatrixModal } from '@/components/DataGrid/ScopeMatrixModal'
 import { parseGradeLevel } from '@/lib/gradeParse'
@@ -36,8 +36,7 @@ import { runAIAssignment, seedStandardRooms, type AISnapshot, type StaffingGap }
 import { linkOrRegisterStaff, linkOrRegisterVenues } from '@/store/directoryStore'
 import {
   Sparkles, Users, BookOpen, Building2, GraduationCap,
-  ChevronLeft, ChevronRight, RefreshCw, CheckCircle2,
-} from 'lucide-react'
+  ChevronLeft, ChevronRight, RefreshCw, } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TabKey = 'classes' | 'subjects' | 'teachers' | 'rooms'

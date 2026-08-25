@@ -20,7 +20,6 @@ import { useTimetableStore } from '@/store/timetableStore'
 const AllocationGridAG = lazy(() =>
   import('@/components/master/AllocationGridAG').then(m => ({ default: m.AllocationGridAG })))
 import { TeacherAllocationSummary } from '@/components/master/TeacherAllocationSummary'
-import { TeacherAvailabilityEditor } from '@/components/master/TeacherAvailabilityEditor'
 import { AllocationReportModal } from '@/components/master/AllocationReportModal'
 import { buildPeriodSequence } from '@/lib/aiEngine'
 import {
@@ -39,8 +38,7 @@ import type { Section, Subject, Staff } from '@/types'
 import {
   Grid3x3, Users, ChevronLeft, ChevronRight,
   Sparkles, AlertTriangle, CheckCircle2, Info, BookOpen,
-  BarChart3, ShieldCheck, XCircle, FileText, FileSpreadsheet, Printer,
-} from 'lucide-react'
+  BarChart3, ShieldCheck, XCircle, FileText, FileSpreadsheet, } from 'lucide-react'
 
 type Sub = 'periods' | 'teachers' | 'validation'
 
@@ -55,13 +53,18 @@ const BANDS = [
   { key: 'senior',    label: 'Sr. Secondary', color: '#DC2626' },
 ]
 
+/** A shared empty fallback: `x ?? []` written inline is a new array every
+ *  render, and every memo built on it recomputes for a change that never
+ *  happened. */
+const NO_ROWS: any[] = []
+
 export function StepAllocation() {
   const store = useTimetableStore() as any
   const {
     setStep, subjectAllocations, teacherAllocations, staff,
     sections, subjects, config, breaks, periods: storePeriods,
   } = store
-  const storeRooms: any[] = (store as any).rooms ?? []
+  const storeRooms: any[] = (store as any).rooms ?? NO_ROWS
   const [sub, setSub] = useState<Sub>('periods')
   const [displayMode, setDisplayMode] = useState<'periods' | 'hours'>('periods')
   const [showReport, setShowReport] = useState<'periods' | 'teachers' | null>(null)

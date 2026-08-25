@@ -295,7 +295,7 @@ const out3 = solveTimetable({
   periods: PERIODS, workDays: WORK_DAYS, requirements: [],
   subjectAllocations: miniAlloc, sectionAdjacency: adjacency,
 } as Any)
-let doubleOk = 0, doubleBad = 0, doubleSeen = 0
+let doubleBad = 0, doubleSeen = 0
 const idx = Object.fromEntries(CLASS_PERIOD_IDS.map((p, i) => [p, i]))
 const allowedStart = new Set(['p1', 'p3', 'p5', 'p6', 'p7'])
 for (const sec of miniSections) {
@@ -305,8 +305,7 @@ for (const sec of miniSections) {
       if (cells[i]?.subject === 'Science' && cells[i + 1]?.subject === 'Science') {
         doubleSeen++
         const startPid = CLASS_PERIOD_IDS[i]
-        if (allowedStart.has(startPid)) doubleOk++
-        else doubleBad++
+        if (!allowedStart.has(startPid)) doubleBad++
         i++ // skip the pair
       }
     }

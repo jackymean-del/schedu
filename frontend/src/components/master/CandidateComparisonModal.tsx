@@ -16,7 +16,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import type { Section, Subject } from '@/types'
 import { rankCandidates, type RankedCandidate } from '@/lib/candidateRanking'
 import { ExplanationCard } from './ExplanationPopover'
-import { X, Trophy, ArrowRight, Users, BookOpen, Sparkles } from 'lucide-react'
+import { X, Trophy, ArrowRight, Users, Sparkles } from 'lucide-react'
 
 interface Props {
   section: Section

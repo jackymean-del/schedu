@@ -9,10 +9,9 @@
  * Deliberately not modelled on any other product: a live status orb + human
  * headline, low cognitive load, one primary action.
  */
-import { useState, useEffect } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { useNamingTerms, plural, type Terms } from '@/lib/terms'
+import { useNamingTerms, plural } from '@/lib/terms'
 
 type PulseState = 'setup' | 'rest' | 'attention' | 'covered' | 'clear'
 

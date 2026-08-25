@@ -14,8 +14,7 @@ import type { DynamicLearningGroup } from '@/lib/schedulingEngine'
 import { getSubjectColor } from '@/lib/orgData'
 import {
   Layers, Calendar as CalendarIcon, Users2, MapPin,
-  AlertTriangle, CheckCircle2, Sparkles,
-} from 'lucide-react'
+  AlertTriangle, CheckCircle2, } from 'lucide-react'
 
 const DAY_LABEL: Record<string, string> = {
   MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed',

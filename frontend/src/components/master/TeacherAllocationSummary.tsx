@@ -121,7 +121,11 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const normMax = effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek)
   const workingDays = config?.workDays?.length || 5
-  const normCaps = { perWeek: normMax, perDay: perDayFromPerWeek(normMax, workingDays) }
+  // Memoised: a fresh object each render made every memo built on it recompute.
+  const normCaps = useMemo(
+    () => ({ perWeek: normMax, perDay: perDayFromPerWeek(normMax, workingDays) }),
+    [normMax, workingDays],
+  )
 
   // Periods or hours — the same caps, stated the way this school talks about
   // them. Blueprint v6 Step 0 allows either; forcing one means somebody does

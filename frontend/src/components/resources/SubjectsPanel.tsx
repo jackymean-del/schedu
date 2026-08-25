@@ -1062,7 +1062,6 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
     onUpdate({ classConfigs: updated })
   }
 
-  const isExpanded = expandSlots || expandSettings
 
   return (
     <>

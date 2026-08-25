@@ -21,7 +21,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useDialog } from '@/hooks/useDialog'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
-import type { Staff, Period, TeacherAvailability, SlotStatus } from '@/types'
+import type { Staff, Period, SlotStatus } from '@/types'
 import { useTimetableStore } from '@/store/timetableStore'
 import {
   X, Star, Ban, Circle, RotateCcw, Users2,

@@ -61,6 +61,9 @@ export function BoardPage() {
       subjects: st.subjects ?? [], periods: st.periods ?? [], config: st.config ?? {},
       classTT: st.classTT ?? {}, substitutions: st.substitutions ?? {},
     }]
+    // openTT is not read here: it is the signal that the open schedule's
+    // timetable changed under us, so the bundle is rebuilt from the store.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, openTT])
 
   const isoDate = localISO(now)
