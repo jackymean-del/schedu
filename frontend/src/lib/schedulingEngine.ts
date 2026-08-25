@@ -1048,6 +1048,19 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     const ix = s.indexOf('::')
     taughtSubjectNames.add(ix >= 0 ? s.slice(ix + 2) : s)
   }))
+
+  /** Is this teacher a specialist for `subName` in this section?
+   *  Section-specific assignments ("IX-A::Maths") restrict a teacher to those
+   *  sections/grades; a bare subject name means they teach it anywhere.
+   *  Pass 2 and the repair pass below share this so eligibility cannot drift. */
+  const teachesSubject = (st: any, secName: string, grade: string | undefined, subName: string): boolean => {
+    const subs: string[] = st.subjects ?? []
+    if (!subs.length) return false
+    if (subs.some(s => s.includes('::'))) {
+      return subs.some(s => s === `${secName}::${subName}` || (!!grade && s === `${grade}::${subName}`))
+    }
+    return subs.includes(subName)
+  }
   sections.forEach((sec, si) => {
     // Get subjects for this section.
     // Explicit assignments (sections[] from the Resources picker, plus
@@ -1195,8 +1208,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           // Priority 2: teacher with grade-level assignment
           // Priority 3: teacher with global subject name
           // In all cases: hard constraint — teacher must not be already busy this slot
-          const sectionKey = `${sec.name}::${chosenSub.name}`
-          const gradeKey   = sec.grade ? `${sec.grade}::${chosenSub.name}` : ''
+          // Section- and grade-scoped matching lives in teachesSubject; this
+          // is the bare name the global fallback below looks for.
           const simpleKey  = chosenSub.name
 
           // SUBJECT scope LOCKS this slot → this subject can't go here; try the
@@ -1209,19 +1222,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             continue
           }
 
-          const matchesSub = (st: any): boolean => {
-            const subs: string[] = st.subjects ?? []
-            if (!subs.length) return false
-            // If this teacher has any section-specific assignments, use section/grade matching
-            if (subs.some(s => s.includes('::'))) {
-              return subs.some(s =>
-                s === sectionKey ||
-                (gradeKey !== '' && s === gradeKey)
-              )
-            }
-            // Global subject name
-            return subs.includes(simpleKey)
-          }
+          const matchesSub = (st: any): boolean =>
+            teachesSubject(st, sec.name, sec.grade, chosenSub.name)
 
           // Build candidate list: section-specific first, then global fallback
           let eligibleTeachers = staff.filter(st => matchesSub(st) && isAvailable(st))
@@ -1390,6 +1392,267 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       })
     })
   })
+
+  // ── Pass 3: shortfall repair ──────────────────────────────────────────
+  //
+  // Pass 2 fills the school section by section, so a subject with very few
+  // specialists runs out of free ones by the time it reaches the last
+  // sections: two Music teachers covering thirty classes are booked solid
+  // when XI and XII come round, and those lessons were simply never placed.
+  // The school is short 3 Music periods on a timetable that has room for
+  // them — they just needed a second look.
+  //
+  // Two moves, tried in that order:
+  //   1. Direct   — an empty slot where a specialist happens to be free.
+  //   2. Displace — an empty slot where the specialist is busy with another
+  //      class: move THAT lesson somewhere it still works, which frees the
+  //      specialist here. One level deep, never a chain.
+  //
+  // Every constraint Pass 2 honours is honoured here: no clash, no
+  // wrong-subject teacher, no off-day, no scope-locked slot, no daily or
+  // weekly cap breach, and pinned cells (optional blocks, class-teacher
+  // period 1) are never moved. When neither move works the lesson stays
+  // unplaced, exactly as it was before.
+  {
+    /** Periods each teacher already has on `day` — a daily cap is an
+     *  availability question, so it is recomputed per attempt. */
+    const dayLoad = (day: string): Record<string, number> => {
+      const m: Record<string, number> = {}
+      Object.values(classTT).forEach(secData => {
+        Object.values(secData[day] ?? {}).forEach((cell: any) => {
+          for (const k of cellKeys(cell)) m[k] = (m[k] ?? 0) + 1
+        })
+      })
+      return m
+    }
+
+    const canTeachAt = (st: any, day: string, pid: string, loadToday: Record<string, number>): boolean => {
+      const k = tKey(st)
+      if (teacherBusy[k]?.[day]?.has(pid)) return false
+      if (atDailyLimit(loadToday[k] ?? 0, dailyCapFor(st, workDays.length))) return false
+      if ((st.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      // Unlike Pass 2 the weekly cap is hard here: a repair is optional, and
+      // buying a missing lesson by overworking somebody is not a repair.
+      const cap = st.maxPeriodsPerWeek ?? normCap
+      if (cap > 0 && (teacherWeeklyLoad[k] ?? 0) >= cap) return false
+      return true
+    }
+
+    /** Could this section hold one more `sub` here — slot empty, day on,
+     *  nothing scope-locked, and still inside the subject's per-day max? */
+    const slotOpenFor = (sec: any, sub: any, day: string, pid: string): boolean => {
+      if (sectionOffDays.get(sec.name)?.has(day)) return false
+      if (classTT[sec.name]?.[day]?.[pid]) return false
+      if ((sec.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      if ((sub.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      const maxPD = sub.maxPeriodsPerDay ?? 2
+      const today = Object.values(classTT[sec.name][day] ?? {})
+        .filter((c: any) => c?.subject === sub.name).length
+      return today < maxPD
+    }
+
+    /** Specialists for a subject in a section. No any-teacher fallback: a
+     *  repair must never invent the wrong-teacher lesson Pass 2 refuses. */
+    const specialistsFor = (sec: any, subName: string): any[] => {
+      const own = staff.filter(st => teachesSubject(st, sec.name, sec.grade, subName))
+      return own.length ? own : staff.filter(st => (st.subjects ?? []).includes(subName))
+    }
+
+    const put = (sec: any, sub: any, day: string, pid: string, st: any) => {
+      ensureBusy(tKey(st))
+      classTT[sec.name][day][pid] = {
+        subject: sub.name, teacher: st.name, teacherId: st.id, room: sec.room,
+      }
+      teacherBusy[tKey(st)][day].add(pid)
+      subjectCount[sec.name][sub.name] = (subjectCount[sec.name][sub.name] ?? 0) + 1
+      teacherWeeklyLoad[tKey(st)] = (teacherWeeklyLoad[tKey(st)] ?? 0) + 1
+      teacherSubjectSet[tKey(st)]?.add(sub.name)
+      teacherSectionSet[tKey(st)]?.add(sec.name)
+    }
+
+    /** Remove a lesson and give back everything it was holding. */
+    const lift = (secName: string, day: string, pid: string): any => {
+      const cell: any = classTT[secName][day][pid]
+      delete classTT[secName][day][pid]
+      for (const k of cellKeys(cell)) {
+        teacherBusy[k]?.[day]?.delete(pid)
+        teacherWeeklyLoad[k] = Math.max(0, (teacherWeeklyLoad[k] ?? 0) - 1)
+      }
+      subjectCount[secName][cell.subject] = Math.max(0, (subjectCount[secName][cell.subject] ?? 0) - 1)
+      return cell
+    }
+
+    /** The lesson a teacher is sitting in at this slot, if it is one we may
+     *  move: a plain Pass-2 cell, not pinned and not half of a double. */
+    const movableLessonAt = (tk: string, day: string, pid: string): { sec: any; sub: any } | null => {
+      for (const sec of sections) {
+        const cell: any = classTT[sec.name]?.[day]?.[pid]
+        if (!cell || !cellKeys(cell).includes(tk)) continue
+        if (cell.optionalBlockId || cell.isClassTeacher) return null
+        const sub = subjects.find(s => s.name === cell.subject)
+        if (!sub) return null
+        if ((sessionSpan[sec.name]?.[sub.name] ?? 1) > 1) return null
+        return { sec, sub }
+      }
+      return null   // busy for some other reason (blocked availability, another pass)
+    }
+
+    for (const sec of sections) {
+      for (const sub of subjects) {
+        // Doubles are placed as whole blocks; repairing half of one would
+        // scatter it across the day. Those stay Pass 2's business.
+        if ((sessionSpan[sec.name]?.[sub.name] ?? 1) > 1) continue
+        let need = (targetPeriods[sec.name]?.[sub.name] ?? 0) - (subjectCount[sec.name][sub.name] ?? 0)
+        if (need <= 0) continue
+        const specialists = specialistsFor(sec, sub.name)
+        if (!specialists.length) continue
+
+        for (const day of workDays) {
+          if (need <= 0) break
+          for (const period of classPeriods) {
+            if (need <= 0) break
+            if (!slotOpenFor(sec, sub, day, period.id)) continue
+
+            // 1. Direct
+            const free = specialists.find(st => canTeachAt(st, day, period.id, dayLoad(day)))
+            if (free) {
+              put(sec, sub, day, period.id, free)
+              penalties.push({
+                constraint: 'shortfall-repaired', penalty: 0,
+                details: `${sub.name} for ${sec.name} placed on second pass at ${day} ${period.id}`,
+              })
+              need--
+              continue
+            }
+
+            // 2. Displace — move one lesson out of the specialist's way.
+            //    Either they are teaching in this very slot, or their day is
+            //    already full (the per-day cap derived from their weekly one,
+            //    which is what actually blocks the last Music lesson: spare
+            //    weekly capacity, but every day they could use it on is full).
+            //    Either way, exactly one lesson has to move.
+            for (const st of specialists) {
+              const k = tKey(st)
+              const holdsSlot = !!teacherBusy[k]?.[day]?.has(period.id)
+              const dayFull = atDailyLimit(dayLoad(day)[k] ?? 0, dailyCapFor(st, workDays.length))
+              if (!holdsSlot && !dayFull) continue    // free here, rejected for some other reason
+
+              // Their lesson in this slot if they hold it, else any lesson of
+              // theirs today — shortening the day is what buys the room.
+              const victimSlots = holdsSlot
+                ? [period.id]
+                : classPeriods.map(p => p.id).filter(vp => teacherBusy[k]?.[day]?.has(vp))
+              // A full day only gets shorter if the lesson leaves the day.
+              const mustChangeDay = dayFull
+
+              let repaired = false
+              for (const vpid of victimSlots) {
+                const victim = movableLessonAt(k, day, vpid)
+                if (!victim) continue
+
+                const cover = specialistsFor(victim.sec, victim.sub.name)
+                let moved = false
+                for (const d2 of workDays) {
+                  if (mustChangeDay && d2 === day) continue
+                  for (const p2 of classPeriods) {
+                    if (d2 === day && p2.id === vpid) continue
+                    if (!slotOpenFor(victim.sec, victim.sub, d2, p2.id)) continue
+                    const t2 = cover.find(t => canTeachAt(t, d2, p2.id, dayLoad(d2)))
+                    if (!t2) continue
+                    lift(victim.sec.name, day, vpid)
+                    put(victim.sec, victim.sub, d2, p2.id, t2)
+                    moved = true
+                    break
+                  }
+                  if (moved) break
+                }
+                if (!moved) continue
+
+                // Room made — unless making it used the specialist up.
+                if (!canTeachAt(st, day, period.id, dayLoad(day))) break
+                put(sec, sub, day, period.id, st)
+                penalties.push({
+                  constraint: 'shortfall-repaired', penalty: 0,
+                  details: `${sub.name} for ${sec.name} placed at ${day} ${period.id} by moving ${victim.sec.name}'s ${victim.sub.name}`,
+                })
+                need--
+                repaired = true
+                break
+              }
+              if (repaired) break
+            }
+          }
+        }
+
+        // 3. Swap inside the section — the case the two moves above cannot
+        //    reach: every slot this class has free falls on a day its
+        //    specialist is already full, while one of its own lessons sits on
+        //    a day they are not. Trade the two: our subject takes that slot,
+        //    the lesson there moves to one of the free ones.
+        if (need > 0) {
+          for (const day1 of workDays) {
+            if (need <= 0) break
+            if (sectionOffDays.get(sec.name)?.has(day1)) continue
+            for (const period1 of classPeriods) {
+              if (need <= 0) break
+              const sitting: any = classTT[sec.name]?.[day1]?.[period1.id]
+              if (!sitting || sitting.optionalBlockId || sitting.isClassTeacher) continue
+              if (sitting.subject === sub.name) continue
+              const sittingSub = subjects.find(x => x.name === sitting.subject)
+              if (!sittingSub) continue
+              if ((sessionSpan[sec.name]?.[sittingSub.name] ?? 1) > 1) continue
+              if ((sec.scope?.cells?.[day1]?.[period1.id] ?? 'allowed') === 'locked') continue
+              if ((sub.scope?.cells?.[day1]?.[period1.id] ?? 'allowed') === 'locked') continue
+              // Our subject must still fit this day once it lands here.
+              const ourToday = Object.values(classTT[sec.name][day1] ?? {})
+                .filter((c: any) => c?.subject === sub.name).length
+              if (ourToday >= (sub.maxPeriodsPerDay ?? 2)) continue
+
+              // Would a specialist of ours be free here with that lesson gone?
+              const holder = cellKeys(sitting)
+              const taker = specialists.find(st => {
+                const k = tKey(st)
+                if (holder.includes(k)) return false      // they are the one sitting here
+                const load = dayLoad(day1)
+                if (teacherBusy[k]?.[day1]?.has(period1.id)) return false
+                if (atDailyLimit(load[k] ?? 0, dailyCapFor(st, workDays.length))) return false
+                if ((st.scope?.cells?.[day1]?.[period1.id] ?? 'allowed') === 'locked') return false
+                const cap = st.maxPeriodsPerWeek ?? normCap
+                return !(cap > 0 && (teacherWeeklyLoad[k] ?? 0) >= cap)
+              })
+              if (!taker) continue
+
+              // Somewhere for the displaced lesson to land.
+              const cover = specialistsFor(sec, sittingSub.name)
+              let swapped = false
+              for (const d2 of workDays) {
+                for (const p2 of classPeriods) {
+                  if (d2 === day1 && p2.id === period1.id) continue
+                  if (!slotOpenFor(sec, sittingSub, d2, p2.id)) continue
+                  const t2 = cover.find(t => canTeachAt(t, d2, p2.id, dayLoad(d2)))
+                  if (!t2) continue
+                  lift(sec.name, day1, period1.id)
+                  put(sec, sittingSub, d2, p2.id, t2)
+                  swapped = true
+                  break
+                }
+                if (swapped) break
+              }
+              if (!swapped) continue
+
+              if (!canTeachAt(taker, day1, period1.id, dayLoad(day1))) continue
+              put(sec, sub, day1, period1.id, taker)
+              penalties.push({
+                constraint: 'shortfall-repaired', penalty: 0,
+                details: `${sub.name} for ${sec.name} placed at ${day1} ${period1.id}, trading places with ${sittingSub.name}`,
+              })
+              need--
+            }
+          }
+        }
+      }
+    }
+  }
 
   // ── Build Teacher Timetable ──
   const teacherTT = buildTeacherTT(classTT, staff, workDays)
