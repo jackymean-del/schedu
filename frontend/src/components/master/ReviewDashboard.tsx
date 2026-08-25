@@ -1032,6 +1032,11 @@ function IssueRow({ severity, label, desc, weight }: {
     <div style={{
       background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 7,
       overflow: 'hidden' as const,
+      // The issues list is a capped column flexbox. `overflow: hidden` above
+      // (rounded corners) also drops this row's automatic minimum height, so
+      // without flexShrink the rows are squeezed to fit the cap instead of the
+      // list scrolling — and an expanded row's fixes are clipped away.
+      flexShrink: 0,
     }}>
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: 9,
