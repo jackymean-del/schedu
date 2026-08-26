@@ -4,6 +4,7 @@
  */
 import { ringsDue, parseClock, toClock, RING_GRACE_MIN, type BellAlarm } from './src/lib/bellRinger.ts'
 import type { Ring } from './src/lib/bellSchedule.ts'
+import { BUILT_IN_RINGS } from './src/lib/bellAudio.ts'
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
@@ -91,6 +92,20 @@ ok(parseClock('24:00') === undefined, '24:00 is not a time')
 ok(parseClock('12:60') === undefined, 'nor is 12:60')
 ok(parseClock('half past three') === undefined, 'nor is prose')
 ok(toClock(930) === '15:30' && toClock(425) === '07:05', 'minutes turn back into HH:MM')
+
+console.log('\n── the ring catalogue ──')
+// The sounds themselves are Web Audio and cannot be rendered here; they are
+// measured in the browser instead — rendered offline, with levels and strike
+// counts checked. What CAN go wrong in a plain import is the bookkeeping: a
+// ring added to the union and forgotten in the list, or two sharing an id.
+const ids = BUILT_IN_RINGS.map(r => r.id)
+ok(ids.length >= 8, 'at least eight rings to choose from', `${ids.length} rings`)
+ok(new Set(ids).size === ids.length, 'no two rings share an id')
+ok(BUILT_IN_RINGS.every(r => r.name.trim() && r.hint.trim()), 'every ring says what it is')
+ok(new Set(BUILT_IN_RINGS.map(r => r.name)).size === ids.length, 'no two rings share a name')
+const groups = [...new Set(BUILT_IN_RINGS.map(r => r.group))]
+ok(groups.every(g => ['Bells', 'Chimes', 'Signals'].includes(g)), 'every ring lands in a known group', groups.join(', '))
+ok(groups.length >= 2, 'the list is grouped, not one long column')
 
 console.log(fail === 0 ? '\nALL BELL CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

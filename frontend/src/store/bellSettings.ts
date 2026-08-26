@@ -38,7 +38,9 @@ export const useBellSettings = create<BellSettingsState>()(
   persist(
     (set) => ({
       enabled: false,
-      sound: 'chime',
+      // The one a school actually has in its corridor, for anyone who never
+      // opens this panel.
+      sound: 'electric',
       volume: 0.7,
       alarms: [],
 

@@ -15,17 +15,23 @@
  *    disallowed is the whole failure mode of this feature.
  */
 import { useEffect, useRef, useState } from 'react'
-import { Bell, BellOff, Plus, Volume2, X } from 'lucide-react'
+import { Bell, BellOff, Play, Plus, Volume2, X } from 'lucide-react'
 import type { Ring } from '@/lib/bellSchedule'
 import { fmtRingTime } from '@/lib/bellSchedule'
 import { ringsDue, parseClock, toClock, type DueRing } from '@/lib/bellRinger'
-import { arm, isArmed, ring, stopRing, readAudioFile, BUILT_IN_RINGS, MAX_RING_BYTES } from '@/lib/bellAudio'
+import {
+  arm, isArmed, ring, stopRing, readAudioFile,
+  BUILT_IN_RINGS, MAX_RING_BYTES, type BuiltInRing, type RingGroup,
+} from '@/lib/bellAudio'
 import { useBellSettings } from '@/store/bellSettings'
 
 const CARD = '#16141F'
 const LINE = '#262234'
 const DIM = '#8B87AD'
 const ACCENT = '#9E92FF'
+
+/** The order the groups are shown in — loudest and most school-like first. */
+const RING_GROUPS: RingGroup[] = ['Bells', 'Chimes', 'Signals']
 
 /** How long the board shows what just rang. */
 const FLASH_MS = 6000
@@ -145,6 +151,12 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
   const [label, setLabel] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Auditioning has to arm audio first: the click IS the gesture, and
+  // without it the browser silently drops the first sound anyone tries.
+  const audition = (id: BuiltInRing) => {
+    void arm().then(() => ring({ sound: id, volume: s.volume }))
+  }
+
   const testRing = () => {
     void arm().then(() => ring({ sound: s.sound, customDataUrl: s.customDataUrl, volume: s.volume }))
   }
@@ -194,29 +206,43 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
           <Toggle checked={s.enabled} onChange={s.setEnabled} />
         </Row>
 
-        {/* Sound */}
+        {/* Sound — pick with the left button, hear it with the right one */}
         <div style={{ flexShrink: 0 }}>
           <Head>Sound</Head>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {BUILT_IN_RINGS.map(r => (
-              <button key={r.id} onClick={() => s.setSound(r.id)} title={r.hint} style={chip(s.sound === r.id)}>
-                {r.name}
-              </button>
-            ))}
-            <button onClick={() => s.customDataUrl && s.setSound('custom')}
-              disabled={!s.customDataUrl}
-              title={s.customDataUrl ? s.customName : 'Upload a recording first'}
-              style={{ ...chip(s.sound === 'custom'), opacity: s.customDataUrl ? 1 : 0.4, cursor: s.customDataUrl ? 'pointer' : 'not-allowed' }}>
-              {s.customName ? trim(s.customName) : 'Custom'}
-            </button>
-            <button onClick={testRing} style={{ ...chip(false), borderStyle: 'dashed' }}>Test</button>
+          {RING_GROUPS.map(group => (
+            <div key={group} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 800, color: '#4A4560', letterSpacing: '0.06em', marginBottom: 6 }}>
+                {group.toUpperCase()}
+              </div>
+              <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))' }}>
+                {BUILT_IN_RINGS.filter(r => r.group === group).map(r => (
+                  <RingOption key={r.id}
+                    name={r.name} hint={r.hint}
+                    selected={s.sound === r.id}
+                    onSelect={() => { s.setSound(r.id); audition(r.id) }}
+                    onPlay={() => audition(r.id)} />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <RingOption
+            name={s.customName ? trim(s.customName, 22) : 'Your own recording'}
+            hint={s.customDataUrl ? 'Uploaded to this screen' : 'Choose a file below first'}
+            selected={s.sound === 'custom'}
+            disabled={!s.customDataUrl}
+            onSelect={() => s.customDataUrl && s.setSound('custom')}
+            onPlay={() => s.customDataUrl && ring({ sound: 'custom', customDataUrl: s.customDataUrl, volume: s.volume })} />
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button onClick={testRing} style={{ ...chip(false), borderStyle: 'dashed' }}>Test the chosen one</button>
             <button onClick={stopRing} style={{ ...chip(false), borderStyle: 'dashed' }}>Stop</button>
           </div>
         </div>
 
         {/* Custom upload */}
         <div style={{ flexShrink: 0 }}>
-          <Head>Your own recording</Head>
+          <Head>Upload a recording</Head>
           <input ref={fileRef} type="file" accept="audio/*" style={{ display: 'none' }}
             onChange={e => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -287,6 +313,43 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
           ringing late. Nothing rings on a holiday, or on a day the school is closed.
         </div>
       </div>
+    </div>
+  )
+}
+
+/** One ring: a wide button that selects it, and a small one that plays it
+ *  without changing the choice. Ten options are too many to audition by
+ *  selecting each in turn. */
+function RingOption({ name, hint, selected, disabled, onSelect, onPlay }: {
+  name: string; hint: string; selected: boolean; disabled?: boolean
+  onSelect: () => void; onPlay: () => void
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'stretch', gap: 0, borderRadius: 10, overflow: 'hidden',
+      border: `1px solid ${selected ? ACCENT : LINE}`,
+      background: selected ? 'rgba(158,146,255,0.12)' : 'transparent',
+      opacity: disabled ? 0.45 : 1, flexShrink: 0,
+    }}>
+      <button onClick={onSelect} disabled={disabled} style={{
+        flex: 1, minWidth: 0, textAlign: 'left', border: 'none', background: 'transparent',
+        padding: '7px 10px', cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+      }}>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: selected ? ACCENT : '#F4F2FF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {name}
+        </div>
+        <div style={{ fontSize: 10.5, color: DIM, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {hint}
+        </div>
+      </button>
+      <button onClick={onPlay} disabled={disabled} title={`Hear ${name}`} style={{
+        border: 'none', borderLeft: `1px solid ${selected ? ACCENT : LINE}`,
+        background: 'transparent', color: selected ? ACCENT : DIM,
+        width: 34, cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Play size={13} />
+      </button>
     </div>
   )
 }
