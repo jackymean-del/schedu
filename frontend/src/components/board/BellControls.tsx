@@ -21,7 +21,8 @@ import { fmtRingTime } from '@/lib/bellSchedule'
 import { ringsDue, parseClock, toClock, type DueRing } from '@/lib/bellRinger'
 import {
   arm, isArmed, ring, stopRing, readAudioFile,
-  BUILT_IN_RINGS, MAX_RING_BYTES, type BuiltInRing, type RingGroup,
+  BUILT_IN_RINGS, MAX_RING_BYTES, MIN_RING_SECONDS, MAX_RING_SECONDS,
+  type BuiltInRing, type RingGroup,
 } from '@/lib/bellAudio'
 import { useBellSettings } from '@/store/bellSettings'
 
@@ -47,14 +48,15 @@ export function useBellRinger(opts: { rings: Ring[]; dayKey: string; silent: boo
   const sound = useBellSettings(s => s.sound)
   const volume = useBellSettings(s => s.volume)
   const customDataUrl = useBellSettings(s => s.customDataUrl)
+  const ringSeconds = useBellSettings(s => s.ringSeconds)
   const alarms = useBellSettings(s => s.alarms)
 
   const [flash, setFlash] = useState<DueRing | null>(null)
   const [armedNow, setArmedNow] = useState(() => isArmed())
 
   // Latest inputs, read by the interval without restarting it.
-  const live = useRef({ rings, dayKey, silent, enabled, sound, volume, customDataUrl, alarms })
-  live.current = { rings, dayKey, silent, enabled, sound, volume, customDataUrl, alarms }
+  const live = useRef({ rings, dayKey, silent, enabled, sound, volume, customDataUrl, ringSeconds, alarms })
+  live.current = { rings, dayKey, silent, enabled, sound, volume, customDataUrl, ringSeconds, alarms }
   const prevMin = useRef<number | undefined>(undefined)
 
   // The first tap anywhere on the page is the gesture that buys us sound.
@@ -81,7 +83,7 @@ export function useBellRinger(opts: { rings: Ring[]; dayKey: string; silent: boo
       prevMin.current = nowMin
       if (!due.length) return
       // Two bells in one minute is one sound; the label carries both.
-      ring({ sound: s.sound, customDataUrl: s.customDataUrl, volume: s.volume })
+      ring({ sound: s.sound, customDataUrl: s.customDataUrl, volume: s.volume, seconds: s.ringSeconds })
       setFlash(due[0])
       window.setTimeout(() => setFlash(f => (f?.key === due[0].key ? null : f)), FLASH_MS)
     }
@@ -154,11 +156,13 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
   // Auditioning has to arm audio first: the click IS the gesture, and
   // without it the browser silently drops the first sound anyone tries.
   const audition = (id: BuiltInRing) => {
-    void arm().then(() => ring({ sound: id, volume: s.volume }))
+    void arm().then(() => ring({ sound: id, volume: s.volume, seconds: s.ringSeconds }))
   }
 
   const testRing = () => {
-    void arm().then(() => ring({ sound: s.sound, customDataUrl: s.customDataUrl, volume: s.volume }))
+    void arm().then(() => ring({
+      sound: s.sound, customDataUrl: s.customDataUrl, volume: s.volume, seconds: s.ringSeconds,
+    }))
   }
 
   const onFile = async (f: File | undefined) => {
@@ -171,6 +175,10 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
       setErr(e?.message ?? 'Could not use that file.')
     }
   }
+
+  // Named from the catalogue, so adding a ring cannot leave this text lying.
+  const sustainedNames = BUILT_IN_RINGS.filter(r => r.sustained).map(r => r.name).join(', ')
+  const oneShotNote = 'The rest have a length of their own — a chime is as long as a chime is.'
 
   const addAlarm = () => {
     const min = parseClock(at)
@@ -232,7 +240,9 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
             selected={s.sound === 'custom'}
             disabled={!s.customDataUrl}
             onSelect={() => s.customDataUrl && s.setSound('custom')}
-            onPlay={() => s.customDataUrl && ring({ sound: 'custom', customDataUrl: s.customDataUrl, volume: s.volume })} />
+            onPlay={() => s.customDataUrl && ring({
+              sound: 'custom', customDataUrl: s.customDataUrl, volume: s.volume, seconds: s.ringSeconds,
+            })} />
 
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button onClick={testRing} style={{ ...chip(false), borderStyle: 'dashed' }}>Test the chosen one</button>
@@ -255,8 +265,31 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
             )}
           </div>
           <div style={{ fontSize: 11.5, color: DIM, marginTop: 6 }}>
-            Any audio file up to {Math.round(MAX_RING_BYTES / 1024)} KB — about two seconds.
-            It is stored on this screen, not uploaded anywhere.
+            Any audio file up to {Math.round(MAX_RING_BYTES / 1024)} KB — roughly a minute
+            of sound, far more than a bell needs. It is stored on this screen and
+            never uploaded anywhere. One recorded strike is enough: it is looped to
+            fill the length above.
+          </div>
+        </div>
+
+        {/* How long it rings */}
+        <div style={{ flexShrink: 0 }}>
+          <Head>How long it rings</Head>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {[2, 4, 6, 10, 15].map(n => (
+              <button key={n} onClick={() => s.setRingSeconds(n)} style={chip(s.ringSeconds === n)}>{n}s</button>
+            ))}
+            <span style={{ fontSize: 11.5, color: DIM }}>or</span>
+            <input type="number" min={MIN_RING_SECONDS} max={MAX_RING_SECONDS}
+              value={s.ringSeconds}
+              onChange={e => s.setRingSeconds(Number(e.target.value))}
+              style={{ ...inp, width: 68 }} />
+            <span style={{ fontSize: 11.5, color: DIM }}>seconds</span>
+          </div>
+          <div style={{ fontSize: 11.5, color: DIM, marginTop: 6 }}>
+            {sustainedNames} keep going for this long. {oneShotNote} A recording of
+            your own is looped to fill it, so one recorded strike can ring for as
+            long as you like.
           </div>
         </div>
 

@@ -11,7 +11,7 @@
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { BuiltInRing } from '@/lib/bellAudio'
+import { DEFAULT_RING_SECONDS, MAX_RING_SECONDS, MIN_RING_SECONDS, type BuiltInRing } from '@/lib/bellAudio'
 import type { BellAlarm } from '@/lib/bellRinger'
 
 interface BellSettingsState {
@@ -19,6 +19,8 @@ interface BellSettingsState {
   enabled: boolean
   sound: BuiltInRing | 'custom'
   volume: number
+  /** How long the rings that keep ringing should keep ringing. */
+  ringSeconds: number
   /** Present only when the school uploaded its own recording. */
   customDataUrl?: string
   customName?: string
@@ -28,6 +30,7 @@ interface BellSettingsState {
   setEnabled: (v: boolean) => void
   setSound: (s: BuiltInRing | 'custom') => void
   setVolume: (v: number) => void
+  setRingSeconds: (v: number) => void
   setCustom: (dataUrl: string, name: string) => void
   clearCustom: () => void
   addAlarm: (a: Omit<BellAlarm, 'id'>) => void
@@ -42,11 +45,15 @@ export const useBellSettings = create<BellSettingsState>()(
       // opens this panel.
       sound: 'electric',
       volume: 0.7,
+      ringSeconds: DEFAULT_RING_SECONDS,
       alarms: [],
 
       setEnabled: (enabled) => set({ enabled }),
       setSound: (sound) => set({ sound }),
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
+      setRingSeconds: (n) => set({
+        ringSeconds: Math.max(MIN_RING_SECONDS, Math.min(MAX_RING_SECONDS, Math.round(n || 0))),
+      }),
       setCustom: (customDataUrl, customName) => set({ customDataUrl, customName, sound: 'custom' }),
       // Dropping the recording must also drop the selection, or the board is
       // left pointing at a sound that no longer exists and rings nothing.

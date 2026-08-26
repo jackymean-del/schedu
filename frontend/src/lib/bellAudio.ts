@@ -20,7 +20,7 @@
  */
 
 export type BuiltInRing =
-  | 'electric' | 'gong' | 'handbell'
+  | 'hammer' | 'hammerring' | 'electric' | 'gong' | 'handbell'
   | 'westminster' | 'chime' | 'marimba' | 'triangle'
   | 'twotone' | 'buzzer' | 'ping'
 
@@ -28,16 +28,21 @@ export type RingGroup = 'Bells' | 'Chimes' | 'Signals'
 
 export const BUILT_IN_RINGS: {
   id: BuiltInRing; name: string; hint: string; group: RingGroup
+  /** Rings for as long as it is asked to, rather than having its own length.
+   *  These are the ones the "how long" setting applies to. */
+  sustained?: true
 }[] = [
-  { id: 'electric',    group: 'Bells',   name: 'Electric bell', hint: 'The classic corridor brrrring' },
+  { id: 'hammer',      group: 'Bells',   name: 'Bell + hammer', hint: 'One hammer strike, left to ring out' },
+  { id: 'hammerring',  group: 'Bells',   name: 'Bell, rung',    hint: 'Struck over and over, for as long as you set', sustained: true },
+  { id: 'electric',    group: 'Bells',   name: 'Electric bell', hint: 'The classic corridor brrrring', sustained: true },
   { id: 'gong',        group: 'Bells',   name: 'Brass gong',    hint: 'One deep strike, left to ring out' },
-  { id: 'handbell',    group: 'Bells',   name: 'Hand bell',     hint: 'Brass, shaken by hand' },
+  { id: 'handbell',    group: 'Bells',   name: 'Hand bell',     hint: 'Brass, shaken by hand', sustained: true },
   { id: 'westminster', group: 'Chimes',  name: 'Westminster',   hint: 'The four-note quarter chime' },
   { id: 'chime',       group: 'Chimes',  name: 'Tubular chime', hint: 'Struck tube, soft edges' },
   { id: 'marimba',     group: 'Chimes',  name: 'Marimba',       hint: 'Wooden and warm — good for infants' },
   { id: 'triangle',    group: 'Chimes',  name: 'Triangle',      hint: 'Bright, thin, gentle' },
   { id: 'twotone',     group: 'Signals', name: 'Two-tone',      hint: 'Bing-bong, before an announcement' },
-  { id: 'buzzer',      group: 'Signals', name: 'Buzzer',        hint: 'Harsh — hard to ignore' },
+  { id: 'buzzer',      group: 'Signals', name: 'Buzzer',        hint: 'Harsh — hard to ignore', sustained: true },
   { id: 'ping',        group: 'Signals', name: 'Ping',          hint: 'Short and quiet' },
 ]
 
@@ -158,6 +163,50 @@ function bellHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, d
   }
 }
 
+/**
+ * A HAMMER strike on a thick bell — the school bell that hangs by the office
+ * and gets hit with a steel hammer, rather than one swung on a rope.
+ *
+ * Three things separate it from the clapper bell above, and all three are what
+ * make it read as "hit with metal":
+ *
+ *  1. The contact is metal on metal, so the transient is brighter and lasts a
+ *     little longer than a clapper's — two noise bands, one very high.
+ *  2. A hammer excites far more of the higher modes, so there are more
+ *     partials, and the top ones are loud enough to hear as a distinct clang
+ *     before they die away.
+ *  3. Real castings are never perfectly symmetrical, so each mode is really
+ *     two modes a fraction apart. They drift in and out of phase, and that
+ *     slow beating is the shimmer a synthesised bell is always missing.
+ */
+const HAMMER_PARTIALS: [ratio: number, gain: number, decayScale: number][] = [
+  [0.5,  0.22, 1.00],   // hum — long, and what is left at the end
+  [1.0,  0.34, 0.85],   // prime
+  [1.19, 0.30, 0.60],   // tierce, the minor third
+  [1.5,  0.20, 0.45],   // quint
+  [2.0,  0.22, 0.35],   // nominal — a hammer drives this harder than a clapper
+  [2.55, 0.14, 0.22],
+  [3.01, 0.12, 0.17],
+  [4.07, 0.08, 0.11],
+  [5.43, 0.05, 0.08],
+  [6.79, 0.03, 0.05],
+]
+
+function hammerHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, decay: number) {
+  // Metal on metal: a bright band for the ring of the hammer face, a lower one
+  // for the body of the bell taking the blow.
+  strikeNoise(c, out, t0, gain * 0.55, hz * 9, 0.055)
+  strikeNoise(c, out, t0, gain * 0.40, hz * 3.5, 0.03)
+
+  for (const [ratio, g, ds] of HAMMER_PARTIALS) {
+    // Each mode as a beating pair. The offset grows with the partial, which is
+    // what real castings do, and keeps the beats from lining up into a tremolo.
+    const beat = 0.0009 * ratio * hz
+    partial(c, out, t0, hz * ratio, gain * g * 0.6, decay * ds)
+    partial(c, out, t0, hz * ratio + beat, gain * g * 0.55, decay * ds * 0.95)
+  }
+}
+
 /** A struck tube or wooden bar: harmonic rather than inharmonic, and shorter. */
 function malletHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, decay: number, wood = false) {
   strikeNoise(c, out, t0, gain * (wood ? 0.35 : 0.22), hz * (wood ? 2 : 4), 0.03)
@@ -194,26 +243,64 @@ function buzz(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, dur:
 /**
  * Per-ring loudness trim.
  *
- * Written by ear-free measurement: each ring was rendered offline and its RMS
- * taken, which spread over 4:1 — the electric bell, of all things, came out
- * quietest, because thirty short strikes average out to less energy than one
- * sustained buzz. Untrimmed, the volume slider means a different thing for
- * every choice, and a school that switches ring finds it has also changed how
- * loud its corridor is.
+ * Written by ear-free measurement: each ring is rendered offline and its RMS
+ * taken over the first second and a half — the part anyone actually hears as
+ * "the bell". Whole-file RMS is the wrong yardstick here, because a single
+ * strike left to ring out for nine seconds is mostly tail, and matching it to
+ * a sustained buzz on that basis drives its strike into clipping.
+ *
+ * Untrimmed the spread is wide, and in unhelpful directions — the electric
+ * bell came out quietest of all, because thirty short strikes average to less
+ * energy than one held buzz. Left alone, the volume slider would mean a
+ * different thing for every choice, and a school that changes its ring would
+ * find it had also changed how loud its corridor is.
  *
  * The spread that is left is deliberate and matches what each one claims to
  * be: the buzzer sits above the pack because it is the one you cannot ignore,
  * the triangle and the ping below it because they are the gentle ones.
  */
+export const MIN_RING_SECONDS = 1
+export const MAX_RING_SECONDS = 30
+export const DEFAULT_RING_SECONDS = 4
+
 const LEVEL_TRIM: Record<BuiltInRing, number> = {
-  electric: 2.36, gong: 1.61, handbell: 1.86,
-  westminster: 0.78, chime: 0.94, marimba: 0.83, triangle: 1.38,
-  twotone: 0.97, buzzer: 0.70, ping: 0.90,
+  hammer: 0.97, hammerring: 1.05,
+  electric: 2.50, gong: 1.00, handbell: 1.62,
+  westminster: 0.62, chime: 0.82, marimba: 0.99, triangle: 1.28,
+  twotone: 0.89, buzzer: 0.69, ping: 1.15,
 }
 
-export function synthRing(c: Ctx, out: AudioNode, t0: number, id: BuiltInRing, v: number): number {
+export function synthRing(
+  c: Ctx, out: AudioNode, t0: number, id: BuiltInRing, v: number,
+  /** How long the sustained rings should keep going. Ignored by the rings
+   *  that have a length of their own — a chime is as long as a chime is. */
+  seconds = DEFAULT_RING_SECONDS,
+): number {
   const g = Math.max(0, Math.min(1, v)) * LEVEL_TRIM[id]
+  const hold = Math.max(MIN_RING_SECONDS, Math.min(MAX_RING_SECONDS, seconds))
   switch (id) {
+    case 'hammer':
+      // One blow, then left alone. A big bell rings a long time.
+      hammerHit(c, out, t0, 415.3, 0.34 * g, 9)
+      return 9.4
+
+    case 'hammerring': {
+      // Struck steadily by hand — about twice a second, which is as fast as
+      // anybody swings a hammer for minutes at a time. The unevenness is on
+      // purpose: a machine-perfect interval is the one thing a person never
+      // manages, and it is what makes a loop sound like a loop.
+      const gap = 0.46
+      const hits = Math.max(2, Math.round(hold / gap))
+      for (let i = 0; i < hits; i++) {
+        // Late, never early — a person swinging a hammer drifts behind the
+        // beat, and a negative offset would put the first strike before the
+        // start of the render, which the audio clock refuses outright.
+        const jitter = ((i * 37) % 11) * 0.006          // 0–60ms, repeatable
+        hammerHit(c, out, t0 + i * gap + jitter, 415.3, 0.26 * g, 2.6)
+      }
+      return hits * gap + 2.4
+    }
+
     case 'ping':
       malletHit(c, out, t0, 1046.5, 0.34 * g, 0.5)
       return 0.6
@@ -252,18 +339,20 @@ export function synthRing(c: Ctx, out: AudioNode, t0: number, id: BuiltInRing, v
       // Shaken: the clapper strikes each wall in turn, so the hits alternate
       // and the spacing is uneven, the way a hand is uneven.
       let t = t0
-      for (let i = 0; i < 7; i++) {
+      const until = t0 + hold
+      for (let i = 0; t < until; i++) {
         bellHit(c, out, t, i % 2 ? 987.8 : 932.3, 0.20 * g, 0.9)
         t += 0.15 + (i % 3) * 0.02
       }
-      return 2.1
+      return hold + 0.9
     }
 
     case 'electric': {
       // A solenoid drives the clapper into the gong ten times a second for as
       // long as the current is on. Each contact is its own strike — a tremolo
       // on a held tone gets the rhythm but never the rattle.
-      const hits = 30, gap = 0.1
+      const gap = 0.1
+      const hits = Math.max(4, Math.round(hold / gap))
       for (let i = 0; i < hits; i++) bellHit(c, out, t0 + i * gap, 1318.5, 0.16 * g, 0.34)
       return hits * gap + 0.4
     }
@@ -275,28 +364,30 @@ export function synthRing(c: Ctx, out: AudioNode, t0: number, id: BuiltInRing, v
 
     case 'buzzer': {
       // Three harsh bursts, the way a klaxon actually gets pressed.
-      for (let i = 0; i < 3; i++) buzz(c, out, t0 + i * 0.5, 233.1, 0.20 * g, 0.36)
-      return 1.7
+      const gap = 0.5
+      const bursts = Math.max(2, Math.round(hold / gap))
+      for (let i = 0; i < bursts; i++) buzz(c, out, t0 + i * gap, 233.1, 0.20 * g, 0.36)
+      return bursts * gap + 0.1
     }
   }
 }
 
 /** How long a ring lasts, without building it. */
-export function ringSeconds(id: BuiltInRing): number {
+export function ringSeconds(id: BuiltInRing, seconds = DEFAULT_RING_SECONDS): number {
   const silent = new OfflineAudioContext(1, 1, 8000)
-  return synthRing(silent, silent.destination, 0, id, 0)
+  return synthRing(silent, silent.destination, 0, id, 0, seconds)
 }
 
 let live: { stop: () => void } | null = null
 
-function playBuiltIn(id: BuiltInRing, volume: number) {
+function playBuiltIn(id: BuiltInRing, volume: number, seconds: number) {
   const c = audioCtx()
   if (!c) return
   // Everything goes through one gain node so a ring in progress can be cut
-  // short — the long ones (gong, electric) outlast a second press otherwise.
+  // short — the long ones (gong, the rung bell) outlast a second press.
   const bus = c.createGain()
   bus.connect(c.destination)
-  synthRing(c, bus, c.currentTime, id, volume)
+  synthRing(c, bus, c.currentTime, id, volume, seconds)
   live = {
     stop: () => {
       try {
@@ -310,13 +401,25 @@ function playBuiltIn(id: BuiltInRing, volume: number) {
 
 let customEl: HTMLAudioElement | null = null
 
-function playCustom(dataUrl: string, volume: number) {
+let customStop = 0
+
+function playCustom(dataUrl: string, volume: number, seconds: number) {
   // One element, reused: a bell that rings while the last one is still playing
   // should restart, not layer.
   if (!customEl) customEl = new Audio()
   if (customEl.src !== dataUrl) customEl.src = dataUrl
   customEl.volume = Math.max(0, Math.min(1, volume))
   customEl.currentTime = 0
+
+  // A real recording is usually ONE strike. Looping it to fill the chosen
+  // length is how a school gets its own bell rung for eight seconds without
+  // having to record eight seconds of it.
+  customEl.loop = true
+  customStop = Date.now() + Math.max(MIN_RING_SECONDS, seconds) * 1000
+  customEl.onended = null
+  customEl.ontimeupdate = () => {
+    if (Date.now() >= customStop) stopRing()
+  }
   void customEl.play().catch(() => {
     // Blocked despite arming — the board shows the "tap to enable" state, so
     // there is nothing useful to do here.
@@ -327,31 +430,43 @@ export interface RingChoice {
   sound: BuiltInRing | 'custom'
   customDataUrl?: string
   volume: number
+  /** How long the sustained rings — and a looped recording — keep going. */
+  seconds?: number
 }
 
 /** Ring. Silent — and honest about it — when audio was never unlocked. */
 export function ring(choice: RingChoice) {
   stopRing()
+  const seconds = choice.seconds ?? DEFAULT_RING_SECONDS
   if (choice.sound === 'custom') {
-    if (choice.customDataUrl) playCustom(choice.customDataUrl, choice.volume)
+    if (choice.customDataUrl) playCustom(choice.customDataUrl, choice.volume, seconds)
     return
   }
-  playBuiltIn(choice.sound, choice.volume)
+  playBuiltIn(choice.sound, choice.volume, seconds)
 }
 
 /** Cut a ring short — used when auditioning one ring after another. */
 export function stopRing() {
-  if (customEl) { customEl.pause(); customEl.currentTime = 0 }
+  if (customEl) {
+    customEl.ontimeupdate = null
+    customEl.loop = false
+    customEl.pause()
+    customEl.currentTime = 0
+  }
   if (live) { live.stop(); live = null }
 }
 
 /**
  * The biggest custom recording we will keep. It is persisted with the rest of
- * the board's settings in localStorage, which is a ~5MB drawer shared with
- * everything else the app stores, and base64 inflates a file by a third. A
- * bell is two seconds long; anything past this is a song.
+ * the board's settings in localStorage — a ~5MB drawer shared with everything
+ * else the app stores — and base64 inflates a file by a third, so 1MB of audio
+ * costs about 1.4MB of that drawer.
+ *
+ * At ordinary bitrates this is roughly a minute of sound, which is far more
+ * than a bell needs. (An earlier version of this comment claimed the old
+ * 512KB was "about two seconds", which was wrong by a factor of fifteen.)
  */
-export const MAX_RING_BYTES = 512 * 1024
+export const MAX_RING_BYTES = 1024 * 1024
 
 export function readAudioFile(file: File): Promise<{ dataUrl: string; name: string }> {
   return new Promise((resolve, reject) => {
@@ -359,7 +474,7 @@ export function readAudioFile(file: File): Promise<{ dataUrl: string; name: stri
       reject(new Error('That is not an audio file.')); return
     }
     if (file.size > MAX_RING_BYTES) {
-      reject(new Error(`Too big — keep it under ${Math.round(MAX_RING_BYTES / 1024)} KB (about 2 seconds).`))
+      reject(new Error(`Too big — keep it under ${Math.round(MAX_RING_BYTES / 1024)} KB, which is about a minute of audio.`))
       return
     }
     const fr = new FileReader()

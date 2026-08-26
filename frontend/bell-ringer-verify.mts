@@ -4,7 +4,9 @@
  */
 import { ringsDue, parseClock, toClock, RING_GRACE_MIN, type BellAlarm } from './src/lib/bellRinger.ts'
 import type { Ring } from './src/lib/bellSchedule.ts'
-import { BUILT_IN_RINGS } from './src/lib/bellAudio.ts'
+import {
+  BUILT_IN_RINGS, MIN_RING_SECONDS, MAX_RING_SECONDS, DEFAULT_RING_SECONDS,
+} from './src/lib/bellAudio.ts'
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
@@ -106,6 +108,15 @@ ok(new Set(BUILT_IN_RINGS.map(r => r.name)).size === ids.length, 'no two rings s
 const groups = [...new Set(BUILT_IN_RINGS.map(r => r.group))]
 ok(groups.every(g => ['Bells', 'Chimes', 'Signals'].includes(g)), 'every ring lands in a known group', groups.join(', '))
 ok(groups.length >= 2, 'the list is grouped, not one long column')
+
+const sustained = BUILT_IN_RINGS.filter(r => r.sustained)
+ok(sustained.length >= 3, 'several rings can be held for as long as the school wants',
+  sustained.map(r => r.name).join(', '))
+ok(BUILT_IN_RINGS.some(r => /hammer/i.test(r.id)), 'a hammer-struck bell is among them')
+ok(MIN_RING_SECONDS >= 1 && MAX_RING_SECONDS > MIN_RING_SECONDS &&
+   DEFAULT_RING_SECONDS >= MIN_RING_SECONDS && DEFAULT_RING_SECONDS <= MAX_RING_SECONDS,
+  'the ring length has sane bounds and a default inside them',
+  `${MIN_RING_SECONDS}–${MAX_RING_SECONDS}s, default ${DEFAULT_RING_SECONDS}s`)
 
 console.log(fail === 0 ? '\nALL BELL CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)
