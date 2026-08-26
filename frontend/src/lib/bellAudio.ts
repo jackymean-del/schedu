@@ -22,7 +22,7 @@
 export type BuiltInRing =
   | 'hammer' | 'hammerring' | 'electric' | 'gong' | 'handbell'
   | 'westminster' | 'chime' | 'marimba' | 'triangle'
-  | 'twotone' | 'buzzer' | 'ping'
+  | 'twotone' | 'alarmbell' | 'buzzer' | 'ping'
 
 export type RingGroup = 'Bells' | 'Chimes' | 'Signals'
 
@@ -36,12 +36,13 @@ export const BUILT_IN_RINGS: {
   { id: 'hammerring',  group: 'Bells',   name: 'Bell, rung',    hint: 'Struck over and over, for as long as you set', sustained: true },
   { id: 'electric',    group: 'Bells',   name: 'Electric bell', hint: 'The classic corridor brrrring', sustained: true },
   { id: 'gong',        group: 'Bells',   name: 'Brass gong',    hint: 'One deep strike, left to ring out' },
-  { id: 'handbell',    group: 'Bells',   name: 'Hand bell',     hint: 'Brass, shaken by hand', sustained: true },
+  { id: 'handbell',    group: 'Bells',   name: 'Hand bell',     hint: 'Brass, swung — strikes in pairs', sustained: true },
   { id: 'westminster', group: 'Chimes',  name: 'Westminster',   hint: 'The four-note quarter chime' },
   { id: 'chime',       group: 'Chimes',  name: 'Tubular chime', hint: 'Struck tube, soft edges' },
   { id: 'marimba',     group: 'Chimes',  name: 'Marimba',       hint: 'Wooden and warm — good for infants' },
   { id: 'triangle',    group: 'Chimes',  name: 'Triangle',      hint: 'Bright, thin, gentle' },
   { id: 'twotone',     group: 'Signals', name: 'Two-tone',      hint: 'Bing-bong, before an announcement' },
+  { id: 'alarmbell',   group: 'Signals', name: 'Alarm bell',    hint: 'Analogue fire-alarm gong, continuous', sustained: true },
   { id: 'buzzer',      group: 'Signals', name: 'Buzzer',        hint: 'Harsh — hard to ignore', sustained: true },
   { id: 'ping',        group: 'Signals', name: 'Ping',          hint: 'Short and quiet' },
 ]
@@ -207,6 +208,38 @@ function hammerHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number,
   }
 }
 
+/**
+ * A SMALL bell — a brass hand bell, not a tower one.
+ *
+ * Scaling a big bell down does not work, and this is why: in a small casting
+ * the hum barely sounds at all, while the nominal an octave above the prime is
+ * unusually strong, and the modes above THAT are strong enough to matter.
+ * That is the whole reason a hand bell reads as bright and a tower bell as
+ * dark. Using one partial set for both is what makes a synthesised hand bell
+ * sound like a small church.
+ */
+const SMALL_BELL_PARTIALS: [ratio: number, gain: number, decayScale: number][] = [
+  [0.5,  0.10, 0.90],   // hum — nearly absent at this size
+  [1.0,  0.38, 0.75],   // prime
+  [1.19, 0.28, 0.50],   // tierce
+  [1.5,  0.22, 0.38],   // quint
+  [2.0,  0.28, 0.30],   // nominal — the bright one, and it carries
+  [2.61, 0.17, 0.20],
+  [3.42, 0.12, 0.14],
+  [4.51, 0.08, 0.10],
+  [5.93, 0.05, 0.07],
+]
+
+function smallBellHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, decay: number) {
+  strikeNoise(c, out, t0, gain * 0.45, hz * 5, 0.028)
+  strikeNoise(c, out, t0, gain * 0.30, hz * 2, 0.018)
+  for (const [ratio, g, ds] of SMALL_BELL_PARTIALS) {
+    const beat = 0.0012 * ratio * hz
+    partial(c, out, t0, hz * ratio, gain * g * 0.6, decay * ds)
+    partial(c, out, t0, hz * ratio + beat, gain * g * 0.55, decay * ds * 0.93)
+  }
+}
+
 /** A struck tube or wooden bar: harmonic rather than inharmonic, and shorter. */
 function malletHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, decay: number, wood = false) {
   strikeNoise(c, out, t0, gain * (wood ? 0.35 : 0.22), hz * (wood ? 2 : 4), 0.03)
@@ -265,9 +298,9 @@ export const DEFAULT_RING_SECONDS = 4
 
 const LEVEL_TRIM: Record<BuiltInRing, number> = {
   hammer: 0.97, hammerring: 1.05,
-  electric: 2.50, gong: 1.00, handbell: 1.62,
+  electric: 2.50, gong: 1.00, handbell: 1.72,
   westminster: 0.62, chime: 0.82, marimba: 0.99, triangle: 1.28,
-  twotone: 0.89, buzzer: 0.69, ping: 1.15,
+  twotone: 0.89, alarmbell: 4.32, buzzer: 0.69, ping: 1.15,
 }
 
 export function synthRing(
@@ -336,15 +369,51 @@ export function synthRing(
       return 5.8
 
     case 'handbell': {
-      // Shaken: the clapper strikes each wall in turn, so the hits alternate
-      // and the spacing is uneven, the way a hand is uneven.
-      let t = t0
+      // A brass hand bell, swung.
+      //
+      // The clapper crosses the bell and strikes the far wall, then swings
+      // back and strikes the near one — so hits come in PAIRS, close together,
+      // with a longer wait while the arm turns around. Even spacing is the
+      // giveaway of a synthesised one; so is striking the same note twice,
+      // because the two walls are never quite the same casting and the second
+      // hit is a shade lower.
+      //
+      // The whole thing also swells and fades as the bell turns toward the
+      // room and away from it, which is the `swing` envelope below.
+      const swing = 0.44                    // seconds per there-and-back
+      let t = t0, i = 0
       const until = t0 + hold
-      for (let i = 0; t < until; i++) {
-        bellHit(c, out, t, i % 2 ? 987.8 : 932.3, 0.20 * g, 0.9)
-        t += 0.15 + (i % 3) * 0.02
+      while (t < until) {
+        const outward = i % 2 === 0
+        const hz = outward ? 1046.5 : 1032.0
+        // Loudest when the mouth faces the room, quieter on the return.
+        const facing = outward ? 1 : 0.72
+        smallBellHit(c, out, t, hz, 0.19 * g * facing, 1.5)
+        // Close pair, then the turnaround.
+        t += outward ? swing * 0.38 : swing * 0.62
+        i++
       }
-      return hold + 0.9
+      return hold + 1.5
+    }
+
+    case 'alarmbell': {
+      // An analogue alarm bell — the fire-alarm gong, and the two domes on top
+      // of an old alarm clock. A single hammer sits between two gongs and is
+      // driven back and forth about twenty times a second, hitting each in
+      // turn. Each contact barely rings before the next arrives, and it is
+      // that overlap, not any one strike, that makes the continuous brrrr.
+      //
+      // The two gongs are deliberately a few percent apart. Identical ones
+      // would beat against each other into a wobble; a few percent is what
+      // gives the sound its hard metallic edge.
+      const rate = 19                        // strikes per second
+      const gap = 1 / rate
+      const hits = Math.max(4, Math.round(hold / gap))
+      for (let i = 0; i < hits; i++) {
+        const hz = i % 2 ? 1725 : 1848
+        smallBellHit(c, out, t0 + i * gap, hz, 0.085 * g, 0.16)
+      }
+      return hits * gap + 0.3
     }
 
     case 'electric': {
