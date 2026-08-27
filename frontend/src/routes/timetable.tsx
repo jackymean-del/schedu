@@ -1323,7 +1323,6 @@ export function TimetablePage() {
   // ── Undo / redo history ──────────────────────────────────
   const [classTTHistory, setClassTTHistory] = useState<typeof classTT[]>([])
   const [classTTFuture,  setClassTTFuture]  = useState<typeof classTT[]>([])
-  const [showUndoRedo,   setShowUndoRedo]   = useState(false)
 
   // ── Pool panel filters ───────────────────────────────────
   const [poolFilterClass,   setPoolFilterClass]   = useState("ALL")
@@ -1708,7 +1707,6 @@ export function TimetablePage() {
     setClassTTHistory(h => [...h.slice(-49), classTT])
     setClassTTFuture([])
     setClassTT(newTT)
-    setShowUndoRedo(true)
     const ntt = { ...teacherTT }
     rebuildTeacherTT(newTT, ntt, config.workDays)
     setTeacherTT(ntt)
@@ -1719,16 +1717,13 @@ export function TimetablePage() {
 
   // ── Keyboard shortcuts (Esc, Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo) ──
   // Use a ref so the effect doesn't re-register on every render
-  const undoPillRef = useRef<HTMLDivElement>(null)
   const kbRef = useRef({ classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
-    setShowUndoRedo,
   })
   kbRef.current = { classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
-    setShowUndoRedo,
   }
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1736,7 +1731,6 @@ export function TimetablePage() {
       // Escape — dismiss drag, modals, and undo/redo pill
       if (e.key === 'Escape') {
         r.setDragItem(null); r.setPoolDragItem(null); r.setDragOverCell(null); r.setEditTarget(null)
-        r.setShowUndoRedo(false)
         return
       }
       const ctrl = e.ctrlKey || e.metaKey
@@ -1748,7 +1742,6 @@ export function TimetablePage() {
         r.setClassTTHistory(r.classTTHistory.slice(0, -1))
         r.setClassTTFuture([r.classTT, ...r.classTTFuture.slice(0, 49)])
         r.setClassTT(prev)
-        r.setShowUndoRedo(true)
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(prev, ntt, r.workDays)
         r.setTeacherTT(ntt)
@@ -1762,7 +1755,6 @@ export function TimetablePage() {
         r.setClassTTHistory([...r.classTTHistory.slice(-49), r.classTT])
         r.setClassTTFuture(r.classTTFuture.slice(1))
         r.setClassTT(next)
-        r.setShowUndoRedo(true)
         const ntt = { ...r.teacherTT }
         rebuildTeacherTT(next, ntt, r.workDays)
         r.setTeacherTT(ntt)
@@ -1772,14 +1764,18 @@ export function TimetablePage() {
     return () => window.removeEventListener('keydown', handler)
   }, []) // intentionally empty — we use kbRef for fresh values
 
-  // ── Dismiss undo/redo pill + clear swap highlight on Escape or click anywhere ──
+  // ── Clear the swap highlight on Escape or a click anywhere ──
+  // This used to also dismiss a transient undo/redo "pill". That pill is gone —
+  // undo and redo are permanent toolbar buttons now, correctly disabled when
+  // there is nothing to undo — but its state, its ref and its dismissal
+  // branches were left behind, setting a value nothing read on every commit,
+  // undo, redo and Escape. The ref was attached to no element at all, so the
+  // click-outside test could never be true.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setShowUndoRedo(false); setSwappedPeriodIds(null) }
+      if (e.key === 'Escape') setSwappedPeriodIds(null)
     }
-    const onMouse = (e: MouseEvent) => {
-      if (undoPillRef.current && !undoPillRef.current.contains(e.target as Node))
-        setShowUndoRedo(false)
+    const onMouse = () => {
       setSwappedPeriodIds(null)
     }
     window.addEventListener('keydown', onKey)
@@ -1931,7 +1927,17 @@ export function TimetablePage() {
         s.name !== section && classTT[s.name]?.[day]?.[periodId]?.teacher === teacher
       )
       if (teacherConflict) {
-        alert(`Cannot assign: ${teacher} is already teaching another class at this period.`)
+        // Through the same styled modal every other refusal on this page uses.
+        // A native alert() blocks the tab, cannot be styled, and reads as a
+        // browser error rather than the page telling you why it said no —
+        // while the identical refusal on a cell drag showed a proper dialog.
+        const clashWith = sections.find(sec =>
+          sec.name !== section && classTT[sec.name]?.[day]?.[periodId]?.teacher === teacher)
+        const dayLabel = DAY_SHORT[day] ?? day
+        const periodLabel = classPeriods.find(cp => cp.id === periodId)?.name ?? periodId
+        setConflictWarning(
+          `${teacher} is already teaching ${clashWith?.name ?? 'another class'} at ${dayLabel} (${periodLabel}). ` +
+          `A teacher cannot be in two classrooms at the same time.`)
         setPoolDragItem(null)
         return
       }

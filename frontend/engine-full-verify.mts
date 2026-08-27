@@ -17,7 +17,7 @@
  *
  * Run: npx tsx engine-full-verify.mts
  */
-import { solveTimetable } from './src/lib/schedulingEngine.ts'
+import { solveTimetable, detectConflicts } from './src/lib/schedulingEngine.ts'
 
 type Any = any
 
@@ -313,6 +313,113 @@ for (const sec of miniSections) {
 }
 check(doubleSeen > 0 && doubleBad === 0, 'INV9 double periods never straddle a break',
   `${doubleSeen} doubles seen, ${doubleBad} straddling${doubleSeen === 0 ? ' (VACUOUS — no doubles placed!)' : ''}`)
+
+// ── INV10: two classes are never sent to the same room at once ─────────────
+//
+// The solver copies each section's HOME room onto its lessons and never asks
+// whether that room is free, so a school with fewer rooms than classes — one
+// lab, one computer suite — gets them booked together silently. Allocating
+// rooms properly is still ahead of us; DETECTING the clash is not, and this
+// pins both halves: that a normal school raises nothing, and that a shared
+// room raises exactly what it should.
+console.log(`\n════ Run 4: rooms ════`)
+{
+  const mk = (sc: Any) => ({
+    sections: sc.sections, staff: sc.staff, subjects: sc.subjects,
+    periods: PERIODS, workDays: WORK_DAYS, requirements: [],
+    subjectAllocations: sc.subjectAllocations,
+  })
+  const roomSchool = buildSchool(2)
+  const cleanOut: Any = solveTimetable(mk(roomSchool) as Any)
+  const cleanClashes = detectConflicts(cleanOut.classTT, PERIODS)
+    .filter((c: Any) => c.type === 'room-clash')
+  check(cleanClashes.length === 0,
+    'INV10a a school where every class has its own room raises no room clash',
+    cleanClashes.length ? `${cleanClashes.length} false positives` : 'clean')
+
+  // Now hand two sections the same room, as a shared lab would.
+  const shared = buildSchool(2)
+  shared.sections[0].room = 'LAB'
+  shared.sections[1].room = 'LAB'
+  const sharedOut: Any = solveTimetable(mk(shared) as Any)
+  let real = 0
+  for (const day of WORK_DAYS) {
+    for (const pid of CLASS_PERIOD_IDS) {
+      const a = sharedOut.classTT[shared.sections[0].name]?.[day]?.[pid]
+      const b = sharedOut.classTT[shared.sections[1].name]?.[day]?.[pid]
+      if (a?.subject && b?.subject && a.room === b.room && a.room) real++
+    }
+  }
+  const found = detectConflicts(sharedOut.classTT, PERIODS)
+    .filter((c: Any) => c.type === 'room-clash')
+  check(real > 0 && found.length === real,
+    'INV10b every room double-booking is reported',
+    `${real} in the timetable, ${found.length} reported`)
+}
+
+// ── INV11/INV12: what the solver does when it CANNOT satisfy the request ───
+//
+// Both of these are about refusing to lie. Under-resourced schools are the
+// normal case, not the edge case, and the failure that matters is not "some
+// lessons are unplaced" — it is a timetable that looks complete because the
+// solver quietly broke a promise to fill it.
+console.log(`
+════ Run 5: impossible inputs ════`)
+{
+  const DAYS5 = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+  const P5: Any[] = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
+    .map((id, i) => ({ id, name: `P${i + 1}`, duration: 40, type: 'class' }))
+  const tinySchool = (staffed: boolean) => {
+    const sections = Array.from({ length: 6 }, (_, i) =>
+      ({ id: `x${i}`, name: `X${i}`, room: `XR${i}`, grade: 'VI', classTeacher: '' }))
+    const staff = !staffed ? [] : ['Maths', 'Science', 'English'].map((sub, i) => ({
+      id: `w${i}`, name: `W${i}`, subjects: [sub], classes: [],
+      isClassTeacher: '', maxPeriodsPerWeek: 25,
+    }))
+    const subjectAllocations: Record<string, Record<string, string>> = {}
+    sections.forEach(sec => { subjectAllocations[sec.name] = { Maths: '10', Science: '10', English: '10' } })
+    return {
+      sections, staff,
+      subjects: ['Maths', 'Science', 'English'].map((n, i) => ({ id: `ss${i}`, name: n, periodsPerWeek: 10 })),
+      periods: P5, workDays: DAYS5, requirements: [], subjectAllocations,
+    }
+  }
+
+  // 180 periods of demand against three teachers capped at 25 — 75 legal
+  // periods in total. The cap must hold and the rest must go unplaced.
+  const tight = tinySchool(true)
+  const tightOut: Any = solveTimetable(tight as Any)
+  const load: Record<string, number> = {}
+  let placedTight = 0
+  for (const sec of Object.keys(tightOut.classTT))
+    for (const d of Object.keys(tightOut.classTT[sec]))
+      for (const pid of Object.keys(tightOut.classTT[sec][d])) {
+        const cell = tightOut.classTT[sec][d][pid]
+        if (!cell?.subject) continue
+        placedTight++
+        if (cell.teacher) load[cell.teacher] = (load[cell.teacher] ?? 0) + 1
+      }
+  const broke = tight.staff.filter((st: Any) => (load[st.name] ?? 0) > st.maxPeriodsPerWeek)
+  check(broke.length === 0,
+    'INV11 the weekly cap holds even when demand is far past it',
+    broke.length
+      ? `over: ${broke.map((b: Any) => `${b.name} ${load[b.name]}/${b.maxPeriodsPerWeek}`).join(', ')}`
+      : `${placedTight} of 180 placed, nobody past their cap`)
+  check(placedTight > 0 && placedTight < 180,
+    'and it neither gives up nor pretends it filled the week',
+    `${placedTight} placed`)
+
+  // No staff at all: every lesson it places would have to invent a teacher.
+  const bare: Any = solveTimetable(tinySchool(false) as Any)
+  let withTeacher = 0
+  for (const sec of Object.keys(bare.classTT))
+    for (const d of Object.keys(bare.classTT[sec]))
+      for (const pid of Object.keys(bare.classTT[sec][d]))
+        if (bare.classTT[sec][d][pid]?.teacher) withTeacher++
+  check(withTeacher === 0,
+    'INV12 a school with no staff gets no lesson with a teacher on it',
+    withTeacher ? `${withTeacher} lessons carry an invented teacher` : 'none invented')
+}
 
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log('\n════ Summary ════')

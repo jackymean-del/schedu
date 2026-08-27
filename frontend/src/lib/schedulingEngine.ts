@@ -2282,6 +2282,7 @@ export function detectConflicts(
   classPeriods.forEach(p => {
     workDays.forEach(day => {
       const teacherMap: Record<string, string> = {}
+      const roomMap: Record<string, string> = {}
       // Track which sections share an optional block at this slot — they're
       // expected to have the same teachers and should NOT be flagged.
       const blockSlotIds: Record<string, string> = {} // sec -> blockId
@@ -2305,6 +2306,40 @@ export function detectConflicts(
             })
           } else {
             teacherMap[cell.teacher] = sec
+          }
+        }
+
+        // ── Two classes sent to the same room at the same time ──
+        //
+        // 'room-clash' has been in the Conflict union — and in the resolution
+        // wizard's label list — since the beginning, and nothing has ever
+        // produced one. Meanwhile the solver copies each section's HOME room
+        // onto every lesson without ever asking whether that room is free, so
+        // two sections sharing a room (a lab, a computer suite, any school
+        // with fewer rooms than classes) were quietly booked into it together,
+        // every period, with nothing anywhere saying so.
+        //
+        // Detecting is not the same as preventing: allocating rooms properly
+        // is a scheduling problem of its own and the solver does not attempt
+        // it yet. But an unflagged clash is one a timetabler discovers when
+        // two classes arrive at the same door.
+        if (cell?.room) {
+          const holder = roomMap[cell.room]
+          if (holder && holder !== sec) {
+            // Sections pooled into one optional block are MEANT to share a
+            // room — same exemption the teacher check above makes.
+            const pooled = blockSlotIds[sec] && blockSlotIds[holder] &&
+              blockSlotIds[sec] === blockSlotIds[holder]
+            if (!pooled) {
+              conflicts.push({
+                type: 'room-clash',
+                message: `${cell.room} double-booked: ${holder} & ${sec} on ${day} ${p.name}`,
+                day,
+                period: p.name,
+              })
+            }
+          } else if (!holder) {
+            roomMap[cell.room] = sec
           }
         }
       })
