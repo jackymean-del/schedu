@@ -651,6 +651,56 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     subjects.forEach(sub => { subjectCount[sec.name][sub.name] = 0 })
   })
 
+  // ── Venue tracking: a room holds one class at a time ────────────────────
+  //
+  // The solver used to write each section's HOME room onto every lesson and
+  // never ask whether it was free. For a school with a room per class that is
+  // correct by construction — but give two sections the same room, which is
+  // what a shared lab or a school with fewer rooms than classes looks like,
+  // and both were booked into it every period of the week.
+  //
+  // This does not attempt real venue allocation: no subject says "I need a
+  // lab" yet, and nothing is optimised. It does the one thing that is
+  // unambiguous — when the home room is already taken, use one that is free.
+  //
+  // When there is nowhere free (or the school has entered no rooms at all) it
+  // falls back to the home room, which is exactly the old behaviour. That
+  // keeps this strictly an improvement: a school that never had a clash sees
+  // byte-identical output, and one that did now gets it resolved where a room
+  // exists and FLAGGED by detectConflicts where none does.
+  const roomBusy: Record<string, Record<string, Set<string>>> = {}
+  workDays.forEach(d => {
+    roomBusy[d] = {}
+    classPeriods.forEach(cp => { roomBusy[d][cp.id] = new Set<string>() })
+  })
+
+  const roomPool = (input.rooms ?? [])
+    .map(r => ({
+      name: (r.actualName || r.name || r.generatedName || '').trim(),
+      capacity: Number(r.capacity ?? 0),
+    }))
+    .filter(r => r.name)
+
+  const seatsNeeded = (sec: Section): number => Number((sec as any).strength ?? 0)
+
+  /** A room for this section at these slots: its own if free, else the first
+   *  free one big enough, else its own anyway. Order is input order, so this
+   *  stays deterministic. */
+  const pickRoom = (sec: Section, day: string, pids: string[]): string => {
+    const home = (sec.room ?? '').trim()
+    const taken = (name: string) => pids.some(pid => roomBusy[day]?.[pid]?.has(name))
+    if (!home || !taken(home)) return home
+    const need = seatsNeeded(sec)
+    const free = roomPool.find(r =>
+      !taken(r.name) && (need <= 0 || r.capacity <= 0 || r.capacity >= need))
+    return free?.name ?? home
+  }
+
+  const holdRoom = (day: string, pids: string[], room: string) => {
+    if (!room) return
+    pids.forEach(pid => roomBusy[day]?.[pid]?.add(room))
+  }
+
   // ── Doc Part 1: per-(section, subject) target periods/week ──
   //   The allocation matrix is AUTHORITATIVE for a section once it has a row:
   //   a subject with no cell in that row is NOT taught there (target 0) — the
@@ -1024,12 +1074,14 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       const ct_state = (ctStaff as any)?.scope?.cells?.[day]?.[p.id] ?? 'allowed'
       if (sec_state === 'locked' || ct_state === 'locked') return
       if (ctKeys.every(k => !teacherBusy[k][day].has(p.id))) {
+        const ctRoom = pickRoom(sec, day, [p.id])
         classTT[sec.name][day][p.id] = {
           subject: ctSubject,
           teacher: ctName,
-          room: sec.room,
+          room: ctRoom,
           isClassTeacher: true,
         }
+        holdRoom(day, [p.id], ctRoom)
         ctKeys.forEach(k => teacherBusy[k][day].add(p.id))
         subjectCount[sec.name][ctSubject] = (subjectCount[sec.name][ctSubject] ?? 0) + 1
       }
@@ -1349,10 +1401,14 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
               spanPeriods.every(cp => !teacherBusy[tKey(teacher)][day].has(cp.id))
             if (allFree) {
+              // One room for the whole block — a class does not move mid-double.
+              const spanIds = spanPeriods.map(cp => cp.id)
+              const spanRoom = pickRoom(sec, day, spanIds)
               spanPeriods.forEach(cp => {
-                classTT[sec.name][day][cp.id] = { subject: chosenSub.name, teacher: teacher.name, teacherId: teacher.id, room: sec.room }
+                classTT[sec.name][day][cp.id] = { subject: chosenSub.name, teacher: teacher.name, teacherId: teacher.id, room: spanRoom }
                 teacherBusy[tKey(teacher)][day].add(cp.id)
               })
+              holdRoom(day, spanIds, spanRoom)
               subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + span
               placed = true
               break
@@ -1360,12 +1416,14 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             // Consecutive not available — fall through to single placement as graceful degradation
           }
 
+          const cellRoom = pickRoom(sec, day, [period.id])
           classTT[sec.name][day][period.id] = {
             subject: chosenSub.name,
             teacher: teacher.name,
             teacherId: teacher.id,
-            room: sec.room,
+            room: cellRoom,
           }
+          holdRoom(day, [period.id], cellRoom)
           teacherBusy[tKey(teacher)][day].add(period.id)
           subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + 1
           // ── AI trackers: bump load + record subject/section pairing ──
@@ -1460,9 +1518,11 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
     const put = (sec: any, sub: any, day: string, pid: string, st: any) => {
       ensureBusy(tKey(st))
+      const repairRoom = pickRoom(sec, day, [pid])
       classTT[sec.name][day][pid] = {
-        subject: sub.name, teacher: st.name, teacherId: st.id, room: sec.room,
+        subject: sub.name, teacher: st.name, teacherId: st.id, room: repairRoom,
       }
+      holdRoom(day, [pid], repairRoom)
       teacherBusy[tKey(st)][day].add(pid)
       subjectCount[sec.name][sub.name] = (subjectCount[sec.name][sub.name] ?? 0) + 1
       teacherWeeklyLoad[tKey(st)] = (teacherWeeklyLoad[tKey(st)] ?? 0) + 1
@@ -1478,6 +1538,12 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         teacherBusy[k]?.[day]?.delete(pid)
         teacherWeeklyLoad[k] = Math.max(0, (teacherWeeklyLoad[k] ?? 0) - 1)
       }
+      // The room goes back too. Lifting a lesson without releasing its venue
+      // leaves the slot marked occupied by a class that is no longer in it, so
+      // the very next placement finds the section's own room "taken" and sends
+      // it somewhere else — which is exactly what happened: three senior
+      // classes were moved into spare rooms while their own sat empty.
+      if (cell?.room) roomBusy[day]?.[pid]?.delete(cell.room)
       subjectCount[secName][cell.subject] = Math.max(0, (subjectCount[secName][cell.subject] ?? 0) - 1)
       return cell
     }

@@ -352,9 +352,57 @@ console.log(`\n════ Run 4: rooms ════`)
   }
   const found = detectConflicts(sharedOut.classTT, PERIODS)
     .filter((c: Any) => c.type === 'room-clash')
-  check(real > 0 && found.length === real,
-    'INV10b every room double-booking is reported',
+  check(found.length === real,
+    'INV10b every room double-booking that remains is reported',
     `${real} in the timetable, ${found.length} reported`)
+
+  // With spare rooms on hand the solver must RESOLVE the shared-room case,
+  // not merely report it: two sections given the same home room, and four
+  // free rooms to move into.
+  const spare = buildSchool(2)
+  spare.sections[0].room = 'LAB'
+  spare.sections[1].room = 'LAB'
+  const withRooms: Any = solveTimetable({
+    ...mk(spare),
+    rooms: [
+      { name: 'LAB', capacity: 60 },
+      { name: 'Spare A', capacity: 60 }, { name: 'Spare B', capacity: 60 },
+      { name: 'Spare C', capacity: 60 }, { name: 'Spare D', capacity: 60 },
+    ],
+  } as Any)
+  const leftover = detectConflicts(withRooms.classTT, PERIODS)
+    .filter((c: Any) => c.type === 'room-clash')
+  check(leftover.length === 0,
+    'INV10c given a free room, the solver moves the class instead of clashing',
+    leftover.length ? `${leftover.length} clashes left: ${leftover[0].message}` : 'all resolved')
+
+  // And a school that never had a clash must never be moved out of its own
+  // rooms. (Comparing whole timetables with and without a `rooms` list would
+  // prove nothing here — that list also feeds the learning-group splitter, so
+  // it changes other things for reasons that have nothing to do with venues.)
+  const normal = buildSchool(2)
+  const normalOut: Any = solveTimetable({
+    ...mk(normal),
+    rooms: [{ name: 'Spare A', capacity: 60 }, { name: 'Spare B', capacity: 60 }],
+  } as Any)
+  let moved = 0
+  const why: string[] = []
+  for (const sec of normal.sections) {
+    for (const day of WORK_DAYS) {
+      for (const pid of CLASS_PERIOD_IDS) {
+        const cell: Any = normalOut.classTT[sec.name]?.[day]?.[pid]
+        if (!cell?.subject || !cell.room || cell.room === sec.room) continue
+        // Optional blocks pool several sections into one venue on purpose —
+        // that is the block's room, not a section being displaced.
+        if (cell.optionalBlockId) continue
+        moved++
+        if (why.length < 3) why.push(`${sec.name} ${day} ${pid} → ${cell.room} (block=${!!cell.optionalBlockId})`)
+      }
+    }
+  }
+  check(moved === 0,
+    'INV10d a class with its own free room is never moved out of it',
+    moved ? `${moved} reassigned: ${why.join('; ')}` : 'every lesson stayed home')
 }
 
 // ── INV11/INV12: what the solver does when it CANNOT satisfy the request ───
