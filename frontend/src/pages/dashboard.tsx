@@ -32,6 +32,7 @@ import { DashboardPulse } from '@/components/DashboardPulse'
 import { useLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary } from '@/lib/scheduleToday'
 import { loadActiveBundles, computeMultiToday } from '@/lib/activeSchedules'
+import { detectConflicts } from '@/lib/schedulingEngine'
 import {
   Home, CalendarDays, Calendar, BarChart2,
   Users, Database, Settings,
@@ -1386,6 +1387,12 @@ export function DashboardPage() {
   // Wait for auth to resolve before deciding — otherwise a fresh load (or the
   // OAuth return) briefly sees no user and flashes the login form. Show the
   // branded loader until Clerk has loaded, then redirect only if truly signed out.
+  // Above the auth gate, with the other hooks — see the note on that gate.
+  const conflictCount = useMemo(
+    () => detectConflicts(store.classTT ?? {}, store.periods ?? []).length,
+    [store.classTT, store.periods],
+  )
+
   if (!authReady) return <BrandedLoader label="Loading your dashboard…" />
   if (!user) { window.location.href = '/login'; return null }
 
@@ -1399,7 +1406,18 @@ export function DashboardPage() {
   // user actually has timetables; otherwise show a clean empty state. This is
   // deterministic (no dependency on the async list fetch / store reset).
   const hasTimetables = ttList.length > 0
-  const conflicts     = hasTimetables ? (store.conflicts ?? []).length : 0
+  const conflicts = hasTimetables ? conflictCount : 0
+  // Counted from the timetable itself, not from store.conflicts.
+  //
+  // `conflicts` is in the per-schedule SNAPSHOT list but deliberately not in
+  // the store's persist partialize, and loadActiveTimetableIntoStore no-ops
+  // once classTT has rehydrated — so after any plain reload the stored array
+  // was empty and this tile read "0 conflicts" for a timetable that had them.
+  // A false all-clear is the worst number this dashboard can show.
+  //
+  // Deriving also keeps it honest after an edit: a stored count goes stale the
+  // moment a lesson is dragged, the same reason the review dashboard counts
+  // teacher load from classTT rather than from the solver's own tally.
 
   // "Today" stats — actionable, day-specific numbers (what's running, who's
   // out, what still needs a sub) instead of static institution-wide counts
