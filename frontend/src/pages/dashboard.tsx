@@ -1390,8 +1390,11 @@ export function DashboardPage() {
   // branded loader until Clerk has loaded, then redirect only if truly signed out.
   // Above the auth gate, with the other hooks — see the note on that gate.
   const conflictCount = useMemo(
-    () => detectConflicts(store.classTT ?? {}, store.periods ?? []).length,
-    [store.classTT, store.periods],
+    () => detectConflicts(store.classTT ?? {}, store.periods ?? [], {
+      sections: store.sections ?? [],
+      rooms: store.rooms ?? [],
+    }).length,
+    [store.classTT, store.periods, store.sections, store.rooms],
   )
 
   if (!authReady) return <BrandedLoader label="Loading your dashboard…" />

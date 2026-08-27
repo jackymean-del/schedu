@@ -405,6 +405,47 @@ console.log(`\n════ Run 4: rooms ════`)
     moved ? `${moved} reassigned: ${why.join('; ')}` : 'every lesson stayed home')
 }
 
+// ── INV13: a class too big for its room ────────────────────────────────────
+//
+// 'capacity-exceeded' was declared in the Conflict union, labelled in the
+// resolution wizard, and never produced — the third type in that state. The
+// numbers were always there: a section carries its strength, a room its
+// capacity. Now that the solver picks rooms, the pairing is worth checking.
+console.log(`
+════ Run 6: room capacity ════`)
+{
+  const capSchool = buildSchool(2)
+  capSchool.sections.forEach((sec: Any, i: number) => { sec.strength = i === 0 ? 45 : 20 })
+  const rooms = capSchool.sections.map((sec: Any) => ({ name: sec.room, capacity: 30 }))
+  const capOut: Any = solveTimetable({
+    sections: capSchool.sections, staff: capSchool.staff, subjects: capSchool.subjects,
+    periods: PERIODS, workDays: WORK_DAYS, requirements: [],
+    subjectAllocations: capSchool.subjectAllocations, rooms,
+  } as Any)
+
+  const over = detectConflicts(capOut.classTT, PERIODS, { sections: capSchool.sections, rooms })
+    .filter((c: Any) => c.type === 'capacity-exceeded')
+  const big = capSchool.sections[0].name
+  check(over.length > 0 && over.every((c: Any) => c.message.includes(big)),
+    'INV13a the class of 45 in a room for 30 is reported',
+    over.length ? over[0].message : 'nothing reported')
+
+  // Once per pairing, not once per period — forty duplicates would bury every
+  // other conflict in the list.
+  check(over.length === new Set(over.map((c: Any) => c.message)).size && over.length <= 2,
+    'INV13b reported once per class-and-room, not once per lesson',
+    `${over.length} entries`)
+
+  // The class of 20 in the same size room must raise nothing.
+  check(!over.some((c: Any) => c.message.startsWith(capSchool.sections[1].name)),
+    'INV13c a class that fits raises nothing')
+
+  // And a caller with no roster gets exactly what it always got.
+  check(detectConflicts(capOut.classTT, PERIODS)
+    .filter((c: Any) => c.type === 'capacity-exceeded').length === 0,
+    'INV13d without a roster the check stays silent rather than guessing')
+}
+
 // ── INV11/INV12: what the solver does when it CANNOT satisfy the request ───
 //
 // Both of these are about refusing to lie. Under-resourced schools are the

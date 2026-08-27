@@ -1407,8 +1407,11 @@ export function TimetablePage() {
   // teacherTT on every drag, drop and delete but never recomputed conflicts,
   // so the count went stale the moment anyone touched the grid.
   const conflicts = useMemo(
-    () => detectConflicts(classTT, periods),
-    [classTT, periods],
+    () => detectConflicts(classTT, periods, {
+      sections,
+      rooms: (store as any).rooms ?? [],
+    }),
+    [classTT, periods, sections, store],
   )
 
   const cwBreaksGlobal = useMemo(

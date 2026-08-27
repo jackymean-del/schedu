@@ -2390,7 +2390,14 @@ export function generateSuggestions(
 // Derives workDays from the classTT keys so no extra parameter needed.
 export function detectConflicts(
   classTT: ClassTimetable,
-  periods: Period[]
+  periods: Period[],
+  /** Optional roster. Given both, a class too big for the room it is in is
+   *  reported as well — see the capacity pass at the end. Callers without the
+   *  roster to hand get exactly what they got before. */
+  opts?: {
+    sections?: Array<{ name: string; strength?: number }>
+    rooms?: Array<{ name?: string; actualName?: string; generatedName?: string; capacity?: number }>
+  },
 ): Conflict[] {
   const conflicts: Conflict[] = []
   const classPeriods = periods.filter(p => p.type === 'class')
@@ -2467,6 +2474,53 @@ export function detectConflicts(
       })
     })
   })
+
+  // ── A class that does not fit the room it has been given ────────────────
+  //
+  // 'capacity-exceeded' was the third conflict type the app declared, gave a
+  // label to in the resolution wizard, and never once produced. It is worth
+  // producing now that the solver actually chooses rooms: the numbers needed
+  // are already on the roster — a section carries its strength, a room its
+  // capacity — and forty-five children in a room for thirty is discovered on
+  // the day otherwise.
+  //
+  // Reported once per (class, room) pairing rather than per slot. The mismatch
+  // is a property of the pairing; emitting it for all forty periods a class
+  // spends in that room would bury every other conflict.
+  if (opts?.sections?.length && opts?.rooms?.length) {
+    const seats = new Map<string, number>()
+    for (const r of opts.rooms) {
+      const name = (r.actualName || r.name || r.generatedName || '').trim()
+      const cap = Number(r.capacity ?? 0)
+      if (name && cap > 0) seats.set(name, cap)
+    }
+    const heads = new Map<string, number>()
+    for (const sec of opts.sections) {
+      const n = Number(sec.strength ?? 0)
+      if (sec.name && n > 0) heads.set(sec.name, n)
+    }
+
+    const seen = new Set<string>()
+    for (const [secName, secData] of Object.entries(classTT)) {
+      const strength = heads.get(secName)
+      if (!strength) continue
+      for (const dayData of Object.values(secData ?? {})) {
+        for (const cell of Object.values(dayData ?? {})) {
+          const room = (cell as any)?.room?.trim()
+          if (!room || !(cell as any)?.subject) continue
+          const cap = seats.get(room)
+          if (!cap || strength <= cap) continue
+          const key = `${secName}|${room}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          conflicts.push({
+            type: 'capacity-exceeded',
+            message: `${secName} has ${strength} students but ${room} seats ${cap}`,
+          })
+        }
+      }
+    }
+  }
 
   return conflicts
 }
