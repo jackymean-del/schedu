@@ -19,6 +19,7 @@
  */
 
 import { DEFAULT_WORK_DAYS } from '@/lib/days'
+import { mergePreservingManual } from '@/lib/periodAllocationEngine'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 
@@ -1191,6 +1192,9 @@ export function AllocationGridAG({
   // Projects AG Grid selection into engine state.
   // Also computes the status bar (cell count, period sum, average).
   const [statusBar, setStatusBar] = useState<{ cells: number; periods: number; avg: number } | null>(null)
+  /** How many hand-typed cells the last Suggest left alone. A merge that looks
+   *  identical to a replace is no more trustworthy than the replace was. */
+  const [keptManual, setKeptManual] = useState(0)
 
   const onCellSelectionChanged = useCallback((e: CellSelectionChangedEvent<RowData>) => {
     window.getSelection()?.removeAllRanges()
@@ -1396,8 +1400,27 @@ export function AllocationGridAG({
       if (Object.keys(row).length) next[sec.name] = row
     })
 
-    allocationsRef.current = next
-    store.setSubjectAllocations?.(next)
+    // Hand-typed cells survive the suggestion.
+    //
+    // This built `next` from an empty object and wrote it over everything, so
+    // Suggest wiped every figure a person had entered — including the ones
+    // pasted in, whose own handler carries a comment saying marking them
+    // manual would stop exactly that. It marked them; nothing here read the
+    // marks. The wizard's version of this same button has always merged
+    // ("Re-derive, but never at the cost of somebody's hand-tuned cells"), so
+    // the identical action kept your work on one screen and discarded it on
+    // the other.
+    //
+    // Merging also protects the SYNTAX, since it keeps the original string: a
+    // suggestion can only ever emit a plain count, so "2s=2p" would otherwise
+    // have been flattened here as well.
+    const { grid, kept } = mergePreservingManual(
+      next, allocationsRef.current ?? {}, manualRef.current ?? {},
+    )
+    allocationsRef.current = grid
+    store.setSubjectAllocations?.(grid)
+    setKeptManual(kept)
+    if (kept > 0) window.setTimeout(() => setKeptManual(0), 6000)
     requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
   }, [store, subjects, gridContext])
 
@@ -1568,6 +1591,15 @@ export function AllocationGridAG({
             </span>
           ))}
         </div>
+        {keptManual > 0 && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '2px 8px', borderRadius: 4, background: '#F0FDF4',
+            border: '1px solid #BBF7D0', color: '#067647', fontSize: 10, fontWeight: 700,
+          }}>
+            ✓ kept {keptManual} of your edit{keptManual > 1 ? 's' : ''}
+          </span>
+        )}
         {statusBar && (
           <div style={{ display: 'flex', gap: 10, fontSize: 10, color: '#5A52D5', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>
             <span>{statusBar.cells} cells</span>
