@@ -871,7 +871,6 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
   onScopeClick?:     (sub: Subject, rect: DOMRect) => void
 }) {
   const [expandSlots,    setExpandSlots]    = useState(false)
-  const [expandSettings, setExpandSettings] = useState(false)
 
   const assignedClasses = getAssignedClasses(sub)
 
@@ -1127,7 +1126,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
         <td style={{ ...TD, whiteSpace: 'nowrap' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
             <button
-              onClick={() => { setExpandSlots(o => !o); setExpandSettings(false) }}
+              onClick={() => setExpandSlots(o => !o)}
               style={{
                 ...actionBtn, minWidth: 0, gap: 4, padding: '5px 10px',
                 ...(expandSlots ? { background: P_L, color: P_D, borderColor: P_B } : {}),

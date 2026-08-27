@@ -149,11 +149,7 @@ func main() {
 	api.Get("/timetables/:id", h.GetTimetable)
 	api.Put("/timetables/:id", h.UpdateTimetable)
 	api.Delete("/timetables/:id", h.DeleteTimetable)
-	api.Post("/timetables/generate", h.GenerateTimetable)
-	api.Post("/timetables/:id/export", h.ExportTimetable)
-	api.Post("/timetables/:id/substitute", h.Substitute)
 	api.Post("/timetables/share", h.CreateShare)
-	api.Get("/org-config", h.GetOrgConfig)
 
 	// --- Curriculum routes ---
 	cur := handlers.NewCurriculumHandlerFromHandler(h)

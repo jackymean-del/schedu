@@ -987,7 +987,6 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
   const [collapsedGroups,  setCollapsedGroups]  = useState<Set<string>>(new Set())
   const [collapsedGrades,  setCollapsedGrades]  = useState<Set<string>>(new Set())
   const [collapsedStreams,  setCollapsedStreams]  = useState<Set<string>>(new Set())
-  const [editingStreamKey, setEditingStreamKey] = useState<string | null>(null) // "grade:stream"
 
   // All unique stream names in use — used for autocomplete everywhere
   const existingStreams = useMemo(() =>
@@ -1047,7 +1046,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
   // Rename within one grade (used by inline header edit)
   function renameStream(grade: string, oldStream: string, newName: string) {
     const trimmed = newName.trim()
-    if (!trimmed || trimmed === oldStream) { setEditingStreamKey(null); return }
+    if (!trimmed || trimmed === oldStream) return
     undoHistory.push(sections)
     setSections(sections.map(s => {
       const sec = s as SectionExt
@@ -1056,7 +1055,6 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
       if (g === grade && st === oldStream) return { ...s, stream: trimmed } as Section
       return s
     }) as Section[])
-    setEditingStreamKey(null)
   }
 
   // Rename across ALL grades (used by the StreamsBar at the top)

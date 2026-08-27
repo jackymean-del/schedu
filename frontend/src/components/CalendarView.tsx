@@ -780,13 +780,12 @@ export function CalendarView({
   const [dragSrc,         setDragSrc]         = useState<{section:string;day:string;periodId:string}|null>(null)
   const [dragSrcEntity,   setDragSrcEntity]   = useState<string|null>(null)  // matrix: row (entity) where drag started
   const [dragOverKey,     setDragOverKey]     = useState<string|null>(null)
-  const [dragOverDst,     setDragOverDst]     = useState<{section:string;day:string;periodId:string}|null>(null)
   const [conflictWarning, setConflictWarning] = useState<string|null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   const clearDrag = useCallback(()=>{
     setDragSrcKey(null); setDragSrc(null); setDragSrcEntity(null)
-    setDragOverKey(null); setDragOverDst(null)
+    setDragOverKey(null)
     setTooltip(null)
   },[])
 
@@ -1374,8 +1373,8 @@ export function CalendarView({
           <DropZone key={`dz-${b.key}`} block={b}
             dayKey={dayKey} left={bLeft} width={bWidth} rowH={rowH} compact={compact}
             isOver={isOver} conflict={conflict}
-            onDragOver={(_sec,_d,_p)=>{ setDragOverKey(b.key); setDragOverDst({section:dropSection,day:dayKey,periodId:b.periodId}) }}
-            onDragLeave={()=>{ if(dragOverKey===b.key){ setDragOverKey(null); setDragOverDst(null) } }}
+            onDragOver={()=>{ setDragOverKey(b.key) }}
+            onDragLeave={()=>{ if(dragOverKey===b.key){ setDragOverKey(null) } }}
             onConflictDrop={(reason)=>{ clearDrag(); setConflictWarning(reason) }}
             onDrop={(_sec,_d,_p)=>{
               if(dragSrc && onCellSwap) {
