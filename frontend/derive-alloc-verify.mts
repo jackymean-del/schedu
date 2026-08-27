@@ -1,5 +1,5 @@
 /* Verifies deriveTeacherAllocations — the backward-sync helper. Run: npx tsx derive-alloc-verify.mts */
-import { deriveTeacherAllocations, deriveSubjectAllocations } from './src/lib/schedulingEngine'
+import { deriveTeacherAllocations, deriveSubjectAllocations, mergeDerivedAllocations } from './src/lib/schedulingEngine'
 import type { ClassTimetable } from './src/types'
 
 let fail = 0
@@ -53,6 +53,42 @@ ok(sa['VI-A']?.['Science'] === '2', 'subjectAlloc: VI-A Science = "2"')
 ok(sa['VI-B']?.['English'] === '1' && sa['VI-B']?.['Mathematics'] === '1', 'subjectAlloc: VI-B English & Maths = "1"')
 const saG = deriveSubjectAllocations(ttG)
 ok(saG['XI-A']?.['Physics'] === '1' && saG['XI-A']?.['Biology'] === '1', 'subjectAlloc: group cell counts each subject')
+
+
+// ── Backward Sync must not flatten what the school typed ───────────────────
+//
+// deriveSubjectAllocations counts cells, so it can only return a plain number.
+// The matrix is richer: "2s=2p" is two DOUBLE periods, which is what a lab
+// needs, and "4" is four singles. Writing the counts straight over the matrix
+// destroyed that, silently, and it surfaced at the next generation with the
+// lab split across four days.
+console.log('')
+console.log('── backward sync: merge, do not flatten ──')
+{
+  const typed = { 'VI-A': { Science: '2s=2p', Maths: '4', Art: '2' } }
+
+  // Same totals — nothing drifted, so nothing should be rewritten.
+  const same = mergeDerivedAllocations(typed, { 'VI-A': { Science: '4', Maths: '4', Art: '2' } })
+  ok(same['VI-A'].Science === '2s=2p', 'a double-period cell survives a sync that agrees with it', same['VI-A'].Science)
+  ok(same['VI-A'].Maths === '4' && same['VI-A'].Art === '2', 'plain cells are untouched')
+
+  // A real drift — the timetable now holds six periods, not four.
+  const drifted = mergeDerivedAllocations(typed, { 'VI-A': { Science: '6', Maths: '4', Art: '2' } })
+  ok(drifted['VI-A'].Science === '6', 'a cell whose total really changed IS updated', drifted['VI-A'].Science)
+
+  // The solver could not place Art at all. Rewriting the plan to match a
+  // failure would quietly reduce what the school asked for to what it got.
+  const short = mergeDerivedAllocations(typed, { 'VI-A': { Science: '4', Maths: '4' } })
+  ok(short['VI-A'].Art === '2', 'a subject the solver could not place keeps its planned figure', short['VI-A'].Art)
+
+  // A subject taught but never planned should appear.
+  const extra = mergeDerivedAllocations(typed, { 'VI-A': { Science: '4', Maths: '4', Art: '2', Music: '1' } })
+  ok(extra['VI-A'].Music === '1', 'a subject new to the timetable is added')
+
+  // No prior plan at all: take everything.
+  const fresh = mergeDerivedAllocations(undefined, { 'VII-B': { Maths: '5' } })
+  ok(fresh['VII-B'].Maths === '5', 'with no plan to protect, the derived figures are used')
+}
 
 console.log(fail === 0 ? '\nALL DERIVE-ALLOC CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

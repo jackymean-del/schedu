@@ -1897,6 +1897,62 @@ export function deriveTeacherAllocations(
  * plain period counts). Pairs with deriveTeacherAllocations so a "Backward Sync"
  * reconciles BOTH the faculty matrix and the class/period plan to the timetable.
  */
+/**
+ * Fold a timetable-derived allocation back onto the one the school typed,
+ * WITHOUT flattening what they wrote.
+ *
+ * deriveSubjectAllocations counts cells, so it can only ever return a plain
+ * number. The allocation matrix is richer than that: "2s=2p" means two DOUBLE
+ * periods — the thing a lab needs — and "4" means four singles. Backward Sync
+ * used to write the derived counts straight over the matrix, so a school that
+ * had asked for doubles got "4" back, silently, and discovered it at the next
+ * generation when the lab was split across four separate days.
+ *
+ * The rule here is that a cell is only rewritten when its TOTAL actually
+ * changed. If the timetable still holds four periods of Science, "2s=2p" is
+ * still a true description of four periods and is left exactly as written. It
+ * is replaced only when the count genuinely drifted, which is the case Backward
+ * Sync exists for.
+ *
+ * Subjects the plan has but the timetable does not are left alone too. A
+ * subject can be missing because the solver could not place it — baking that
+ * failure into the plan would quietly reduce what the school asked for to what
+ * it happened to get.
+ */
+export function mergeDerivedAllocations(
+  existing: Record<string, Record<string, string>> | undefined,
+  derived: Record<string, Record<string, string>>,
+): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {}
+  const prev = existing ?? {}
+
+  for (const sec of new Set([...Object.keys(prev), ...Object.keys(derived)])) {
+    const prevRow = prev[sec] ?? {}
+    const newRow = derived[sec] ?? {}
+    const row: Record<string, string> = {}
+
+    for (const sub of new Set([...Object.keys(prevRow), ...Object.keys(newRow)])) {
+      const typed = prevRow[sub]
+      const counted = newRow[sub]
+
+      // In the plan but nowhere in the timetable — keep what was asked for.
+      if (counted === undefined) {
+        if (typed !== undefined) row[sub] = typed
+        continue
+      }
+      // New in the timetable — take the count.
+      if (typed === undefined) { row[sub] = counted; continue }
+
+      const before = parseAllocation(typed)
+      // Same total: what they wrote still describes the timetable. Keep it,
+      // syntax and all.
+      row[sub] = before.valid && before.weeklyTotal === Number(counted) ? typed : counted
+    }
+    out[sec] = row
+  }
+  return out
+}
+
 export function deriveSubjectAllocations(
   classTT: ClassTimetable,
 ): Record<string, Record<string, string>> {

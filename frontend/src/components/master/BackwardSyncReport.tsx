@@ -15,7 +15,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
-import { deriveTeacherAllocations, deriveSubjectAllocations } from '@/lib/schedulingEngine'
+import { deriveTeacherAllocations, deriveSubjectAllocations, mergeDerivedAllocations } from '@/lib/schedulingEngine'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
 import { useWorkloadLimits } from '@/store/workloadLimits'
 import type { ClassTimetable, Section, Staff } from '@/types'
@@ -73,7 +73,13 @@ export function BackwardSyncReport({
   const doBackwardSync = () => {
     const s = useTimetableStore.getState() as any
     s.setTeacherAllocations?.(deriveTeacherAllocations(classTT))
-    s.setSubjectAllocations?.(deriveSubjectAllocations(classTT))
+    // Folded onto what the school typed rather than written over it: a cell is
+    // only replaced where its total actually changed, so "2s=2p" survives a
+    // sync that still counts four periods of Science. See
+    // mergeDerivedAllocations for why writing the raw counts loses doubles.
+    s.setSubjectAllocations?.(
+      mergeDerivedAllocations(s.subjectAllocations, deriveSubjectAllocations(classTT)),
+    )
     setSynced(true)
   }
 
