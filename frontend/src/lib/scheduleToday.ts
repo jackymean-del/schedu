@@ -113,20 +113,47 @@ export function computeTodaySummary(params: {
     for (const s of sections) {
       const sd = classTT[s.name]?.[dayKey] ?? {}
       for (const p of periods) {
-        const c = sd[p.id]
-        if (!c?.subject || !c.teacher || !onLeaveSet.has(c.teacher)) continue
+        const c = sd[p.id] as any
+        if (!c?.subject) continue
+
+        // Everyone teaching in this cell, not just the cell-level teacher.
+        //
+        // An OR/AND cell runs parallel subjects in one slot and names a
+        // teacher PER SUBJECT in groupAssignments, mirroring only the first
+        // into `teacher`. Checking that copy meant an absent teacher taking a
+        // LATER group was never listed as needing cover at all: the group sat
+        // with nobody in front of it, and the console that exists to catch
+        // exactly that said the day was fine.
+        const inCell: Array<{ teacher: string; subject: string }> = c.groupAssignments?.length
+          ? c.groupAssignments
+              .filter((g: any) => g.teacher)
+              .map((g: any) => ({ teacher: g.teacher, subject: g.subject ?? c.subject }))
+          : (c.teacher ? [{ teacher: c.teacher, subject: c.subject }] : [])
+
+        const away = inCell.filter(x => onLeaveSet.has(x.teacher))
+        if (!away.length) continue
+
         const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
-        const coveredBy = substitutions[subKey(s.name, isoDate, p.id)]
-        const slot: AffectedSlot = {
-          teacher: c.teacher, section: s.name, subject: c.subject,
-          periodId: p.id, periodName: p.name ?? p.id,
-          startMin: t.startMin, endMin: t.endMin, coveredBy,
-        }
-        if (coveredBy) {
-          coveredSlots.push(slot)
-        } else {
-          uncoveredSlots.push(slot)
-          uncoveredByPeriod[p.id] = (uncoveredByPeriod[p.id] ?? 0) + 1
+        // The overlay is keyed section|date|period, with no room for WHICH
+        // group a cover belongs to. So a recorded cover can only be trusted
+        // when a single teacher in the cell is away; with two away it cannot
+        // say which one was replaced, and calling both covered would hide a
+        // class that still has nobody.
+        const recorded = substitutions[subKey(s.name, isoDate, p.id)]
+        const coveredBy = away.length === 1 ? recorded : undefined
+
+        for (const who of away) {
+          const slot: AffectedSlot = {
+            teacher: who.teacher, section: s.name, subject: who.subject,
+            periodId: p.id, periodName: p.name ?? p.id,
+            startMin: t.startMin, endMin: t.endMin, coveredBy,
+          }
+          if (coveredBy) {
+            coveredSlots.push(slot)
+          } else {
+            uncoveredSlots.push(slot)
+            uncoveredByPeriod[p.id] = (uncoveredByPeriod[p.id] ?? 0) + 1
+          }
         }
       }
     }

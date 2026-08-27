@@ -2830,6 +2830,53 @@ ok(hlRun([{ date: '2026-08-18', name: 'I-B trip', sections: ['I-B'] }]) === 3,
 // Holidays outside the leave must not move the figure at all.
 ok(hlRun([{ date: '2026-08-21', name: 'Later holiday' }]) === 3, 'a closure outside the absence changes nothing')
 ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ignored rather than throwing')
+// ── An absent teacher in a PARALLEL group still needs cover ────────────────
+//
+// An OR/AND cell runs parallel subjects in one slot and names a teacher per
+// subject in groupAssignments, mirroring only the first into `teacher`. The
+// day summary checked that copy — so a teacher who was away and took a LATER
+// group was never listed as needing cover. The group sat with nobody in front
+// of it and the console that exists to catch exactly that reported a clear day.
+{
+  const { computeTodaySummary: cts } = await import('./src/lib/scheduleToday.ts')
+  const parPeriods: any[] = [{ id: 'p1', name: 'P1', duration: 40, type: 'class' }]
+  const parSections: any[] = [{ name: 'VI-A' }]
+  const parallelCell = (aTeacher: string, bTeacher: string) => ({
+    'VI-A': { MONDAY: { p1: {
+      subject: 'Maths', teacher: aTeacher, room: 'R1',
+      groupAssignments: [
+        { subject: 'Maths', teacher: aTeacher },
+        { subject: 'Art', teacher: bTeacher },
+      ],
+    } } },
+  })
+  const run = (classTT: any, subs: Record<string, string>, away: string[]) => cts({
+    periods: parPeriods, sections: parSections, classTT,
+    config: { startTime: '09:00', workDays: ['MONDAY'] },
+    substitutions: subs,
+    leaves: away.map(t => ({ teacher: t, date: '2026-08-24' })) as any,
+    conflicts: [], date: new Date('2026-08-24T10:00:00'),
+  } as any) as any
+
+  const second = run(parallelCell('Rao', 'Devi'), {}, ['Devi'])
+  ok((second.uncoveredSlots ?? []).length === 1,
+    'a teacher away in the SECOND group of a parallel cell is listed as needing cover')
+  ok((second.uncoveredSlots?.[0]?.subject) === 'Art',
+    'and the slot names the group they actually teach, not the first subject')
+
+  // One cover key per (section, date, period) cannot say WHICH group it
+  // replaced. With two away it must not claim both are covered.
+  const bothAway = run(parallelCell('Rao', 'Devi'), { 'VI-A|2026-08-24|p1': 'Iyer' }, ['Rao', 'Devi'])
+  ok((bothAway.uncoveredSlots ?? []).length === 2,
+    'with both group teachers away, one recorded cover does not mark both covered')
+
+  // The ordinary single-teacher cell must behave exactly as before.
+  const plain = run({ 'VI-A': { MONDAY: { p1: { subject: 'Maths', teacher: 'Rao' } } } },
+    { 'VI-A|2026-08-24|p1': 'Iyer' }, ['Rao'])
+  ok((plain.coveredSlots ?? []).length === 1 && (plain.uncoveredSlots ?? []).length === 0,
+    'a plain cell with a recorded cover still counts as covered')
+}
+
 // ── No component may call a hook after it can return early ──
 // React counts hooks per render. A hook below an early return runs on some
 // renders and not others, and React kills the whole page with "rendered more
