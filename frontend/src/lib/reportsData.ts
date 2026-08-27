@@ -6,6 +6,7 @@
  * not (a cancelled lesson). Trends, leave-type splits, and faculty/class
  * summaries all fall out of that same expansion.
  */
+import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, leaveCoversDate } from './leaveUtils'
 import { subKey } from './substitutionKeys'
 import { DAY_KEY, toISODate } from './scheduleToday'
@@ -99,12 +100,15 @@ export function computeReports(params: {
 
   // Per-source period → wall-clock minutes (each schedule has its own bell).
   const srcTimes = sources.map(src => {
-    const [sh = 9, sm = 0] = (src.config?.startTime ?? '09:00').split(':').map(Number)
+    // The schedule's own bell, not a running total of durations — a day with
+    // an assembly or a lunch row is longer than its teaching periods add up
+    // to, and every figure after one lands early otherwise. Falls back to the
+    // same cumulative sum when a schedule has no bell rows.
+    const bell = schedulePeriodTimes(src.config, src.periods, src.sections ?? [])
     const map: Record<string, { startMin: number; endMin: number; name: string }> = {}
-    let mins = sh * 60 + sm
     for (const p of src.periods) {
-      map[p.id] = { startMin: mins, endMin: mins + (p.duration ?? 45), name: p.name ?? p.id }
-      mins += p.duration ?? 45
+      const t = bell.get(p.id)
+      if (t) map[p.id] = { startMin: t.startMin, endMin: t.endMin, name: p.name ?? p.id }
     }
     return map
   })

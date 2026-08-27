@@ -99,4 +99,49 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
   if (!monotonic || !ppFirst) fails++
 }
 
+// ── The clock must come from the bell, never from adding up durations ──────
+//
+// A day that holds an assembly, a lunch or a dispersal is longer than its
+// teaching periods add up to, so summing `duration` from config.startTime puts
+// every period after one of those rows early — measured at an hour by the
+// third period of an ordinary morning.
+//
+// That is not a cosmetic label. lib/activeSchedules decides whether two
+// classes are in one room AT THE SAME TIME from these numbers, so a drifting
+// clock invents overlaps that do not exist and misses ones that do; Reports
+// attributes periods to the wrong part of the day for the same reason. Both
+// re-implemented the sum privately instead of calling bellTimes, which is why
+// this guard is on the SOURCE: the next surface that needs period → clock will
+// be written by someone who has never read that note.
+{
+  const { readFileSync: rf } = await import('node:fs')
+  const { globSync: gs } = await import('node:fs')
+  const stripComments = (t: string) =>
+    t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+  const offenders: string[] = []
+  for (const file of gs('src/**/*.{ts,tsx}')) {
+    const norm = file.split('\\').join('/')
+    // bellTimes IS the implementation; CalendarView builds a duration-summed
+    // base and then overrides it with bell rows, which is deliberate and
+    // documented at the call site.
+    if (norm.endsWith('lib/bellTimes.ts')) continue
+    const src = stripComments(rf(file, 'utf8'))
+    const readsStart = /startTime\s*\?\?\s*["'][0-9]{2}:[0-9]{2}["']/.test(src)
+    const addsDurations = /\+=\s*\(?\s*p\.duration|\+=\s*p\.duration|duration\s*\?\?\s*45/.test(src)
+    // The rule is not "never add durations up" — that IS the fallback for a
+    // schedule with no bell, and bellTimes does it too. The rule is that the
+    // bell must be consulted FIRST. A file that never mentions it, and adds
+    // durations up from the start time, is computing a clock that drifts.
+    // (routes/timetable.tsx keeps its own bell-first resolver with a naive
+    // fallback, so it passes here — that duplication is worth collapsing into
+    // lib/bellTimes one day, but it is not the drift this guards against.)
+    const consultsBell = /bellTimes|bellSchedules|bellScheduleForSection|schedulePeriodTimes|sectionPeriodTimes/.test(src)
+    if (readsStart && addsDurations && !consultsBell) offenders.push(norm.split('src/')[1] ?? norm)
+  }
+  const ok = offenders.length === 0
+  console.log(`${ok ? '✓' : '✗'} period → clock goes through lib/bellTimes everywhere${
+    ok ? '' : ` — re-summed privately in: ${offenders.join(', ')}`}`)
+  if (!ok) fails++
+}
+
 process.exit(fails ? 1 : 0)

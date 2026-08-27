@@ -12,6 +12,7 @@ import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { rebuildTeacherTT } from "@/lib/aiEngine"
+import { schedulePeriodTimes } from "@/lib/bellTimes"
 import { detectConflicts } from "@/lib/schedulingEngine"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
@@ -27,20 +28,23 @@ const DAY_SHORT: Record<string,string> = {
 }
 
 // ── Time calculator ────────────────────────────────────────
-function calcTimes(periods: any[], config: any): Map<string,{start:string;end:string}> {
+// Formats the clock shown beside each period. The MINUTES come from the
+// school's bell (lib/bellTimes) — adding durations up from the start time puts
+// every period after an assembly or a lunch early, by an hour by mid-morning —
+// and this only turns them into 12- or 24-hour text.
+function calcTimes(periods: any[], config: any, sections: any[] = []): Map<string,{start:string;end:string}> {
   const map = new Map<string,{start:string;end:string}>()
-  const [sh, sm] = (config.startTime ?? "09:00").split(":").map(Number)
-  let mins = sh*60+sm
-  const fmt = (h: number, m: number) => {
+  const bell = schedulePeriodTimes(config, periods, sections)
+  const fmt = (mins: number) => {
+    const h = Math.floor(mins/60), m = mins%60
     if ((config.timeFormat ?? "12h") === "24h") return h.toString().padStart(2,"0")+":"+m.toString().padStart(2,"0")
     const ap = h>=12?"PM":"AM", h12 = h%12||12
     return h12+":"+(m.toString().padStart(2,"0"))+" "+ap
   }
   periods.forEach((p: any) => {
-    const h=Math.floor(mins/60), m=mins%60
-    const start=fmt(h,m); mins+=p.duration
-    const eh=Math.floor(mins/60), em=mins%60
-    map.set(p.id,{start,end:fmt(eh,em)})
+    const t = bell.get(p.id)
+    if (!t) return
+    map.set(p.id,{ start: fmt(t.startMin), end: fmt(t.endMin) })
   })
   return map
 }
@@ -1383,9 +1387,9 @@ export function TimetablePage() {
   // ── Memoized derived values — avoid recomputation on every render ──────────
   // These are recomputed only when their actual data dependencies change,
   // NOT on drag-state changes (dragOverCell / dragItem), which fire 60fps.
-  const periodTimes  = useMemo(() => calcTimes(periods, activeBlock ? { ...config, startTime: activeBlock.startTime } : config),
+  const periodTimes  = useMemo(() => calcTimes(periods, activeBlock ? { ...config, startTime: activeBlock.startTime } : config, sections),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [periods, config.startTime, config.timeFormat, blockFilter])
+    [periods, config.startTime, config.timeFormat, blockFilter, sections])
 
   const classPeriods = useMemo(() => periods.filter(p => p.type === "class"), [periods])
 

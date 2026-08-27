@@ -9,6 +9,7 @@
  * "New timetable" → opens CreateTimetableModal (Page 5 — Wizard Step 0)
  */
 
+import { schedulePeriodTimes } from '@/lib/bellTimes'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { wizardStepLabel } from '@/lib/wizardSteps'
 
@@ -1451,18 +1452,22 @@ export function DashboardPage() {
   const liveNow = (() => {
     if (!hasTimetables || !todaySummary?.isWorkDay) return undefined
     const periods: any[] = store.periods ?? []
-    const [sh = 9, sm = 0] = (store.config?.startTime ?? '09:00').split(':').map(Number)
-    let mins = sh * 60 + sm
+    // The school's own bell decides what is on now. Summing durations from
+    // the start time puts every period after an assembly or a lunch early, so
+    // this tile named the wrong period — and said a class was in session when
+    // the school was at lunch.
+    const bell = schedulePeriodTimes(store.config, periods, sections ?? [])
     const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
     for (const p of periods) {
-      const end = mins + (p.duration ?? 45)
+      const slot = bell.get(p.id)
+      if (!slot) continue
+      const mins = slot.startMin, end = slot.endMin
       if (nowMin >= mins && nowMin < end) {
         if (p.type === 'break') return `${p.name ?? 'Break'} in progress`
         const dk = todaySummary.dayKey
         const inSession = sections.filter((s: any) => store.classTT?.[s.name]?.[dk]?.[p.id]?.subject).length
         return `${p.name ?? 'Period'} · ${inSession} in session`
       }
-      mins = end
     }
     return undefined
   })()

@@ -8,6 +8,7 @@
  * different bells — so cross-schedule comparison happens on wall-clock
  * minutes, never on period ids.
  */
+import { sectionPeriodTimes } from './bellTimes'
 import { computeTodaySummary, type TodaySummary, type RoomClash } from './scheduleToday'
 import type { CalLeave } from './leaveUtils'
 
@@ -78,20 +79,27 @@ export interface MultiToday extends TodaySummary {
 
 /** Occupied wall-clock intervals per venue for one bundle on one weekday. */
 function venueIntervals(b: ScheduleBundle, dayKey: string) {
-  const [sh = 9, sm = 0] = (b.config?.startTime ?? '09:00').split(':').map(Number)
-  let mins = sh * 60 + sm
-  const times: Record<string, { startMin: number; endMin: number }> = {}
-  for (const p of b.periods) {
-    times[p.id] = { startMin: mins, endMin: mins + (p.duration ?? 45) }
-    mins += p.duration ?? 45
-  }
+  // Times come from the section's own BELL, not from adding up durations.
+  //
+  // Summing period durations from config.startTime silently drifts on any day
+  // that holds an assembly, a lunch or a dispersal — those rows take real
+  // minutes off the clock and are not plain teaching periods, so everything
+  // after them lands early. This function decides whether two classes are in
+  // one room AT THE SAME TIME, so a drifting clock does not merely mislabel a
+  // row: it invents overlaps that do not exist and misses ones that do.
+  //
+  // sectionPeriodTimes falls back to exactly this cumulative sum when a
+  // schedule has no bell rows, so nothing changes for schedules that never
+  // had them. Per SECTION rather than per schedule, because classwise breaks
+  // mean two classes can run to different clocks on the same day.
   const out: { room: string; startMin: number; endMin: number; section: string; periodName: string }[] = []
   for (const s of b.sections) {
+    const times = sectionPeriodTimes(s.name, b.config, b.periods)
     const sd = b.classTT[s.name]?.[dayKey] ?? {}
     for (const p of b.periods) {
       const c = sd[p.id]
       if (!c?.subject || !(c.room ?? '').trim()) continue
-      const t = times[p.id]
+      const t = times.get(p.id)
       if (t) out.push({ room: c.room.trim(), startMin: t.startMin, endMin: t.endMin, section: s.name, periodName: p.name ?? p.id })
     }
   }

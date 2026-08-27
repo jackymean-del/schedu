@@ -4,6 +4,7 @@
  * on leave, or a slot still needing cover. Computing this in one place also
  * keeps the (non-trivial) uncovered-slot logic from drifting between them.
  */
+import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
 import { subKey } from './substitutionKeys'
 
@@ -63,13 +64,16 @@ export function computeTodaySummary(params: {
 
   // Period → wall-clock minutes, computed first so affected slots carry a
   // real time (not just a period id) — needed to sort/display them usefully.
-  const [sh = 9, sm = 0] = (config?.startTime ?? '09:00').split(':').map(Number)
+  // From the bell, not from adding durations up. These minutes go onto the
+  // slots somebody reads while arranging a cover, and a day with an assembly
+  // or a lunch row is longer than its teaching periods total — by an hour, by
+  // the third period of an ordinary morning. Falls back to the same sum when
+  // a schedule has no bell rows.
+  const bell = schedulePeriodTimes(config, periods, sections ?? [])
   const periodTimes: Record<string, { startMin: number; endMin: number }> = {}
-  let mins = sh * 60 + sm
   for (const p of periods) {
-    const startMin = mins, endMin = mins + (p.duration ?? 45)
-    periodTimes[p.id] = { startMin, endMin }
-    mins = endMin
+    const t = bell.get(p.id)
+    if (t) periodTimes[p.id] = { startMin: t.startMin, endMin: t.endMin }
   }
 
   const uncoveredSlots: AffectedSlot[] = []
@@ -131,7 +135,8 @@ export function computeTodaySummary(params: {
   }
 
   const periodRows: TodayPeriodRow[] = periods.map((p: any) => {
-    const t = periodTimes[p.id] ?? { startMin: mins, endMin: mins }
+    // No bell row for this period: no clock to show, rather than a made-up one.
+    const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
     return {
       id: p.id, name: p.name ?? p.id, startMin: t.startMin, endMin: t.endMin,
       isBreak: p.type === 'break', uncovered: uncoveredByPeriod[p.id] ?? 0,
