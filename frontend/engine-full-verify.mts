@@ -405,6 +405,45 @@ console.log(`\n════ Run 4: rooms ════`)
     moved ? `${moved} reassigned: ${why.join('; ')}` : 'every lesson stayed home')
 }
 
+// ── INV14: every teacher in a parallel cell is checked, not just the first ──
+//
+// An OR/AND cell runs parallel subjects in one slot and carries a teacher PER
+// SUBJECT in groupAssignments; the cell-level `teacher` is documented as a copy
+// of the first. deriveTeacherAllocations, deriveSubjectAllocations and
+// rebuildTeacherTT all walk the whole list — conflict detection did not, in
+// BOTH of the places it is implemented. So the teacher taking the second group
+// could be down for another class at the same moment and nothing said so, and
+// the more groups a school runs the more of its staff went unchecked.
+console.log(`
+════ Run 7: parallel-group teachers ════`)
+{
+  const oneSlot: Any[] = [{ id: 'p1', name: 'P1', duration: 40, type: 'class' }]
+  const clash: Any = {
+    'VI-A': { MONDAY: { p1: {
+      subject: 'Maths', teacher: 'Rao', room: 'R1',
+      groupAssignments: [{ subject: 'Maths', teacher: 'Rao' }, { subject: 'Art', teacher: 'Devi' }],
+    } } },
+    'VI-B': { MONDAY: { p1: { subject: 'Science', teacher: 'Devi', room: 'R2' } } },
+  }
+  const found = detectConflicts(clash, oneSlot).filter((c: Any) => c.type === 'double-booking')
+  check(found.length === 1 && found[0].message.includes('Devi'),
+    'INV14a a teacher taking a LATER group is caught double-booked elsewhere',
+    found.length ? found[0].message : 'missed entirely')
+
+  // The cell-level teacher mirrors groupAssignments[0]; counting both would
+  // report every parallel cell as clashing with itself.
+  const solo: Any = {
+    'VI-A': { MONDAY: { p1: {
+      subject: 'Maths', teacher: 'Rao',
+      groupAssignments: [{ subject: 'Maths', teacher: 'Rao' }, { subject: 'Art', teacher: 'Devi' }],
+    } } },
+  }
+  const none = detectConflicts(solo, oneSlot).filter((c: Any) => c.type === 'double-booking')
+  check(none.length === 0,
+    'INV14b a parallel cell does not report itself',
+    none.length ? none[0].message : 'clean')
+}
+
 // ── INV13: a class too big for its room ────────────────────────────────────
 //
 // 'capacity-exceeded' was declared in the Conflict union, labelled in the

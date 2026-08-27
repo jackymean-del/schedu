@@ -1744,17 +1744,32 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       Object.entries(classTT).forEach(([sec, sd]) => {
         const cell = sd[day]?.[p.id] as any
         if (cell?.optionalBlockId) blockSlotIds[sec] = cell.optionalBlockId
-        if (cell?.teacher) {
-          if (teacherMap[cell.teacher]) {
+
+        // Everybody teaching in this cell, not just the first of them.
+        //
+        // An OR/AND cell runs parallel subjects in one slot and carries a
+        // teacher PER SUBJECT in groupAssignments; the cell-level `teacher` is
+        // documented as a copy of the first one, kept for backward
+        // compatibility. deriveTeacherAllocations, deriveSubjectAllocations and
+        // rebuildTeacherTT all walk the full list. This did not — so the
+        // teacher taking the second group could be down for another class at
+        // the same moment and nothing would say so. The more groups a school
+        // runs, the more of its staff were invisible to the check.
+        const cellTeachers: string[] = (cell as any)?.groupAssignments?.length
+          ? (cell as any).groupAssignments.map((g: any) => g.teacher).filter(Boolean)
+          : (cell?.teacher ? [cell.teacher] : [])
+
+        for (const who of cellTeachers) {
+          const otherSec = teacherMap[who]
+          if (otherSec) {
             // Skip if both sections share the same optional block (intentional pooling)
-            const otherSec = teacherMap[cell.teacher]
-            if (blockSlotIds[sec] && blockSlotIds[otherSec] && blockSlotIds[sec] === blockSlotIds[otherSec]) return
+            if (blockSlotIds[sec] && blockSlotIds[otherSec] && blockSlotIds[sec] === blockSlotIds[otherSec]) continue
             conflicts.push({
               type: 'double-booking',
-              message: `${cell.teacher} double-booked: ${teacherMap[cell.teacher]} & ${sec} on ${day} ${p.name}`,
-              teacher: cell.teacher, day, period: p.name,
+              message: `${who} double-booked: ${otherSec} & ${sec} on ${day} ${p.name}`,
+              teacher: who, day, period: p.name,
             })
-          } else teacherMap[cell.teacher] = sec
+          } else teacherMap[who] = sec
         }
       })
     })
@@ -2418,23 +2433,32 @@ export function detectConflicts(
       Object.entries(classTT).forEach(([sec, sd]) => {
         const cell: any = sd[day]?.[p.id]
         if (cell?.optionalBlockId) blockSlotIds[sec] = cell.optionalBlockId
-        if (cell?.teacher) {
-          if (teacherMap[cell.teacher]) {
+
+        // Every teacher in the cell, not just the first — see the matching
+        // note in solveTimetable. An OR/AND cell carries a teacher per subject
+        // in groupAssignments and mirrors only the first into `cell.teacher`,
+        // so anyone taking a later group was invisible to this check.
+        const cellTeachers: string[] = cell?.groupAssignments?.length
+          ? cell.groupAssignments.map((g: any) => g.teacher).filter(Boolean)
+          : (cell?.teacher ? [cell.teacher] : [])
+
+        for (const who of cellTeachers) {
+          const otherSec = teacherMap[who]
+          if (otherSec) {
             // Skip the conflict if both sections share the same optional block
-            const otherSec = teacherMap[cell.teacher]
             if (blockSlotIds[sec] && blockSlotIds[otherSec] && blockSlotIds[sec] === blockSlotIds[otherSec]) {
               // intentional cross-section pooling — not a conflict
-              return
+              continue
             }
             conflicts.push({
               type: 'double-booking',
-              message: `${cell.teacher} double-booked: ${teacherMap[cell.teacher]} & ${sec} on ${day} ${p.name}`,
-              teacher: cell.teacher,
+              message: `${who} double-booked: ${otherSec} & ${sec} on ${day} ${p.name}`,
+              teacher: who,
               day,
               period: p.name,
             })
           } else {
-            teacherMap[cell.teacher] = sec
+            teacherMap[who] = sec
           }
         }
 
