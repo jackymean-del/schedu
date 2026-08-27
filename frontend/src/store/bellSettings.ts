@@ -14,6 +14,11 @@ import { persist } from 'zustand/middleware'
 import { DEFAULT_RING_SECONDS, MAX_RING_SECONDS, MIN_RING_SECONDS, type BuiltInRing } from '@/lib/bellAudio'
 import type { BellAlarm } from '@/lib/bellRinger'
 
+/** The ring a screen falls back to: what it starts on, and what it returns to
+ *  if the school deletes its own recording. One constant, because these two
+ *  drifted apart the moment the default changed and nothing noticed. */
+const DEFAULT_SOUND: BuiltInRing = 'electric'
+
 interface BellSettingsState {
   /** Ring at the timetable's own bell times. */
   enabled: boolean
@@ -43,7 +48,7 @@ export const useBellSettings = create<BellSettingsState>()(
       enabled: false,
       // The one a school actually has in its corridor, for anyone who never
       // opens this panel.
-      sound: 'electric',
+      sound: DEFAULT_SOUND,
       volume: 0.7,
       ringSeconds: DEFAULT_RING_SECONDS,
       alarms: [],
@@ -59,7 +64,7 @@ export const useBellSettings = create<BellSettingsState>()(
       // left pointing at a sound that no longer exists and rings nothing.
       clearCustom: () => set((s) => ({
         customDataUrl: undefined, customName: undefined,
-        sound: s.sound === 'custom' ? 'chime' : s.sound,
+        sound: s.sound === 'custom' ? DEFAULT_SOUND : s.sound,
       })),
       addAlarm: (a) => set((s) => ({
         alarms: [...s.alarms, { ...a, id: Math.random().toString(36).slice(2, 10) }]
