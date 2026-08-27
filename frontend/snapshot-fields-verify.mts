@@ -89,11 +89,27 @@ ok(notPersisted.length === 0,
 const stripComments = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 
-const dash = stripComments(read('src/pages/dashboard.tsx'))
+// Checked across every screen that shows one, not just the dashboard. The same
+// field was being read from the store on the TIMETABLE page too, where it drove
+// a green "✓ No conflicts" pill and the publish dialog's warning — so a reload
+// reported a broken schedule as clean at the exact moment someone was about to
+// publish it to a school.
+const SCREENS = [
+  'src/pages/dashboard.tsx',
+  'src/routes/timetable.tsx',
+  'src/components/master/ReviewDashboard.tsx',
+  'src/pages/insights.tsx',
+  'src/pages/calendar.tsx',
+]
 for (const f of DERIVED_NOT_PERSISTED) {
-  const trusts = new RegExp(`store\\.${f}\\b`).test(dash)
-  ok(!trusts, `dashboard does not read store.${f} as truth`,
-    trusts ? 'it does — that value is empty after every reload' : 'recomputed where shown')
+  const guilty = SCREENS.filter(screen => {
+    try { return new RegExp(`store\\.${f}\\b`).test(stripComments(read(screen))) }
+    catch { return false }
+  })
+  ok(guilty.length === 0, `no screen reads store.${f} as truth`,
+    guilty.length
+      ? `${guilty.map(g => g.split('/').pop()).join(', ')} — empty after every reload`
+      : `recomputed on all ${SCREENS.length} screens that show it`)
 }
 
 console.log(fail === 0 ? '\nALL SNAPSHOT-FIELD CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)

@@ -12,6 +12,7 @@ import { EditCellModal } from "@/components/modals/EditCellModal"
 import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { rebuildTeacherTT } from "@/lib/aiEngine"
+import { detectConflicts } from "@/lib/schedulingEngine"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
@@ -1210,7 +1211,7 @@ export function TimetablePage() {
   const store = useTimetableStore()
   const {
     config, sections, staff, subjects, periods: storePeriods,
-    classTT, teacherTT, substitutions, conflicts,
+    classTT, teacherTT, substitutions,
     showTeacher, showRoom, editMode,
     timetableStatus, setTimetableStatus,
     setShowTeacher, setShowRoom, setEditMode,
@@ -1387,6 +1388,24 @@ export function TimetablePage() {
     [periods, config.startTime, config.timeFormat, blockFilter])
 
   const classPeriods = useMemo(() => periods.filter(p => p.type === "class"), [periods])
+
+  // ── Conflicts, counted from the timetable rather than remembered ─────────
+  //
+  // This page used to read `conflicts` off the store. That field is written
+  // when a schedule is generated and is deliberately NOT persisted, so after
+  // any plain reload it is empty — and this page then showed a green
+  // "✓ No conflicts" pill, an empty conflict panel, and a publish dialog with
+  // nothing to warn about, for a timetable that had them. Publishing a broken
+  // schedule to a whole school while being told it is clean is the worst
+  // version of this mistake, which is why it is derived here.
+  //
+  // It also has to be derived to stay TRUE while editing: commitTT rebuilds
+  // teacherTT on every drag, drop and delete but never recomputed conflicts,
+  // so the count went stale the moment anyone touched the grid.
+  const conflicts = useMemo(
+    () => detectConflicts(classTT, periods),
+    [classTT, periods],
+  )
 
   const cwBreaksGlobal = useMemo(
     () => (config as any).classwiseBreaks as CwBreakLite[] | undefined,
