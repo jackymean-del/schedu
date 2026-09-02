@@ -1475,14 +1475,33 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   {
     /** Periods each teacher already has on `day` — a daily cap is an
      *  availability question, so it is recomputed per attempt. */
-    const dayLoad = (day: string): Record<string, number> => {
-      const m: Record<string, number> = {}
-      Object.values(classTT).forEach(secData => {
-        Object.values(secData[day] ?? {}).forEach((cell: any) => {
-          for (const k of cellKeys(cell)) m[k] = (m[k] ?? 0) + 1
-        })
-      })
-      return m
+    // Per-day teaching counts, kept CURRENT rather than recomputed.
+    //
+    // This used to rebuild the whole map on every call by walking every section
+    // and every period of the day — and it is called from inside the innermost
+    // loops of the repair, once per candidate teacher per candidate slot. On a
+    // fully-utilised school the repair has a great deal to do, and the cost
+    // compounded: measured at 27 SECONDS for forty sections, against 102ms for
+    // the same forty with enough staff that the repair had nothing to do. The
+    // schools it punished hardest were the under-resourced ones it exists to
+    // help.
+    //
+    // Now seeded once and adjusted by put()/lift(), exactly as teacherBusy and
+    // teacherWeeklyLoad already were.
+    const loadByDay: Record<string, Record<string, number>> = {}
+    for (const d of workDays) loadByDay[d] = {}
+    for (const secData of Object.values(classTT)) {
+      for (const [d, dayData] of Object.entries(secData ?? {})) {
+        if (!loadByDay[d]) loadByDay[d] = {}
+        for (const cell of Object.values(dayData ?? {})) {
+          for (const k of cellKeys(cell as any)) loadByDay[d][k] = (loadByDay[d][k] ?? 0) + 1
+        }
+      }
+    }
+    const dayLoad = (day: string): Record<string, number> => loadByDay[day] ?? {}
+    const bumpDayLoad = (day: string, keys: string[], by: number) => {
+      const m = (loadByDay[day] ??= {})
+      for (const k of keys) m[k] = Math.max(0, (m[k] ?? 0) + by)
     }
 
     const canTeachAt = (st: any, day: string, pid: string, loadToday: Record<string, number>): boolean => {
@@ -1525,6 +1544,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       }
       holdRoom(day, [pid], repairRoom)
       teacherBusy[tKey(st)][day].add(pid)
+      bumpDayLoad(day, [tKey(st)], +1)
       subjectCount[sec.name][sub.name] = (subjectCount[sec.name][sub.name] ?? 0) + 1
       teacherWeeklyLoad[tKey(st)] = (teacherWeeklyLoad[tKey(st)] ?? 0) + 1
       teacherSubjectSet[tKey(st)]?.add(sub.name)
@@ -1539,6 +1559,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         teacherBusy[k]?.[day]?.delete(pid)
         teacherWeeklyLoad[k] = Math.max(0, (teacherWeeklyLoad[k] ?? 0) - 1)
       }
+      bumpDayLoad(day, cellKeys(cell), -1)
       // The room goes back too. Lifting a lesson without releasing its venue
       // leaves the slot marked occupied by a class that is no longer in it, so
       // the very next placement finds the section's own room "taken" and sends

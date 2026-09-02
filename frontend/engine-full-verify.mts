@@ -549,6 +549,42 @@ console.log(`
     withTeacher ? `${withTeacher} lessons carry an invented teacher` : 'none invented')
 }
 
+// ── INV15: the repair must not blow up on a school that needs it ───────────
+//
+// Pass 3 repairs shortfalls, so it has most to do on a school with no slack —
+// which is precisely the under-resourced school it exists to help. Its inner
+// loop recomputed the day's teaching counts from scratch, once per candidate
+// teacher per candidate slot: measured at 27 SECONDS for forty sections at
+// 100% staff utilisation, against 102ms for the same forty with slack. Now the
+// counts are kept current instead, like teacherBusy always was.
+//
+// A time-based check is a blunt instrument and machines differ, so the ceiling
+// here is deliberately loose — it is there to catch a return to quadratic
+// behaviour, not to police milliseconds.
+console.log(`
+════ Run 8: the repair under saturation ════`)
+{
+  const tight = buildSchool(2)
+  // Halve the staff to force the repair to work hard.
+  tight.staff = tight.staff.filter((_: Any, i: number) => i % 2 === 0)
+  const t = performance.now()
+  const out: Any = solveTimetable({
+    sections: tight.sections, staff: tight.staff, subjects: tight.subjects,
+    periods: PERIODS, workDays: WORK_DAYS, requirements: [],
+    subjectAllocations: tight.subjectAllocations,
+  } as Any)
+  const took = performance.now() - t
+  let placed = 0
+  for (const sec of Object.keys(out.classTT))
+    for (const d of Object.keys(out.classTT[sec]))
+      for (const pid of Object.keys(out.classTT[sec][d]))
+        if (out.classTT[sec][d][pid]?.subject) placed++
+  check(took < 5000,
+    'INV15 a half-staffed school still solves in seconds, not minutes',
+    `${took.toFixed(0)} ms, ${placed} lessons placed`)
+  check(placed > 0, 'and it still places lessons rather than giving up', `${placed} placed`)
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log('\n════ Summary ════')
 console.log(`Run1 (30 sections): ${ms1.toFixed(0)} ms · Run2 (60 sections): ${ms2.toFixed(0)} ms`)
