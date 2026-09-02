@@ -2830,6 +2830,39 @@ ok(hlRun([{ date: '2026-08-18', name: 'I-B trip', sections: ['I-B'] }]) === 3,
 // Holidays outside the leave must not move the figure at all.
 ok(hlRun([{ date: '2026-08-21', name: 'Later holiday' }]) === 3, 'a closure outside the absence changes nothing')
 ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ignored rather than throwing')
+// ── A teacher's own printed timetable must hold all their lessons ──────────
+//
+// The teacher-wise export matched cell.teacher, which on an OR/AND cell is a
+// copy of the FIRST group's teacher. So a teacher taking a later group was
+// handed a sheet with that class silently missing, and nobody turns up to a
+// lesson that is not on the paper they were given. The slot would also have
+// been labelled with the first group's subject rather than theirs.
+{
+  const { buildTeacherSheet: bts, buildFlatSheet: bfs } = await import('./src/lib/timetableExport.ts')
+  const expPeriods: any[] = [{ id: 'p1', name: 'P1', type: 'class' }]
+  const expTT: any = { 'VI-A': { MONDAY: { p1: {
+    subject: 'Maths', teacher: 'Rao', room: 'R1',
+    groupAssignments: [{ subject: 'Maths', teacher: 'Rao' }, { subject: 'Art', teacher: 'Devi' }],
+  } } } }
+  const expOpts: any = {
+    classTT: expTT, sections: [{ name: 'VI-A' }], staff: [], subjects: [],
+    periods: expPeriods, workDays: ['MONDAY'],
+  }
+
+  const devi = bts('Devi', expOpts)
+  ok(String(devi[1][1] ?? '').includes('Art'),
+    "a teacher in a later group gets that lesson on their own printed timetable")
+  const rao = bts('Rao', expOpts)
+  ok(String(rao[1][1] ?? '').includes('Maths'),
+    "and the first group's teacher still gets theirs")
+  ok(!String(devi[1][1] ?? '').includes('Maths'),
+    "each is labelled with the subject THEY take, not the first group's")
+
+  const flat = bfs(expOpts).slice(1)
+  ok(flat.length === 2,
+    'the flat "every assignment" sheet lists every assignment, not one per cell')
+}
+
 // ── An absent teacher in a PARALLEL group still needs cover ────────────────
 //
 // An OR/AND cell runs parallel subjects in one slot and names a teacher per

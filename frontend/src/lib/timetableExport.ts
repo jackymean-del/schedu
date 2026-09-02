@@ -12,6 +12,7 @@
  * Pure functions. No React, no SheetJS, no side effects.
  */
 
+import { teachingPairsInCell } from './cellTeachers'
 import type { Section, Staff, Subject, Period, ClassTimetable } from '@/types'
 import { subjectColor } from './subjectColors'
 
@@ -112,8 +113,20 @@ export function buildTeacherSheet(
         let found = ''
         Object.entries(classTT).forEach(([secName, secData]) => {
           const cell: any = secData[day]?.[period.id]
-          if (cell?.teacher === teacherName && cell?.subject) {
-            const base = `${cell.subject} (${secName})`
+          // Matched against EVERY teacher in the cell, and labelled with the
+          // subject that teacher actually takes.
+          //
+          // An OR/AND cell runs parallel subjects in one slot and names a
+          // teacher per subject, mirroring only the first into cell.teacher —
+          // so this handed a teacher a timetable with their parallel-group
+          // classes silently missing from it, and nobody turns up to a lesson
+          // that is not on the sheet they were given. It would also have
+          // labelled the slot with the first group's subject rather than
+          // theirs.
+          const mine = teachingPairsInCell(cell).find(x => x.teacher === teacherName)
+          const subj = mine?.subject || cell?.subject
+          if (mine && subj) {
+            const base = `${subj} (${secName})`
             found = showRoom && cell.room ? `${base}\n[${cell.room}]` : base
           }
         })
@@ -145,14 +158,25 @@ export function buildFlatSheet(options: ExportOptions): (string | number)[][] {
         if (period.type === 'break') return
         const cell: any = secData[day]?.[period.id]
         if (!cell?.subject) return
-        rows.push([
-          secName,
-          day,
-          period.name,
-          cell.subject ?? '',
-          cell.teacher ?? '',
-          cell.room ?? '',
-        ])
+        // One row per teaching pair, not per cell. This sheet says it lists
+        // every assignment; a parallel cell holds more than one, and emitting
+        // only cell.teacher dropped every group after the first — from the
+        // export people use for mail-merge and to move data elsewhere.
+        const pairs = teachingPairsInCell(cell)
+        if (!pairs.length) {
+          rows.push([secName, day, period.name, cell.subject ?? '', '', cell.room ?? ''])
+          return
+        }
+        pairs.forEach(pair => {
+          rows.push([
+            secName,
+            day,
+            period.name,
+            pair.subject || cell.subject || '',
+            pair.teacher,
+            cell.room ?? '',
+          ])
+        })
       })
     })
   })
