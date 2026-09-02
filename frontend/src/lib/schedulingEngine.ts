@@ -13,6 +13,7 @@
  * before entering the constraint engine.
  */
 
+import { teachersInCell } from './cellTeachers'
 import type { Section, Staff, Subject, Period, ClassTimetable, TeacherSchedule, Conflict, Suggestion, SchedulingRequirement } from '@/types'
 import { parseAllocation } from './allocationSyntax'
 import { atDailyLimit, perDayFromPerWeek } from './facultyWorkload'
@@ -1755,9 +1756,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         // teacher taking the second group could be down for another class at
         // the same moment and nothing would say so. The more groups a school
         // runs, the more of its staff were invisible to the check.
-        const cellTeachers: string[] = (cell as any)?.groupAssignments?.length
-          ? (cell as any).groupAssignments.map((g: any) => g.teacher).filter(Boolean)
-          : (cell?.teacher ? [cell.teacher] : [])
+        const cellTeachers = teachersInCell(cell)
 
         for (const who of cellTeachers) {
           const otherSec = teacherMap[who]
@@ -2438,9 +2437,7 @@ export function detectConflicts(
         // note in solveTimetable. An OR/AND cell carries a teacher per subject
         // in groupAssignments and mirrors only the first into `cell.teacher`,
         // so anyone taking a later group was invisible to this check.
-        const cellTeachers: string[] = cell?.groupAssignments?.length
-          ? cell.groupAssignments.map((g: any) => g.teacher).filter(Boolean)
-          : (cell?.teacher ? [cell.teacher] : [])
+        const cellTeachers = teachersInCell(cell)
 
         for (const who of cellTeachers) {
           const otherSec = teacherMap[who]

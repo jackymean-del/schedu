@@ -6,6 +6,7 @@
  * not (a cancelled lesson). Trends, leave-type splits, and faculty/class
  * summaries all fall out of that same expansion.
  */
+import { cellHasTeacher } from './cellTeachers'
 import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, leaveCoversDate } from './leaveUtils'
 import { subKey } from './substitutionKeys'
@@ -158,7 +159,9 @@ export function computeReports(params: {
           const sd = src.classTT[s.name]?.[dayKey] ?? {}
           for (const p of src.periods) {
             const c = sd[p.id]
-            if (!c?.subject || c.teacher !== l.teacher) continue
+            // Any teacher in the cell, not just the first: an absence in a
+            // parallel group was leaving its periods out of the loss figures.
+            if (!c?.subject || !cellHasTeacher(c, l.teacher)) continue
             const sub = src.substitutions[subKey(s.name, date, p.id)]
             const t = times[p.id] ?? { startMin: 0, endMin: 0, name: p.id }
             events.push({

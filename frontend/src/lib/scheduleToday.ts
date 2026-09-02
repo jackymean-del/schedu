@@ -4,6 +4,7 @@
  * on leave, or a slot still needing cover. Computing this in one place also
  * keeps the (non-trivial) uncovered-slot logic from drifting between them.
  */
+import { teachingPairsInCell } from './cellTeachers'
 import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
 import { subKey } from './substitutionKeys'
@@ -124,11 +125,7 @@ export function computeTodaySummary(params: {
         // LATER group was never listed as needing cover at all: the group sat
         // with nobody in front of it, and the console that exists to catch
         // exactly that said the day was fine.
-        const inCell: Array<{ teacher: string; subject: string }> = c.groupAssignments?.length
-          ? c.groupAssignments
-              .filter((g: any) => g.teacher)
-              .map((g: any) => ({ teacher: g.teacher, subject: g.subject ?? c.subject }))
-          : (c.teacher ? [{ teacher: c.teacher, subject: c.subject }] : [])
+        const inCell = teachingPairsInCell(c)
 
         const away = inCell.filter(x => onLeaveSet.has(x.teacher))
         if (!away.length) continue

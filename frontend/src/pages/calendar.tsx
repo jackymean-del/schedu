@@ -8,6 +8,7 @@
  * Phase 1 of the premium calendar: foundation + Add Event. Leave/Substitution
  * and Auto-Assign layer on top of this in later phases.
  */
+import { cellHasTeacher } from '@/lib/cellTeachers'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { subKey, localISO } from '@/lib/substitutionKeys'
 import { DAY_NAMES, sameDay } from '@/lib/days'
@@ -574,8 +575,13 @@ export function CalendarPage() {
         for (const pid of Object.keys(sd)) {
           const c = sd[pid]
           if (!c?.subject) continue
-          const eff = b.substitutions[subKey(s.name, isoDate, pid)] || c.teacher
-          if (eff !== name) continue
+          // A substitute replaces the whole slot; otherwise ANY teacher in the
+          // cell counts. Reading only c.teacher made a teacher mid-lesson in a
+          // parallel group look free — so this offered them as a substitute
+          // and created the double-booking itself.
+          const cover = b.substitutions[subKey(s.name, isoDate, pid)]
+          const here = cover ? cover === name : cellHasTeacher(c, name)
+          if (!here) continue
           const t = times[pid]
           if (t && t.s < endMin && startMin < t.e) return true
         }
@@ -656,7 +662,7 @@ export function CalendarPage() {
       return tb.sections.some((s: any) => {
         const c = tb.classTT[s.name]?.[dayKey]?.[pid]
         const cov = tb.substitutions[subKey(s.name, isoDate, pid)]
-        return cov ? cov === name : c?.teacher === name
+        return cov ? cov === name : cellHasTeacher(c, name)
       })
     }
   }
