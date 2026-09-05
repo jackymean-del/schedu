@@ -13,6 +13,7 @@
  * were available to cover one that will.
  */
 import { computeTodaySummary } from './src/lib/scheduleToday.ts'
+import { computeMultiToday } from './src/lib/activeSchedules.ts'
 import { teachersInCell, teachingPairsInCell, cellHasTeacher } from './src/lib/cellTeachers.ts'
 import { orOptionsInCell } from './src/lib/orChoice.ts'
 import { planKey } from './src/lib/syllabusTracking.ts'
@@ -128,6 +129,34 @@ console.log('\n── both parallel shapes count as teaching ──')
     'an empty cell holds nobody')
 }
 
+console.log('\n── a decision belongs to the schedule it was made on ──')
+{
+  // Several schedules run at once (a I-V timetable beside a VI-X one), each
+  // with its own dated overlays. Applying the OPEN schedule's decisions to all
+  // of them would free a teacher in one wing of a school because somebody
+  // chose a subject in another.
+  const bundle = (id: string, cell: Any, orDecisions: Any): Any => ({
+    id, name: id, sections, staff: [], rooms: [], subjects: [],
+    periods, config, classTT: { [SEC]: { TUESDAY: { p1: cell } } },
+    substitutions: {}, orDecisions,
+  })
+  const plans = { [planKey('Physics', SEC)]: plan(50), [planKey('Chemistry', SEC)]: plan(50) }
+  const decided = { [key]: { subject: 'Physics', by: 'Rao' } }
+
+  // Only the FIRST bundle carries the decision that frees Devi.
+  const multi = computeMultiToday(
+    [bundle('a', orCell, decided), bundle('b', orCell, {})], leaves, 0, DATE, plans,
+  )
+  const covers = multi.uncoveredSlots.map((x: Any) => x.teacher + '/' + x.subject)
+  ok(covers.length === 1,
+    'the undecided schedule still needs cover, the decided one does not', JSON.stringify(covers))
+
+  const both = computeMultiToday(
+    [bundle('a', orCell, decided), bundle('b', orCell, decided)], leaves, 0, DATE, plans,
+  )
+  ok(both.uncoveredSlots.length === 0, 'and with both decided, neither does')
+}
+
 console.log('\n── nobody keeps a private copy of "who teaches this" ──')
 {
   // The guard that matters. Every check above passes forever while the same
@@ -143,13 +172,13 @@ console.log('\n── nobody keeps a private copy of "who teaches this" ──')
   }
   walk('src')
 
-  const SHARED = join('src', 'lib', 'cellTeachers.ts')
+  const SHARED = [join('src', 'lib', 'cellTeachers.ts'), join('src', 'lib', 'orChoice.ts')]
   const offenders: string[] = []
   for (const f of files) {
-    if (f === SHARED) continue
+    if (SHARED.includes(f)) continue
     const src = readFileSync(f, 'utf8')
     // A local definition of any of these names, rather than an import of it.
-    if (/(?:^|\n)\s*(?:export\s+)?(?:function|const)\s+(cellHasTeacher|teachersInCell|teachingPairsInCell|teachersActuallyIn)\b/.test(src)) {
+    if (/(?:^|\n)\s*(?:export\s+)?(?:function|const)\s+(cellHasTeacher|teachersInCell|teachingPairsInCell|teachersActuallyIn|teachingPairsOnDate|cellHasTeacherOnDate)\b/.test(src)) {
       offenders.push(f)
     }
   }

@@ -18,6 +18,11 @@ export interface ScheduleBundle {
   periods: any[]; config: any
   classTT: Record<string, any>
   substitutions: Record<string, string>
+  /** Dated OR choices for THIS schedule, keyed section|date|period. Carried
+   *  per bundle for the same reason substitutions are: a decision belongs to
+   *  the schedule it was made on, and the open one's must not be applied to
+   *  the others. */
+  orDecisions: Record<string, any>
 }
 
 const TTLIST_KEY = 'schedu-tt-list'
@@ -67,6 +72,7 @@ export function loadActiveBundles(uid: string): ScheduleBundle[] {
       sections: snap.sections ?? [], staff: snap.staff ?? [], rooms: snap.rooms ?? [],
       subjects: snap.subjects ?? [], periods: snap.periods ?? [], config: snap.config ?? {},
       classTT: snap.classTT ?? {}, substitutions: snap.substitutions ?? {},
+      orDecisions: snap.orDecisions ?? {},
     })
   }
   return bundles
@@ -114,14 +120,12 @@ function venueIntervals(b: ScheduleBundle, dayKey: string) {
  */
 export function computeMultiToday(
   bundles: ScheduleBundle[], leaves: CalLeave[], conflicts: number, date: Date,
-  // Decisions are keyed by SECTION, and sections do not repeat across active
-  // schedules, so one map serves every bundle without collision.
-  orDecisions: Record<string, any> = {}, plans: Record<string, any> = {},
+  plans: Record<string, any> = {},
 ): MultiToday {
   const parts = bundles.map(b => computeTodaySummary({
     periods: b.periods, sections: b.sections, classTT: b.classTT, config: b.config,
     substitutions: b.substitutions, leaves, conflicts: 0, date,
-    orDecisions, plans,
+    orDecisions: b.orDecisions, plans,
   }))
 
   const merged: MultiToday = {

@@ -8,7 +8,8 @@
  * Phase 1 of the premium calendar: foundation + Add Event. Leave/Substitution
  * and Auto-Assign layer on top of this in later phases.
  */
-import { cellHasTeacher } from '@/lib/cellTeachers'
+import { cellHasTeacherOnDate } from '@/lib/orChoice'
+import { useSyllabus } from '@/lib/syllabusTracking'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { subKey, localISO } from '@/lib/substitutionKeys'
 import { DAY_NAMES, sameDay } from '@/lib/days'
@@ -207,6 +208,9 @@ export function CalendarPage() {
   const uid = useAuthStore.getState().user?.id ?? ''
 
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
+  // Which subject an undecided OR period runs comes from syllabus coverage, so
+  // free/busy below needs the plans. Read here, above every early return.
+  const syllabusPlans = useSyllabus(s => s.plans)
   // One-time seed of the shared staff/venue directory from whatever active
   // schedules already exist, so wizard entry has something to match against
   // from day one (see lib/directoryBootstrap.ts).
@@ -375,6 +379,7 @@ export function CalendarPage() {
     const open: ScheduleBundle = {
       id: activeScheduleId ?? 'open', name: config.timetableName ?? 'Schedule',
       sections, staff, rooms, subjects, periods, config, classTT, substitutions,
+      orDecisions: store.orDecisions ?? {},
     }
     if (!multiActive) return [open]
     // The open schedule uses the live store; other actives use their snapshot.
@@ -580,7 +585,12 @@ export function CalendarPage() {
           // parallel group look free — so this offered them as a substitute
           // and created the double-booking itself.
           const cover = b.substitutions[subKey(s.name, isoDate, pid)]
-          const here = cover ? cover === name : cellHasTeacher(c, name)
+          // …and an OR period runs only ONE of its subjects, so the option
+          // that is not running leaves its teacher genuinely free. Holding
+          // them busy takes half a science department out of the pool at the
+          // exact moment somebody is hunting for cover.
+          const here = cover ? cover === name
+            : cellHasTeacherOnDate(c, name, s.name, isoDate, pid, b.orDecisions, syllabusPlans)
           if (!here) continue
           const t = times[pid]
           if (t && t.s < endMin && startMin < t.e) return true
@@ -662,7 +672,8 @@ export function CalendarPage() {
       return tb.sections.some((s: any) => {
         const c = tb.classTT[s.name]?.[dayKey]?.[pid]
         const cov = tb.substitutions[subKey(s.name, isoDate, pid)]
-        return cov ? cov === name : cellHasTeacher(c, name)
+        return cov ? cov === name
+          : cellHasTeacherOnDate(c, name, s.name, isoDate, pid, tb.orDecisions, syllabusPlans)
       })
     }
   }

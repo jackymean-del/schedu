@@ -25,6 +25,7 @@
  * a school shown a confident wrong answer cannot.
  */
 import { contentFraction, hasContentSignal, planKey, type SyllabusPlan } from './syllabusTracking'
+import { teachingPairsInCell } from './cellTeachers'
 
 export interface OrOption {
   subject: string
@@ -236,4 +237,48 @@ export function orOptionsInCell(cell: {
     .map(g => ({ subject: (g.subject ?? '').trim(), teacher: (g.teacher ?? '').trim() }))
     .filter(o => o.subject)
   return options.length ? options : null
+}
+
+/**
+ * Who is teaching a cell on ONE DATE, with the day's OR choice applied.
+ *
+ * The dated counterpart to teachingPairsInCell, and the only place that should
+ * answer this. Identical to it for ordinary cells and for AND groups, where
+ * every parallel teacher is genuinely in the room. It differs only for an OR
+ * choice, where the day resolves to a single subject and the other options'
+ * teachers are free — free to cover an absence, free to be OFFERED as a
+ * substitute, free to be counted as free.
+ *
+ * Only a decisive choice releases anybody. resolveOrChoice still names a
+ * subject when it has nothing to compare, falling back to a stable order so
+ * callers get a deterministic answer, and says so with reason 'untracked'.
+ * Treating that as a decision would free a teacher on a coin toss and leave a
+ * class with nobody — worse than the double-booking this path prevents.
+ */
+export function teachingPairsOnDate(
+  cell: any, section: string, isoDate: string, periodId: string,
+  orDecisions: Record<string, OrDecision> = {}, plans: Record<string, SyllabusPlan> = {},
+): Array<{ teacher: string; subject: string }> {
+  const all = teachingPairsInCell(cell)
+  const options = orOptionsInCell(cell)
+  if (!options) return all
+  const choice = resolveOrChoice(
+    options, section, plans, orDecisions[orDecisionKey(section, isoDate, periodId)],
+  )
+  if (!choice || choice.reason === 'untracked') return all
+  const taking = all.filter(x => x.subject === choice.subject)
+  // A choice naming a subject no longer in the cell is stale; hold everyone
+  // rather than empty the room on the strength of bad data.
+  return taking.length ? taking : all
+}
+
+/** Is this person teaching this cell on this date, once the choice is applied? */
+export function cellHasTeacherOnDate(
+  cell: any, name: string, section: string, isoDate: string, periodId: string,
+  orDecisions: Record<string, OrDecision> = {}, plans: Record<string, SyllabusPlan> = {},
+): boolean {
+  const who = (name ?? '').trim()
+  if (!who) return false
+  return teachingPairsOnDate(cell, section, isoDate, periodId, orDecisions, plans)
+    .some(x => x.teacher === who)
 }

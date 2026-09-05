@@ -1440,7 +1440,7 @@ export function DashboardPage() {
   const multiActive = activeBundles.length > 1
   const todaySummary = !hasTimetables ? null
     : multiActive
-    ? computeMultiToday(activeBundles, leaves, conflicts, new Date(), store.orDecisions ?? {}, syllabusPlans)
+    ? computeMultiToday(activeBundles, leaves, conflicts, new Date(), syllabusPlans)
     : computeTodaySummary({
         periods: store.periods ?? [], sections, classTT: store.classTT ?? {}, config: store.config ?? {},
         substitutions: store.substitutions ?? {}, leaves,

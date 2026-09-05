@@ -154,6 +154,7 @@ export function useEffectiveCoverage(term?: AcademicTerm | null): EffectiveCover
     if (!Object.keys(st.classTT ?? {}).length) return []
     return [{
       id: 'open', name: st.config?.timetableName ?? 'Current schedule',
+      orDecisions: st.orDecisions ?? {},
       sections: st.sections ?? [], staff: st.staff ?? [], rooms: st.rooms ?? [],
       subjects: st.subjects ?? [], periods: st.periods ?? [], config: st.config ?? {},
       classTT: st.classTT ?? {}, substitutions: st.substitutions ?? {},
