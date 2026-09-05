@@ -59,6 +59,51 @@ ALTER TABLE share_access_codes
   ADD COLUMN IF NOT EXISTS attempts INT NOT NULL DEFAULT 0;
 `
 
+// collabSchema mirrors database/migrations/009_members_and_or_decisions.sql,
+// inlined for the same reason as the two above.
+//
+// These are the first tables written by somebody who does not own the row. Up
+// to now the server has held one account's snapshot and the browser has held
+// everything else; a teacher tapping "I'll take this slot" on their own phone
+// has nowhere to put that fact, and the corridor board has no way to learn it.
+//
+// The school is an owner_id rather than a school_id because there is no schools
+// table yet, and inventing one here would mean migrating every existing account
+// into it blind. A school is currently "the account that owns the timetables".
+// When schools become first-class this is a rename, not a rethink.
+const collabSchema = `
+CREATE TABLE IF NOT EXISTS school_members (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email       TEXT        NOT NULL,
+    user_id     UUID        REFERENCES users(id) ON DELETE SET NULL,
+    staff_name  TEXT,
+    role        TEXT        NOT NULL DEFAULT 'teacher'
+                            CHECK (role IN ('admin', 'teacher', 'viewer')),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (owner_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS idx_school_members_email ON school_members (email);
+CREATE INDEX IF NOT EXISTS idx_school_members_user  ON school_members (user_id);
+CREATE INDEX IF NOT EXISTS idx_school_members_owner ON school_members (owner_id);
+
+CREATE TABLE IF NOT EXISTS or_decisions (
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    timetable_id  UUID        NOT NULL REFERENCES timetables(id) ON DELETE CASCADE,
+    section       TEXT        NOT NULL,
+    on_date       DATE        NOT NULL,
+    period_id     TEXT        NOT NULL,
+    subject       TEXT        NOT NULL,
+    decided_by    TEXT,
+    decided_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (timetable_id, section, on_date, period_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_or_decisions_lookup ON or_decisions (timetable_id, on_date);
+`
+
 // EnsureSchema applies idempotent schema needed by features that must not
 // depend on an out-of-band migration step.
 // Safe to call on every startup; a failure is returned so the caller can log it
@@ -66,6 +111,9 @@ ALTER TABLE share_access_codes
 func EnsureSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, err := pool.Exec(ctx, billingSchema); err != nil {
 		return fmt.Errorf("ensure billing schema: %w", err)
+	}
+	if _, err := pool.Exec(ctx, collabSchema); err != nil {
+		return fmt.Errorf("ensure collaboration schema: %w", err)
 	}
 	if _, err := pool.Exec(ctx, shareSchema); err != nil {
 		return fmt.Errorf("ensure share schema: %w", err)

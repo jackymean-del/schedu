@@ -151,6 +151,21 @@ func main() {
 	api.Delete("/timetables/:id", h.DeleteTimetable)
 	api.Post("/timetables/share", h.CreateShare)
 
+	// --- People, and the decisions they may take ---
+	//
+	// The first routes in this service written by somebody who does not own the
+	// row. A teacher on their own account claims an OR period; the school's
+	// board reads it. Authorisation lives in the handlers (collab.go) because
+	// it is not "is this yours" but "do you teach this subject".
+	api.Get("/members", h.ListMembers)
+	api.Post("/members", h.UpsertMember)
+	api.Delete("/members/:id", h.RemoveMember)
+	// Every timetable this account may see — their own, plus any school that
+	// lists them on its roster.
+	api.Get("/my-schedules", h.MySchedules)
+	api.Get("/timetables/:id/or-decisions", h.ListOrDecisions)
+	api.Post("/timetables/:id/or-decisions", h.DecideOr)
+
 	// --- Curriculum routes ---
 	cur := handlers.NewCurriculumHandlerFromHandler(h)
 
