@@ -72,7 +72,7 @@ const TT_SNAPSHOT_PFX = 'schedu-tt-snap-'
 // here means it silently won't survive a per-timetable save/restore.
 const TT_SNAPSHOT_FIELDS = [
   'step','config','sections','staff','subjects','breaks','periods',
-  'classTT','teacherTT','substitutions','substitutionSettings','conflicts','suggestions',
+  'classTT','teacherTT','substitutions','orDecisions','substitutionSettings','conflicts','suggestions',
   'optionalConfigs','subjectPools','participantPools','rooms',
   'facilities','teacherPools',
   'subjectGroups','subjectCombinations','dynamicLearningGroups',

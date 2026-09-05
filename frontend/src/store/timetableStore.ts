@@ -1,3 +1,4 @@
+import type { OrDecision } from '@/lib/orChoice'
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { DEFAULT_SUBSTITUTION_SETTINGS, type SubstitutionSettings } from '@/lib/substitutionSettings'
@@ -189,6 +190,14 @@ interface ScheduState {
   classTT: ClassTimetable
   teacherTT: Record<string, TeacherSchedule>
   substitutions: Record<string, string>
+  /**
+   * Which subject an OR period actually runs, per DATE — key
+   * `section|YYYY-MM-DD|periodId` (lib/orChoice). A dated overlay exactly like
+   * substitutions: the base timetable keeps holding the CHOICE, and this says
+   * which way one particular day went. Absent means nobody has decided, and
+   * coverage picks.
+   */
+  orDecisions: Record<string, OrDecision>
   substitutionSettings: SubstitutionSettings
   conflicts: Conflict[]
   suggestions: Suggestion[]
@@ -346,6 +355,9 @@ interface ScheduState {
   setClassTT: (tt: ClassTimetable) => void
   setTeacherTT: (tt: Record<string, TeacherSchedule>) => void
   setSubstitutions: (s: Record<string, string>) => void
+  setOrDecisions: (d: Record<string, OrDecision>) => void
+  /** Record (or clear, with an empty subject) one day's OR choice. */
+  decideOr: (key: string, subject: string, by?: string) => void
   setSubstitutionSettings: (s: SubstitutionSettings) => void
   setConflicts: (c: Conflict[]) => void
   setSuggestions: (s: Suggestion[]) => void
@@ -433,7 +445,7 @@ const initialState: Omit<ScheduState,
   | 'setSessionInstances' | 'setTimetableStatus' | 'setTimetableHealthScore'
   | 'setViewTab' | 'setTransposed' | 'setShowTeacher' | 'setShowRoom' | 'setEditMode' | 'setSidebarTab'
   | 'setSections' | 'setLegacySubjects' | 'setStaff' | 'setBreaks' | 'setPeriods'
-  | 'setClassTT' | 'setTeacherTT' | 'setSubstitutions' | 'setSubstitutionSettings' | 'setConflicts' | 'setSuggestions'
+  | 'setClassTT' | 'setTeacherTT' | 'setSubstitutions' | 'setOrDecisions' | 'decideOr' | 'setSubstitutionSettings' | 'setConflicts' | 'setSuggestions'
   | 'setParticipantPools' | 'setFacilities' | 'setTeacherPools' | 'setRooms'
   | 'setOptionalConfigs' | 'setSubjectPools' | 'setSubjectGroups' | 'setSchedulingMode' | 'setWorkingDaysPerYear'
   | 'togglePeriodShiftable' | 'updateCell'
@@ -494,6 +506,7 @@ const initialState: Omit<ScheduState,
   classTT: {},
   teacherTT: {},
   substitutions: {},
+  orDecisions: {},
   substitutionSettings: DEFAULT_SUBSTITUTION_SETTINGS,
   conflicts: [],
   suggestions: [],
@@ -662,6 +675,15 @@ export const useTimetableStore = create<ScheduState>()(
         setClassTT: (classTT) => set({ classTT }),
         setTeacherTT: (teacherTT) => set({ teacherTT }),
         setSubstitutions: (substitutions) => set({ substitutions }),
+        setOrDecisions: (orDecisions) => set({ orDecisions }),
+        decideOr: (key, subject, by) => set(st => {
+          const next = { ...(st.orDecisions ?? {}) }
+          // An empty subject clears the decision and hands the slot back to
+          // coverage, which is how somebody undoes a choice they regret.
+          if (!subject) delete next[key]
+          else next[key] = { subject, by, at: new Date().toISOString() }
+          return { orDecisions: next }
+        }),
         setSubstitutionSettings: (substitutionSettings) => set({ substitutionSettings }),
         setConflicts: (conflicts) => set({ conflicts }),
         setSuggestions: (suggestions) => set({ suggestions }),
@@ -828,7 +850,7 @@ export const useTimetableStore = create<ScheduState>()(
           step: 1,
           config: defaultWizardConfig,
           sections: [], staff: [], breaks: [], periods: [],
-          classTT: {}, teacherTT: {}, substitutions: {}, substitutionSettings: DEFAULT_SUBSTITUTION_SETTINGS, conflicts: [],
+          classTT: {}, teacherTT: {}, substitutions: {}, orDecisions: {}, substitutionSettings: DEFAULT_SUBSTITUTION_SETTINGS, conflicts: [],
           suggestions: [], optionalConfigs: [], subjectPools: [],
         }),
 
@@ -899,6 +921,7 @@ export const useTimetableStore = create<ScheduState>()(
           // so any field only captured in the snapshot (not here) would silently
           // vanish on refresh even though the snapshot itself still has it.
           substitutions: state.substitutions,
+          orDecisions: state.orDecisions,
           substitutionSettings: state.substitutionSettings,
           participantPools: state.participantPools,
           facilities: state.facilities,

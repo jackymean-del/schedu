@@ -32,7 +32,31 @@ export interface OrOption {
   room?: string
 }
 
+/**
+ * A decision recorded by a person, for one date.
+ *
+ * Dated, not permanent — exactly like a substitution, and for the same reason.
+ * "We are doing Physics this Tuesday because I have the lab" is a fact about
+ * Tuesday; writing it into the timetable would make it true every Tuesday until
+ * somebody noticed. The base timetable keeps holding the CHOICE; only the
+ * overlay says which way one particular day went.
+ */
+export interface OrDecision {
+  /** The subject the class will actually take. */
+  subject: string
+  /** Who decided, when there is a name to record. */
+  by?: string
+  /** ISO timestamp, for showing "decided this morning" rather than a mystery. */
+  at?: string
+}
+
+/** The key an OR decision is stored under — same shape as a substitution. */
+export const orDecisionKey = (section: string, isoDate: string, periodId: string) =>
+  `${section}|${isoDate}|${periodId}`
+
 export type OrReason =
+  /** A person chose, for this date. Beats coverage — they know something it does not. */
+  | 'manual'
   /** Both tracked, and one is genuinely further behind. */
   | 'behind'
   /** Both tracked and level — settled by a stable order, not a coin toss. */
@@ -65,9 +89,35 @@ export function resolveOrChoice(
   options: OrOption[],
   section: string,
   plans: Record<string, SyllabusPlan> | undefined,
+  /**
+   * What a person decided for THIS date, if they did. It wins outright:
+   * coverage is a good default, not an instruction, and the teacher standing
+   * in front of the class knows things the syllabus percentages do not — a lab
+   * free this morning, an exam next week, a topic half-finished.
+   */
+  manual?: OrDecision | string,
 ): OrChoice | null {
   const live = options.filter(o => o?.subject?.trim())
   if (!live.length) return null
+
+  const decided = typeof manual === 'string' ? { subject: manual } : manual
+  if (decided?.subject) {
+    const chosen = live.find(o => o.subject === decided.subject)
+    if (chosen) {
+      const who = decided.by ? ` by ${decided.by}` : ''
+      return {
+        subject: chosen.subject, option: chosen, reason: 'manual',
+        coverage: live.map(o => ({
+          subject: o.subject,
+          fraction: hasContentSignal(plans?.[planKey(o.subject, section)])
+            ? contentFraction(plans?.[planKey(o.subject, section)]) : undefined,
+        })),
+        explain: `${chosen.subject} — chosen${who} for this day.`,
+      }
+    }
+    // A decision naming a subject that is not in the group is stale (the group
+    // was edited since). Fall through to coverage rather than honour it.
+  }
 
   const measured = live.map(o => {
     const plan = plans?.[planKey(o.subject, section)]
@@ -112,6 +162,30 @@ export function resolveOrChoice(
     subject: first.option.subject, option: first.option, reason: 'behind', coverage,
     explain: `${first.option.subject} — ${pct(first.fraction!)} covered against ${second.option.subject}'s ${pct(second.fraction!)}, so it is further behind.`,
   }
+}
+
+/**
+ * The OR teachers who are NOT taking this period, and are therefore free.
+ *
+ * The solver reserves every option's teacher when it places an OR slot — it
+ * has to, since it cannot know in advance which subject will run. But only one
+ * of them ends up teaching, and the rest are then free: free to cover an
+ * absence, free to be offered as a substitute, free to be counted as free.
+ * Leaving them marked busy quietly removes half a science department from the
+ * pool at exactly the moment somebody is hunting for cover.
+ */
+export function freedTeachers(options: OrOption[], chosenSubject: string): string[] {
+  const chosen = new Set<string>()
+  const others = new Set<string>()
+  for (const o of options) {
+    const t = (o.teacher ?? '').trim()
+    if (!t) continue
+    if (o.subject === chosenSubject) chosen.add(t)
+    else others.add(t)
+  }
+  // Somebody teaching BOTH options is still busy — releasing them would be
+  // wrong in the one case it matters.
+  return [...others].filter(t => !chosen.has(t))
 }
 
 /**

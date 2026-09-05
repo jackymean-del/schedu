@@ -6,7 +6,8 @@
  * decided by syllabus coverage: whichever is further behind takes the period.
  * The interesting cases are all about not pretending to know.
  */
-import { resolveOrChoice, invalidOrSubjects } from './src/lib/orChoice.ts'
+import { resolveOrChoice, invalidOrSubjects, freedTeachers, orDecisionKey } from './src/lib/orChoice.ts'
+import { teachersActuallyIn } from './src/lib/cellTeachers.ts'
 import { planKey } from './src/lib/syllabusTracking.ts'
 
 type Any = any
@@ -101,6 +102,54 @@ console.log('\n── an OR group may not contain optional subjects ──')
     'so is one sitting in an elective slot')
   ok(invalidOrSubjects([{ subject: 'Unknown' }], subjects).length === 0,
     'a subject not on the roster is left for the roster to complain about')
+}
+
+console.log('')
+console.log('── a person can decide, and their choice wins ──')
+{
+  // Coverage is a good default, not an instruction. The teacher in front of
+  // the class knows things the percentages do not — a lab free this morning,
+  // an exam next week, a topic half-finished.
+  const byHand = resolveOrChoice(opts, SEC, plansFor(40, 70), { subject: 'Chemistry', by: 'Devi' })!
+  ok(byHand.subject === 'Chemistry' && byHand.reason === 'manual',
+    'a manual choice beats coverage even when coverage disagrees', byHand.explain)
+  ok(/by Devi/.test(byHand.explain), 'and records who made it')
+  ok(resolveOrChoice(opts, SEC, plansFor(40, 70), 'Chemistry')!.subject === 'Chemistry',
+    'a bare subject string works too, for the simple call site')
+
+  // A decision naming a subject no longer in the group is stale, not binding.
+  const stale = resolveOrChoice(opts, SEC, plansFor(40, 70), { subject: 'Biology' })!
+  ok(stale.subject === 'Physics' && stale.reason === 'behind',
+    'a decision naming a subject that has left the group falls back to coverage')
+  ok(resolveOrChoice(opts, SEC, plansFor(40, 70), undefined)!.reason === 'behind',
+    'with the decision cleared, coverage decides again')
+  ok(orDecisionKey('XI-A', '2026-08-25', 'p3') === 'XI-A|2026-08-25|p3',
+    'decisions are keyed per DATE, like substitutions')
+}
+
+console.log('')
+console.log('── the teachers who did not take it are free ──')
+{
+  ok(freedTeachers(opts, 'Physics').join() === 'Devi',
+    'the Chemistry teacher is released when Physics takes the period')
+  ok(freedTeachers(opts, 'Chemistry').join() === 'Rao', 'and the other way round')
+  ok(freedTeachers(opts, 'Biology').length === 2,
+    'a choice outside the group releases nobody rather than guessing')
+
+  // Somebody teaching BOTH options is still busy — the one case where
+  // releasing would be actively wrong.
+  const both = [{ subject: 'Physics', teacher: 'Rao' }, { subject: 'Chemistry', teacher: 'Rao' }]
+  ok(freedTeachers(both, 'Physics').length === 0, 'a teacher who covers both options stays busy')
+
+  const cell: any = {
+    subject: 'Physics', teacher: 'Rao',
+    groupAssignments: [{ subject: 'Physics', teacher: 'Rao' }, { subject: 'Chemistry', teacher: 'Devi' }],
+  }
+  ok(teachersActuallyIn(cell, 'Physics').join() === 'Rao',
+    'only the teacher taking the slot counts as teaching it')
+  ok(teachersActuallyIn(cell).length === 2, 'with no decision yet, everybody is still held')
+  ok(teachersActuallyIn(cell, 'Biology').length === 2,
+    'a stale decision holds everybody rather than emptying the room')
 }
 
 console.log(fail === 0 ? '\nALL OR-CHOICE CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)

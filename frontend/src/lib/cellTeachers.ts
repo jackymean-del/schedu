@@ -66,6 +66,35 @@ export function teachingPairsInCell(
   return solo ? [{ teacher: solo, subject: (cell.subject ?? '').trim() }] : []
 }
 
+/**
+ * Who is ACTUALLY teaching an OR cell once the day's choice is known.
+ *
+ * An OR cell offers a choice of subject to the whole class, so the solver has
+ * to reserve every option's teacher — it cannot know in advance which subject
+ * will run. Once the day resolves, only one of them teaches, and the others are
+ * free: free to cover an absence, free to be offered as a substitute, free to
+ * be counted as free. Leaving them marked busy takes half a science department
+ * out of the pool at precisely the moment somebody is hunting for cover.
+ *
+ * `chosenSubject` is what resolveOrChoice decided for that date. Without it
+ * nothing is released, which is the safe direction: an unresolved OR slot still
+ * holds everyone, exactly as before.
+ */
+export function teachersActuallyIn(
+  cell: TeachingCell | undefined | null,
+  chosenSubject?: string,
+): string[] {
+  const all = teachersInCell(cell)
+  if (!chosenSubject || !cell?.groupAssignments?.length) return all
+  const taking = cell.groupAssignments
+    .filter(g => g.subject === chosenSubject)
+    .map(g => (g.teacher ?? '').trim())
+    .filter(Boolean)
+  // A group whose subject is not among the assignments means a stale decision;
+  // hold everyone rather than free the room on bad data.
+  return taking.length ? taking : all
+}
+
 /** Is this person teaching in this cell at all? */
 export function cellHasTeacher(cell: TeachingCell | undefined | null, name: string): boolean {
   if (!name) return false

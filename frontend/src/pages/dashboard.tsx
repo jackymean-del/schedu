@@ -199,7 +199,7 @@ function snapKey(id: string) { return `${TT_SNAPSHOT_PFX}${cacheNS}:${id}` }
 // We save and restore all of these when switching between timetables.
 const TT_SNAPSHOT_FIELDS = [
   'step','config','sections','staff','subjects','breaks','periods',
-  'classTT','teacherTT','substitutions','substitutionSettings','conflicts','suggestions',
+  'classTT','teacherTT','substitutions','orDecisions','substitutionSettings','conflicts','suggestions',
   'optionalConfigs','subjectPools','participantPools','rooms',
   'facilities','teacherPools',
   // Elective-grouping data — keep OR/AND combos, generated groups, the
