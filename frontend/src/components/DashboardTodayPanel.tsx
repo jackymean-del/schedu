@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { useLeaves } from '@/lib/leaveUtils'
 import { computeTodaySummary, type AffectedSlot, type TodaySummary } from '@/lib/scheduleToday'
+import { useSyllabus } from '@/lib/syllabusTracking'
 import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight, DoorOpen } from 'lucide-react'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -44,6 +45,9 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
   // React's "rendered more hooks than during the previous render", and it took
   // the whole page down on the first load after signing in.
   const leaves = useLeaves(s => s.leaves)
+  // Same rule: above the early return. Plans decide which subject an
+  // undecided OR period runs, so a freed teacher is not chased for a cover.
+  const plans = useSyllabus(s => s.plans)
 
   const sections: any[] = store.sections ?? []
   const classTT = store.classTT ?? {}
@@ -58,6 +62,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
     periods: store.periods ?? [], sections, classTT, config: store.config ?? {},
     substitutions: store.substitutions ?? {}, leaves,
     conflicts: (store.conflicts ?? []).length, date: today,
+    orDecisions: store.orDecisions ?? {}, plans,
   })
   const allClear = summary.isWorkDay && summary.uncoveredSlots.length === 0
     && summary.teachersOnLeave.length === 0 && summary.roomClashes.length === 0

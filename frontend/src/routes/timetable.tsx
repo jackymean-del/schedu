@@ -5,6 +5,7 @@ import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { TimetableOrphanBanner } from '@/components/TimetableOrphanBanner'
 import { useNamingTerms, plural } from "@/lib/terms"
+import { cellHasTeacher } from '@/lib/cellTeachers'
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
@@ -127,22 +128,33 @@ function shortRoomName(name: string): string { return name ? name.slice(0, 9) : 
 // Optional/group blocks store teacher:'' at the section level and keep the real
 // teacher inside `options[]`. These helpers let teacher-view logic recognise
 // such blocks (e.g. an IP group taught to XI-Sci-A + XI-Sci-B by one teacher).
-function cellHasTeacher(cell: any, tn: string): boolean {
-  if (!cell) return false
-  if (cell.teacher === tn) return true
-  return Array.isArray(cell.options) && cell.options.some((o: any) => o.teacher === tn)
-}
+// cellHasTeacher used to live here as a private copy that matched `options[]`
+// and missed `groupAssignments` — so a teacher taking a later OR/AND group was
+// absent from their own teacher view and undercounted in every load figure on
+// this page. It is imported now; lib/cellTeachers reads both parallel shapes.
+//
+// These two had the same gap. A cell-level `subject` on an OR/AND cell reads
+// "Physics OR Chemistry" and its `room` is the FIRST group's — so the Chemistry
+// teacher's own timetable named both subjects and sent them to the physics lab.
+// Their own group is checked first now, and the cell-level values remain the
+// fallback for an ordinary lesson.
+const groupFor = (cell: any, tn: string) =>
+  (Array.isArray(cell?.groupAssignments) ? cell.groupAssignments : [])
+    .find((g: any) => g?.teacher === tn)
+  ?? (Array.isArray(cell?.options) ? cell.options : [])
+    .find((o: any) => o?.teacher === tn)
+
 function cellSubjectForTeacher(cell: any, tn: string): string {
   if (!cell) return ""
-  if (cell.teacher === tn && cell.subject) return cell.subject
-  const opt = Array.isArray(cell.options) ? cell.options.find((o: any) => o.teacher === tn) : null
-  return opt?.subject ?? (cell.subject ?? "")
+  const mine = groupFor(cell, tn)
+  if (mine?.subject) return mine.subject
+  return cell.subject ?? ""
 }
 function cellRoomForTeacher(cell: any, tn: string): string {
   if (!cell) return ""
-  if (cell.teacher === tn) return cell.room ?? ""
-  const opt = Array.isArray(cell.options) ? cell.options.find((o: any) => o.teacher === tn) : null
-  return opt?.room ?? cell.room ?? ""
+  const mine = groupFor(cell, tn)
+  if (mine?.room) return mine.room
+  return cell.room ?? ""
 }
 
 // ── Compress a list of sections into readable class names / ranges ──

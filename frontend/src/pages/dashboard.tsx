@@ -31,6 +31,7 @@ import { AppFooter } from '@/components/AppFooter'
 import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
 import { DashboardPulse } from '@/components/DashboardPulse'
 import { useLeaves } from '@/lib/leaveUtils'
+import { useSyllabus } from '@/lib/syllabusTracking'
 import { computeTodaySummary } from '@/lib/scheduleToday'
 import { loadActiveBundles, computeMultiToday } from '@/lib/activeSchedules'
 import { detectConflicts } from '@/lib/schedulingEngine'
@@ -1004,6 +1005,10 @@ export function DashboardPage() {
   // which is React's "rendered more hooks than during the previous render".
   // That is the login transition exactly, and it took the whole page down.
   const leaves = useLeaves(s => s.leaves)
+  // Above the auth gate at the foot of this component, like every other hook
+  // here: an early return that skips a hook is the crash this page has had
+  // before.
+  const syllabusPlans = useSyllabus(s => s.plans)
   const store = useTimetableStore() as any
   const { sections, staff } = store
 
@@ -1435,11 +1440,12 @@ export function DashboardPage() {
   const multiActive = activeBundles.length > 1
   const todaySummary = !hasTimetables ? null
     : multiActive
-    ? computeMultiToday(activeBundles, leaves, conflicts, new Date())
+    ? computeMultiToday(activeBundles, leaves, conflicts, new Date(), store.orDecisions ?? {}, syllabusPlans)
     : computeTodaySummary({
         periods: store.periods ?? [], sections, classTT: store.classTT ?? {}, config: store.config ?? {},
         substitutions: store.substitutions ?? {}, leaves,
         conflicts, date: new Date(),
+        orDecisions: store.orDecisions ?? {}, plans: syllabusPlans,
       })
   const onLeaveCount   = todaySummary?.teachersOnLeave.length ?? 0
   const uncoveredCount = todaySummary?.uncoveredSlots.length ?? 0

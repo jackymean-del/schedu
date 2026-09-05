@@ -31,6 +31,19 @@ interface TeachingCell {
   teacher?: string
   subject?: string
   groupAssignments?: Array<{ subject?: string; teacher?: string }>
+  /**
+   * The OTHER parallel shape. An optional block ("PE / Art / Painting in one
+   * slot") keeps its real teachers in `options[]` rather than
+   * `groupAssignments`, and mirrors only the first into the cell-level fields
+   * exactly as group cells do.
+   *
+   * Both shapes are read here because a private helper that knew about one and
+   * not the other is precisely how this module's seven bugs happened: the
+   * timetable page carried its own copy that matched `options` and missed
+   * `groupAssignments`, so a teacher in a later GROUP vanished from their own
+   * timetable and from every load count on the page.
+   */
+  options?: Array<{ subject?: string; teacher?: string }>
 }
 
 /**
@@ -42,10 +55,17 @@ interface TeachingCell {
  */
 export function teachersInCell(cell: TeachingCell | undefined | null): string[] {
   if (!cell) return []
-  if (cell.groupAssignments?.length) {
-    return cell.groupAssignments
-      .map(g => (g.teacher ?? '').trim())
-      .filter(Boolean)
+  const parallel = [...(cell.groupAssignments ?? []), ...(cell.options ?? [])]
+  if (parallel.length) {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const g of parallel) {
+      const t = (g.teacher ?? '').trim()
+      // A cell can carry both shapes, and one teacher can appear in each; the
+      // same person is not two people standing in one room.
+      if (t && !seen.has(t)) { seen.add(t); out.push(t) }
+    }
+    return out
   }
   const solo = (cell.teacher ?? '').trim()
   return solo ? [solo] : []
@@ -57,9 +77,15 @@ export function teachingPairsInCell(
   cell: TeachingCell | undefined | null,
 ): Array<{ teacher: string; subject: string }> {
   if (!cell) return []
-  if (cell.groupAssignments?.length) {
-    return cell.groupAssignments
-      .filter(g => (g.teacher ?? '').trim())
+  const parallel = [...(cell.groupAssignments ?? []), ...(cell.options ?? [])]
+  if (parallel.length) {
+    const seen = new Set<string>()
+    return parallel
+      .filter(g => {
+        const t = (g.teacher ?? '').trim()
+        if (!t || seen.has(t)) return false
+        seen.add(t); return true
+      })
       .map(g => ({ teacher: g.teacher!.trim(), subject: (g.subject ?? cell.subject ?? '').trim() }))
   }
   const solo = (cell.teacher ?? '').trim()

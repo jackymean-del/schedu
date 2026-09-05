@@ -112,10 +112,16 @@ function venueIntervals(b: ScheduleBundle, dayKey: string) {
  * venue occupied by two schedules at overlapping wall-clock times, which no
  * single-schedule check can see.
  */
-export function computeMultiToday(bundles: ScheduleBundle[], leaves: CalLeave[], conflicts: number, date: Date): MultiToday {
+export function computeMultiToday(
+  bundles: ScheduleBundle[], leaves: CalLeave[], conflicts: number, date: Date,
+  // Decisions are keyed by SECTION, and sections do not repeat across active
+  // schedules, so one map serves every bundle without collision.
+  orDecisions: Record<string, any> = {}, plans: Record<string, any> = {},
+): MultiToday {
   const parts = bundles.map(b => computeTodaySummary({
     periods: b.periods, sections: b.sections, classTT: b.classTT, config: b.config,
     substitutions: b.substitutions, leaves, conflicts: 0, date,
+    orDecisions, plans,
   }))
 
   const merged: MultiToday = {

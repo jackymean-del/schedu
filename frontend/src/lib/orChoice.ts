@@ -208,3 +208,32 @@ export function invalidOrSubjects(
   }
   return bad
 }
+
+/**
+ * The OR options in a cell, or null if it is not an OR choice.
+ *
+ * OR and AND look identical in the data — both are parallel `groupAssignments`
+ * — and are told apart only by the joiner in the cell's subject string,
+ * "Physics OR Chemistry" against "Physics AND Chemistry". That parsing already
+ * existed inline in the cell renderer, where it decides a chip colour. It must
+ * not be re-derived anywhere that decides who is TEACHING, because getting it
+ * backwards is not a cosmetic error: treating an AND cell as a choice would
+ * release a teacher who is genuinely standing in front of half the class.
+ *
+ * So the distinction lives here once, next to the resolver that consumes it.
+ */
+export function orOptionsInCell(cell: {
+  subject?: string
+  groupAssignments?: Array<{ subject?: string; teacher?: string }>
+} | undefined | null): OrOption[] | null {
+  if (!cell?.groupAssignments?.length) return null
+  const raw = cell.subject ?? ''
+  // AND is checked first: a cell can only carry one joiner, and a subject named
+  // with a stray "or" inside it must not turn a parallel split into a choice.
+  if (raw.includes(' AND ')) return null
+  if (!raw.includes(' OR ')) return null
+  const options = cell.groupAssignments
+    .map(g => ({ subject: (g.subject ?? '').trim(), teacher: (g.teacher ?? '').trim() }))
+    .filter(o => o.subject)
+  return options.length ? options : null
+}

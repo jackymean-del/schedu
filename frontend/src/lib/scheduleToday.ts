@@ -5,6 +5,7 @@
  * keeps the (non-trivial) uncovered-slot logic from drifting between them.
  */
 import { teachingPairsInCell } from './cellTeachers'
+import { orOptionsInCell, resolveOrChoice, orDecisionKey, type OrDecision } from './orChoice'
 import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
 import { subKey } from './substitutionKeys'
@@ -52,8 +53,14 @@ export interface TodaySummary {
 export function computeTodaySummary(params: {
   periods: any[]; sections: any[]; classTT: Record<string, any>; config: any
   substitutions: Record<string, string>; leaves: CalLeave[]; conflicts: number; date: Date
+  /** Dated OR choices, keyed section|date|period. Absent means undecided. */
+  orDecisions?: Record<string, OrDecision>
+  /** Syllabus plans, so an undecided OR slot still resolves by coverage. */
+  plans?: Record<string, any>
 }): TodaySummary {
   const { periods, sections, classTT, config, substitutions, leaves, conflicts, date } = params
+  const orDecisions = params.orDecisions ?? {}
+  const plans = params.plans ?? {}
   const isoDate = toISODate(date)
   const dayKey = DAY_KEY[date.getDay()]
   const workDays: string[] = config?.workDays?.length
@@ -125,7 +132,14 @@ export function computeTodaySummary(params: {
         // LATER group was never listed as needing cover at all: the group sat
         // with nobody in front of it, and the console that exists to catch
         // exactly that said the day was fine.
-        const inCell = teachingPairsInCell(c)
+        //
+        // An OR cell is a subject CHOICE for the whole class, and only one of
+        // its teachers actually stands up. Counting the others as teaching
+        // sends the cover flow hunting a substitute for a lesson that will not
+        // happen — and hides the fact that they were free to cover something
+        // that will. An undecided slot still holds everyone, which is the safe
+        // direction.
+        const inCell = orTeachingPairs(c, s.name, isoDate, p.id, orDecisions, plans)
 
         const away = inCell.filter(x => onLeaveSet.has(x.teacher))
         if (!away.length) continue
@@ -175,3 +189,35 @@ export function computeTodaySummary(params: {
 }
 
 export { isOnLeaveOn }
+
+/**
+ * The (teacher, subject) pairs actually teaching a cell on ONE DATE.
+ *
+ * Identical to teachingPairsInCell for every ordinary cell and for AND groups,
+ * where the parallel teachers are all genuinely in the room. It differs only
+ * for an OR choice, where the day resolves to a single subject and the rest of
+ * the options' teachers are free.
+ */
+function orTeachingPairs(
+  cell: any, section: string, isoDate: string, periodId: string,
+  orDecisions: Record<string, OrDecision>, plans: Record<string, any>,
+): Array<{ teacher: string; subject: string }> {
+  const all = teachingPairsInCell(cell)
+  const options = orOptionsInCell(cell)
+  if (!options) return all
+  const choice = resolveOrChoice(
+    options, section, plans, orDecisions[orDecisionKey(section, isoDate, periodId)],
+  )
+  if (!choice) return all
+  // Only a DECISIVE choice releases anybody. resolveOrChoice still names a
+  // subject when it has nothing to go on — it falls back to a stable order so
+  // callers get a deterministic answer — and reason 'untracked' is how it says
+  // so. Treating that as a decision would free a teacher on a coin toss and
+  // leave a class with nobody, which is worse than the double-booking this
+  // whole path exists to prevent.
+  if (choice.reason === 'untracked') return all
+  const taking = all.filter(x => x.subject === choice.subject)
+  // A choice naming a subject no longer in the cell is stale; hold everyone
+  // rather than empty the room on the strength of bad data.
+  return taking.length ? taking : all
+}
