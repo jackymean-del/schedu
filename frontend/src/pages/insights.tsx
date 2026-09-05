@@ -9,6 +9,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
 import { useLeaves } from '@/lib/leaveUtils'
+import { useSyllabus } from '@/lib/syllabusTracking'
 import { useHolidays } from '@/lib/holidays'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
 import { useFreeAssignments, type FreeAssignment } from '@/lib/freeAssignments'
@@ -43,6 +44,9 @@ export function InsightsPage() {
   // the school lost twice over.
   const holidays = useHolidays(s => s.holidays)
   const freeAssignments = useFreeAssignments(s => s.assignments)
+  // An undecided OR period resolves by syllabus coverage, so a period the
+  // choice went against is not a period this absence cost the school.
+  const syllabusPlans = useSyllabus(s => s.plans)
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
   const [tab, setTab] = useState<Tab>('summary')
@@ -57,17 +61,17 @@ export function InsightsPage() {
   // Memoised: rebuilt inline this was a new array on every render, so every
   // report below recomputed whether or not anything had changed.
   const sources: ReportSource[] = useMemo(() => multiActive
-    ? bundles.map(b => ({ sections: b.sections, periods: b.periods, classTT: b.classTT, substitutions: b.substitutions, config: b.config }))
-    : [{ sections, periods: store.periods ?? [], classTT: store.classTT ?? {}, substitutions: store.substitutions ?? {}, config: store.config ?? {} }],
-    [multiActive, bundles, sections, store.periods, store.classTT, store.substitutions, store.config])
+    ? bundles.map(b => ({ sections: b.sections, periods: b.periods, classTT: b.classTT, substitutions: b.substitutions, config: b.config, orDecisions: b.orDecisions }))
+    : [{ sections, periods: store.periods ?? [], classTT: store.classTT ?? {}, substitutions: store.substitutions ?? {}, config: store.config ?? {}, orDecisions: store.orDecisions ?? {} }],
+    [multiActive, bundles, sections, store.periods, store.classTT, store.substitutions, store.config, store.orDecisions])
   const hasData = sources.some(s => s.sections.length > 0 && Object.keys(s.classTT).length > 0)
 
   // `leaves` was read inside and missing from the deps: a newly recorded
   // absence did not reach the reports until something else happened to
   // invalidate them.
   const reports: ReportsData = useMemo(() => computeReports({
-    leaves, sources, holidays, range: rangeFor(rangeKey),
-  }), [leaves, sources, holidays, rangeKey])
+    leaves, sources, holidays, range: rangeFor(rangeKey), plans: syllabusPlans,
+  }), [leaves, sources, holidays, rangeKey, syllabusPlans])
 
   // Extra duties (free-slot task assignments) in the selected range — same
   // date-scoped records the Calendar writes, so the audit trail is automatic.

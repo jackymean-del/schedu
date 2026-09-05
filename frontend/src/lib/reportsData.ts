@@ -6,7 +6,7 @@
  * not (a cancelled lesson). Trends, leave-type splits, and faculty/class
  * summaries all fall out of that same expansion.
  */
-import { cellHasTeacher } from './cellTeachers'
+import { cellHasTeacherOnDate } from './orChoice'
 import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, leaveCoversDate } from './leaveUtils'
 import { subKey } from './substitutionKeys'
@@ -74,6 +74,8 @@ export function rangeFor(preset: string, today = new Date()): DateRange {
 export interface ReportSource {
   sections: any[]; periods: any[]; classTT: Record<string, any>
   substitutions: Record<string, string>; config: any
+  /** This schedule's dated OR choices, keyed section|date|period. */
+  orDecisions?: Record<string, any>
 }
 
 export function computeReports(params: {
@@ -91,12 +93,16 @@ export function computeReports(params: {
   periods?: any[]
   sections?: any[]
   config?: any
+  orDecisions?: Record<string, any>
+  /** Syllabus plans, so an undecided OR period still resolves by coverage. */
+  plans?: Record<string, any>
 }): ReportsData {
   const { leaves, range, holidays = [] } = params
+  const plans = params.plans ?? {}
   const sources: ReportSource[] = params.sources ?? [{
     sections: params.sections ?? [], periods: params.periods ?? [],
     classTT: params.classTT ?? {}, substitutions: params.substitutions ?? {},
-    config: params.config ?? {},
+    config: params.config ?? {}, orDecisions: params.orDecisions ?? {},
   }]
 
   // Per-source period → wall-clock minutes (each schedule has its own bell).
@@ -161,7 +167,13 @@ export function computeReports(params: {
             const c = sd[p.id]
             // Any teacher in the cell, not just the first: an absence in a
             // parallel group was leaving its periods out of the loss figures.
-            if (!c?.subject || !cellHasTeacher(c, l.teacher)) continue
+            //
+            // …but an OR period runs one subject, and a period the choice went
+            // AGAINST was never this teacher's to lose. Counting it inflates
+            // what the absence cost the school.
+            if (!c?.subject) continue
+            if (!cellHasTeacherOnDate(c, l.teacher, s.name, date, p.id,
+                                      src.orDecisions ?? {}, plans)) continue
             const sub = src.substitutions[subKey(s.name, date, p.id)]
             const t = times[p.id] ?? { startMin: 0, endMin: 0, name: p.id }
             events.push({

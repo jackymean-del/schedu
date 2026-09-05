@@ -14,6 +14,7 @@
  */
 import { computeTodaySummary } from './src/lib/scheduleToday.ts'
 import { computeMultiToday } from './src/lib/activeSchedules.ts'
+import { computeReports } from './src/lib/reportsData.ts'
 import { teachersInCell, teachingPairsInCell, cellHasTeacher } from './src/lib/cellTeachers.ts'
 import { orOptionsInCell } from './src/lib/orChoice.ts'
 import { planKey } from './src/lib/syllabusTracking.ts'
@@ -127,6 +128,37 @@ console.log('\n── both parallel shapes count as teaching ──')
   ok(teachingPairsInCell(both).length === 1, 'and the pair list agrees')
   ok(teachersInCell(null).length === 0 && teachersInCell({}).length === 0,
     'an empty cell holds nobody')
+}
+
+console.log('\n── a period the choice went against was never lost ──')
+{
+  // Reports price an absence in periods lost. An OR period that ran the OTHER
+  // subject was never this teacher's to lose, so counting it inflates what the
+  // absence cost — the figure a school takes to a staffing conversation.
+  const src = (orDecisions: Any): Any => ({
+    sections, periods, classTT: { [SEC]: { TUESDAY: { p1: orCell } } },
+    substitutions: {}, config, orDecisions,
+  })
+  const range = { start: ISO, end: ISO }
+  const plans = { [planKey('Physics', SEC)]: plan(50), [planKey('Chemistry', SEC)]: plan(50) }
+
+  const lostAnyway = computeReports({
+    leaves, holidays: [], range, sources: [src({})], plans,
+  })
+  ok(lostAnyway.events.length === 1, 'an undecided OR period still counts as lost')
+
+  const notHers = computeReports({
+    leaves, holidays: [], range,
+    sources: [src({ [key]: { subject: 'Physics', by: 'Rao' } })], plans,
+  })
+  ok(notHers.events.length === 0,
+    'but once Physics took the period, Devi lost nothing', JSON.stringify(notHers.events))
+
+  const hers = computeReports({
+    leaves, holidays: [], range,
+    sources: [src({ [key]: { subject: 'Chemistry', by: 'Devi' } })], plans,
+  })
+  ok(hers.events.length === 1, 'and when the period was hers, it is counted')
 }
 
 console.log('\n── a decision belongs to the schedule it was made on ──')
