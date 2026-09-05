@@ -1195,7 +1195,29 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           const sameGroupPenalty = (prevGroup && thisGroup && prevGroup === thisGroup) ? -20 : 0
           // Extra penalty for two heavy subjects back-to-back
           const adjacentHeavyPenalty = (prevIsHeavy && isHeavySubject(sub.name)) ? -10 : 0
-          return { sub, score: dayScore + rotScore + sameGroupPenalty + adjacentHeavyPenalty }
+
+          // ── Slot variety: the same subject must not own the same period ──
+          //
+          // Spreading a subject across DAYS was already handled (subjectDayQuota
+          // above). Nothing spread it across SLOTS, so a class could take Maths
+          // in period 1 every single day of the week — and whichever subject
+          // drew the last period kept it all week too, which is the one nobody
+          // wants.
+          //
+          // The penalty escalates with each repeat rather than being flat: one
+          // repeat is a coincidence worth allowing when the alternative is a
+          // blank period, four is a rut.
+          let sameSlotElsewhere = 0
+          for (const d of workDays) {
+            if (d === day) continue
+            if (classTT[sec.name]?.[d]?.[period.id]?.subject === sub.name) sameSlotElsewhere++
+          }
+          const slotRepeatPenalty = sameSlotElsewhere * -12
+
+          return {
+            sub,
+            score: dayScore + rotScore + sameGroupPenalty + adjacentHeavyPenalty + slotRepeatPenalty,
+          }
         }).sort((a, b) => b.score - a.score)
         // ── schedU Scope System integration ──
         // Skip placement entirely if SECTION scope LOCKS this slot (slot-level,

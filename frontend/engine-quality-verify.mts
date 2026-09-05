@@ -105,8 +105,10 @@ function measure(out: Any, s: Any) {
   const mean = vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)
   const sd = Math.sqrt(vals.reduce((a, v) => a + (v - mean) ** 2, 0) / Math.max(1, vals.length))
 
-  // A class taking one subject in the same slot 4+ times in a week.
-  let sameSlot = 0
+  // A class taking one subject in the same slot repeatedly. Counted at two
+  // depths: 4+ in a six-day week is a rut, and 3 is worth watching so that
+  // "zero at four" cannot hide a pile at three.
+  let sameSlot = 0, sameSlot3 = 0
   for (const sec of s.sections) {
     const seen: Record<string, Record<string, number>> = {}
     for (const d of WORK_DAYS) {
@@ -116,7 +118,10 @@ function measure(out: Any, s: Any) {
         ;(seen[c.subject] ??= {})[pid] = (seen[c.subject][pid] ?? 0) + 1
       }
     }
-    for (const sub in seen) for (const pid in seen[sub]) if (seen[sub][pid] >= 4) sameSlot++
+    for (const sub in seen) for (const pid in seen[sub]) {
+      if (seen[sub][pid] >= 4) sameSlot++
+      if (seen[sub][pid] === 3) sameSlot3++
+    }
   }
 
   let placed = 0
@@ -128,7 +133,7 @@ function measure(out: Any, s: Any) {
   return {
     gaps, taught, worstDay, placed,
     gapsPerTaught: +(gaps / Math.max(1, taught)).toFixed(3),
-    sd: +sd.toFixed(2), mean: +mean.toFixed(1), sameSlot,
+    sd: +sd.toFixed(2), mean: +mean.toFixed(1), sameSlot, sameSlot3,
   }
 }
 
@@ -141,7 +146,7 @@ for (const perGrade of [2, 4]) {
   console.log(`\n── ${s.sections.length} sections, ${s.staff.length} staff · ${ms.toFixed(0)} ms ──`)
   console.log(`   placed ${m.placed} · load mean ${m.mean} sd ${m.sd}`)
   console.log(`   stranded frees ${m.gaps} (${m.gapsPerTaught} per lesson taught), worst day ${m.worstDay}`)
-  console.log(`   same subject in same slot 4+/wk: ${m.sameSlot}`)
+  console.log(`   same subject in same slot: ${m.sameSlot} at 4+/wk, ${m.sameSlot3} at exactly 3`)
 
   ok(m.placed > 0, 'the school actually gets a timetable', `${m.placed} lessons`)
   // Ceilings sit a little above what the engine achieves today, so a real
@@ -153,6 +158,11 @@ for (const perGrade of [2, 4]) {
     'stranded free periods stay under 0.38 per lesson taught', `${m.gapsPerTaught}`)
   ok(m.worstDay <= 5, 'no teacher has more than 5 stranded frees in one day', `worst ${m.worstDay}`)
   ok(m.sd <= 6, 'teaching load stays reasonably even across staff', `sd ${m.sd}`)
+  // A subject must not own one period of the day all week. Gated at zero
+  // because the engine now achieves zero — it was 18 and 31 before the slot
+  // variety term, so this is a real property to hold rather than an aspiration.
+  ok(m.sameSlot === 0,
+    'no class takes one subject in the same slot 4+ times a week', `${m.sameSlot}`)
   ok(ms < 5000, 'and it solves in seconds', `${ms.toFixed(0)} ms`)
 }
 
