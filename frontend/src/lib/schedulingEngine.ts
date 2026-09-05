@@ -1331,6 +1331,40 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             // Avoid exhaustion today (each period taught today = -3)
             score -= todayLoad * 3
 
+            // ── Compaction: do not strand a free period ─────────────────────
+            //
+            // A free period with lessons either side of it is the single most
+            // common complaint about a generated timetable — too short to
+            // leave the building, too long to do nothing with. The scorer had
+            // no notion of adjacency at all, so those holes were an accident
+            // rather than a trade-off: it pushed a teacher's lessons apart
+            // (todayLoad above) and never asked whether a placement left a gap.
+            //
+            // Three cases, and the third is the one that matters:
+            //   next to a lesson they already have  → compacts the day, reward
+            //   already long run of lessons         → stop, exhaustion is real
+            //   in school today but NOT adjacent    → this opens a hole, avoid
+            //
+            // Deliberately a preference, not a rule. Refusing such a placement
+            // outright would leave lessons unplaced, and a stranded free is an
+            // annoyance where a missing lesson is a failure.
+            const busyToday = teacherBusy[name]?.[day]
+            if (busyToday?.size) {
+              const prevId = classPeriods[pi - 1]?.id
+              const nextId = classPeriods[pi + 1]?.id
+              const touching = (prevId && busyToday.has(prevId)) || (nextId && busyToday.has(nextId))
+              if (touching) {
+                // How long a run this would extend — three in a row is a
+                // stretch, beyond that it stops being a kindness.
+                let run = 0
+                for (let k = pi - 1; k >= 0 && busyToday.has(classPeriods[k].id); k--) run++
+                for (let k = pi + 1; k < classPeriods.length && busyToday.has(classPeriods[k].id); k++) run++
+                score += run < 3 ? 25 : -17
+              } else {
+                score -= 22
+              }
+            }
+
             // Scope-disabled soft penalty
             const tScope = (st as any).scope
             if (tScope) {
