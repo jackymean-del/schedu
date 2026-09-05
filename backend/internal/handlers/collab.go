@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // Members and OR decisions — the first things in this app that somebody other
@@ -117,7 +119,7 @@ func (h *Handler) ListMembers(c fiber.Ctx) error {
 		}
 		out = append(out, fiber.Map{
 			"id": id, "email": email, "staffName": staff, "role": role,
-			"status": map[bool]string{true: "active", false: "invited"}[joined],
+			"status":  map[bool]string{true: "active", false: "invited"}[joined],
 			"addedAt": created,
 		})
 	}
@@ -302,7 +304,7 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 	}
 	var body struct {
 		Section  string `json:"section"`
-		Date     string `json:"date"`     // YYYY-MM-DD
+		Date     string `json:"date"` // YYYY-MM-DD
 		PeriodID string `json:"periodId"`
 		Subject  string `json:"subject"` // empty clears the decision
 		Options  []struct {
@@ -332,7 +334,28 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 	subject := strings.TrimSpace(body.Subject)
 
 	// Clearing hands the slot back to syllabus coverage.
+	//
+	// This path needs its own guard, and for the same reason mayClaim exists.
+	// A teacher cannot TAKE a colleague's period — but without this they could
+	// drop it, and coverage might then hand it straight to them. Same harm,
+	// other door. So a teacher may only hand back what they took.
 	if subject == "" {
+		if !caller.isOwner && caller.role != "admin" {
+			var by string
+			err := h.db.QueryRow(ctx, `
+				SELECT COALESCE(decided_by, '') FROM or_decisions
+				WHERE timetable_id = $1 AND section = $2 AND on_date = $3::date AND period_id = $4`,
+				ttID, body.Section, body.Date, body.PeriodID).Scan(&by)
+			switch {
+			case errors.Is(err, pgx.ErrNoRows):
+				// Nothing is decided, so there is nothing to take away.
+			case err != nil:
+				return fiber.NewError(fiber.StatusInternalServerError, "could not check the decision")
+			case !mayClear(by, caller.staffName):
+				return fiber.NewError(fiber.StatusForbidden,
+					"only whoever took this period can hand it back")
+			}
+		}
 		if _, err := h.db.Exec(ctx, `
 			DELETE FROM or_decisions
 			WHERE timetable_id = $1 AND section = $2 AND on_date = $3::date AND period_id = $4`,
@@ -361,6 +384,23 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 		"section": body.Section, "date": body.Date, "periodId": body.PeriodID,
 		"subject": subject, "by": caller.staffName,
 	})
+}
+
+// mayClear reports whether `staffName` may hand back a decision made by
+// `decidedBy`. Only its own author may, which is what stops the clear path
+// being a way around mayClaim.
+//
+// An unnamed claim (decided_by null, written before a roster mapping existed)
+// belongs to nobody, so no teacher may clear it — an admin still can. Refusing
+// is the safe direction: the alternative is that every unnamed claim is
+// everybody's to drop.
+func mayClear(decidedBy, staffName string) bool {
+	who := strings.TrimSpace(staffName)
+	owner := strings.TrimSpace(decidedBy)
+	if who == "" || owner == "" {
+		return false
+	}
+	return strings.EqualFold(owner, who)
 }
 
 // mayClaim reports whether `staffName` teaches `subject` among the OR options.

@@ -59,7 +59,8 @@ export function RootLayout() {
   // Pages requiring a signed-in user (real auth via Clerk; open in mock mode).
   const PROTECTED = ['/dashboard', '/wizard', '/timetable', '/master-data',
     '/settings', '/insights', '/users', '/calendar', '/support',
-    '/guide', '/profile', '/subscription', '/configure', '/syllabus', '/board']
+    '/guide', '/profile', '/subscription', '/configure', '/syllabus', '/board',
+    '/my-teaching']
   const isProtected = PROTECTED.some(p => path === p || path.startsWith(p + '/'))
 
   // The corridor display fills the screen it lives on: no sidebar, no topbar,

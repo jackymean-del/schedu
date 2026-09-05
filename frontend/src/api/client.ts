@@ -85,3 +85,68 @@ export const timetableApi = {
   update: (id: string, data: unknown)           => apiClient.put(`/timetables/${id}`, data),
   delete: (id: string)                          => apiClient.delete(`/timetables/${id}`),
 }
+
+// ─────────────────────────────────────────────────────────────
+// PEOPLE, AND THE DECISIONS THEY MAY TAKE
+// ─────────────────────────────────────────────────────────────
+//
+// The first endpoints in this app that somebody other than the account owner
+// writes to. A teacher signs in, sees the schedules a school has put them on,
+// and takes an OR period for a subject they teach. Authorisation is the
+// server's: it checks that the caller's ROSTER NAME is against the subject
+// being claimed, because a timetable names teachers by roster name and never
+// by login.
+
+export interface MemberRow {
+  id: string
+  email: string
+  /** How this person is named in the timetable — the join that makes the rest work. */
+  staffName: string
+  role: 'admin' | 'teacher' | 'viewer'
+  status: 'active' | 'invited'
+}
+
+export const memberApi = {
+  list:   ()                     => apiClient.get<{ members: MemberRow[] }>('/members'),
+  upsert: (m: { email: string; staffName?: string; role?: string }) =>
+    apiClient.post('/members', m),
+  remove: (id: string)           => apiClient.delete(`/members/${id}`),
+}
+
+export interface MySchedule {
+  id: string
+  name: string
+  status: string
+  /** True when this is the caller's own school rather than one they teach at. */
+  mine: boolean
+  role: 'admin' | 'teacher' | 'viewer'
+  staffName: string
+}
+
+export interface OrDecisionRow {
+  /** `section|YYYY-MM-DD|periodId` — the same key lib/orChoice builds. */
+  key: string
+  section: string
+  date: string
+  periodId: string
+  subject: string
+  by: string
+}
+
+export const collabApi = {
+  /** Every timetable this account may see: their own, plus any school that
+   *  lists them on its roster. */
+  mySchedules: () => apiClient.get<{ schedules: MySchedule[] }>('/my-schedules'),
+
+  orDecisions: (timetableId: string, from?: string, to?: string) =>
+    apiClient.get<{ decisions: OrDecisionRow[] }>(
+      `/timetables/${timetableId}/or-decisions`, { params: { from, to } }),
+
+  /** Take (or, with an empty subject, release) one OR period for one date.
+   *  `options` is sent as the timetable holds them so the server can check the
+   *  caller actually teaches the subject being claimed. */
+  decideOr: (timetableId: string, body: {
+    section: string; date: string; periodId: string; subject: string
+    options?: Array<{ subject: string; teacher?: string }>
+  }) => apiClient.post(`/timetables/${timetableId}/or-decisions`, body),
+}

@@ -76,3 +76,33 @@ func TestNormEmail(t *testing.T) {
 		}
 	}
 }
+
+// mayClear is the other half of the authorisation. Guarding only the claim
+// leaves a teacher able to drop a colleague's period and let syllabus coverage
+// hand it back to them — the same outcome mayClaim refuses, reached sideways.
+func TestMayClear(t *testing.T) {
+	cases := []struct {
+		name      string
+		decidedBy string
+		staff     string
+		want      bool
+	}{
+		{"a teacher hands back their own claim", "R. Rao", "R. Rao", true},
+		{"case and spacing do not lock somebody out of their own slot", "  r. rao ", "R. Rao", true},
+
+		// The hole this closes.
+		{"a teacher cannot drop a colleague's claim", "S. Devi", "R. Rao", false},
+
+		// A claim nobody is named on belongs to nobody. An admin still clears
+		// it; letting any teacher do so would make every legacy row fair game.
+		{"an unattributed claim is not any teacher's to clear", "", "R. Rao", false},
+		{"an unmapped account clears nothing", "R. Rao", "", false},
+		{"and two blanks do not match each other", "", "", false},
+		{"nor do two whitespace names", "   ", "  ", false},
+	}
+	for _, c := range cases {
+		if got := mayClear(c.decidedBy, c.staff); got != c.want {
+			t.Errorf("%s: mayClear(%q, %q) = %v, want %v", c.name, c.decidedBy, c.staff, got, c.want)
+		}
+	}
+}

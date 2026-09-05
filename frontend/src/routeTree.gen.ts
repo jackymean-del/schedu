@@ -23,6 +23,7 @@ import { RouteLoadingFallback } from "./components/RouteLoadingFallback"
 const DashboardPage  = lazyRouteComponent(() => import("./pages/dashboard"), "DashboardPage")
 const WizardPage     = lazyRouteComponent(() => import("./pages/wizard"), "WizardPage")
 const MasterDataPage = lazyRouteComponent(() => import("./pages/master-data"), "MasterDataPage")
+const MyTeachingPage = lazyRouteComponent(() => import("./pages/my-teaching"), "MyTeachingPage")
 const SettingsPage   = lazyRouteComponent(() => import("./pages/settings"), "SettingsPage")
 const InsightsPage   = lazyRouteComponent(() => import("./pages/insights"), "InsightsPage")
 const CalendarPage   = lazyRouteComponent(() => import("./pages/calendar"), "CalendarPage")
@@ -44,6 +45,7 @@ const wizardRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/w
 const timetableRoute  = createRoute({ getParentRoute: () => rootRoute, path: "/timetable",   component: TimetablePage, pendingComponent: RouteLoadingFallback })
 const demoRoute       = createRoute({ getParentRoute: () => rootRoute, path: "/demo",        component: DemoPage })
 const masterDataRoute = createRoute({ getParentRoute: () => rootRoute, path: "/master-data", component: MasterDataPage, pendingComponent: RouteLoadingFallback })
+const myTeachingRoute = createRoute({ getParentRoute: () => rootRoute, path: "/my-teaching", component: MyTeachingPage, pendingComponent: RouteLoadingFallback })
 const featuresRoute   = createRoute({ getParentRoute: () => rootRoute, path: "/features",    component: MarketingRedirect })
 const pricingRoute    = createRoute({ getParentRoute: () => rootRoute, path: "/pricing",     component: MarketingRedirect })
 const docsRoute       = createRoute({ getParentRoute: () => rootRoute, path: "/docs",        component: MarketingRedirect })
@@ -66,7 +68,7 @@ const boardRoute         = createRoute({ getParentRoute: () => rootRoute, path: 
 
 export const routeTree = rootRoute.addChildren([
   indexRoute, loginRoute, registerRoute, dashboardRoute,
-  wizardRoute, timetableRoute, demoRoute, masterDataRoute,
+  wizardRoute, timetableRoute, demoRoute, masterDataRoute, myTeachingRoute,
   featuresRoute, pricingRoute, docsRoute, docArticleRoute, contactRoute,
   sharedRoute, ssoCallbackRoute,
   settingsRoute, insightsRoute, usersRoute, calendarRoute, supportRoute,
