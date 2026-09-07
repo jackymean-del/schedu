@@ -585,6 +585,63 @@ console.log(`
   check(placed > 0, 'and it still places lessons rather than giving up', `${placed} placed`)
 }
 
+// ── INV16: a class teacher does not get more of their subject than asked ──
+//
+// Pass 1 gives the class teacher Period 1. It used to give them Period 1 on
+// EVERY working day with no reference to the subject's weekly quota, so a class
+// teacher of Hindi in a school that wants one Hindi period a week got six — and
+// on a full timetable the subjects those slots displaced were never taught at
+// all. A class asked for Science once a week and got none.
+//
+// Nothing above caught it because every section in this file is built with
+// classTeacher: '' — the flagship fixture never exercised Pass 1 at all. Found
+// by engine-stress-verify, pinned here.
+{
+  const WD = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+  const P: Any[] = [1, 2, 3, 4].map(i => ({ id: `p${i}`, name: `P${i}`, duration: 40, type: 'class', shiftable: true }))
+  const sections = [{ id: 's1', name: 'VI-A', room: 'R1', grade: 'VI', classTeacher: 'CT' }]
+  const staff: Any[] = [
+    { id: 'ct', name: 'CT', role: 'teacher', subjects: ['Hindi'], isClassTeacher: 'VI-A', maxPeriodsPerWeek: 30 },
+    { id: 't2', name: 'T2', role: 'teacher', subjects: ['Mathematics'], isClassTeacher: '', maxPeriodsPerWeek: 30 },
+    { id: 't3', name: 'T3', role: 'teacher', subjects: ['Science'], isClassTeacher: '', maxPeriodsPerWeek: 30 },
+    { id: 't4', name: 'T4', role: 'teacher', subjects: ['English'], isClassTeacher: '', maxPeriodsPerWeek: 30 },
+  ]
+  const subjects: Any[] = ['Hindi', 'Mathematics', 'Science', 'English']
+    .map((n, i) => ({ id: `s${i}`, name: n, periodsPerWeek: 5 }))
+  // 20 slots, and Hindi — the class teacher's subject — is wanted just twice.
+  const alloc = { 'VI-A': { Hindi: '2', Mathematics: '6', Science: '6', English: '6' } }
+
+  const out: Any = solveTimetable({
+    sections, staff, subjects, periods: P, workDays: WD, requirements: [],
+    subjectAllocations: alloc,
+  } as Any)
+
+  const count: Record<string, number> = {}
+  for (const d of WD) {
+    for (const p of P) {
+      const sub = out.classTT['VI-A']?.[d]?.[p.id]?.subject
+      if (sub) count[sub] = (count[sub] ?? 0) + 1
+    }
+  }
+  check(count.Hindi === 2,
+    'INV16 the class teacher gets exactly the Hindi the school asked for',
+    `Hindi=${count.Hindi ?? 0} of 2 wanted`)
+  check((count.Science ?? 0) === 6,
+    'and the subject it used to displace is still taught',
+    `Science=${count.Science ?? 0} of 6 wanted`)
+
+  // The class teacher should still OWN Period 1 on the days they teach — the
+  // fix bounds the quota, it does not abandon the pastoral slot.
+  const p1Hindi = WD.filter(d => out.classTT['VI-A']?.[d]?.p1?.teacher === 'CT').length
+  check(p1Hindi === 2, 'and still takes Period 1 on the days they do teach', `${p1Hindi} of 2`)
+
+  // Spread, not stacked at the front of the week.
+  const ctDays = WD.filter(d => out.classTT['VI-A']?.[d]?.p1?.teacher === 'CT')
+  check(!(ctDays[0] === 'MONDAY' && ctDays[1] === 'TUESDAY'),
+    'and those days are spread across the week rather than stacked',
+    ctDays.join(', '))
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log('\n════ Summary ════')
 console.log(`Run1 (30 sections): ${ms1.toFixed(0)} ms · Run2 (60 sections): ${ms2.toFixed(0)} ms`)

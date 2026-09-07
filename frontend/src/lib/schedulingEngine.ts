@@ -1063,7 +1063,34 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       eligible[0] ?? ctRawSubs[0] ?? subjects[0]?.name ?? ''
     const ctSubject = ctSubjectRaw.replace(/.*::/, '')
 
+    // The allocation row is authoritative — the same rule Pass 2 follows — so
+    // the class teacher's Period 1 is BOUNDED by their subject's weekly quota.
+    //
+    // Without this the subject was placed on every working day regardless of
+    // what the school asked for. A class teacher of Hindi in a school that
+    // wants one Hindi period a week got six of them, and on a tight timetable
+    // the subjects those slots displaced were never taught at all: a class
+    // asked for Science once a week and got none.
+    const ctSubjectDef = subjects.find(su => su.name === ctSubject)
+    const ctTarget = targetPeriods[sec.name]?.[ctSubject] ?? (ctSubjectDef?.periodsPerWeek ?? 0)
+    // A subject this class does not take cannot be its Period 1 at all.
+    if (ctTarget <= 0) return
+
+    // Spread the quota across the week rather than stacking it at the front:
+    // two class-teacher periods should be Monday and Thursday, not Monday and
+    // Tuesday. Pass 2 does the same for everything else.
+    const ctDays = new Set<string>()
+    const teachingDays = workDays.filter(d => !sectionOffDays.get(sec.name)?.has(d))
+    if (teachingDays.length) {
+      for (let k = 0; k < Math.min(ctTarget, teachingDays.length); k++) {
+        ctDays.add(teachingDays[Math.floor((k * teachingDays.length) / Math.min(ctTarget, teachingDays.length))])
+      }
+    }
+
     workDays.forEach(day => {
+      if (!ctDays.has(day)) return
+      // Belt and braces: another pass may have placed this subject since.
+      if ((subjectCount[sec.name][ctSubject] ?? 0) >= ctTarget) return
       // Day-off rule: skip class-teacher assignment on off-days too
       if (sectionOffDays.get(sec.name)?.has(day)) return
       const p = classPeriods[0]
