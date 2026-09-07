@@ -1,12 +1,13 @@
 package handlers
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-// opt mirrors the anonymous option struct DecideOr binds from the request body.
-type opt = struct {
-	Subject string `json:"subject"`
-	Teacher string `json:"teacher"`
-}
+// opt is the option shape mayClaim checks. It comes from the SCHOOL's stored
+// timetable now, not from the request body — see orCell.
+type opt = orOption
 
 // mayClaim is the entire authorisation decision for a teacher taking an OR
 // slot; everything else in DecideOr is plumbing. Without it, handing a school's
@@ -104,5 +105,44 @@ func TestMayClear(t *testing.T) {
 		if got := mayClear(c.decidedBy, c.staff); got != c.want {
 			t.Errorf("%s: mayClear(%q, %q) = %v, want %v", c.name, c.decidedBy, c.staff, got, c.want)
 		}
+	}
+}
+
+// dayKeyOf has to agree with lib/days.ts DAY_NAMES exactly. If it drifts, the
+// server looks up a slot that is not there, orCell returns nothing, and every
+// teacher claim is refused with "that period is not a subject choice" — a
+// failure that looks like a permissions bug and is really an off-by-one.
+func TestDayKeyOf(t *testing.T) {
+	// 2026-09-06 is a Sunday, so this walks a full week from index 0.
+	base := time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC)
+	want := []string{"SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY",
+		"FRIDAY", "SATURDAY"}
+	for i, w := range want {
+		if got := dayKeyOf(base.AddDate(0, 0, i)); got != w {
+			t.Errorf("day +%d = %q, want %q", i, got, w)
+		}
+	}
+	// And it wraps rather than running off the end of the array.
+	if got := dayKeyOf(base.AddDate(0, 0, 7)); got != "SUNDAY" {
+		t.Errorf("day +7 = %q, want SUNDAY", got)
+	}
+}
+
+// The claim path is only as good as the options it checks. These are the
+// options a caller could once have invented; they now come from the school's
+// own timetable, so the test names what mayClaim must do with a hostile set.
+func TestMayClaimRejectsForgedOptions(t *testing.T) {
+	// What a teacher would post to take a colleague's period: an option list
+	// asserting they teach Chemistry. Against the SCHOOL's list they do not.
+	forged := []opt{{Subject: "Chemistry", Teacher: "R. Rao"}}
+	if !mayClaim(forged, "Chemistry", "R. Rao") {
+		t.Fatal("the forged list is internally consistent — this is why it must never be the one checked")
+	}
+	real := []opt{
+		{Subject: "Physics", Teacher: "R. Rao"},
+		{Subject: "Chemistry", Teacher: "S. Devi"},
+	}
+	if mayClaim(real, "Chemistry", "R. Rao") {
+		t.Error("against the school's own options the same claim is refused")
 	}
 }

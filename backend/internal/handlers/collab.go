@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -285,6 +287,126 @@ func (h *Handler) ListOrDecisions(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"decisions": out})
 }
 
+// ListOrSlots returns the choice periods on one date, as the SCHOOL's timetable
+// has them, plus whichever have already been decided.
+//
+// A teacher's browser holds no copy of their school's timetable — the app is
+// local-first and that copy belongs to whoever plans it. So without this a
+// teacher could only ever hand back a decision that already existed; there was
+// no way to see a period and take it, which is the whole point of the feature.
+//
+// It answers with the caller's OWN claimable options marked, but the marking is
+// a convenience for the page. DecideOr re-checks every claim against this same
+// server-side read, because a hint in a response is not a permission.
+func (h *Handler) ListOrSlots(c fiber.Ctx) error {
+	uid := clerkID(c)
+	if uid == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "no user")
+	}
+	ttID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	}
+	date := c.Query("date")
+	when, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "date must be YYYY-MM-DD")
+	}
+
+	ctx := context.Background()
+	caller, err := h.callerFor(ctx, uid, ttID)
+	if err != nil || !caller.isMember {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	}
+
+	dayKey := dayKeyOf(when)
+
+	// One read of the whole day rather than a query per slot: the classTT is
+	// section → day → period, so this pulls every section's row for that day.
+	var raw []byte
+	if err := h.db.QueryRow(ctx, `
+		SELECT COALESCE(data -> 'classTT', '{}'::jsonb) FROM timetables WHERE id = $1`,
+		ttID).Scan(&raw); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "could not read the timetable")
+	}
+	var classTT map[string]map[string]map[string]struct {
+		Subject          string     `json:"subject"`
+		GroupAssignments []orOption `json:"groupAssignments"`
+	}
+	if err := json.Unmarshal(raw, &classTT); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "could not read the timetable")
+	}
+
+	decided := map[string]string{}
+	decidedBy := map[string]string{}
+	rows, err := h.db.Query(ctx, `
+		SELECT section, period_id, subject, COALESCE(decided_by, '')
+		FROM or_decisions WHERE timetable_id = $1 AND on_date = $2::date`, ttID, date)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var sec, pid, sub, by string
+			if rows.Scan(&sec, &pid, &sub, &by) == nil {
+				decided[sec+"|"+pid] = sub
+				decidedBy[sec+"|"+pid] = by
+			}
+		}
+	}
+
+	type slot struct {
+		Section   string     `json:"section"`
+		PeriodID  string     `json:"periodId"`
+		Options   []orOption `json:"options"`
+		Decided   string     `json:"decided,omitempty"`
+		DecidedBy string     `json:"decidedBy,omitempty"`
+		// The subject this caller could take here, empty if none. A hint for
+		// the page; DecideOr enforces it independently.
+		Claimable string `json:"claimable,omitempty"`
+	}
+	slots := []slot{}
+	for section, days := range classTT {
+		for pid, cell := range days[dayKey] {
+			if len(cell.GroupAssignments) == 0 ||
+				strings.Contains(cell.Subject, " AND ") ||
+				!strings.Contains(cell.Subject, " OR ") {
+				continue
+			}
+			opts := make([]orOption, 0, len(cell.GroupAssignments))
+			for _, g := range cell.GroupAssignments {
+				if strings.TrimSpace(g.Subject) != "" {
+					opts = append(opts, g)
+				}
+			}
+			if len(opts) == 0 {
+				continue
+			}
+			s := slot{
+				Section: section, PeriodID: pid, Options: opts,
+				Decided: decided[section+"|"+pid], DecidedBy: decidedBy[section+"|"+pid],
+			}
+			if !caller.isOwner && caller.role != "admin" {
+				for _, o := range opts {
+					if strings.EqualFold(strings.TrimSpace(o.Teacher),
+						strings.TrimSpace(caller.staffName)) && caller.staffName != "" {
+						s.Claimable = o.Subject
+						break
+					}
+				}
+			}
+			slots = append(slots, s)
+		}
+	}
+	// Map iteration is random; a list that reorders itself on every refresh is
+	// unusable to read down.
+	sort.Slice(slots, func(i, j int) bool {
+		if slots[i].Section != slots[j].Section {
+			return slots[i].Section < slots[j].Section
+		}
+		return slots[i].PeriodID < slots[j].PeriodID
+	})
+	return c.JSON(fiber.Map{"date": date, "day": dayKey, "slots": slots})
+}
+
 // DecideOr records (or clears) which subject an OR period runs on one date.
 //
 // AUTHORISATION IS THE POINT OF THIS ENDPOINT. An admin may set any slot. A
@@ -307,10 +429,10 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 		Date     string `json:"date"` // YYYY-MM-DD
 		PeriodID string `json:"periodId"`
 		Subject  string `json:"subject"` // empty clears the decision
-		Options  []struct {
-			Subject string `json:"subject"`
-			Teacher string `json:"teacher"`
-		} `json:"options"`
+		// `options` may still arrive from older clients. It is deliberately
+		// NOT bound: the server reads the options from its own copy of the
+		// timetable, because a caller cannot be asked to supply the evidence
+		// they are being judged on.
 	}
 	if err := c.Bind().JSON(&body); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid body")
@@ -366,7 +488,18 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 	}
 
 	if !caller.isOwner && caller.role != "admin" {
-		if !mayClaim(body.Options, subject, caller.staffName) {
+		// Checked against the SCHOOL's timetable, never the options in the
+		// request body — the body is written by the person being authorised.
+		when, _ := time.Parse("2006-01-02", body.Date)
+		options, err := h.orCell(ctx, ttID, body.Section, dayKeyOf(when), body.PeriodID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "could not read the period")
+		}
+		if len(options) == 0 {
+			return fiber.NewError(fiber.StatusForbidden,
+				"that period is not a subject choice on this timetable")
+		}
+		if !mayClaim(options, subject, caller.staffName) {
 			return fiber.NewError(fiber.StatusForbidden,
 				"you can only take a slot for a subject you teach")
 		}
@@ -384,6 +517,78 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 		"section": body.Section, "date": body.Date, "periodId": body.PeriodID,
 		"subject": subject, "by": caller.staffName,
 	})
+}
+
+// ── The server's OWN copy of an OR cell ────────────────────────────────────
+//
+// mayClaim decides whether a teacher may take a period, and it can only mean
+// something if the options it checks are the SCHOOL'S, not the caller's. The
+// first cut of DecideOr trusted the options in the request body, which made
+// the whole check ceremonial: a teacher could post
+//
+//     {"subject": "Chemistry", "options": [{"subject": "Chemistry",
+//                                           "teacher": "<their own name>"}]}
+//
+// and take a colleague's period, since the body proved whatever it asserted.
+// So the options are read here, out of the timetable the school stored.
+//
+// This is the first place the server looks INSIDE `data`, which until now has
+// been an opaque blob written by the client. It reads two fields and no more —
+// the cell's subject label and its groupAssignments — precisely so the shape
+// defined in TypeScript is not quietly redefined in Go.
+
+type orOption struct {
+	Subject string `json:"subject"`
+	Teacher string `json:"teacher"`
+}
+
+// dayKeyOf maps a date to the DOW key the timetable is keyed by. It must match
+// lib/days.ts DAY_NAMES exactly; a mismatch would silently find no cell, and
+// "no cell" is a refusal rather than a pass, so the failure is visible.
+func dayKeyOf(t time.Time) string {
+	return [...]string{"SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY",
+		"FRIDAY", "SATURDAY"}[int(t.Weekday())]
+}
+
+// orCell returns the OR options the SCHOOL has recorded for one slot.
+//
+// A nil result means "not an OR choice as far as this server can see" — the
+// cell is missing, or single-subject, or an AND split. Each of those is a
+// refusal for a teacher, because a claim that cannot be checked must not be
+// waved through.
+func (h *Handler) orCell(ctx context.Context, ttID uuid.UUID, section, dayKey, periodID string) ([]orOption, error) {
+	var raw []byte
+	err := h.db.QueryRow(ctx, `
+		SELECT COALESCE(data #> ARRAY['classTT', $2, $3, $4], 'null'::jsonb)
+		FROM timetables WHERE id = $1`,
+		ttID, section, dayKey, periodID).Scan(&raw)
+	if err != nil {
+		return nil, err
+	}
+	var cell struct {
+		Subject          string     `json:"subject"`
+		GroupAssignments []orOption `json:"groupAssignments"`
+	}
+	if err := json.Unmarshal(raw, &cell); err != nil || len(cell.GroupAssignments) == 0 {
+		return nil, nil
+	}
+	// OR and AND are identical in the data and told apart only by the joiner in
+	// the label, mirroring orOptionsInCell on the client. AND is checked first:
+	// releasing an AND group's teacher would take them out of a lesson they are
+	// genuinely giving.
+	if strings.Contains(cell.Subject, " AND ") || !strings.Contains(cell.Subject, " OR ") {
+		return nil, nil
+	}
+	out := make([]orOption, 0, len(cell.GroupAssignments))
+	for _, g := range cell.GroupAssignments {
+		if strings.TrimSpace(g.Subject) != "" {
+			out = append(out, g)
+		}
+	}
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out, nil
 }
 
 // mayClear reports whether `staffName` may hand back a decision made by
@@ -407,10 +612,7 @@ func mayClear(decidedBy, staffName string) bool {
 //
 // Split out and named so it can be tested without a database, because it is the
 // whole authorisation decision: everything else in DecideOr is plumbing.
-func mayClaim(options []struct {
-	Subject string `json:"subject"`
-	Teacher string `json:"teacher"`
-}, subject, staffName string) bool {
+func mayClaim(options []orOption, subject, staffName string) bool {
 	who := strings.TrimSpace(staffName)
 	if who == "" {
 		// Nobody on the roster maps to a timetable name, so no claim can be

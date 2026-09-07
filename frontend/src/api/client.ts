@@ -133,6 +133,19 @@ export interface OrDecisionRow {
   by: string
 }
 
+/** One choice period as the school's timetable has it. */
+export interface OrSlotRow {
+  section: string
+  periodId: string
+  options: Array<{ subject: string; teacher: string }>
+  /** The subject running this date, if somebody has decided. */
+  decided?: string
+  decidedBy?: string
+  /** The subject THIS caller could take here — a hint for the page; the server
+   *  re-checks every claim regardless. */
+  claimable?: string
+}
+
 export const collabApi = {
   /** Every timetable this account may see: their own, plus any school that
    *  lists them on its roster. */
@@ -142,11 +155,18 @@ export const collabApi = {
     apiClient.get<{ decisions: OrDecisionRow[] }>(
       `/timetables/${timetableId}/or-decisions`, { params: { from, to } }),
 
+  /** The choice periods on one date, from the SCHOOL's timetable — a teacher's
+   *  own browser holds no copy of it, so without this they could only hand
+   *  back decisions that already existed, never take a period. */
+  orSlots: (timetableId: string, date: string) =>
+    apiClient.get<{ date: string; day: string; slots: OrSlotRow[] }>(
+      `/timetables/${timetableId}/or-slots`, { params: { date } }),
+
   /** Take (or, with an empty subject, release) one OR period for one date.
-   *  `options` is sent as the timetable holds them so the server can check the
-   *  caller actually teaches the subject being claimed. */
+   *  Nothing about WHO may take it is sent: the server checks the claim
+   *  against its own copy of the timetable, because a caller cannot supply the
+   *  evidence they are being judged on. */
   decideOr: (timetableId: string, body: {
     section: string; date: string; periodId: string; subject: string
-    options?: Array<{ subject: string; teacher?: string }>
   }) => apiClient.post(`/timetables/${timetableId}/or-decisions`, body),
 }

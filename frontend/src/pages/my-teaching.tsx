@@ -19,7 +19,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Check, Loader2, RefreshCw } from 'lucide-react'
-import { collabApi, type MySchedule, type OrDecisionRow } from '@/api/client'
+import { collabApi, type MySchedule, type OrSlotRow } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { localISO, DAY_NAMES } from '@/lib/days'
 import { orDecisionKey } from '@/lib/orChoice'
@@ -34,7 +34,7 @@ export function MyTeachingPage() {
   const user = useAuthStore(s => s.user)
   const [schedules, setSchedules] = useState<MySchedule[] | null>(null)
   const [activeId, setActiveId] = useState<string>('')
-  const [decisions, setDecisions] = useState<Record<string, OrDecisionRow>>({})
+  const [slots, setSlots] = useState<OrSlotRow[] | null>(null)
   const [busyKey, setBusyKey] = useState<string>('')
   const [error, setError] = useState('')
   const [date, setDate] = useState(() => localISO(new Date()))
@@ -54,22 +54,19 @@ export function MyTeachingPage() {
     return () => { alive = false }
   }, [])
 
-  const loadDecisions = useCallback(() => {
-    if (!activeId) return
+  const loadSlots = useCallback(() => {
+    if (!activeId) { setSlots([]); return }
     // A refusal is about one click on one slot. Carrying it across a change of
     // schedule or date would leave a teacher reading a complaint about a period
     // they are no longer looking at.
     setError('')
-    collabApi.orDecisions(activeId, date, date)
-      .then(r => {
-        const map: Record<string, OrDecisionRow> = {}
-        for (const d of r.data?.decisions ?? []) map[d.key] = d
-        setDecisions(map)
-      })
-      .catch(() => setDecisions({}))
+    setSlots(null)
+    collabApi.orSlots(activeId, date)
+      .then(r => setSlots(r.data?.slots ?? []))
+      .catch(() => setSlots([]))
   }, [activeId, date])
 
-  useEffect(() => { loadDecisions() }, [loadDecisions])
+  useEffect(() => { loadSlots() }, [loadSlots])
 
   const dayName = useMemo(() => {
     const d = new Date(`${date}T00:00:00`)
@@ -84,16 +81,13 @@ export function MyTeachingPage() {
    * is shown as it arrives rather than being pre-empted, because the honest
    * answer to "why can I not press this" comes from whoever enforces it.
    */
-  const claim = async (
-    section: string, periodId: string, subject: string,
-    options: Array<{ subject: string; teacher?: string }>,
-  ) => {
+  const claim = async (section: string, periodId: string, subject: string) => {
     if (!activeId) return
     const key = orDecisionKey(section, date, periodId)
     setBusyKey(key); setError('')
     try {
-      await collabApi.decideOr(activeId, { section, date, periodId, subject, options })
-      loadDecisions()
+      await collabApi.decideOr(activeId, { section, date, periodId, subject })
+      loadSlots()
     } catch (e: any) {
       setError(e?.response?.data?.error || e?.message || 'Could not record that.')
     } finally {
@@ -138,7 +132,7 @@ export function MyTeachingPage() {
               <span style={{ fontSize: 12, color: DIM }}>
                 <CalendarDays size={12} style={{ verticalAlign: -2 }} /> {dayName[0] + dayName.slice(1).toLowerCase()}
               </span>
-              <button onClick={loadDecisions} style={ghost}><RefreshCw size={12} /> Refresh</button>
+              <button onClick={loadSlots} style={ghost}><RefreshCw size={12} /> Refresh</button>
             </div>
 
             {active && !active.staffName && !active.mine && (
@@ -154,7 +148,7 @@ export function MyTeachingPage() {
             <OrSlots
               schedule={active}
               date={date}
-              decisions={decisions}
+              slots={slots}
               busyKey={busyKey}
               onClaim={claim}
               me={active?.staffName ?? ''}
@@ -167,24 +161,21 @@ export function MyTeachingPage() {
 }
 
 /**
- * The OR periods for this day, and who has taken them.
+ * The choice periods for this day, and what this teacher may do with them.
  *
- * The lessons themselves come from the school's own schedule, which this
- * account may not hold locally — a teacher's browser has no copy of their
- * school's timetable. Until the read side of that is wired, this shows the
- * decisions the server already holds and lets a teacher release one; claiming a
- * NEW slot needs the day's options, which arrive with that same read.
+ * The periods come from the SCHOOL's timetable via the server: a teacher's own
+ * browser holds no copy of it, so this list could not be built locally. Each
+ * row shows every option and who teaches it, so a teacher can see what they are
+ * choosing between rather than only what they personally offer.
  */
-function OrSlots({ schedule, date, decisions, busyKey, onClaim, me }: {
+function OrSlots({ schedule, date, slots, busyKey, onClaim, me }: {
   schedule?: MySchedule
   date: string
-  decisions: Record<string, OrDecisionRow>
+  slots: OrSlotRow[] | null
   busyKey: string
-  onClaim: (section: string, periodId: string, subject: string,
-            options: Array<{ subject: string; teacher?: string }>) => void
+  onClaim: (section: string, periodId: string, subject: string) => void
   me: string
 }) {
-  const rows = Object.values(decisions)
   if (!schedule) return null
 
   return (
@@ -193,59 +184,90 @@ function OrSlots({ schedule, date, decisions, busyKey, onClaim, me }: {
         Choice periods on {date}
       </div>
       <div style={{ fontSize: 11.5, color: DIM, marginBottom: 12 }}>
-        A choice period runs one of two subjects. Left alone it goes to whichever
+        A choice period runs one of its subjects. Left alone it goes to whichever
         is further behind on syllabus; take it to teach yours instead. The choice
         applies to this day only.
       </div>
 
-      {rows.length === 0 ? (
+      {slots === null ? (
         <div style={{ fontSize: 12.5, color: DIM }}>
-          Nothing has been decided for this day yet.
+          <Loader2 size={13} className="spin" style={{ verticalAlign: -2 }} /> Loading this day…
+        </div>
+      ) : slots.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: DIM }}>
+          No choice periods on this day.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {rows.map(d => (
-            <div key={d.key} style={{
-              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-              border: `1px solid ${LINE}`, borderRadius: 10, padding: '9px 12px', flexShrink: 0,
-            }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: INK }}>{d.section}</span>
-              <span style={{ fontSize: 12, color: DIM }}>{d.periodId}</span>
-              <span style={{
-                fontSize: 12, fontWeight: 700, color: ACCENT,
-                background: '#EDE9FF', padding: '2px 9px', borderRadius: 20,
+          {slots.map(sl => {
+            const key = orDecisionKey(sl.section, date, sl.periodId)
+            const busy = busyKey === key
+            // Only the person who took it may hand it back; the server refuses
+            // anyone else, so offering the button would be a promise the next
+            // click breaks.
+            const isMine = !!sl.decidedBy && !!me &&
+              sl.decidedBy.trim().toLowerCase() === me.trim().toLowerCase()
+            return (
+              <div key={key} style={{
+                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                border: `1px solid ${LINE}`, borderRadius: 10, padding: '9px 12px', flexShrink: 0,
               }}>
-                <Check size={11} style={{ verticalAlign: -1 }} /> {d.subject}
-              </span>
-              {d.by && <span style={{ fontSize: 11.5, color: DIM }}>taken by {d.by}</span>}
-              {mine(d, me) ? (
-                <button
-                  disabled={busyKey === d.key}
-                  onClick={() => onClaim(d.section, d.periodId, '', [])}
-                  style={{ ...ghost, marginLeft: 'auto' }}>
-                  {busyKey === d.key ? 'Working…' : 'Hand it back'}
-                </button>
-              ) : (
-                // Somebody else took this one. The server refuses a clear from
-                // anyone but its author, so offering the button here would only
-                // be a promise the next click breaks.
-                <span style={{ fontSize: 11, color: DIM, marginLeft: 'auto' }}>
-                  not yours to change
+                <span style={{ fontWeight: 700, fontSize: 13, color: INK, minWidth: 54 }}>
+                  {sl.section}
                 </span>
-              )}
-            </div>
-          ))}
+                <span style={{ fontSize: 12, color: DIM, minWidth: 28 }}>{sl.periodId}</span>
+
+                {sl.options.map(o => {
+                  const running = sl.decided
+                    ? o.subject === sl.decided
+                    : false
+                  return (
+                    <span key={o.subject} style={{
+                      fontSize: 11.5, padding: '2px 9px', borderRadius: 20,
+                      fontWeight: running ? 700 : 500,
+                      color: running ? ACCENT : DIM,
+                      background: running ? '#EDE9FF' : '#F4F3FA',
+                      border: `1px solid ${running ? '#D9D2FF' : LINE}`,
+                    }}>
+                      {running && <Check size={11} style={{ verticalAlign: -1 }} />} {o.subject}
+                      {o.teacher ? <span style={{ opacity: 0.7 }}> · {o.teacher}</span> : null}
+                    </span>
+                  )
+                })}
+
+                {sl.decided
+                  ? <span style={{ fontSize: 11, color: DIM }}>
+                      {sl.decidedBy ? `taken by ${sl.decidedBy}` : 'set by the school'}
+                    </span>
+                  : <span style={{ fontSize: 11, color: DIM }}>undecided — syllabus decides</span>}
+
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                  {isMine && (
+                    <button disabled={busy} onClick={() => onClaim(sl.section, sl.periodId, '')}
+                            style={ghost}>
+                      {busy ? 'Working…' : 'Hand it back'}
+                    </button>
+                  )}
+                  {/* Claimable when this teacher offers one of the options and
+                      has not already got the slot. */}
+                  {sl.claimable && !isMine && (
+                    <button disabled={busy}
+                            onClick={() => onClaim(sl.section, sl.periodId, sl.claimable!)}
+                            style={primary}>
+                      {busy ? 'Working…' : `I'll take ${sl.claimable}`}
+                    </button>
+                  )}
+                  {!sl.claimable && !isMine && (
+                    <span style={{ fontSize: 11, color: DIM }}>not yours to change</span>
+                  )}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
   )
-}
-
-/** Whether this decision is the signed-in teacher's own, by roster name. */
-function mine(d: OrDecisionRow, me: string) {
-  const who = me.trim()
-  const by = (d.by ?? '').trim()
-  return who !== '' && by !== '' && who.toLowerCase() === by.toLowerCase()
 }
 
 function Note({ children, tone }: { children: React.ReactNode; tone?: 'warn' }) {
@@ -268,6 +290,12 @@ const card: React.CSSProperties = {
 const input: React.CSSProperties = {
   border: `1px solid ${LINE}`, borderRadius: 9, padding: '7px 10px',
   fontSize: 12.5, fontFamily: 'inherit', color: INK, background: '#fff',
+}
+const primary: React.CSSProperties = {
+  border: `1px solid ${ACCENT}`, borderRadius: 8, background: ACCENT,
+  padding: '5px 11px', fontSize: 11.5, color: '#fff', cursor: 'pointer',
+  fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5,
+  fontWeight: 600,
 }
 const ghost: React.CSSProperties = {
   border: `1px solid ${LINE}`, borderRadius: 8, background: '#fff',

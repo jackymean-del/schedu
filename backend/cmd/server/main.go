@@ -163,6 +163,7 @@ func main() {
 	// Every timetable this account may see — their own, plus any school that
 	// lists them on its roster.
 	api.Get("/my-schedules", h.MySchedules)
+	api.Get("/timetables/:id/or-slots", h.ListOrSlots)
 	api.Get("/timetables/:id/or-decisions", h.ListOrDecisions)
 	api.Post("/timetables/:id/or-decisions", h.DecideOr)
 
