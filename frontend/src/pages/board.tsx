@@ -17,6 +17,7 @@ import { useTimetableStore } from '@/store/timetableStore'
 import { loadActiveBundles } from '@/lib/activeSchedules'
 import { useLeaves, teachersOnLeaveOn } from '@/lib/leaveUtils'
 import { useHolidays } from '@/lib/holidays'
+import { useSyllabus } from '@/lib/syllabusTracking'
 import { useSchoolEvents, teachingSuspendedOn } from '@/lib/schoolEvents'
 import { boardNow, boardRows, uncoveredRows, soonestRings } from '@/lib/smartboard'
 import {
@@ -38,6 +39,9 @@ export function BoardPage() {
   const uid = user?.id ?? ''
   const schoolName = useOrgProfile(s => s.name)
   const leaves = useLeaves(s => s.leaves)
+  // An undecided choice period resolves by syllabus coverage, so the board
+  // needs the plans to name what is actually running.
+  const syllabusPlans = useSyllabus(s => s.plans)
   const holidays = useHolidays(s => s.holidays)
   const events = useSchoolEvents(s => s.events)
   const openTT = useTimetableStore(s => (s as any).classTT)
@@ -60,6 +64,7 @@ export function BoardPage() {
       sections: st.sections ?? [], staff: st.staff ?? [], rooms: st.rooms ?? [],
       subjects: st.subjects ?? [], periods: st.periods ?? [], config: st.config ?? {},
       classTT: st.classTT ?? {}, substitutions: st.substitutions ?? {},
+      orDecisions: st.orDecisions ?? {},
     }]
     // openTT is not read here: it is the signal that the open schedule's
     // timetable changed under us, so the bundle is rebuilt from the store.
@@ -97,8 +102,8 @@ export function BoardPage() {
 
   const absent = useMemo(() => new Set(teachersOnLeaveOn(leaves, isoDate)), [leaves, isoDate])
   const rows = useMemo(
-    () => boardRows(bundles as any, dayKey, localISO(now), nowMin, absent),
-    [bundles, dayKey, now, nowMin, absent],
+    () => boardRows(bundles as any, dayKey, localISO(now), nowMin, absent, syllabusPlans),
+    [bundles, dayKey, now, nowMin, absent, syllabusPlans],
   )
   const uncovered = useMemo(() => uncoveredRows(rows), [rows])
   const teaching = rows.filter(r => r.subject)

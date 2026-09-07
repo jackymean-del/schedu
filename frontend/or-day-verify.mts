@@ -15,6 +15,7 @@
 import { computeTodaySummary } from './src/lib/scheduleToday.ts'
 import { computeMultiToday } from './src/lib/activeSchedules.ts'
 import { computeReports } from './src/lib/reportsData.ts'
+import { boardRows } from './src/lib/smartboard.ts'
 import { teachersInCell, teachingPairsInCell, cellHasTeacher } from './src/lib/cellTeachers.ts'
 import { orOptionsInCell } from './src/lib/orChoice.ts'
 import { planKey } from './src/lib/syllabusTracking.ts'
@@ -128,6 +129,61 @@ console.log('\n── both parallel shapes count as teaching ──')
   ok(teachingPairsInCell(both).length === 1, 'and the pair list agrees')
   ok(teachersInCell(null).length === 0 && teachersInCell({}).length === 0,
     'an empty cell holds nobody')
+}
+
+console.log('\n── the corridor board names what is actually running ──')
+{
+  // A board that announces "Physics OR Chemistry" to a class whose period was
+  // settled days ago, and points them at the first group's room whichever way
+  // it went, is the app being wrong out loud in front of the whole school.
+  const bundle = (orDecisions: Any): Any => ({
+    id: 'b', name: 'Senior', sections, periods, config,
+    classTT: { [SEC]: { TUESDAY: { p1: orCell } } }, substitutions: {}, orDecisions,
+  })
+  // Mid-period: the bell runs 09:00-09:45, so 09:20 is inside it.
+  const AT = 9 * 60 + 20
+  const row = (orDecisions: Any, absent: string[] = [], plans: Any = {}) =>
+    boardRows([bundle(orDecisions)], 'TUESDAY', ISO, AT, new Set(absent), plans)[0]
+
+  const undecided = row({})
+  ok(undecided.subject === 'Physics OR Chemistry',
+    'an undecided choice period is shown as the choice it still is', undecided.subject)
+
+  const chosen = row({ [key]: { subject: 'Chemistry', by: 'Devi' } })
+  ok(chosen.subject === 'Chemistry', 'a settled one names the subject that won', chosen.subject)
+  ok(chosen.teacher === 'Devi', 'and the teacher who will actually take it', String(chosen.teacher))
+  ok(chosen.room === 'Lab 2', 'and the room they will actually be in', String(chosen.room))
+
+  const other = row({ [key]: { subject: 'Physics', by: 'Rao' } })
+  ok(other.teacher === 'Rao' && other.room === 'Lab 1', 'and the other way round')
+
+  // The bug that matters most on this surface. cell.teacher mirrors the FIRST
+  // group only, so a board reading it stayed silent when the teacher of a
+  // later group was absent — on the one screen whose whole job is to shout
+  // about a class with nobody in front of it.
+  const laterGroupOut = row({}, ['Devi'])
+  ok(laterGroupOut.uncovered === true,
+    'an absent LATER-group teacher makes the board shout')
+  const firstGroupOut = row({}, ['Rao'])
+  ok(firstGroupOut.uncovered === true, 'as does an absent first-group teacher')
+
+  // Once the choice is settled the other option's teacher is free, so their
+  // absence is not this class's problem.
+  const freedAway = row({ [key]: { subject: 'Physics', by: 'Rao' } }, ['Devi'])
+  ok(freedAway.uncovered === false,
+    'but once Physics took the period, Devi being out costs this class nothing')
+  const takerAway = row({ [key]: { subject: 'Physics', by: 'Rao' } }, ['Rao'])
+  ok(takerAway.uncovered === true, 'while the teacher who DID take it being out still shouts')
+
+  // An ordinary cell must be untouched by any of this.
+  const plain: Any = { subject: 'History', teacher: 'Bose', room: 'R4' }
+  const plainRow = boardRows(
+    [{ id: 'b', name: 'S', sections, periods, config,
+       classTT: { [SEC]: { TUESDAY: { p1: plain } } }, substitutions: {}, orDecisions: {} }],
+    'TUESDAY', ISO, AT, new Set(['Bose']), {},
+  )[0]
+  ok(plainRow.subject === 'History' && plainRow.teacher === 'Bose' && plainRow.uncovered === true,
+    'an ordinary lesson is unaffected')
 }
 
 console.log('\n── a period the choice went against was never lost ──')

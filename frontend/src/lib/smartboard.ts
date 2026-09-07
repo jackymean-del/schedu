@@ -16,6 +16,7 @@
  */
 import type { Period } from '@/types'
 import { subKey } from './substitutionKeys'
+import { runningOnDate, teachingPairsOnDate } from './orChoice'
 import { sectionPeriodTimes } from './bellTimes'
 import { ringsForSection, nextRing, describeRing, type Ring } from './bellSchedule'
 
@@ -108,6 +109,8 @@ interface BoardBundle {
   config: any
   classTT: Record<string, any>
   substitutions: Record<string, string>
+  /** This schedule's dated OR choices, keyed section|date|period. */
+  orDecisions?: Record<string, any>
 }
 
 /**
@@ -127,6 +130,8 @@ export function boardRows(
   isoDate: string,
   nowMin: number,
   absentTeachers: Set<string>,
+  /** Syllabus plans, so an undecided choice period still resolves by coverage. */
+  plans: Record<string, any> = {},
 ): BoardRow[] {
   const rows: BoardRow[] = []
   for (const b of bundles) {
@@ -144,14 +149,26 @@ export function boardRows(
           // Dated: the corridor screen must name who is ACTUALLY teaching now,
           // and a weekday key stopped matching once covers became dated.
           const sub = b.substitutions?.[subKey(s.name, isoDate, p.id)]
-          const timetabled = cell.teacher ?? ''
-          row.subject = cell.subject
-          row.room = (cell.room ?? '').trim() || undefined
-          row.teacher = sub || timetabled || undefined
+          // …and once a choice period is settled, "actually" means the subject
+          // that won it. Announcing "Physics OR Chemistry" to a class whose
+          // period was decided days ago, and sending them to the first group's
+          // room whichever way it went, is the board being wrong out loud.
+          const running = runningOnDate(cell, s.name, isoDate, p.id, b.orDecisions ?? {}, plans)
+          row.subject = running.subject
+          row.room = running.room || undefined
+          row.teacher = sub || running.teacher || undefined
           row.isSub = !!sub
           // The one thing a board exists to shout about: a class whose teacher
           // is out and for whom nobody has been assigned.
-          row.uncovered = !sub && !!timetabled && absentTeachers.has(timetabled)
+          //
+          // Every teacher in the cell counts, not just the cell-level one —
+          // that field mirrors the first group only, so a board reading it
+          // stayed silent when the teacher of a LATER group was absent. On an
+          // undecided choice period nobody knows yet which of them is due, so
+          // any of them being out is worth flagging: over-warning costs a
+          // second glance, under-warning leaves a class with nobody.
+          const due = teachingPairsOnDate(cell, s.name, isoDate, p.id, b.orDecisions ?? {}, plans)
+          row.uncovered = !sub && due.some(x => absentTeachers.has(x.teacher))
         }
         break
       }

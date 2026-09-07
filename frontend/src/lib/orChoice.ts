@@ -282,3 +282,44 @@ export function cellHasTeacherOnDate(
   return teachingPairsOnDate(cell, section, isoDate, periodId, orDecisions, plans)
     .some(x => x.teacher === who)
 }
+
+/**
+ * What a cell is actually RUNNING on one date — subject, teacher and room.
+ *
+ * For an ordinary cell, or an AND split, or an OR choice nobody can resolve,
+ * this is the cell's own values: "Physics OR Chemistry" and the first group's
+ * teacher, which is all anyone honestly knows. Once the choice IS decisive it
+ * is the chosen group's — the subject that will actually be taught, by the
+ * person who will actually teach it, in the room they will actually be in.
+ *
+ * A corridor board reading the raw cell announces "Physics OR Chemistry" to a
+ * class whose period was settled days ago, and sends them to the first group's
+ * room whichever subject won.
+ */
+export function runningOnDate(
+  cell: any, section: string, isoDate: string, periodId: string,
+  orDecisions: Record<string, OrDecision> = {}, plans: Record<string, SyllabusPlan> = {},
+): { subject: string; teacher: string; room: string; decided: boolean } {
+  const fallback = {
+    subject: (cell?.subject ?? '').trim(),
+    teacher: (cell?.teacher ?? '').trim(),
+    room: (cell?.room ?? '').trim(),
+    decided: false,
+  }
+  const options = orOptionsInCell(cell)
+  if (!options) return fallback
+  const choice = resolveOrChoice(
+    options, section, plans, orDecisions[orDecisionKey(section, isoDate, periodId)],
+  )
+  if (!choice || choice.reason === 'untracked') return fallback
+  const g = (cell.groupAssignments ?? []).find((x: any) => x?.subject === choice.subject)
+  // A choice naming a subject no longer in the cell is stale; show the cell as
+  // it stands rather than invent a lesson from it.
+  if (!g) return fallback
+  return {
+    subject: (g.subject ?? '').trim(),
+    teacher: (g.teacher ?? '').trim(),
+    room: (g.room ?? '').trim() || fallback.room,
+    decided: true,
+  }
+}
