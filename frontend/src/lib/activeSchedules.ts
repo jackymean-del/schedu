@@ -48,6 +48,17 @@ export function patchBundleSubstitutions(uid: string, id: string, next: Record<s
   try { localStorage.setItem(key, JSON.stringify(snap)) } catch { /* quota */ }
 }
 
+/** Write one schedule's OR decisions straight into its snapshot. The mirror of
+ *  patchBundleSubstitutions, for the same reason: a decision belongs to the
+ *  schedule that owns the period, which is not always the open one. */
+export function patchBundleOrDecisions(uid: string, id: string, next: Record<string, any>): void {
+  const key = snapKeyFor(uid, id)
+  let snap: Record<string, any> = {}
+  try { const raw = localStorage.getItem(key); if (raw) snap = JSON.parse(raw) } catch { /* ignore */ }
+  snap.orDecisions = next
+  try { localStorage.setItem(key, JSON.stringify(snap)) } catch { /* quota */ }
+}
+
 /** Load a bundle for every schedule marked active in the tt-list. */
 export function loadActiveBundles(uid: string): ScheduleBundle[] {
   let list: any[] = []

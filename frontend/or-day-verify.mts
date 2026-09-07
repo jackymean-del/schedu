@@ -16,6 +16,7 @@ import { computeTodaySummary } from './src/lib/scheduleToday.ts'
 import { computeMultiToday } from './src/lib/activeSchedules.ts'
 import { computeReports } from './src/lib/reportsData.ts'
 import { boardRows } from './src/lib/smartboard.ts'
+import { mergeOrWindow, dateOfKey, rowsToMap } from './src/lib/orSyncRules.ts'
 import { teachersInCell, teachingPairsInCell, cellHasTeacher } from './src/lib/cellTeachers.ts'
 import { orOptionsInCell } from './src/lib/orChoice.ts'
 import { planKey } from './src/lib/syllabusTracking.ts'
@@ -129,6 +130,60 @@ console.log('\n── both parallel shapes count as teaching ──')
   ok(teachingPairsInCell(both).length === 1, 'and the pair list agrees')
   ok(teachersInCell(null).length === 0 && teachersInCell({}).length === 0,
     'an empty cell holds nobody')
+}
+
+console.log('\n── what silence from the server means, and where ──')
+{
+  // The cache is refreshed a window at a time, and the server saying nothing
+  // about a slot means two opposite things depending on where it falls.
+  const d = (subject: string, by: string) => ({ subject, by })
+  const cached: Any = {
+    'XI-A|2026-09-07|p1': d('Physics', 'Rao'),     // inside, still there
+    'XI-A|2026-09-07|p2': d('Chemistry', 'Devi'),  // inside, handed back
+    'XI-A|2026-09-20|p1': d('Physics', 'Rao'),     // outside, untouched
+    'XI-A|2026-08-01|p1': d('Chemistry', 'Devi'),  // outside, untouched
+  }
+  const fresh: Any = {
+    'XI-A|2026-09-07|p1': d('Chemistry', 'Devi'),  // changed hands
+    'XI-A|2026-09-07|p3': d('Physics', 'Rao'),     // newly claimed
+  }
+  const merged = mergeOrWindow(cached, fresh, '2026-09-07', '2026-09-07')
+
+  ok(merged['XI-A|2026-09-07|p1']?.subject === 'Chemistry',
+    'a decision that changed hands inside the window takes the server value')
+  ok(merged['XI-A|2026-09-07|p3']?.subject === 'Physics',
+    'and one made since the last pull appears')
+
+  // The one that rots quietly if it goes wrong: a released period that the app
+  // goes on showing as claimed, forever.
+  ok(!('XI-A|2026-09-07|p2' in merged),
+    'silence INSIDE the window means handed back, so the cache forgets it')
+
+  // And the opposite mistake: wiping every other date on each refresh.
+  ok(merged['XI-A|2026-09-20|p1']?.subject === 'Physics',
+    'silence OUTSIDE the window means nothing, so a later date survives')
+  ok(merged['XI-A|2026-08-01|p1']?.subject === 'Chemistry', 'as does an earlier one')
+
+  // A range, not just a single day.
+  const wide = mergeOrWindow(cached, {}, '2026-08-01', '2026-09-30')
+  ok(Object.keys(wide).length === 0, 'an empty answer for a wide window clears all of it')
+
+  ok(dateOfKey('XI-A|2026-09-07|p1') === '2026-09-07', 'the date is read out of the key')
+  ok(dateOfKey('nonsense') === '', 'and a malformed key yields nothing')
+  // Deleting real data because a key failed to parse is the worse mistake.
+  const odd = mergeOrWindow({ nonsense: d('X', 'Y') } as Any, {}, '2026-09-07', '2026-09-07')
+  ok(odd.nonsense?.subject === 'X', 'a malformed key is kept rather than silently dropped')
+
+  // Server rows in, store shape out.
+  const mapped = rowsToMap([
+    { key: 'XI-A|2026-09-07|p1', subject: 'Physics', by: 'Rao' },
+    { section: 'XI-B', date: '2026-09-07', periodId: 'p2', subject: 'Chemistry', by: '' },
+    { key: 'XI-C|2026-09-07|p3', subject: '' },   // a row with no subject is not a decision
+  ] as Any)
+  ok(Object.keys(mapped).length === 2, 'rows without a subject are not decisions')
+  ok(mapped['XI-B|2026-09-07|p2']?.subject === 'Chemistry',
+    'a row without a key is addressed by its parts')
+  ok(mapped['XI-B|2026-09-07|p2']?.by === undefined, 'and an empty claimant is nobody, not ""')
 }
 
 console.log('\n── the corridor board names what is actually running ──')

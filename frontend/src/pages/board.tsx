@@ -18,6 +18,7 @@ import { loadActiveBundles } from '@/lib/activeSchedules'
 import { useLeaves, teachersOnLeaveOn } from '@/lib/leaveUtils'
 import { useHolidays } from '@/lib/holidays'
 import { useSyllabus } from '@/lib/syllabusTracking'
+import { useOrDecisionSync } from '@/lib/orSync'
 import { useSchoolEvents, teachingSuspendedOn } from '@/lib/schoolEvents'
 import { boardNow, boardRows, uncoveredRows, soonestRings } from '@/lib/smartboard'
 import {
@@ -72,6 +73,11 @@ export function BoardPage() {
   }, [uid, openTT])
 
   const isoDate = localISO(now)
+  // Nobody stands at a corridor screen to press refresh, so this one polls:
+  // a teacher claiming a period two minutes before the bell has to show up.
+  // Declared here rather than with the other hooks because it needs isoDate;
+  // there is no early return above it, so hook order is stable.
+  const orNonce = useOrDecisionSync(isoDate, isoDate, 60_000)
   const dayKey = DAY_KEY[now.getDay()]
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
@@ -103,7 +109,10 @@ export function BoardPage() {
   const absent = useMemo(() => new Set(teachersOnLeaveOn(leaves, isoDate)), [leaves, isoDate])
   const rows = useMemo(
     () => boardRows(bundles as any, dayKey, localISO(now), nowMin, absent, syllabusPlans),
-    [bundles, dayKey, now, nowMin, absent, syllabusPlans],
+    // orNonce is not read here: it is the signal that a pull changed what is
+    // in local storage, so the rows are rebuilt from it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bundles, dayKey, now, nowMin, absent, syllabusPlans, orNonce],
   )
   const uncovered = useMemo(() => uncoveredRows(rows), [rows])
   const teaching = rows.filter(r => r.subject)

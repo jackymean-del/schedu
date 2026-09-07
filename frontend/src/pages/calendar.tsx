@@ -10,6 +10,7 @@
  */
 import { cellHasTeacherOnDate } from '@/lib/orChoice'
 import { useSyllabus } from '@/lib/syllabusTracking'
+import { useOrDecisionSync } from '@/lib/orSync'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { subKey, localISO } from '@/lib/substitutionKeys'
 import { DAY_NAMES, sameDay } from '@/lib/days'
@@ -275,6 +276,8 @@ export function CalendarPage() {
 
   const dayKey = DAY_KEY[date.getDay()]
   const isoDate = toISODate(date)
+  // A teacher's claim has to reach whoever is arranging cover for that day.
+  const orNonce = useOrDecisionSync(isoDate, isoDate)
   /**
    * The date a given weekday falls on in the week being viewed.
    *
@@ -371,7 +374,7 @@ export function CalendarPage() {
   // activeScheduleId and subNonce are unused INSIDE the call on purpose: they
   // are the signals that the snapshot on disk has changed under us.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const rawBundles = useMemo(() => loadActiveBundles(uid), [uid, activeScheduleId, subNonce])
+  const rawBundles = useMemo(() => loadActiveBundles(uid), [uid, activeScheduleId, subNonce, orNonce])
   const activeCount = rawBundles.length
   const multiActive = activeCount > 1
   const openId = activeScheduleId ?? 'open'

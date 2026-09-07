@@ -32,6 +32,8 @@ import { DashboardTodayPanel } from '@/components/DashboardTodayPanel'
 import { DashboardPulse } from '@/components/DashboardPulse'
 import { useLeaves } from '@/lib/leaveUtils'
 import { useSyllabus } from '@/lib/syllabusTracking'
+import { useOrDecisionSync } from '@/lib/orSync'
+import { localISO } from '@/lib/days'
 import { computeTodaySummary } from '@/lib/scheduleToday'
 import { loadActiveBundles, computeMultiToday } from '@/lib/activeSchedules'
 import { detectConflicts } from '@/lib/schedulingEngine'
@@ -1009,6 +1011,11 @@ export function DashboardPage() {
   // here: an early return that skips a hook is the crash this page has had
   // before.
   const syllabusPlans = useSyllabus(s => s.plans)
+  // Today's claims, so the day console does not chase cover for a period a
+  // teacher has already taken.
+  const today = localISO(new Date())
+  const orNonce = useOrDecisionSync(today, today)
+  void orNonce
   const store = useTimetableStore() as any
   const { sections, staff } = store
 
