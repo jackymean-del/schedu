@@ -7,12 +7,14 @@
  * nothing to read, and every account behaved as an administrator. A faculty
  * member could declare a school-wide holiday.
  *
- * HONEST LIMIT: this is a client-side roster. The backend exposes /me (which
- * returns a role) but no endpoint for setting anyone else's, so nothing here is
- * enforced on the server. Treat it as "what the app offers this person", not as
- * a security boundary — someone determined can edit their own browser storage.
- * When the API gains member management, this store becomes its cache and the
- * server's answer wins.
+ * WHERE THE TRUTH LIVES. This started as a client-side roster with nothing
+ * behind it, and said so. The API now has member management, so — exactly as
+ * that note promised — this store is its CACHE and the server's answer wins.
+ * lib/memberSync pulls the roster in and pushes every change out.
+ *
+ * It still works offline, and a role here still only decides what the app
+ * OFFERS someone. What they may actually do to a school's timetable is decided
+ * server-side, in handlers/collab.go, against the same roster.
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -27,6 +29,13 @@ export interface Member {
   /** 'active' once they've signed in at least once; 'invited' before that. */
   status: 'active' | 'invited'
   addedAt: string
+  /**
+   * How this person is named in the TIMETABLE ("R. Rao"), as opposed to how
+   * they sign in. This is the join that makes everything else work: without it
+   * a signed-in teacher cannot be matched to their own lessons, and the server
+   * refuses every claim they make because it cannot check who they are.
+   */
+  staffName?: string
 }
 
 export const ROLE_ORDER: Role[] = ['admin', 'teacher', 'viewer']
@@ -40,7 +49,10 @@ const norm = (e: string) => (e ?? '').trim().toLowerCase()
 
 interface MembersState {
   members: Member[]
-  addMember: (email: string, role: Role, name?: string) => void
+  addMember: (email: string, role: Role, name?: string, staffName?: string) => void
+  /** Replace the whole roster with the server's copy. */
+  replaceMembers: (members: Member[]) => void
+  setStaffName: (id: string, staffName: string) => void
   setRole: (id: string, role: Role) => void
   removeMember: (id: string) => void
   /** Called on sign-in: records the person and marks them active. */
@@ -53,24 +65,32 @@ export const useMembers = create<MembersState>()(
     (set) => ({
       members: [],
 
-      addMember: (email, role, name) =>
+      addMember: (email, role, name, staffName) =>
         set(s => {
           const e = norm(email)
           if (!e) return s
           // Re-inviting someone who already exists updates their role rather
           // than creating a second row that silently shadows the first.
           if (s.members.some(m => m.email === e)) {
-            return { members: s.members.map(m => m.email === e ? { ...m, role, name: name ?? m.name } : m) }
+            return { members: s.members.map(m => m.email === e
+              ? { ...m, role, name: name ?? m.name, staffName: staffName ?? m.staffName }
+              : m) }
           }
           return {
             members: [...s.members, {
               id: Math.random().toString(36).slice(2, 9),
-              email: e, name, role, status: 'invited', addedAt: new Date().toISOString(),
+              email: e, name, role, status: 'invited',
+              addedAt: new Date().toISOString(), staffName,
             }],
           }
         }),
 
       setRole: (id, role) => set(s => ({ members: s.members.map(m => m.id === id ? { ...m, role } : m) })),
+
+      replaceMembers: (members) => set({ members }),
+
+      setStaffName: (id, staffName) =>
+        set(s => ({ members: s.members.map(m => m.id === id ? { ...m, staffName } : m) })),
 
       removeMember: (id) => set(s => ({ members: s.members.filter(m => m.id !== id) })),
 

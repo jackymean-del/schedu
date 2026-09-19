@@ -9,6 +9,7 @@
 import { resolveOrChoice, invalidOrSubjects, freedTeachers, orDecisionKey } from './src/lib/orChoice.ts'
 import { teachersActuallyIn } from './src/lib/cellTeachers.ts'
 import { planKey } from './src/lib/syllabusTracking.ts'
+import { readFileSync } from 'node:fs'
 
 type Any = any
 let fail = 0
@@ -102,6 +103,27 @@ console.log('\n── an OR group may not contain optional subjects ──')
     'so is one sitting in an elective slot')
   ok(invalidOrSubjects([{ subject: 'Unknown' }], subjects).length === 0,
     'a subject not on the roster is left for the roster to complain about')
+}
+
+console.log('')
+console.log('── the rule is ENFORCED, not merely documented ──')
+{
+  // invalidOrSubjects existed with no call site: the rule was written down and
+  // nothing checked it, so the group editor happily built OR groups out of
+  // optional subjects and the suggestion engine actively proposed them
+  // ("students choose one optional language"). A slot built that way schedules
+  // a period only part of the room can attend.
+  const EDITOR = 'src/components/resources/SubjectGroupsSection.tsx'
+  const src = readFileSync(EDITOR, 'utf8')
+
+  ok(src.includes('invalidOrSubjects('),
+    'the group editor actually calls invalidOrSubjects')
+  // Both doors. Guarding only the editor leaves the app arguing with itself:
+  // suggest the group, then refuse to save it.
+  ok(src.includes('badForOr.length === 0'),
+    'and a group that breaks the rule cannot be saved')
+  ok(src.includes('pushOr('),
+    'and OR suggestions go through the same check rather than straight to the list')
 }
 
 console.log('')

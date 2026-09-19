@@ -1,13 +1,28 @@
 /**
  * SubjectGroupsSection — OR / AND (Parallel Split) subject-combo configurator
  *
- * OR  → "PHY OR CHEM OR BIO"  — ONE subject per slot (rotation / teacher-availability)
- * AND → "PHY AND CHEM AND BIO" — all subjects in parallel, same slot, students split into groups
- *       (NOT the same as Student Groups — see inline note)
+ * OR  → "PHY OR CHEM OR BIO"  — ONE subject runs in the slot, for the WHOLE
+ *        class. Which one is decided by syllabus coverage: whichever subject is
+ *        further behind takes the period (lib/orChoice), unless a teacher says
+ *        otherwise for a given day.
+ * AND → "PHY AND CHEM AND BIO" — all subjects in parallel, same slot, students
+ *        split into groups.
+ *
+ * THE RULE THAT SEPARATES THEM: an OR group may only contain subjects EVERY
+ * student in the class takes. It is a choice about which subject the class does
+ * today, not about which students go where — that is what AND is for, and what
+ * optional blocks are for.
+ *
+ * This was stated in lib/orChoice and enforced nowhere: invalidOrSubjects
+ * existed with no call site, so nothing stopped an optional subject being put
+ * into an OR group, and the suggestion engine below actively proposed exactly
+ * that ("students choose one optional language"). A slot built that way
+ * schedules a period only part of the room can attend.
  */
 
 import { useState, useMemo } from 'react'
-import { Plus, Trash2, Pencil, X, Check, ChevronDown, ChevronUp, Info, Lightbulb, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, Pencil, X, Check, ChevronDown, ChevronUp, Info, Lightbulb, ArrowRight, AlertTriangle } from 'lucide-react'
+import { invalidOrSubjects } from '@/lib/orChoice'
 
 // ── Suggestion engine ─────────────────────────────────────────────────────────
 
@@ -101,6 +116,7 @@ function generateSuggestions(
   allSubjects: string[],
   subjectSectionsMap: Record<string, string[]>,
   existingCombos: SubjectAndOrGroup[],
+  subjectRows: Array<{ name: string; isOptional?: boolean; electiveSlotId?: string }> = [],
 ): SuggestionTemplate[] {
   const suggestions: SuggestionTemplate[] = []
   const alreadyCombo = new Set<string>(existingCombos.flatMap(g => g.subjects))
@@ -108,6 +124,31 @@ function generateSuggestions(
 
   const push = (sug: SuggestionTemplate) => {
     if (!suggestions.find(x => x.id === sug.id)) suggestions.push(sug)
+  }
+
+  /**
+   * Never suggest what the modal would refuse.
+   *
+   * These clusters were written around "students choose one optional language"
+   * — an OR group of optional subjects, which is exactly what an OR group may
+   * not be. Suggesting it and then blocking Save would be the app arguing with
+   * itself, so an OR suggestion carrying optional subjects becomes an AND
+   * suggestion: students divide into parallel groups, which is what was
+   * actually being described.
+   */
+  const pushOr = (sug: SuggestionTemplate, andLabel?: string, andReason?: string) => {
+    const bad = invalidOrSubjects(sug.subjects.map(name => ({ subject: name })), subjectRows)
+    if (!bad.length) { push(sug); return }
+    push({
+      ...sug,
+      id: sug.id.replace('sug_or_', 'sug_and_'),
+      logic: 'AND',
+      label: andLabel ?? sug.label.replace(/rotation/i, 'Parallel Split'),
+      reason: andReason
+        ?? `${bad.join(', ')} ${bad.length === 1 ? 'is optional' : 'are optional'}, so not every student takes `
+           + `${bad.length === 1 ? 'it' : 'them'} — these run in parallel with the class divided into groups, `
+           + 'rather than one subject running for everybody.',
+    })
   }
 
   // 1. Pattern-based suggestions — emit OR / AND / both per cluster
@@ -121,13 +162,13 @@ function generateSuggestions(
     const base = cluster.keywords[0].replace(/\s+/g, '_').slice(0, 16)
 
     if (cluster.logic === 'OR' || cluster.logic === 'BOTH') {
-      push({
+      pushOr({
         id:       `sug_or_${base}`,
         label:    cluster.orLabel ?? 'Elective Rotation',
         logic:    'OR',
         subjects: matched,
         reason:   cluster.orReason,
-      })
+      }, cluster.andLabel, cluster.andReason)
     }
     if (cluster.logic === 'AND' || cluster.logic === 'BOTH') {
       push({
@@ -157,12 +198,12 @@ function generateSuggestions(
       suggestions.some(sg => sg.logic === logic && subs.every(s => sg.subjects.includes(s)))
     const sigKey = subs.slice(0, 3).join('_').replace(/\s+/g, '').toLowerCase()
     if (!covered('OR')) {
-      push({
+      pushOr({
         id:       `sug_sec_or_${sigKey}`,
         label:    'Subjects for the same classes — Rotation',
         logic:    'OR',
         subjects: subs,
-        reason:   'These subjects are all assigned to the same class-sections — likely optional electives that rotate in a shared slot',
+        reason:   'These subjects are taught to exactly the same classes — so the class can do whichever is further behind on syllabus in a shared slot',
       })
     }
     if (!covered('AND')) {
@@ -217,11 +258,12 @@ export function GroupDisplay({ group }: { group: SubjectAndOrGroup }) {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function GroupModal({
-  initial, allSubjects, allSections, subjectSectionsMap, onSave, onClose, orOnly = false,
+  initial, allSubjects, allSections, subjectRows, subjectSectionsMap, onSave, onClose, orOnly = false,
 }: {
   initial?: SubjectAndOrGroup | null
   allSubjects: string[]
   allSections: string[]
+  subjectRows?: Array<{ name: string; isOptional?: boolean; electiveSlotId?: string }>
   subjectSectionsMap?: Record<string, string[]>
   onSave: (g: SubjectAndOrGroup) => void
   onClose: () => void
@@ -269,7 +311,19 @@ function GroupModal({
   const toggleSec = (s: string) =>
     setSections(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s])
 
-  const canSave = selected.length >= 2
+  // An OR group is a choice for the WHOLE class, so every subject in it must be
+  // one every student takes. An optional subject here would schedule a period
+  // only part of the room can attend — which is what AND groups and optional
+  // blocks exist for. lib/orChoice has always said so; this is where it is
+  // finally enforced rather than merely documented.
+  const badForOr = useMemo(
+    () => logic === 'OR'
+      ? invalidOrSubjects(selected.map(name => ({ subject: name })), subjectRows ?? [])
+      : [],
+    [logic, selected, subjectRows],
+  )
+
+  const canSave = selected.length >= 2 && badForOr.length === 0
 
   return (
     <div
@@ -608,6 +662,23 @@ function GroupModal({
           </div>
         )}
 
+        {!!badForOr.length && (
+          <div style={{
+            display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10,
+            background: OR_BG, border: `1px solid ${OR_BDR}`, borderRadius: 9,
+            padding: '10px 12px', fontSize: 12, color: OR_TEXT, lineHeight: 1.55,
+          }}>
+            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>
+              {badForOr.join(', ')} {badForOr.length === 1 ? 'is an optional subject' : 'are optional subjects'},
+              so {badForOr.length === 1 ? 'it cannot' : 'they cannot'} be part of an OR group. OR decides which
+              subject the <strong>whole class</strong> does in a period — every student attends whichever one
+              runs. If these subjects are taken by different students, use <strong>AND</strong>, which splits
+              the class into parallel groups.
+            </span>
+          </div>
+        )}
+
         {/* Footer */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid #F3F4F6' }}>
           <button onClick={onClose} style={{
@@ -656,6 +727,7 @@ export function SubjectGroupsSection({
   setGroups,
   allSubjectNames,
   allSectionNames,
+  allSubjects,
   subjectSectionsMap,
   defaultOpen = false,
   orOnly = false,
@@ -664,6 +736,9 @@ export function SubjectGroupsSection({
   setGroups: (g: SubjectAndOrGroup[]) => void
   allSubjectNames: string[]
   allSectionNames: string[]
+  /** The subject rows themselves, so an OR group can be checked against which
+   *  of them are optional. Names alone cannot answer that. */
+  allSubjects?: Array<{ name: string; isOptional?: boolean; electiveSlotId?: string }>
   /** subject name → applicable section names (used to filter the section picker) */
   subjectSectionsMap?: Record<string, string[]>
   /** Start the collapsible panel open (default false; set true when used as primary content) */
@@ -692,10 +767,10 @@ export function SubjectGroupsSection({
   const dismissSug = (id: string) => setDismissedSugs(prev => new Set([...prev, id]))
 
   const suggestions = useMemo(
-    () => generateSuggestions(allSubjectNames, subjectSectionsMap ?? {}, groups)
+    () => generateSuggestions(allSubjectNames, subjectSectionsMap ?? {}, groups, allSubjects ?? [])
       .filter(s => !dismissedSugs.has(s.id))
       .filter(s => !orOnly || s.logic === 'OR'),
-    [allSubjectNames, subjectSectionsMap, groups, dismissedSugs, orOnly],
+    [allSubjectNames, subjectSectionsMap, groups, dismissedSugs, orOnly, allSubjects],
   )
 
   const handleSave = (g: SubjectAndOrGroup) => {
@@ -928,6 +1003,7 @@ export function SubjectGroupsSection({
           initial={editTarget}
           allSubjects={allSubjectNames}
           allSections={allSectionNames}
+          subjectRows={allSubjects}
           subjectSectionsMap={subjectSectionsMap}
           orOnly={orOnly}
           onSave={handleSave}

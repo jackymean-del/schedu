@@ -370,13 +370,26 @@ function inferOptionalBlocksFromStrengths(
       }
     }
 
-    // Match a teacher per option (subject-aware, no double-booking)
+    // Match a teacher per option (subject-aware, no double-booking).
+    //
+    // A SPECIALIST or nobody. This used to fall back to `staff.find(any free
+    // teacher)`, which handed the subject to whoever happened to be spare: a
+    // block of "Computer OR Social Studies" put the Computer teacher on
+    // Computer and the ENGLISH teacher on Social Studies, in fourteen sections
+    // at once. Pass 2 states the rule in its own comment — specialists busy
+    // means try something else, "NEVER hand the lesson to a random teacher" —
+    // and this path quietly did the opposite.
+    //
+    // An option with no teacher is the honest outcome, and matches what the
+    // solver does everywhere else when a school has nobody who can teach
+    // something: place the lesson and leave the name blank rather than invent
+    // a qualification.
     const teacherBusyAtBlock = new Set<string>()
     const options = entry.subjects.map(sub => {
       const t = staff.find(st =>
         ((st as any).subjects ?? []).some((s: string) => s === sub || s.endsWith(`::${sub}`))
         && !teacherBusyAtBlock.has(st.name)
-      ) ?? staff.find(st => !teacherBusyAtBlock.has(st.name))
+      )
       if (t) teacherBusyAtBlock.add(t.name)
       // Pick a sensible room based on subject keyword
       const roomGuess = guessRoom(sub, sections)
@@ -1023,6 +1036,20 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       block.options.forEach(opt => {
         if (opt.teacher) for (const k of keysFor(opt.teacher)) { ensureBusy(k); teacherBusy[k][day].add(periodId) }
       })
+      // Hold the ROOMS too, not just the teachers.
+      //
+      // This pass reserved its teachers and left its rooms unmarked, so every
+      // later pass believed the block's room was empty. A block pinned into a
+      // section's own classroom — which is what the inferred ones use — was
+      // then joined there by whichever class owns that room, and two different
+      // lessons ran in it at once. Pass 0 goes first, so nothing downstream
+      // could have noticed on its own.
+      //
+      // Every option's room, not only the cell-level one: an AND split puts
+      // each group in a different room at the same moment, and all of them are
+      // occupied.
+      holdRoom(day, [periodId], blockRoom)
+      block.options.forEach(opt => holdRoom(day, [periodId], opt.room ?? ''))
       // AND (parallel split) IS the subjects' period → count toward quota and cap
       // the target so Pass 2 won't also schedule them individually.
       // OR is an EXTRA slot → do NOT count, so the individual Physics / Chemistry
@@ -2125,6 +2152,17 @@ export interface ReoptimizeInput {
    *  figure, or it would undo caps the first pass respected. */
   defaultTeacherMaxPeriods?: number
   subjectAllocations?: Record<string, Record<string, string>>
+  /**
+   * The same availability matrix the first pass was given — for exactly the
+   * reason stated above about caps, and it was missing.
+   *
+   * Without it this function cannot know a teacher is unavailable, so it moved
+   * lessons INTO slots the solver had carefully kept clear: a teacher who does
+   * not work Friday afternoons was re-assigned to teach on one, and nothing
+   * anywhere said so. Re-optimisation must not be able to undo a constraint by
+   * being ignorant of it.
+   */
+  teacherAvailability?: import('@/types').TeacherAvailability
 }
 
 export interface ReoptimizeResult {
@@ -2215,9 +2253,21 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
         const cell: any = secData[day]?.[period.id]
         if (!cell?.subject) return
         if (cell.optionalBlockId || cell.isClassTeacher) {
-          if (cell.teacher) {
-            for (const k of cellKeys(cell)) { ensureBusy(k); teacherBusy[k]?.[day]?.add(period.id) }
-          }
+          // EVERY teacher in the cell, not just the cell-level one.
+          //
+          // An optional block runs parallel subjects and names a teacher per
+          // subject in options[] / groupAssignments[], mirroring only the first
+          // into `teacher`. Marking that copy busy left every LATER group's
+          // teacher looking free, so the re-optimiser handed them a second
+          // lesson at the same moment — it created the double-booking while
+          // tidying the load chart, and the timetable came back worse than it
+          // went in.
+          //
+          // lib/cellTeachers reads both parallel shapes; cellKeys is kept for
+          // the id-based path on ordinary cells.
+          const inCell = teachersInCell(cell)
+          const keys = inCell.length ? inCell.flatMap(n => keysFor(n)) : cellKeys(cell)
+          for (const k of keys) { ensureBusy(k); teacherBusy[k]?.[day]?.add(period.id) }
         } else {
           const prevTeacher = cell.teacher ?? ''
           cell.teacher = ''   // clear — will be re-assigned below
@@ -2266,6 +2316,8 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
 
     const isAvailable = (st: Staff): boolean => {
       if (teacherBusy[tKey(st)]?.[day]?.has(periodId)) return false
+      // A blocked slot is a slot this person cannot work. Hard, as in Pass 2.
+      if (input.teacherAvailability?.[st.name]?.[day]?.[periodId] === 'blocked') return false
       // PER-DAY workload cap — hard, same as Phase 2.
       if (atDailyLimit(loadTodayForCap[st.name] ?? 0, dailyCapFor(st, workDays.length))) return false
       const tScope = (st as any).scope
@@ -2304,8 +2356,16 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     if (!eligible.length) eligible = staff.filter(st =>
       ((st as any).subjects ?? []).includes(subject) && isAvailable(st)
     )
-    if (!eligible.length) eligible = staff.filter(st => isAvailable(st))
-    if (!eligible.length) return   // no teacher available — slot stays blank
+    // There is deliberately NO third tier handing the lesson to whoever is
+    // free. This used to fall back to `staff.filter(isAvailable)`, so when
+    // every Computer teacher was busy or at their cap the period was given to
+    // the Art teacher — re-optimisation inventing a qualification in order to
+    // even out a load chart.
+    //
+    // Returning here leaves the cell exactly as it was, which is the honest
+    // outcome: this function redistributes work among people who can do it,
+    // and when nobody can, the existing assignment stands.
+    if (!eligible.length) return
     eligible = pickTier(eligible)
 
     // Today's load snapshot (for exhaustion penalty)

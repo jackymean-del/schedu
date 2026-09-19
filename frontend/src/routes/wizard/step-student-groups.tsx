@@ -1244,6 +1244,7 @@ export function StepStudentGroups() {
             setGroups={store.setSubjectGroups}
             allSubjectNames={allSubjectNames}
             allSectionNames={allSectionNames}
+            allSubjects={subjects as any}
             subjectSectionsMap={subjectSectionsMap}
             defaultOpen
             orOnly

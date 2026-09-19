@@ -7,16 +7,27 @@
  * every account behaved as an administrator. A faculty member could declare a
  * school-wide holiday.
  *
- * Now it is the real thing: the roster in store/members, which lib/permissions
- * resolves the signed-in person against by email.
+ * Now it is the real thing, and server-backed. The roster lives on the server
+ * (handlers/collab.go) with store/members as its cache, because this list is
+ * what decides whether a TEACHER may claim a period on their own phone. A
+ * school that adds somebody only in its own browser has not added them at all.
+ *
+ * The staff name is the field that makes the rest work, and the least obvious:
+ * the timetable names teachers by their ROSTER name ("R. Rao"), not by login,
+ * so without that mapping a signed-in teacher is matched to no lessons and
+ * every period reads "not yours to change" with nothing explaining why. The
+ * page warns about it rather than leaving it to be discovered.
  */
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useAuthStore } from '@/store/authStore'
 import { useOrgProfile } from '@/store/orgProfile'
 import { useMembers, canDemote, ROLE_ORDER, ROLE_HINTS, type Member } from '@/store/members'
+import { useTimetableStore } from '@/store/timetableStore'
+import { pullMembers, upsertMember, setMemberRole, setMemberStaffName, removeMember as removeMemberRemote } from '@/lib/memberSync'
+import { unmappedMembers, unknownStaffNames } from '@/lib/memberRules'
 import { ROLE_LABELS, useCan, type Role } from '@/lib/permissions'
-import { Trash2, ShieldCheck, Info } from 'lucide-react'
+import { Trash2, ShieldCheck, Info, CloudOff, AlertTriangle } from 'lucide-react'
 
 const ACCENT = '#685DBC'
 const ROLE_STYLE: Record<Role, { bg: string; fg: string }> = {
@@ -28,18 +39,31 @@ const ROLE_STYLE: Record<Role, { bg: string; fg: string }> = {
 export function UsersPage() {
   const { user } = useAuthStore()
   const { name: orgName } = useOrgProfile()
-  const { members, addMember, setRole, removeMember } = useMembers()
+  const { members } = useMembers()
   const canManage = useCan('holiday.manage')   // admin-only surface
+  const staff = useTimetableStore(s => (s as any).staff) as any[] | undefined
 
   const [email, setEmail] = useState('')
+  const [staffName, setStaffName] = useState('')
   const [role, setNewRole] = useState<Role>('teacher')
   const [error, setError] = useState('')
+  const [offline, setOffline] = useState(false)
 
-  const invite = () => {
+  // The server's roster is the one that counts, so it is read on arrival and
+  // its answer replaces whatever this browser remembered.
+  useEffect(() => { pullMembers().then(okay => setOffline(!okay)) }, [])
+
+  const staffNames = useMemo(() => (staff ?? []).map((x: any) => x?.name).filter(Boolean), [staff])
+  const unmapped = useMemo(() => unmappedMembers(members), [members])
+  const unknown = useMemo(() => unknownStaffNames(members, staffNames), [members, staffNames])
+
+  const invite = async () => {
     const e = email.trim()
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { setError('That doesn’t look like an email address.'); return }
-    addMember(e, role)
-    setEmail(''); setError('')
+    setError('')
+    const landed = await upsertMember(e, role, staffName.trim() || undefined)
+    setOffline(!landed)
+    setEmail(''); setStaffName('')
   }
 
   const isSelf = (m: Member) => m.email === (user?.email ?? '').trim().toLowerCase()
@@ -59,11 +83,56 @@ export function UsersPage() {
           <Info size={14} color={ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>
             Roles decide what the app offers each person — who can declare holidays, mark absences and
-            arrange cover, versus who only records their own syllabus. They are stored with your school's
-            data and applied in the browser; they are <strong>not yet enforced by the server</strong>, so
-            treat them as workflow rather than security until the API supports member accounts.
+            arrange cover, versus who only records their own syllabus. This roster is kept on the server,
+            and it is <strong>what decides whether a teacher may claim a period</strong> from their own
+            phone, so adding somebody here is what actually gives them access.
           </span>
         </div>
+
+        {offline && (
+          <div style={{
+            display: 'flex', gap: 9, alignItems: 'flex-start',
+            background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12,
+            padding: '11px 14px', fontSize: 12, color: '#92400E', lineHeight: 1.55,
+          }}>
+            <CloudOff size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>
+              This roster has not reached the server. You can keep editing it, but until the
+              connection is back a person added here cannot sign in and see your timetable.
+            </span>
+          </div>
+        )}
+
+        {!!unmapped.length && (
+          <div style={{
+            display: 'flex', gap: 9, alignItems: 'flex-start',
+            background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12,
+            padding: '11px 14px', fontSize: 12, color: '#92400E', lineHeight: 1.55,
+          }}>
+            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>
+              {unmapped.length === 1 ? 'One person has' : `${unmapped.length} people have`} no name
+              set against the timetable: {unmapped.map(m => m.email).join(', ')}. They can sign in,
+              but nothing will be matched to their lessons and every period will read “not yours to
+              change”. Set the name your timetable uses for them.
+            </span>
+          </div>
+        )}
+
+        {!!unknown.length && (
+          <div style={{
+            display: 'flex', gap: 9, alignItems: 'flex-start',
+            background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12,
+            padding: '11px 14px', fontSize: 12, color: '#92400E', lineHeight: 1.55,
+          }}>
+            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>
+              {unknown.map(m => `“${m.staffName}”`).join(', ')} {unknown.length === 1 ? 'is' : 'are'} not
+              a name on your staff list, so it will match no lessons. A typo here fails exactly like a
+              blank one — silently.
+            </span>
+          </div>
+        )}
 
         <section style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px', color: '#13111E' }}>Members</h2>
@@ -97,6 +166,32 @@ export function UsersPage() {
                   <div style={{ fontSize: 12, color: '#6D6A8A', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
                 </div>
 
+                {/* The timetable name. Editable in place because it is the one
+                    field that decides whether this account finds its lessons,
+                    and it is usually wrong or missing rather than absent by
+                    choice. */}
+                {canManage && m.role !== 'viewer' && (
+                  <input
+                    defaultValue={m.staffName ?? ''}
+                    list="schedu-staff-names"
+                    aria-label={`Timetable name for ${m.email}`}
+                    placeholder="timetable name"
+                    title="How your timetable names this teacher. Without it, none of their lessons can be matched to them."
+                    onBlur={e => {
+                      const next = e.target.value.trim()
+                      if (next === (m.staffName ?? '')) return
+                      setMemberStaffName(m.id, m.email, m.role, next)
+                        .then(landed => setOffline(!landed))
+                    }}
+                    style={{
+                      width: 132, padding: '5px 9px', borderRadius: 7, fontSize: 12,
+                      fontFamily: 'inherit', outline: 'none',
+                      border: `1px solid ${(m.staffName ?? '').trim() ? '#E5E7EB' : '#FDE68A'}`,
+                      background: (m.staffName ?? '').trim() ? '#fff' : '#FFFBEB',
+                    }}
+                  />
+                )}
+
                 {m.status === 'invited' && (
                   <span style={{ fontSize: 10.5, fontWeight: 700, color: '#92400e', background: '#FEF3C7', padding: '3px 9px', borderRadius: 20 }}>
                     Invited
@@ -113,7 +208,8 @@ export function UsersPage() {
                     title={lastAdmin
                       ? 'This is the only administrator. Promote somebody else first — otherwise nobody could manage the school.'
                       : ROLE_HINTS[m.role]}
-                    onChange={e => setRole(m.id, e.target.value as Role)}
+                    onChange={e => setMemberRole(m.id, m.email, e.target.value as Role, m.staffName)
+                      .then(landed => setOffline(!landed))}
                     style={{
                       padding: '5px 9px', borderRadius: 7, fontSize: 12, fontWeight: 700,
                       border: `1px solid ${style.bg}`, background: lastAdmin ? '#F5F5F7' : style.bg,
@@ -130,7 +226,7 @@ export function UsersPage() {
 
                 {canManage && (
                   <button
-                    onClick={() => removeMember(m.id)}
+                    onClick={() => removeMemberRemote(m.id).then(landed => setOffline(!landed))}
                     disabled={lastAdmin}
                     title={lastAdmin ? 'The only administrator cannot be removed.' : `Remove ${m.email}`}
                     style={{
@@ -167,6 +263,19 @@ export function UsersPage() {
                 placeholder="name@school.edu"
                 style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 9, border: `1px solid ${error ? '#FCA5A5' : '#E5E7EB'}`, fontSize: 13.5, fontFamily: 'inherit', outline: 'none' }}
               />
+              <input
+                value={staffName}
+                onChange={e => setStaffName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') invite() }}
+                list="schedu-staff-names"
+                aria-label="Their name in the timetable"
+                placeholder="Their name in the timetable"
+                title="The timetable names teachers by their roster name, not their login. Without this they cannot be matched to their own lessons."
+                style={{ flex: 1, minWidth: 190, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', fontSize: 13.5, fontFamily: 'inherit', outline: 'none' }}
+              />
+              <datalist id="schedu-staff-names">
+                {staffNames.map((n: string) => <option key={n} value={n} />)}
+              </datalist>
               <select value={role} aria-label="Role for the person you're adding" onChange={e => setNewRole(e.target.value as Role)}
                 style={{ padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', fontSize: 13, fontWeight: 700, color: '#4B5275', fontFamily: 'inherit' }}>
                 {ROLE_ORDER.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}

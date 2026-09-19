@@ -28,7 +28,7 @@
  * its staff can deliver, and the honest answer is to place what fits and report
  * the rest. Scheduling a lesson that cannot happen IS a failure.
  */
-import { solveTimetable } from './src/lib/schedulingEngine.ts'
+import { solveTimetable, detectConflicts, reoptimizeTeachers } from './src/lib/schedulingEngine.ts'
 
 type Any = any
 
@@ -63,6 +63,7 @@ interface Gen {
   sectionAdjacency?: Record<string, string[]>
   defaultTeacherMaxPeriods?: number
   optionalBlocks: Any[]
+  sectionStrengths: Any[]
 }
 
 function generate(seed: number): Gen {
@@ -243,7 +244,27 @@ function generate(seed: number): Gen {
     }
   }
 
+  // Section strengths. When present AND no blocks are authored, the engine
+  // INFERS optional blocks from them — a completely separate entry into Pass 0
+  // that authored blocks never reach.
+  const sectionStrengths: Any[] = []
+  if (!optionalBlocks.length && r() < 0.35) {
+    for (const sec of sections) {
+      const total = sec.strength
+      const subjectStrengths: Record<string, number> = {}
+      for (const sub of subjectNames) subjectStrengths[sub] = total
+      // Two subjects that split the class are what marks them optional.
+      if (subjectNames.length >= 3) {
+        const half = Math.floor(total / 2)
+        subjectStrengths[subjectNames[subjectNames.length - 1]] = half
+        subjectStrengths[subjectNames[subjectNames.length - 2]] = total - half
+      }
+      sectionStrengths.push({ sectionName: sec.name, subjectStrengths })
+    }
+  }
+
   return {
+    sectionStrengths,
     optionalBlocks,
     label: `${nSections}sec ${classPeriodIds.length}p×${workDays.length}d fill=${fillRatio} supply=${supply}${optionalBlocks.length ? ` blocks=${optionalBlocks.length}` : ''}`,
     sections, staff, subjects: subjectNames.map((n, i) => ({ id: `sub${i}`, name: n, periodsPerWeek: 4 })),
@@ -280,8 +301,18 @@ function occupantsOf(cell: Any): Array<{ teacher: string; subject: string; room:
   return out
 }
 
-function verify(g: Gen, out: Any): Violation[] {
+function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
   const v: Violation[] = []
+  // Room clashes the engine itself reports, keyed room|day|period. Parsed from
+  // its own message because that is the only place it names them.
+  const reportedRoomClashes = new Set<string>()
+  for (const c of reported) {
+    if (c?.type !== 'room-clash') continue
+    const m = /^(.+?) double-booked: .+ on ([A-Z]+) (.+)$/.exec(String(c.message ?? ''))
+    if (!m) continue
+    const pid = g.periods.find(p => (p.name ?? p.id) === m[3])?.id ?? m[3]
+    reportedRoomClashes.add(`${m[1]}|${m[2]}|${pid}`)
+  }
   const add = (rule: string, detail: string) => { if (v.length < 40) v.push({ rule, detail }) }
 
   const classTT = out.classTT ?? {}
@@ -341,15 +372,30 @@ function verify(g: Gen, out: Any): Violation[] {
   }
   /** slot → section → the block signature that section's cell carries. */
   const cellSig = new Map<string, Map<string, string>>()
-  /** Are these sections one pooled lesson at this slot? */
+  /**
+   * Are these sections one pooled lesson at this slot?
+   *
+   * Yes when every one of them carries the IDENTICAL parallel signature — the
+   * same subjects taught by the same people. That is one lesson with students
+   * from several classes in it, which is what pooling means, and it is the
+   * honest reading whether the block was authored or inferred from the
+   * strengths matrix. Requiring the sections to appear on an authored block
+   * reported every INFERRED pool as a clash.
+   *
+   * It keeps its teeth where they matter: a teacher in this pooled lesson AND
+   * in some other lesson at the same moment is still two places at once,
+   * because that other section's signature will not match.
+   */
   const isPooled = (slot: string, secs: string[]) => {
     const bySection = cellSig.get(slot)
     if (!bySection) return false
     const first = bySection.get(secs[0])
     if (!first) return false
     if (!secs.every(x => bySection.get(x) === first)) return false
+    // An authored block additionally states who may be pooled; when one says
+    // so, hold it to that.
     const allowed = blockSections.get(first)
-    return !!allowed && secs.every(x => allowed.has(x))
+    return allowed ? secs.every(x => allowed.has(x)) : true
   }
 
   // (day, period) → who is teaching, and where.
@@ -463,7 +509,19 @@ function verify(g: Gen, out: Any): Violation[] {
   for (const [slot, perRoom] of roomUse) {
     for (const [room, secs] of perRoom) {
       if (secs.size > 1 && !isPooled(slot, [...secs])) {
-        add('V8-room-clash', `${room} holds ${[...secs].join(' + ')} at ${slot}`)
+        // A room clash is not automatically a bug. pickRoom resolves what it
+        // can and, where no free room exists, deliberately places the lesson
+        // in the home room anyway rather than dropping it — on the condition,
+        // stated in its own comment, that the result is FLAGGED.
+        //
+        // So the invariant is not "never clashes"; it is "never clashes
+        // SILENTLY". Asking detectConflicts whether it admits to a clash this
+        // verifier found independently is a fair question: if it says no, then
+        // a school is running two classes in one room with nothing on screen
+        // saying so, which is the bug.
+        if (!reportedRoomClashes.has(`${room}|${slot}`)) {
+          add('V8-silent-room-clash', `${room} holds ${[...secs].join(' + ')} at ${slot}, unreported`)
+        }
       }
     }
   }
@@ -697,6 +755,7 @@ for (let i = 0; i < RUNS; i++) {
       sectionAdjacency: g.sectionAdjacency,
       defaultTeacherMaxPeriods: g.defaultTeacherMaxPeriods,
       optionalBlocks: g.optionalBlocks,
+      sectionStrengths: g.sectionStrengths,
     } as Any)
   } catch (e: Any) {
     console.log(`✗ seed ${seed} (${g.label}): SOLVER THREW — ${e?.message}`)
@@ -705,6 +764,7 @@ for (let i = 0; i < RUNS; i++) {
     continue
   }
   const ms = performance.now() - t0
+  const r0 = rng(seed ^ 0x5bf03635)
   totalMs += ms
   if (ms > slowest.ms) slowest = { ms, label: g.label, seed }
   solved++
@@ -717,6 +777,7 @@ for (let i = 0; i < RUNS; i++) {
   }
   if (g.sections.some(sec => sec.classTeacher)) cover('class teachers named')
   if (g.optionalBlocks.length) cover('parallel groups (OR/AND blocks)')
+  if (g.sectionStrengths.length) cover('blocks inferred from section strengths')
   if (g.optionalBlocks.some((b: Any) => b.sectionNames.length > 1)) cover('a block pooled across sections')
   if (g.optionalBlocks.some((b: Any) => b.logic === 'OR')) cover('an OR choice block')
   if (g.optionalBlocks.some((b: Any) => b.logic === 'AND')) cover('an AND split block')
@@ -748,7 +809,50 @@ for (let i = 0; i < RUNS; i++) {
     }))
   if (shortfall) cover('a school that could not be fully staffed')
 
-  const violations = verify(g, out)
+  // ── The re-optimiser, on the timetable just produced ────────────────────
+  //
+  // reoptimizeTeachers rewrites WHO teaches each lesson to even out staff load.
+  // It moves the one thing every invariant here depends on, so a bug in it is
+  // a bug in the finished timetable — and it was outside this loop entirely.
+  // The SAME verifier runs over its output: a redistribution that creates a
+  // double-booking has not improved anything.
+  if (out.classTT && Object.keys(out.classTT).length && r0() < 0.5) {
+    try {
+      const re: Any = reoptimizeTeachers({
+        classTT: out.classTT, sections: g.sections, staff: g.staff,
+        subjects: g.subjects, periods: g.periods, workDays: g.workDays,
+        defaultTeacherMaxPeriods: g.defaultTeacherMaxPeriods,
+        subjectAllocations: g.subjectAllocations,
+        teacherAvailability: g.teacherAvailability,
+      } as Any)
+      cover('a re-optimised timetable')
+      let reReported: Any[] = []
+      try {
+        reReported = detectConflicts(re.classTT, g.periods as Any,
+          { sections: g.sections as Any, rooms: g.rooms as Any }) ?? []
+      } catch { reReported = [] }
+      const reViolations = verify(g, { classTT: re.classTT, teacherTT: {} }, reReported)
+      if (reViolations.length) {
+        failedRuns++
+        console.log(`✗ seed ${seed} (${g.label}) — ${reViolations.length} violation(s) AFTER re-optimise`)
+        for (const x of reViolations.slice(0, 6)) console.log(`    ${x.rule}: ${x.detail}`)
+        console.log(`   replay: npx tsx engine-stress-verify.mts 1 ${seed}`)
+        for (const x of reViolations) tally.set('reopt/' + x.rule, (tally.get('reopt/' + x.rule) ?? 0) + 1)
+      }
+    } catch (e: Any) {
+      failedRuns++
+      console.log(`✗ seed ${seed}: RE-OPTIMISER THREW — ${e?.message}`)
+    }
+  }
+
+  // detectConflicts is asked only whether it ADMITS to what this verifier
+  // already found on its own — never to do the finding.
+  let reported: Any[] = []
+  try {
+    reported = detectConflicts(out.classTT, g.periods as Any,
+      { sections: g.sections as Any, rooms: g.rooms as Any }) ?? []
+  } catch { reported = [] }
+  const violations = verify(g, out, reported)
   if (violations.length) {
     failedRuns++
     console.log(`✗ seed ${seed} (${g.label}) — ${violations.length} violation(s)`)
@@ -772,6 +876,7 @@ const WANTED = [
   'a one-day week', 'a single-section school', 'demand beyond capacity',
   'a school that could not be fully staffed', 'parallel groups (OR/AND blocks)',
   'a block pooled across sections', 'an OR choice block', 'an AND split block',
+  'blocks inferred from section strengths', 'a re-optimised timetable',
 ]
 console.log('')
 console.log('situations exercised:')

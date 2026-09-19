@@ -232,6 +232,10 @@ export function ReviewDashboard({
         workDays,
         defaultTeacherMaxPeriods: schoolTeacherCap(),
         subjectAllocations: liveStore.subjectAllocations ?? {},
+        // The same matrix the solver used. Without it the re-optimiser cannot
+        // see that somebody is unavailable and moves lessons into slots the
+        // first pass kept deliberately clear.
+        teacherAvailability: liveStore.teacherAvailability ?? {},
       })
       const stddevBefore = loadStats.stddev
       // PERSIST the improved assignment — previously only the load bars were
