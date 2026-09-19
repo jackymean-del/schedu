@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { MarketingChrome } from '@/components/MarketingChrome'
 import { appHref } from '@/lib/appUrl'
 import { DOC_ARTICLES, getDoc, type DocBlock } from '@/content/docs'
+import { SITE_URL } from '@/lib/structuredData'
 
 // Static export needs every param known at build time — no on-demand slugs.
 export const dynamicParams = false
@@ -59,8 +60,43 @@ export default async function DocArticlePage({ params }: { params: Promise<{ slu
   const doc = getDoc(slug)
   if (!doc) notFound()
 
+  // BreadcrumbList + TechArticle.
+  //
+  // The breadcrumb replaces the bare URL in a Google listing with
+  // "schedU › Documentation › <this guide>", which tells a reader where they
+  // are landing before they click. TechArticle marks the page as documentation
+  // rather than a product page, so it is eligible to answer a how-to query
+  // instead of competing with the home page for a brand one.
+  const BREADCRUMB_SCHEMA = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'schedU', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Documentation', item: `${SITE_URL}/docs` },
+      { '@type': 'ListItem', position: 3, name: doc.title, item: `${SITE_URL}/docs/${doc.slug}` },
+    ],
+  }
+  const ARTICLE_SCHEMA = {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: doc.title,
+    description: doc.description,
+    url: `${SITE_URL}/docs/${doc.slug}`,
+    inLanguage: 'en',
+    isPartOf: { '@type': 'WebSite', name: 'schedU', url: SITE_URL },
+    publisher: { '@type': 'Organization', name: 'schedU', url: SITE_URL },
+  }
+
   return (
     <MarketingChrome>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_SCHEMA) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ARTICLE_SCHEMA) }}
+      />
       <div className="mx-auto grid w-full max-w-[1000px] grid-cols-1 gap-10 px-6 py-12 md:grid-cols-[220px_1fr]">
 
         {/* Sidebar */}

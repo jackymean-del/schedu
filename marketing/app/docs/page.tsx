@@ -14,7 +14,7 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'Documentation',
+  title: 'Documentation — How to Build a School Timetable',
   description: 'Learn how schedU works — from your first conflict-free timetable to advanced electives, room planning, and exports. Guides for schools, colleges, and universities.',
   alternates: { canonical: '/docs' },
 }

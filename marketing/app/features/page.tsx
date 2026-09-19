@@ -42,7 +42,9 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'Features',
+  // A one-word title renders as "Features · schedU" and matches nothing
+  // anybody searches for. The page's own subject belongs here.
+  title: 'Timetable Features — Conflicts, Electives & Substitutions',
   description: 'Explore every schedU feature — Human-Intelligence auto-scheduling, real-time conflict detection, elective OR/AND groups, multi-stream support, room planning, and PDF/Excel export.',
   alternates: { canonical: '/features' },
 }

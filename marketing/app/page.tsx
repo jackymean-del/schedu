@@ -55,9 +55,74 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'schedU — Free School Timetable Generator & Class Scheduling Software',
-  description: 'Auto-generate conflict-free school timetables, class routines & teacher schedules in minutes. Built with Human Intelligence (not black-box AI) from real experience — a live board that follows the clock, one-click substitutions & workload balancing. Any board, any curriculum, anywhere.',
+  // The brand is spelled out because the root layout's title template applies
+  // to CHILD segments only — this page sits in the same segment that defines
+  // it, so nothing would be appended and a search for the brand would return a
+  // result that never says it.
+  //
+  // 55 characters, so the whole line survives a Google listing rather than
+  // being cut mid-phrase. "Timetable Generator" is what people type; "Human
+  // Intelligence" is the reason to click this result over the AI ones around
+  // it.
+  title: 'schedU — Timetable Generator Built on Human Intelligence',
+  description: 'Build conflict-free school timetables, class routines and teacher schedules in minutes. Built on Human Intelligence — real scheduling expertise you can inspect, question and override, not a black box that guesses. A live board that follows the clock, one-click substitutions and workload balancing, for any board and any curriculum.',
   alternates: { canonical: '/' },
+}
+
+// ── The questions people actually ask before choosing a scheduler ──────────
+//
+// This exists for two reasons, and the SEO one is the smaller of them.
+//
+// Not for the rich result. Google restricted FAQ rich snippets in 2023 to
+// well-known government and health sites, so this markup will almost certainly
+// not draw an expanded listing, and pretending otherwise would be the kind of
+// SEO folklore that survives because nobody checks.
+//
+// What it does do is give a crawler unambiguous, quotable text. The listing for
+// this site read "schedU uses AI to auto-generate conflict-free timetables" —
+// the opposite of what this product is — because a crawler inferred it from a
+// category full of AI tools and a page that never said otherwise in so many
+// words. The first entry says otherwise in so many words, in the structured
+// form that featured snippets and AI overviews draw from.
+//
+// Every answer here must also be TRUE and match the page; Google drops
+// structured data that does not, and a school that arrives on a promise the
+// product does not keep is worse than one that never came.
+const HOME_FAQ = [
+  {
+    q: 'Does schedU use AI to build timetables?',
+    a: 'No. schedU is built on Human Intelligence — the scheduling rules a timetable in-charge actually applies, written down and made inspectable. Every decision has a reason you can read, question and override, and the same input always produces the same timetable. A model that guesses can do none of those things, and a timetable you cannot explain to the teacher standing in front of you is not finished.',
+  },
+  {
+    q: 'What does "Human Intelligence" mean in practice?',
+    a: 'It means the constraints are explicit rather than learned. Teacher availability, weekly workload limits, double periods that must not straddle a break, a class teacher who takes the first period, room capacity, elective groups — each is a rule you set and can see applied. When something cannot be satisfied, schedU tells you which rule blocked it and where, instead of quietly producing a worse timetable.',
+  },
+  {
+    q: 'How long does it take to generate a timetable?',
+    a: 'Seconds for a typical school. A thirty-section school with a full allocation matrix, day-off rules and teacher availability solves in under a second, and you can re-run it as often as you like while you adjust the inputs.',
+  },
+  {
+    q: 'Will it work with my board or curriculum?',
+    a: 'Yes. schedU has no built-in board restrictions — you enter your own period counts, subject names, streams and grading labels. Schools on CBSE, ICSE, IB, Cambridge, state boards and Common Core all use the same engine, as do colleges and universities with entirely different structures.',
+  },
+  {
+    q: 'What happens when a teacher is absent?',
+    a: 'The day view shows every period left uncovered and suggests substitutes who are genuinely free at that moment — checked against every parallel group, not just the first name on the cell. One click records the cover, and the corridor board and every affected teacher’s timetable update with it.',
+  },
+  {
+    q: 'Can several people work on the timetable?',
+    a: 'Yes. A school can add colleagues by email with a role — administrator, faculty or view-only — and teachers get their own view of the periods they teach. Where a period offers a choice of subject, the teacher who offers it can take that slot themselves and the change reaches whoever is planning the day.',
+  },
+]
+
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: HOME_FAQ.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
 }
 
 const SOFTWARE_APPLICATION_SCHEMA = {
@@ -84,6 +149,10 @@ export default function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_APPLICATION_SCHEMA) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_SCHEMA) }}
       />
 
       {/* Hero — the simulated product walkthrough plays immediately after the nav */}
@@ -281,6 +350,23 @@ export default function HomePage() {
       </section>
 
       {/* Bottom CTA */}
+      {/* FAQ — the marked-up questions must be visible on the page, or Google
+          drops the structured data. */}
+      <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#F8F7FF] px-6 py-16">
+        <h2 className="mb-2 text-[28px] font-normal text-[#13111E]">Questions schools ask</h2>
+        <p className="mb-8 max-w-[520px] text-center text-[14px] leading-[1.7] text-[#8B87AD]">
+          The ones worth answering before you trust a piece of software with your week.
+        </p>
+        <div className="grid w-full max-w-[920px] grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-[18px]">
+          {HOME_FAQ.map(item => (
+            <div key={item.q} className="rounded-xl border border-[#E8E4FF] bg-white px-[22px] py-[22px]">
+              <h3 className="mb-2 text-sm font-bold text-[#13111E]">{item.q}</h3>
+              <p className="text-[13px] leading-[1.7] text-[#4B5275]">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16 text-center">
         <h2 className="mb-2.5 text-[30px] font-normal leading-[1.2] text-[#13111E]">Ready to build your timetable?</h2>
         <p className="mb-7 max-w-[380px] text-[15px] leading-[1.6] text-[#8B87AD]">

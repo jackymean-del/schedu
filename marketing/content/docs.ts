@@ -71,10 +71,20 @@ export const DOC_ARTICLES: DocArticle[] = [
     ],
   },
   {
-    slug: 'ai-scheduling',
+    // Renamed from 'ai-scheduling' / "How AI scheduling works".
+    //
+    // The old slug and title were the single loudest AI signal on the site, and
+    // a crawler reading them alongside a category full of AI tools had every
+    // reason to describe the product as one. The page never described a model:
+    // its own first line calls the timetable a constraint-satisfaction problem,
+    // which is the Human Intelligence story under the wrong name.
+    //
+    // The old URL 301s to this one (vercel.json), so anything already linking
+    // to it still lands here.
+    slug: 'how-scheduling-works',
     icon: '🧠',
-    title: 'How AI scheduling works',
-    description: 'Understand how schedU allocates periods and balances workloads automatically.',
+    title: 'How schedU builds a timetable',
+    description: 'The rules the engine applies, in the order it applies them — how periods are allocated, how clashes are prevented, and how teacher workload is balanced.',
     readMins: 5,
     intro:
       'schedU treats your timetable as a constraint-satisfaction problem: you describe the rules, and the engine searches for an arrangement that satisfies every hard constraint while optimizing the soft ones.',

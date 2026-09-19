@@ -10,7 +10,7 @@ const CHANNELS = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Contact',
+  title: 'Contact & Demo for Your School',
   description: 'Questions about schedU, a demo for your institution, or help getting set up? Get in touch with the schedU team.',
   alternates: { canonical: '/contact' },
 }

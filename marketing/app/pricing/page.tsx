@@ -63,7 +63,7 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'Pricing',
+  title: 'Pricing — Free School Timetable Software, Paid Plans From ₹333',
   description: 'schedU is free for a limited time — every plan, no card required. Planned pricing: Free up to 10 sections, Pro (₹333/mo) up to 70 sections with multi-stream electives and team collaboration, Custom beyond 70 or multi-campus.',
   alternates: { canonical: '/pricing' },
 }

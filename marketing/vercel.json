@@ -5,5 +5,12 @@
       "source": "/api/:path*",
       "destination": "https://schedu-production.up.railway.app/api/:path*"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/docs/ai-scheduling",
+      "destination": "/docs/how-scheduling-works",
+      "permanent": true
+    }
   ]
 }

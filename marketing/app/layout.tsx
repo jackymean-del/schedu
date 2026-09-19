@@ -17,12 +17,22 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // TITLE LENGTH IS THE CONSTRAINT. Google gives a result about 600px — roughly
+  // 55-60 characters — and rewrites titles it finds unhelpful. The old default
+  // ran to 103 characters, so "Built with Human Intelligence" was cut off in
+  // every listing it ever appeared in: the differentiator was written down and
+  // never seen.
+  //
+  // Order is therefore deliberate. The CATEGORY comes first, because that is
+  // what people type; the POSITIONING second, because that is what makes them
+  // choose us over the dozen "AI timetable generator" results around us; the
+  // brand last, where a reader looks for it anyway.
   title: {
-    default: "schedU — School Timetable Generator & Class Scheduling Software, Built with Human Intelligence",
+    default: "School Timetable Software, Built on Human Intelligence · schedU",
     template: "%s · schedU",
   },
   description:
-    "Free online timetable maker for schools, colleges & universities. Auto-generate conflict-free class schedules, teacher timetables & school routines in minutes — smarter than black-box AI, built with Human Intelligence from real experience. CBSE, ICSE, IB, Cambridge, Common Core & every board.",
+    "Build conflict-free class timetables, teacher schedules and school routines in minutes. schedU is built on Human Intelligence — real scheduling expertise you can inspect and override — not a black box that guesses. For schools, colleges and universities on any board: CBSE, ICSE, IB, Cambridge, Common Core.",
   // The phrases real users actually search — timetable maker, class scheduler,
   // school routine, period allocation — belong in titles/descriptions (Google
   // ignores the keywords meta tag, but other engines still read it).
