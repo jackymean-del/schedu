@@ -8,8 +8,8 @@ import { appHref } from '@/lib/appUrl'
 const FEATURES = [
   {
     icon: '🧠',
-    title: 'Smart auto-schedule',
-    desc: 'Feed schedU your teachers, subjects, and sections, then let the AI build a complete, balanced timetable in seconds. Regenerate instantly when requirements change.',
+    title: 'Auto-schedule you can question',
+    desc: 'Give schedU your teachers, subjects and sections, and it builds a complete, balanced timetable in seconds — by applying the rules a timetable in-charge applies, not by guessing. Every placement has a reason you can read, and regenerating gives the same answer twice.',
   },
   {
     icon: '⚠️',
@@ -60,8 +60,10 @@ export default function FeaturesPage() {
           <span className="italic text-[#7C6FE0]">schedule with confidence.</span>
         </h1>
         <p className="max-w-[560px] text-base leading-[1.8] text-[#4B5275]">
-          schedU combines AI generation with the real constraints institutions live by —
-          so the timetable you publish is always conflict-free.
+          schedU applies the real constraints institutions live by — teacher availability,
+          workload limits, rooms, electives — as explicit rules rather than a model&rsquo;s
+          guess, so the timetable you publish is conflict-free and every choice in it can
+          be explained.
         </p>
       </section>
 

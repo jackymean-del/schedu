@@ -276,7 +276,7 @@ function SDash() {
       <In d={2400} className="hw-overlay">
         <div className="hw-modal">
           <div className="hw-h2">Create new schedule</div>
-          <div className="hw-sub">AI will generate all defaults — you only refine.</div>
+          <div className="hw-sub">Sensible defaults are filled in for you — you only refine.</div>
           <div className="hw-field-label" style={{ marginTop: 10 }}>Schedule name <b className="hw-req">*</b></div>
           <div className="hw-input"><span className="hw-type" style={{ ["--ch" as string]: "14ch", animationDelay: "3000ms", animationDuration: "900ms" }}>Eden&rsquo;s AY 26–27</span><span className="hw-caret" /></div>
         </div>
@@ -505,7 +505,7 @@ function SCombo() {
           <span className="hw-tab hw-flash" style={{ animationDelay: "4300ms" }}>OR Groups</span>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <span className="hw-btn-amber hw-press" data-hw="suggest" style={{ animationDelay: "800ms" }}>✨ AI Suggest</span>
+          <span className="hw-btn-amber hw-press" data-hw="suggest" style={{ animationDelay: "800ms" }}>✨ Suggest</span>
           <span className="hw-cta" style={{ padding: "4px 10px", fontSize: 9.5 }}>＋ New block</span>
         </div>
       </div>

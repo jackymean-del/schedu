@@ -43,7 +43,12 @@ export const metadata: Metadata = {
     "school timetable software free", "college timetable maker",
     "period allocation", "substitute teacher management", "teacher workload",
     "CBSE timetable", "ICSE timetable", "school master timetable",
-    "AI timetable generator alternative", "exam timetable maker",
+    // No "AI …" entry here. Google has ignored the keywords meta for over a
+    // decade, so it wins nothing, and it put the string on every page of a
+    // site whose whole point is that it is not that. The same capture is made
+    // where it actually counts — the home page FAQ answers "Does schedU use
+    // AI?" in words a search engine can quote.
+    "exam timetable maker", "timetable scheduling without AI",
   ],
   openGraph: {
     type: "website",

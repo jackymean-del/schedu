@@ -1116,7 +1116,10 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
                 onMouseEnter={e => (e.currentTarget.style.background = P_D)}
                 onMouseLeave={e => (e.currentTarget.style.background = P)}
               >
-                ⚡ {shortHint ? `(${aiSuggestion.length})` : `AI (${aiSuggestion.length})`}
+                {/* Labelled "AI" until now, which was both off-brand and untrue:
+                    suggestClassesForSubject is a curriculum lookup by board — a
+                    table, not a model. */}
+                ⚡ {shortHint ? `(${aiSuggestion.length})` : `Suggest (${aiSuggestion.length})`}
               </button>
             )}
           </div>
