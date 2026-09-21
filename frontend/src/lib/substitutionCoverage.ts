@@ -46,6 +46,7 @@ import { create } from 'zustand'
 import { DAY_NAMES, sameDay, localISO } from './days'
 import { persist } from 'zustand/middleware'
 import type { ClassTimetable } from '@/types'
+import { teachingPairsInCell } from './cellTeachers'
 import { planKey } from './syllabusTracking'
 import { leaveCoversDate, type CalLeave } from './leaveUtils'
 
@@ -265,9 +266,24 @@ export function uncoveredAbsenceLoss(
           const slots = days[dayKey] ?? {}
           for (const periodId of Object.keys(slots)) {
             const cell: any = slots[periodId]
-            if (!cell?.subject || cell.teacher !== leave.teacher) continue
+            if (!cell?.subject) continue
+            // EVERY teacher in the cell, and the subject THEY were taking.
+            //
+            // Comparing `cell.teacher` missed an absence in any later parallel
+            // group, so those periods counted as taught and the syllabus plan
+            // believed hours had run that nobody delivered. Worse, the plan was
+            // keyed on `cell.subject` — on a parallel cell that is the combined
+            // label "Physics OR Chemistry", not the subject actually lost, so
+            // even a matching absence was filed against a plan that does not
+            // exist.
+            //
+            // This figure feeds coverage, and coverage decides which subject an
+            // undecided OR period runs. Over-reporting it hands the period to
+            // the wrong subject.
+            const mine = teachingPairsInCell(cell).find(x => x.teacher === leave.teacher)
+            if (!mine) continue
             if (covered.has(`${date}|${section}|${periodId}`)) continue   // someone stood in
-            const k = planKey(cell.subject, section)
+            const k = planKey(mine.subject || cell.subject, section)
             const cur = periods[k] ?? { count: 0, dates: [] }
             cur.count += 1
             if (!cur.dates.includes(date)) cur.dates.push(date)

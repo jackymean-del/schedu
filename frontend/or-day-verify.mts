@@ -16,6 +16,8 @@ import { computeTodaySummary } from './src/lib/scheduleToday.ts'
 import { computeMultiToday } from './src/lib/activeSchedules.ts'
 import { computeReports } from './src/lib/reportsData.ts'
 import { boardRows } from './src/lib/smartboard.ts'
+import { toSharedCell } from './src/lib/shareCell.ts'
+import { uncoveredAbsenceLoss } from './src/lib/substitutionCoverage.ts'
 import { mergeOrWindow, dateOfKey, rowsToMap } from './src/lib/orSyncRules.ts'
 import { teachersInCell, teachingPairsInCell, cellHasTeacher } from './src/lib/cellTeachers.ts'
 import { orOptionsInCell } from './src/lib/orChoice.ts'
@@ -298,6 +300,57 @@ console.log('\n── a decision belongs to the schedule it was made on ──')
     [bundle('a', orCell, decided), bundle('b', orCell, decided)], leaves, 0, DATE, plans,
   )
   ok(both.uncoveredSlots.length === 0, 'and with both decided, neither does')
+}
+
+console.log('\n── a shared link shows every teacher in the cell ──')
+{
+  // A school sends its teachers a link. A parallel cell used to flatten to the
+  // combined label plus the FIRST group's teacher and room, so the second
+  // group's teacher was missing from the timetable their own school had just
+  // sent them, and half the class was pointed at the wrong room.
+  const snap = toSharedCell(orCell)
+  ok(snap.groups?.length === 2, 'both groups survive into the shared snapshot')
+  ok(snap.groups?.map(g => g.teacher).join() === 'Rao,Devi',
+    'with the teacher who actually takes each one', snap.groups?.map(g => g.teacher).join())
+  ok(snap.groups?.[1]?.room === 'Lab 2', 'and the room that group is actually in')
+  ok(snap.subject === 'Physics OR Chemistry' && snap.teacher === 'Rao',
+    'the cell-level fields are unchanged, so an older shared link still renders')
+
+  const plain = toSharedCell({ subject: 'History', teacher: 'Bose', room: 'R4' })
+  ok(plain.groups === undefined, 'an ordinary lesson carries no groups at all')
+
+  const optBlock = toSharedCell({
+    subject: 'PE', teacher: 'Rao', room: 'Field',
+    options: [{ subject: 'PE', teacher: 'Rao' }, { subject: 'Art', teacher: 'Iyer' }],
+  })
+  ok(optBlock.groups?.length === 2, 'and an optional block carries its options too')
+  ok(optBlock.groups?.[1]?.room === 'Field',
+    'an option with no room of its own inherits the cell room')
+}
+
+console.log('\n── an absence in a later group still costs its own subject ──')
+{
+  // This figure feeds syllabus coverage, and coverage decides which subject an
+  // UNDECIDED OR period runs — so over-reporting it hands the period to the
+  // wrong subject.
+  const classTT: Any = { [SEC]: { TUESDAY: { p1: orCell } } }
+  const lost = (who: string) => uncoveredAbsenceLoss(
+    [{ id: 'l', teacher: who, date: ISO, duration: 'full', type: 'sick' }] as Any,
+    classTT, [], 60,
+  )
+
+  const devi = lost('Devi')
+  ok(devi[planKey('Chemistry', SEC)]?.hours === 1,
+    'the LATER group teacher loses an hour of HER subject',
+    JSON.stringify(devi))
+  ok(!devi[planKey('Physics OR Chemistry', SEC)],
+    'and it is not filed against the combined label, which is no subject at all')
+
+  const rao = lost('Rao')
+  ok(rao[planKey('Physics', SEC)]?.hours === 1, 'the first group teacher loses his own subject')
+
+  const stranger = lost('Nobody')
+  ok(Object.keys(stranger).length === 0, 'somebody who does not teach the cell loses nothing')
 }
 
 console.log('\n── nobody keeps a private copy of "who teaches this" ──')

@@ -257,11 +257,29 @@ export function SharedTimetablePage() {
                             return (
                               <td key={p.id} className="border-l border-t border-[#E8E4FF] px-2 py-2 text-center align-top">
                                 {cell ? (
-                                  <>
-                                    <div className="font-bold text-[#13111E]">{cell.subject}</div>
-                                    {cell.teacher && <div className="text-[10px] text-[#685DBC]">{cell.teacher}</div>}
-                                    {cell.room && <div className="text-[10px] text-[#6D6A8A]">{cell.room}</div>}
-                                  </>
+                                  cell.groups?.length ? (
+                                    /* A parallel cell runs more than one thing at once — an
+                                       OR choice or a split class. Showing only the first
+                                       teacher left the others off the timetable their own
+                                       school had sent them, and sent half the class to the
+                                       wrong room. Each group gets its own line. */
+                                    <div className="flex flex-col gap-1">
+                                      {cell.groups.map((g, i) => (
+                                        <div key={`${g.subject ?? ''}-${g.teacher ?? ''}-${i}`}
+                                             className={i > 0 ? 'border-t border-dashed border-[#E8E4FF] pt-1' : ''}>
+                                          <div className="font-bold text-[#13111E]">{g.subject}</div>
+                                          {g.teacher && <div className="text-[10px] text-[#685DBC]">{g.teacher}</div>}
+                                          {g.room && <div className="text-[10px] text-[#6D6A8A]">{g.room}</div>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="font-bold text-[#13111E]">{cell.subject}</div>
+                                      {cell.teacher && <div className="text-[10px] text-[#685DBC]">{cell.teacher}</div>}
+                                      {cell.room && <div className="text-[10px] text-[#6D6A8A]">{cell.room}</div>}
+                                    </>
+                                  )
                                 ) : (
                                   <span className="text-[#CBC6EC]">—</span>
                                 )}

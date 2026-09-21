@@ -7,11 +7,8 @@
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 
-export interface SharedCell {
-  subject?: string
-  teacher?: string
-  room?: string
-}
+export { toSharedCell, type SharedCell } from './shareCell'
+import { toSharedCell, type SharedCell } from './shareCell'
 
 export interface SharedPeriod {
   id: string
@@ -53,7 +50,7 @@ export function buildShareSnapshot(title?: string): SharedTimetable {
         if (p.type !== 'class') continue
         const cell = classTT[sec.name]?.[day]?.[p.id]
         if (cell && (cell.subject || cell.teacher || cell.room)) {
-          grid[day][p.id] = { subject: cell.subject, teacher: cell.teacher, room: cell.room }
+          grid[day][p.id] = toSharedCell(cell)
         }
       }
     }
