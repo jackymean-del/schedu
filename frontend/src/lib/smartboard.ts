@@ -7,7 +7,7 @@
  * front of it).
  *
  * The derivation lives here rather than in the page so the awkward states can
- * be tested — and they are the whole difficulty. A board that shows a cheerful
+ * be tested - and they are the whole difficulty. A board that shows a cheerful
  * timetable grid on a holiday, or counts down to a bell that will not ring, is
  * worse than a blank screen, because people trust it.
  *
@@ -27,7 +27,7 @@ export type BoardState =
   | 'during'
   /** The last bell has gone. */
   | 'after'
-  /** No lessons at all today — weekend, holiday, or teaching suspended. */
+  /** No lessons at all today - weekend, holiday, or teaching suspended. */
   | 'closed'
 
 export interface BoardNow {
@@ -37,7 +37,7 @@ export interface BoardNow {
   /** Minutes until the next bell, when there is one left today. */
   nextBellIn?: number
   nextBellAt?: number
-  /** What that bell will mean — "Period 2 ends · Break begins". */
+  /** What that bell will mean - "Period 2 ends · Break begins". */
   nextBellMeans?: string
   /** First and last bell of the day, for the before/after messages. */
   firstBellAt?: number
@@ -59,7 +59,7 @@ export function boardNow(rings: Ring[], nowMin: number, opts: {
     return { state: 'closed', reason: opts.closedReason ?? 'No lessons scheduled today' }
   }
   if (rings.length === 0) {
-    // A working day with no bells is a schedule that hasn't been generated —
+    // A working day with no bells is a schedule that hasn't been generated -
     // not a school day to count down to.
     return { state: 'closed', reason: 'No schedule for today' }
   }
@@ -86,7 +86,7 @@ export function boardNow(rings: Ring[], nowMin: number, opts: {
 
 export interface BoardRow {
   section: string
-  /** The schedule this section belongs to — shown only when several are active. */
+  /** The schedule this section belongs to - shown only when several are active. */
   schedule: string
   subject?: string
   /** Who is actually taking it: the substitute when there is one. */
@@ -118,7 +118,7 @@ interface BoardBundle {
  *
  * Sections are resolved against THEIR OWN bell (lib/bellTimes), because a
  * school with early dispersal or class-wise breaks has several clocks running
- * — using one would show Nursery in a lesson it left twenty minutes ago.
+ * - using one would show Nursery in a lesson it left twenty minutes ago.
  *
  * A section with nothing scheduled right now still gets a row, with no
  * subject. Dropping it would make the board's list silently change length
@@ -161,7 +161,7 @@ export function boardRows(
           // The one thing a board exists to shout about: a class whose teacher
           // is out and for whom nobody has been assigned.
           //
-          // Every teacher in the cell counts, not just the cell-level one —
+          // Every teacher in the cell counts, not just the cell-level one -
           // that field mirrors the first group only, so a board reading it
           // stayed silent when the teacher of a LATER group was absent. On an
           // undecided choice period nobody knows yet which of them is due, so
@@ -187,12 +187,12 @@ export function uncoveredRows(rows: BoardRow[]): BoardRow[] {
  * The bells to count down to when several groups run different clocks.
  *
  * A single board cannot honestly show two countdowns at once, so it uses the
- * EARLIEST next bell across the groups — the next moment anything changes
+ * EARLIEST next bell across the groups - the next moment anything changes
  * anywhere in the building, which is what someone in the corridor is waiting
  * for. The group it belongs to is named alongside.
  */
 export function soonestRings(
-  /** Each ACTIVE schedule with its OWN bell — never one schedule's clock
+  /** Each ACTIVE schedule with its OWN bell - never one schedule's clock
    *  applied to another's classes. A school running "I–V TT" and "VI–X TT"
    *  side by side has two bells, and using the first for both would put every
    *  ring time on the second schedule's classes minutes or hours out. */

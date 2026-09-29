@@ -8,7 +8,7 @@ import { appHref } from '@/lib/appUrl'
 // numbers change, update the backend billing config + the app subscription page
 // (frontend/src/pages/subscription.tsx) to match.
 /**
- * Payments are not live yet — there is no company bank account, so no Razorpay
+ * Payments are not live yet - there is no company bank account, so no Razorpay
  * keys, so nothing can actually be charged. Advertising ₹333/mo while nobody
  * can pay it is a promise the product cannot keep, so every price reads "Free"
  * and the tiers explain what each one WILL include.
@@ -24,7 +24,7 @@ const TIERS = [
     desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
     features: [
-      'Human-Intelligence auto-scheduling — conflict-free in minutes',
+      'Human-Intelligence auto-scheduling - conflict-free in minutes',
       'Up to 10 sections',
       'Class, Faculty, Venue & Subject views',
       'Live calendar (view mode)',
@@ -32,13 +32,13 @@ const TIERS = [
     ],
   },
   {
-    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
+    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr - save 17%',
     desc: 'For a single institution running multiple streams and electives.',
     cta: 'Get Pro', href: appHref('/login'), popular: true,
     features: [
       'Up to 70 sections',
       'Live task assignment & substitutions',
-      'Team collaboration — invite & manage users',
+      'Team collaboration - invite & manage users',
       'Advanced engine & multi-shift / block scheduling',
       'Workload analytics & optimisation',
       'Priority support',
@@ -53,22 +53,22 @@ const TIERS = [
 ]
 
 const FAQ = [
-  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever — up to 10 sections, with full Human-Intelligence auto-scheduling. No credit card required.' },
-  { q: 'How much is Pro, and what does it add?', a: 'Everything is free for a limited time — Pro included, with no card required. When paid plans begin, Pro will be ₹333/month or ₹3,333/year (save ~17%), shown in USD outside India and billed in INR. It raises the limit to 70 sections and adds live task assignment, team collaboration, workload analytics, and priority support. Beyond 70 sections or multiple campuses is a Custom plan. We will give plenty of notice before anything becomes payable.' },
-  { q: 'What payment methods do you accept?', a: 'Payments are processed securely via Razorpay in INR — UPI, cards, and netbanking. International cards are supported too. You can cancel anytime and keep access until the end of your billing period.' },
-  { q: 'Do you support any curriculum?', a: 'schedU has no built-in board restrictions. Enter your own period counts, subject names, and grading labels — it adapts to you.' },
+  { q: 'Is there really a free plan?', a: 'Yes. The Free plan is free forever - up to 10 sections, with full Human-Intelligence auto-scheduling. No credit card required.' },
+  { q: 'How much is Pro, and what does it add?', a: 'Everything is free for a limited time - Pro included, with no card required. When paid plans begin, Pro will be ₹333/month or ₹3,333/year (save ~17%), shown in USD outside India and billed in INR. It raises the limit to 70 sections and adds live task assignment, team collaboration, workload analytics, and priority support. Beyond 70 sections or multiple campuses is a Custom plan. We will give plenty of notice before anything becomes payable.' },
+  { q: 'What payment methods do you accept?', a: 'Payments are processed securely via Razorpay in INR - UPI, cards, and netbanking. International cards are supported too. You can cancel anytime and keep access until the end of your billing period.' },
+  { q: 'Do you support any curriculum?', a: 'schedU has no built-in board restrictions. Enter your own period counts, subject names, and grading labels - it adapts to you.' },
 ]
 
 const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'Pricing — Free School Timetable Software, Paid Plans From ₹333',
-  description: 'schedU is free for a limited time — every plan, no card required. Planned pricing: Free up to 10 sections, Pro (₹333/mo) up to 70 sections with multi-stream electives and team collaboration, Custom beyond 70 or multi-campus.',
+  title: 'Pricing - Free School Timetable Software, Paid Plans From ₹333',
+  description: 'schedU is free for a limited time - every plan, no card required. Planned pricing: Free up to 10 sections, Pro (₹333/mo) up to 70 sections with multi-stream electives and team collaboration, Custom beyond 70 or multi-campus.',
   alternates: { canonical: '/pricing' },
 }
 
-// FAQPage structured data — mirrors the visible FAQ exactly (Google requires
+// FAQPage structured data - mirrors the visible FAQ exactly (Google requires
 // the marked-up questions to be present on the page).
 const FAQ_SCHEMA = {
   '@context': 'https://schema.org',
@@ -97,7 +97,7 @@ export default function PricingPage() {
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
           {BILLING_LIVE
             ? 'Start free up to 10 sections. Upgrade to Pro for up to 70 sections, electives, live task assignment, and team collaboration.'
-            : 'Free for a limited time, for a limited number of first users — every plan below, no card required. The prices shown are what they return to; we will give plenty of notice before anything becomes payable.'}
+            : 'Free for a limited time, for a limited number of first users - every plan below, no card required. The prices shown are what they return to; we will give plenty of notice before anything becomes payable.'}
         </p>
         {BILLING_LIVE && <LocalBillingNote className="mt-4 max-w-[520px] text-[12px] leading-[1.5] text-[#A5A1C0]" />}
       </section>

@@ -1,7 +1,7 @@
 /**
  * Lightweight per-page SEO for the marketing SPA. Imperatively manages the
  * document <head> (title, description, canonical, Open Graph, Twitter) on
- * mount — no dependency, works without SSR. Each marketing page renders one.
+ * mount - no dependency, works without SSR. Each marketing page renders one.
  */
 import { useEffect } from 'react'
 
@@ -62,7 +62,7 @@ export function Seo({ title, description, path, noindex = false, jsonLd }: SeoPr
     upsertMeta('name', 'twitter:description', description)
     upsertMeta('name', 'twitter:image', OG_IMAGE)
 
-    // Structured data — one <script> per schema object, removed on unmount/change
+    // Structured data - one <script> per schema object, removed on unmount/change
     // so navigating between pages doesn't accumulate stale JSON-LD.
     const schemas = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
     const scripts = schemas.map(schema => {

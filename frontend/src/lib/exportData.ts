@@ -1,5 +1,5 @@
 /**
- * Reusable export helpers — Excel (SheetJS, lazily loaded on demand) and
+ * Reusable export helpers - Excel (SheetJS, lazily loaded on demand) and
  * shared print branding (institution info + schedU mark). The actual Print/PDF
  * preview lives in components/PrintDoc.tsx (the standardized PrintPreview).
  */
@@ -31,7 +31,7 @@ export const SCHEDU_MARK = `<svg width="22" height="22" viewBox="0 0 52 52" fill
 /**
  * Institution branding for print/PDF headers, read from the stores
  * (best-effort). `isPaid` controls whether the schedU footer watermark shows.
- * Product decision: exports are watermark-free on EVERY tier — a printed
+ * Product decision: exports are watermark-free on EVERY tier - a printed
  * timetable is the school's own document, so we never brand it. Pro is
  * differentiated by capacity/limits, not by watermarking Free. Hence isPaid is
  * always true here; the field is kept so print components need no change.

@@ -30,7 +30,7 @@ func annualDiscountPct() int {
 	if full == 0 {
 		return 0
 	}
-	// Round (not truncate) so it matches the frontend's rounded fallback — a
+	// Round (not truncate) so it matches the frontend's rounded fallback - a
 	// truncating int() would show 16% here but 17% when billing is disabled.
 	return int(float64(full-proYearlyINR)/float64(full)*100.0 + 0.5)
 }
@@ -54,7 +54,7 @@ type razorpayWebhook struct {
 }
 
 // planForEvent maps a Razorpay subscription lifecycle event to the plan it
-// should produce. "" means "no plan change — record status only". Pure, so the
+// should produce. "" means "no plan change - record status only". Pure, so the
 // billing decision is unit-testable without a DB or the network.
 func planForEvent(event string) string {
 	switch event {
@@ -85,7 +85,7 @@ func (h *Handler) BillingConfig(c fiber.Ctx) error {
 // CreateSubscription (auth) creates a Razorpay subscription for the signed-in
 // user and stores its id so the webhook can later map events back to the user.
 // Returns the subscription id + publishable key so the client can open Razorpay
-// Checkout. The user is NOT Pro yet — that happens on the activation webhook.
+// Checkout. The user is NOT Pro yet - that happens on the activation webhook.
 func (h *Handler) CreateSubscription(c fiber.Ctx) error {
 	uid := clerkID(c)
 	if uid == "" {
@@ -125,11 +125,11 @@ func (h *Handler) CreateSubscription(c fiber.Ctx) error {
 	})
 	if err != nil {
 		slog.Error("billing: create subscription failed", "err", err, "clerk_id", uid)
-		return fiber.NewError(fiber.StatusBadGateway, "could not start checkout — please try again")
+		return fiber.NewError(fiber.StatusBadGateway, "could not start checkout - please try again")
 	}
 
 	// Record the pending subscription. plan stays 'free' until the activation
-	// webhook confirms payment — never grant Pro on create.
+	// webhook confirms payment - never grant Pro on create.
 	if _, err := h.db.Exec(ctx, `
 		UPDATE users SET
 			billing_provider    = 'razorpay',
@@ -212,7 +212,7 @@ func (h *Handler) CancelSubscription(c fiber.Ctx) error {
 	sub, err := h.bill.CancelSubscription(ctx, *subID, true /* at cycle end */)
 	if err != nil {
 		slog.Error("billing: cancel failed", "err", err, "clerk_id", uid, "sub", *subID)
-		return fiber.NewError(fiber.StatusBadGateway, "could not cancel — please try again or contact support")
+		return fiber.NewError(fiber.StatusBadGateway, "could not cancel - please try again or contact support")
 	}
 	_, _ = h.db.Exec(ctx, `UPDATE users SET subscription_status = $2, updated_at = NOW() WHERE clerk_id = $1`, uid, sub.Status)
 
@@ -221,7 +221,7 @@ func (h *Handler) CancelSubscription(c fiber.Ctx) error {
 
 // BillingWebhook is the PUBLIC Razorpay webhook. It verifies the HMAC signature,
 // dedupes by event id, and flips the user's plan based on the subscription's
-// lifecycle. This is the ONLY place `plan` is promoted to 'pro' — never on the
+// lifecycle. This is the ONLY place `plan` is promoted to 'pro' - never on the
 // client, never on subscription-create.
 func (h *Handler) BillingWebhook(c fiber.Ctx) error {
 	raw := c.Body()
@@ -255,7 +255,7 @@ func (h *Handler) BillingWebhook(c fiber.Ctx) error {
 
 	sub := evt.Payload.Subscription.Entity
 	if sub.ID == "" {
-		// Not a subscription event we handle (e.g. a payment.* ping) — ack.
+		// Not a subscription event we handle (e.g. a payment.* ping) - ack.
 		return c.JSON(fiber.Map{"ok": true, "ignored": evt.Event})
 	}
 

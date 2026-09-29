@@ -12,7 +12,7 @@ import "github.com/jackymean-del/smart-sched/internal/curriculum"
 // (CBSE, CISCE, IBO, Cambridge). No authentication required.
 var TrustedRegistry = []curriculum.Source{
 	// -----------------------------------------------------------------------
-	// CBSE — Central Board of Secondary Education
+	// CBSE - Central Board of Secondary Education
 	// -----------------------------------------------------------------------
 	{
 		Board:              curriculum.BoardCBSE,
@@ -44,7 +44,7 @@ var TrustedRegistry = []curriculum.Source{
 	},
 
 	// -----------------------------------------------------------------------
-	// ICSE / ISC — Council for the Indian School Certificate Examinations
+	// ICSE / ISC - Council for the Indian School Certificate Examinations
 	// -----------------------------------------------------------------------
 	{
 		Board:              curriculum.BoardICSE,
@@ -62,13 +62,13 @@ var TrustedRegistry = []curriculum.Source{
 	},
 
 	// -----------------------------------------------------------------------
-	// IB — International Baccalaureate
+	// IB - International Baccalaureate
 	// -----------------------------------------------------------------------
 	{
 		Board:              curriculum.BoardIB,
 		URL:                "https://resources.ibo.org/data/pyp-programme-standards-practices_en.pdf",
 		Name:               "IB PYP Programme Standards & Practices",
-		FetchIntervalHours: 168, // weekly — IB updates less frequently
+		FetchIntervalHours: 168, // weekly - IB updates less frequently
 		Enabled:            true,
 	},
 	{
@@ -87,7 +87,7 @@ var TrustedRegistry = []curriculum.Source{
 	},
 
 	// -----------------------------------------------------------------------
-	// Cambridge — Cambridge Assessment International Education
+	// Cambridge - Cambridge Assessment International Education
 	// -----------------------------------------------------------------------
 	{
 		Board:              curriculum.BoardCambridge,

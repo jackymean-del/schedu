@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Members and OR decisions — the first things in this app that somebody other
+// Members and OR decisions - the first things in this app that somebody other
 // than the account owner may write.
 //
 // Everything else is local-first: a school's roster and its dated overlays live
@@ -38,7 +38,7 @@ func (h *Handler) ownerOfTimetable(ctx context.Context, ttID uuid.UUID) (uuid.UU
 // and if not, what does the school's roster say about them?
 //
 // Returned staffName is the ROSTER name ("R. Rao"), which is how the timetable
-// identifies teachers — logins do not appear in a timetable cell. Without that
+// identifies teachers - logins do not appear in a timetable cell. Without that
 // mapping a signed-in user cannot be matched to the lessons that are theirs.
 type callerRole struct {
 	userID    uuid.UUID
@@ -68,7 +68,7 @@ func (h *Handler) callerFor(ctx context.Context, clerkID string, ttID uuid.UUID)
 	}
 
 	// Matched on user_id once they have signed in, or on email while the
-	// invitation is still open — so an invited teacher is recognised the first
+	// invitation is still open - so an invited teacher is recognised the first
 	// time they arrive, without an extra claim step.
 	var role, staff string
 	err = h.db.QueryRow(ctx, `
@@ -290,7 +290,7 @@ func (h *Handler) ListOrDecisions(c fiber.Ctx) error {
 // ListOrSlots returns the choice periods on one date, as the SCHOOL's timetable
 // has them, plus whichever have already been decided.
 //
-// A teacher's browser holds no copy of their school's timetable — the app is
+// A teacher's browser holds no copy of their school's timetable - the app is
 // local-first and that copy belongs to whoever plans it. So without this a
 // teacher could only ever hand back a decision that already existed; there was
 // no way to see a period and take it, which is the whole point of the feature.
@@ -410,7 +410,7 @@ func (h *Handler) ListOrSlots(c fiber.Ctx) error {
 // DecideOr records (or clears) which subject an OR period runs on one date.
 //
 // AUTHORISATION IS THE POINT OF THIS ENDPOINT. An admin may set any slot. A
-// teacher may claim a slot ONLY for a subject they themselves teach — the
+// teacher may claim a slot ONLY for a subject they themselves teach - the
 // caller sends the options as the timetable holds them, and the server checks
 // that the caller's roster name is against the subject being claimed. Without
 // that check a school's link would be an invitation to rewrite somebody else's
@@ -458,7 +458,7 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 	// Clearing hands the slot back to syllabus coverage.
 	//
 	// This path needs its own guard, and for the same reason mayClaim exists.
-	// A teacher cannot TAKE a colleague's period — but without this they could
+	// A teacher cannot TAKE a colleague's period - but without this they could
 	// drop it, and coverage might then hand it straight to them. Same harm,
 	// other door. So a teacher may only hand back what they took.
 	if subject == "" {
@@ -489,7 +489,7 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 
 	if !caller.isOwner && caller.role != "admin" {
 		// Checked against the SCHOOL's timetable, never the options in the
-		// request body — the body is written by the person being authorised.
+		// request body - the body is written by the person being authorised.
 		when, _ := time.Parse("2006-01-02", body.Date)
 		options, err := h.orCell(ctx, ttID, body.Section, dayKeyOf(when), body.PeriodID)
 		if err != nil {
@@ -533,8 +533,8 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 // So the options are read here, out of the timetable the school stored.
 //
 // This is the first place the server looks INSIDE `data`, which until now has
-// been an opaque blob written by the client. It reads two fields and no more —
-// the cell's subject label and its groupAssignments — precisely so the shape
+// been an opaque blob written by the client. It reads two fields and no more -
+// the cell's subject label and its groupAssignments - precisely so the shape
 // defined in TypeScript is not quietly redefined in Go.
 
 type orOption struct {
@@ -552,7 +552,7 @@ func dayKeyOf(t time.Time) string {
 
 // orCell returns the OR options the SCHOOL has recorded for one slot.
 //
-// A nil result means "not an OR choice as far as this server can see" — the
+// A nil result means "not an OR choice as far as this server can see" - the
 // cell is missing, or single-subject, or an AND split. Each of those is a
 // refusal for a teacher, because a claim that cannot be checked must not be
 // waved through.
@@ -596,7 +596,7 @@ func (h *Handler) orCell(ctx context.Context, ttID uuid.UUID, section, dayKey, p
 // being a way around mayClaim.
 //
 // An unnamed claim (decided_by null, written before a roster mapping existed)
-// belongs to nobody, so no teacher may clear it — an admin still can. Refusing
+// belongs to nobody, so no teacher may clear it - an admin still can. Refusing
 // is the safe direction: the alternative is that every unnamed claim is
 // everybody's to drop.
 func mayClear(decidedBy, staffName string) bool {

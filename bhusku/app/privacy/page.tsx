@@ -16,10 +16,10 @@ export default function PrivacyPage() {
     >
       <Section heading="1. Information we collect">
         <ul>
-          <li><strong>Account details</strong> — name and email address when you sign up or contact us.</li>
-          <li><strong>Content you create</strong> — the schedules, staff, and organisation details you enter into a product.</li>
-          <li><strong>Payment information</strong> — handled directly by our payment processor, Razorpay. We do not store your full card or bank details on our servers.</li>
-          <li><strong>Usage &amp; technical data</strong> — basic logs (such as IP address and browser) used to run and secure the service.</li>
+          <li><strong>Account details</strong> - name and email address when you sign up or contact us.</li>
+          <li><strong>Content you create</strong> - the schedules, staff, and organisation details you enter into a product.</li>
+          <li><strong>Payment information</strong> - handled directly by our payment processor, Razorpay. We do not store your full card or bank details on our servers.</li>
+          <li><strong>Usage &amp; technical data</strong> - basic logs (such as IP address and browser) used to run and secure the service.</li>
         </ul>
       </Section>
 
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
 
       <Section heading="3. Sharing with service providers">
         <p>
-          We share data only with trusted providers who help us run the service, under appropriate confidentiality obligations —
+          We share data only with trusted providers who help us run the service, under appropriate confidentiality obligations -
           currently including <strong>Razorpay</strong> (payments), <strong>Clerk</strong> (authentication), and our cloud hosting
           and infrastructure providers. We may also disclose information where required by law.
         </p>

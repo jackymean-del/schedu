@@ -18,7 +18,7 @@ func TestResolveMode(t *testing.T) {
 		{"jwt secret when no clerk key", "", "", "s3cret", modeJWT},
 		{"skip beats everything, since it is explicit", "true", "sk_live_x", "s3cret", modeSkip},
 
-		// Only the exact string enables the bypass — "1"/"yes"/"TRUE" must not
+		// Only the exact string enables the bypass - "1"/"yes"/"TRUE" must not
 		// half-open the door on a hand-edited env file.
 		{"skip is not truthy-guessing", "1", "", "", modeUnconfigured},
 		{"skip is case-sensitive", "TRUE", "", "", modeUnconfigured},

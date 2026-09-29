@@ -48,7 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_school_members_owner   ON school_members (owner_i
 
 -- ── Which subject an OR period actually runs, on one date ──────────────────
 --
--- An OR group is a subject choice for a whole class — "Physics OR Chemistry" —
+-- An OR group is a subject choice for a whole class - "Physics OR Chemistry" -
 -- resolved by syllabus coverage unless a person decides otherwise. The choice
 -- is DATED, not permanent, for the same reason a substitution is: "we are doing
 -- Physics this Tuesday because I have the lab" is a fact about Tuesday, and
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS or_decisions (
   decided_at    TIMESTAMPTZ DEFAULT NOW(),
   -- One decision per slot per day. A second claim UPDATEs rather than stacking,
   -- so two teachers racing for the same period cannot leave the class with two
-  -- answers — the later one wins and is visible as such.
+  -- answers - the later one wins and is visible as such.
   UNIQUE (timetable_id, section, on_date, period_id)
 );
 

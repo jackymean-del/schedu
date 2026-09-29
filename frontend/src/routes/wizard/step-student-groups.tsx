@@ -1,5 +1,5 @@
 /**
- * Step 4 — AND Groups + OR Groups
+ * Step 4 - AND Groups + OR Groups
  *
  * AND Groups tab: combinations are grouped into BLOCKS. Each block has a fixed
  *   Section + Total rail pinned at the left, and one or more combination "cards"
@@ -45,7 +45,7 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
   return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) }
 }
 
-/** A distinct shade for group #idx of a subject — same hue, stepped lightness,
+/** A distinct shade for group #idx of a subject - same hue, stepped lightness,
  *  so every generated group gets its own unique colour. */
 function shadeFor(baseHex: string, idx: number): { dot: string; headBg: string; border: string } {
   const { h, s } = hexToHsl(baseHex)
@@ -178,7 +178,7 @@ function readOpt(sub: any): OptInfo {
     ?? cfgs.find(c => c.electiveSlotId)?.electiveSlotId
   const category = sub.category ?? cfgs.find(c => c.category)?.category
   // Elective SCOPE is per-section. Marking any section elective also sets the
-  // subject-level isOptional flag (types/index.ts) — that flag must not widen
+  // subject-level isOptional flag (types/index.ts) - that flag must not widen
   // the scope back to every section the subject is merely TAUGHT in, or "PE
   // elective in XI–XII" drags LKG–X into the combo cards too. When explicit
   // per-section elective flags exist, they alone define the scope; the
@@ -294,7 +294,7 @@ function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []
   const scope = getScope(group)
   const capacitySensitive = group.roomCapacitySensitive !== false
   const sorted = [...rooms].sort((a, b) => (a.capacity ?? 0) - (b.capacity ?? 0))
-  // When capacity sensitivity is OFF, never split a pool — one group per pool.
+  // When capacity sensitivity is OFF, never split a pool - one group per pool.
   const biggest = !capacitySensitive
     ? Infinity
     : (sorted.length > 0 ? sorted[sorted.length - 1].capacity ?? 0 : Infinity)
@@ -403,7 +403,7 @@ function Picker({
 }
 
 /** Editable field with a dropdown that ALWAYS lists every option (filtered only
- *  by what you type) — unlike a native datalist, which hides options once the
+ *  by what you type) - unlike a native datalist, which hides options once the
  *  field already has a value. */
 function ComboField({ value, options, placeholder, title, onChange }: {
   value: string; options: string[]; placeholder: string; title?: string; onChange: (v: string) => void
@@ -534,7 +534,7 @@ function BlockCard({
 
   // Blueprint v3, Step 4: when a parallel group spans blocks/buildings, prefer
   // NEARER blocks (per the Step 2 distance matrix) so students walk less. Each
-  // group's room list is ordered by distance from that group's own block — the
+  // group's room list is ordered by distance from that group's own block - the
   // dominant block of its sections' home rooms. Falls back to the plain list when
   // no distances are recorded (single-block schools are unaffected).
   const blockDistances = useBlockDistance(s => s.distances)
@@ -583,9 +583,9 @@ function BlockCard({
     })
     return { ...c, generatedGroups: fresh }
   })
-  /** auto-regenerating commit — used by all matrix / scope / structure edits */
+  /** auto-regenerating commit - used by all matrix / scope / structure edits */
   const commit = (next: AndComboGroup[]) => onReplace(hasGroups ? regen(next) : next)
-  /** raw commit — bypasses regeneration (room edits, group deletes, name edits) */
+  /** raw commit - bypasses regeneration (room edits, group deletes, name edits) */
   const commitRaw = (next: AndComboGroup[]) => onReplace(next)
 
   const setCell = (comboId: string, sec: string, sub: string, val: number) =>
@@ -694,7 +694,7 @@ function BlockCard({
           onBlur={e => { e.currentTarget.style.border = '1.5px solid transparent'; e.currentTarget.style.background = 'transparent' }} />
 
         {/* room capacity sensitivity toggle */}
-        <div title="When OFF, room capacity is ignored — any number of sections can pool into a single group." style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
+        <div title="When OFF, room capacity is ignored - any number of sections can pool into a single group." style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
           <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 6px', background: '#fff' }}>Room cap.</span>
           {([['on', true], ['off', false]] as const).map(([lbl, val]) => (
             <button key={lbl} onClick={() => setRoomSensitive(val)} style={{
@@ -745,7 +745,7 @@ function BlockCard({
               {combos.map((combo, ci) => {
                 const cols = getCols(combo)
                 return [
-                  ...(cols.length ? cols : ['—']).map((sub, si) => (
+                  ...(cols.length ? cols : ['-']).map((sub, si) => (
                     <th key={combo.id + sub + si} style={{
                       padding: '4px 6px', fontSize: 9.5, fontWeight: 800, color: cols.length ? colColor(ci) : '#767384',
                       textTransform: 'uppercase', letterSpacing: '0.04em', background: '#FAFAFE', borderBottom: '2px solid #E8E4FF',
@@ -788,7 +788,7 @@ function BlockCard({
                     </span>
                   </td>
                   <td style={{ ...stickyCell(SEC_W, TOT_W, bg), textAlign: 'center' }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#69707E' }}>{total || '—'}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#69707E' }}>{total || '-'}</span>
                   </td>
                   {combos.map((combo, ci) => {
                     const cols = getCols(combo)
@@ -796,11 +796,11 @@ function BlockCard({
                     const isMatch = total > 0 && sum === total
                     const isOver = sum > total
                     return [
-                      ...(cols.length ? cols : ['—']).map((sub, si) => (
+                      ...(cols.length ? cols : ['-']).map((sub, si) => (
                         <td key={combo.id + sub + si} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid #F0EDFF', borderLeft: si === 0 ? '2px solid #E8E4FF' : 'none' }}>
-                          {!cols.length ? <span style={{ fontSize: 10, color: '#D1D5DB' }}>—</span>
+                          {!cols.length ? <span style={{ fontSize: 10, color: '#D1D5DB' }}>-</span>
                           : isNA(combo, sec, sub) ? (
-                            <button onClick={() => toggleNA(combo.id, sec, sub)} title="Not applicable to this section — click to enable"
+                            <button onClick={() => toggleNA(combo.id, sec, sub)} title="Not applicable to this section - click to enable"
                               style={{ width: 52, padding: '3px 4px', borderRadius: 5, border: '1.5px dashed #D1D5DB', background: '#F3F4F6', color: '#6B7079', fontSize: 10.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>NA</button>
                           ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
@@ -815,7 +815,7 @@ function BlockCard({
                         </td>
                       )),
                       <td key={combo.id + 'val'} style={{ width: 40, textAlign: 'center', borderBottom: '1px solid #F0EDFF' }}>
-                        {total === 0 ? <span style={{ fontSize: 10, color: '#767384' }}>—</span>
+                        {total === 0 ? <span style={{ fontSize: 10, color: '#767384' }}>-</span>
                           : isMatch ? <CheckCircle2 size={14} color="#15803D" />
                           : isOver ? <span style={{ color: '#DC2626', fontSize: 10.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 1 }}><XCircle size={11} />+{sum - total}</span>
                           : sum > 0 ? <span style={{ color: '#D97706', fontSize: 10.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 1 }}><AlertCircle size={11} />−{total - sum}</span>
@@ -827,7 +827,7 @@ function BlockCard({
                 </tr>
               )
             })}
-            {/* add-section row — always directly below the last section */}
+            {/* add-section row - always directly below the last section */}
             <tr>
               <td style={{ ...stickyCell(0, SEC_W, '#fff'), position: 'relative' }}>
                 <button onClick={() => setPicker(p => p && p.type === 'section' ? null : { type: 'section' })} title="Add a class-section row"
@@ -891,7 +891,7 @@ function BlockCard({
         <div style={{ flex: 1 }} />
       </div>
 
-      {/* generated groups — show/hide applies to THIS section only */}
+      {/* generated groups - show/hide applies to THIS section only */}
       {allGenerated.length > 0 && (
         <div style={{ padding: '2px 12px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 7px' }}>
@@ -1120,7 +1120,7 @@ export function StepStudentGroups() {
           <div style={{ marginBottom: 16, borderRadius: 10, border: '1px solid #C4B5FD', background: 'linear-gradient(135deg, #F5F2FF, #FAFAFE)', overflow: 'hidden' }}>
             <button onClick={() => setShowGuide(g => !g)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
               <Info size={15} color="#685DBC" />
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: '#4C1D95', flex: 1, textAlign: 'left' }}>How to build a combination — quick guide</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: '#4C1D95', flex: 1, textAlign: 'left' }}>How to build a combination - quick guide</span>
               <ChevronDown size={16} color="#685DBC" style={{ transform: showGuide ? 'none' : 'rotate(-90deg)', transition: 'transform .15s' }} />
             </button>
             {showGuide && (
@@ -1130,9 +1130,9 @@ export function StepStudentGroups() {
                     { n: 1, t: 'Add the class-sections', d: 'Use the purple “＋ Add section” under the Section heading. They become the rows of this block.' },
                     { n: 2, t: 'Add subjects per combo', d: 'Click the green “＋ Subject” in a combo to add its mutually-exclusive choices (e.g. Maths, Bio).' },
                     { n: 3, t: 'Add more combinations', d: 'Use “＋ Add combo” on the right for a separate optional group (e.g. PE / Painting).' },
-                    { n: 4, t: 'Enter the headcounts', d: 'Type how many students take each subject — each combo’s row must sum to the section total (green ✓). “Split evenly” fills them fast.' },
+                    { n: 4, t: 'Enter the headcounts', d: 'Type how many students take each subject - each combo’s row must sum to the section total (green ✓). “Split evenly” fills them fast.' },
                     { n: 5, t: 'Set how groups merge', d: 'Use Merge (Section/Grade/Stream/Block) and the Room-capacity toggle to control pooling, then press “Generate teaching groups”.' },
-                    { n: 6, t: 'Review & assign rooms', d: 'Each generated group shows its sections & size — set a Room, delete a single group, or hit “Show / Hide” to preview.' },
+                    { n: 6, t: 'Review & assign rooms', d: 'Each generated group shows its sections & size - set a Room, delete a single group, or hit “Show / Hide” to preview.' },
                   ].map(s => (
                     <div key={s.n} style={{ display: 'flex', gap: 8 }}>
                       <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: '#685DBC', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.n}</div>
@@ -1171,7 +1171,7 @@ export function StepStudentGroups() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginBottom: 16, borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
               <Info size={15} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
               <div style={{ flex: 1, fontSize: 11.5, color: '#78350F', lineHeight: 1.55 }}>
-                <strong>{sharedElectives.slice(0, 5).join(', ')}{sharedElectives.length > 5 ? ` +${sharedElectives.length - 5}` : ''}</strong> look like single elective choices — set them up as{' '}
+                <strong>{sharedElectives.slice(0, 5).join(', ')}{sharedElectives.length > 5 ? ` +${sharedElectives.length - 5}` : ''}</strong> look like single elective choices - set them up as{' '}
                 <button onClick={() => setActiveTab('or')} style={{ background: 'none', border: 'none', padding: 0, color: '#B45309', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5 }}>OR Groups</button>.
               </div>
               <button onClick={() => setHintDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B45309', padding: 2, flexShrink: 0 }}><X size={13} /></button>
@@ -1233,7 +1233,7 @@ export function StepStudentGroups() {
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>OR Elective Slots</div>
               <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.65 }}>
-                <strong>OR slot</strong> — one of the listed subjects runs per slot; each student picks one and whichever teacher is free takes that period (e.g. a Third-Language slot: Hindi / French / German).<br />
+                <strong>OR slot</strong> - one of the listed subjects runs per slot; each student picks one and whichever teacher is free takes that period (e.g. a Third-Language slot: Hindi / French / German).<br />
                 Parallel splits where a section divides simultaneously belong in the <strong>AND Groups</strong> tab.
               </div>
             </div>

@@ -25,7 +25,7 @@ export default function ContactPage() {
           Let&apos;s talk <span className="italic text-[#7C6FE0]">scheduling.</span>
         </h1>
         <p className="max-w-[520px] text-base leading-[1.8] text-[#4B5275]">
-          Questions about schedU, a demo for your institution, or help getting set up — we&apos;d love to hear from you.
+          Questions about schedU, a demo for your institution, or help getting set up - we&apos;d love to hear from you.
         </p>
       </section>
 

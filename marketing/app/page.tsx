@@ -29,10 +29,10 @@ const TIERS = [
     name: 'Free', price: '₹0', period: '/mo', sub: '',
     desc: 'Everything a small team needs to try Human-Intelligence scheduling.',
     cta: 'Start free', href: appHref('/login'), popular: false,
-    features: ['Human-Intelligence auto-scheduling — conflict-free', 'Up to 10 sections', 'All timetable views', 'Excel & PDF export'],
+    features: ['Human-Intelligence auto-scheduling - conflict-free', 'Up to 10 sections', 'All timetable views', 'Excel & PDF export'],
   },
   {
-    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr — save 17%',
+    name: 'Pro', price: '₹333', period: '/mo', sub: 'or ₹3,333/yr - save 17%',
     desc: 'For a single institution running multiple streams and electives.',
     cta: 'Get Pro', href: appHref('/login'), popular: true,
     features: ['Up to 70 sections', 'Live task assignment & substitutions', 'Team collaboration', 'Advanced engine & multi-shift scheduling', 'Priority support'],
@@ -56,7 +56,7 @@ const cardHover =
 
 export const metadata: Metadata = {
   // The brand is spelled out because the root layout's title template applies
-  // to CHILD segments only — this page sits in the same segment that defines
+  // to CHILD segments only - this page sits in the same segment that defines
   // it, so nothing would be appended and a search for the brand would return a
   // result that never says it.
   //
@@ -64,8 +64,8 @@ export const metadata: Metadata = {
   // being cut mid-phrase. "Timetable Generator" is what people type; "Human
   // Intelligence" is the reason to click this result over the AI ones around
   // it.
-  title: 'schedU — Timetable Generator Built on Human Intelligence',
-  description: 'Build conflict-free school timetables, class routines and teacher schedules in minutes. Built on Human Intelligence — real scheduling expertise you can inspect, question and override, not a black box that guesses. A live board that follows the clock, one-click substitutions and workload balancing, for any board and any curriculum.',
+  title: 'schedU - Timetable Generator Built on Human Intelligence',
+  description: 'Build conflict-free school timetables, class routines and teacher schedules in minutes. Built on Human Intelligence - real scheduling expertise you can inspect, question and override, not a black box that guesses. A live board that follows the clock, one-click substitutions and workload balancing, for any board and any curriculum.',
   alternates: { canonical: '/' },
 }
 
@@ -79,8 +79,8 @@ export const metadata: Metadata = {
 // SEO folklore that survives because nobody checks.
 //
 // What it does do is give a crawler unambiguous, quotable text. The listing for
-// this site read "schedU uses AI to auto-generate conflict-free timetables" —
-// the opposite of what this product is — because a crawler inferred it from a
+// this site read "schedU uses AI to auto-generate conflict-free timetables" -
+// the opposite of what this product is - because a crawler inferred it from a
 // category full of AI tools and a page that never said otherwise in so many
 // words. The first entry says otherwise in so many words, in the structured
 // form that featured snippets and AI overviews draw from.
@@ -91,11 +91,11 @@ export const metadata: Metadata = {
 const HOME_FAQ = [
   {
     q: 'Does schedU use AI to build timetables?',
-    a: 'No. schedU is built on Human Intelligence — the scheduling rules a timetable in-charge actually applies, written down and made inspectable. Every decision has a reason you can read, question and override, and the same input always produces the same timetable. A model that guesses can do none of those things, and a timetable you cannot explain to the teacher standing in front of you is not finished.',
+    a: 'No. schedU is built on Human Intelligence - the scheduling rules a timetable in-charge actually applies, written down and made inspectable. Every decision has a reason you can read, question and override, and the same input always produces the same timetable. A model that guesses can do none of those things, and a timetable you cannot explain to the teacher standing in front of you is not finished.',
   },
   {
     q: 'What does "Human Intelligence" mean in practice?',
-    a: 'It means the constraints are explicit rather than learned. Teacher availability, weekly workload limits, double periods that must not straddle a break, a class teacher who takes the first period, room capacity, elective groups — each is a rule you set and can see applied. When something cannot be satisfied, schedU tells you which rule blocked it and where, instead of quietly producing a worse timetable.',
+    a: 'It means the constraints are explicit rather than learned. Teacher availability, weekly workload limits, double periods that must not straddle a break, a class teacher who takes the first period, room capacity, elective groups - each is a rule you set and can see applied. When something cannot be satisfied, schedU tells you which rule blocked it and where, instead of quietly producing a worse timetable.',
   },
   {
     q: 'How long does it take to generate a timetable?',
@@ -103,15 +103,15 @@ const HOME_FAQ = [
   },
   {
     q: 'Will it work with my board or curriculum?',
-    a: 'Yes. schedU has no built-in board restrictions — you enter your own period counts, subject names, streams and grading labels. Schools on CBSE, ICSE, IB, Cambridge, state boards and Common Core all use the same engine, as do colleges and universities with entirely different structures.',
+    a: 'Yes. schedU has no built-in board restrictions - you enter your own period counts, subject names, streams and grading labels. Schools on CBSE, ICSE, IB, Cambridge, state boards and Common Core all use the same engine, as do colleges and universities with entirely different structures.',
   },
   {
     q: 'What happens when a teacher is absent?',
-    a: 'The day view shows every period left uncovered and suggests substitutes who are genuinely free at that moment — checked against every parallel group, not just the first name on the cell. One click records the cover, and the corridor board and every affected teacher’s timetable update with it.',
+    a: 'The day view shows every period left uncovered and suggests substitutes who are genuinely free at that moment - checked against every parallel group, not just the first name on the cell. One click records the cover, and the corridor board and every affected teacher’s timetable update with it.',
   },
   {
     q: 'Can several people work on the timetable?',
-    a: 'Yes. A school can add colleagues by email with a role — administrator, faculty or view-only — and teachers get their own view of the periods they teach. Where a period offers a choice of subject, the teacher who offers it can take that slot themselves and the change reaches whoever is planning the day.',
+    a: 'Yes. A school can add colleagues by email with a role - administrator, faculty or view-only - and teachers get their own view of the periods they teach. Where a period offers a choice of subject, the teacher who offers it can take that slot themselves and the change reaches whoever is planning the day.',
   },
 ]
 
@@ -132,7 +132,7 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   applicationCategory: 'EducationalApplication',
   operatingSystem: 'Web',
   url: 'https://schedu.bhusku.com',
-  description: 'Conflict-free, expertly generated timetables for schools, colleges, and universities — any board, any curriculum.',
+  description: 'Conflict-free, expertly generated timetables for schools, colleges, and universities - any board, any curriculum.',
   // Only the numeric INR tiers become Offers; Enterprise ("Custom") is omitted
   // rather than advertised with a fake price.
   offers: TIERS.filter(t => t.price.startsWith('₹')).map(t => ({
@@ -155,7 +155,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_SCHEMA) }}
       />
 
-      {/* Hero — the simulated product walkthrough plays immediately after the nav */}
+      {/* Hero - the simulated product walkthrough plays immediately after the nav */}
       <section className="bg-gradient-to-b from-[#F8F7FF] to-white pb-12 pt-4">
         <HeroWalkthrough />
 
@@ -168,14 +168,14 @@ export default function HomePage() {
             Add life to your schedules, <span className="italic text-[#7C6FE0]">smartly.</span>
           </h1>
           <p className="mx-auto mb-8 max-w-[640px] text-base leading-[1.75] text-[#4B5275]">
-            Most timetables die the day they&rsquo;re published. Yours follows the clock —
-            who&rsquo;s teaching, who&rsquo;s free, who&rsquo;s covering — every minute of term,
+            Most timetables die the day they&rsquo;re published. Yours follows the clock -
+            who&rsquo;s teaching, who&rsquo;s free, who&rsquo;s covering - every minute of term,
             across every schedule your institution runs.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <a href={appHref('/login')} className="no-underline">
               <button className="rounded-[9px] bg-[#7C6FE0] px-[26px] py-[13px] text-sm font-bold text-white shadow-[0_4px_18px_rgba(124,111,224,0.38)]">
-                Start free — no credit card
+                Start free - no credit card
               </button>
             </a>
             <a href="#unique" className="no-underline">
@@ -199,7 +199,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Human Intelligence — the positioning story */}
+      {/* Human Intelligence - the positioning story */}
       <section id="human-intelligence" className="flex flex-col items-center border-t border-[#F0EDFF] bg-white px-6 py-16">
         <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Why schedU is different</p>
         <h2 className="mb-3 max-w-[720px] text-center text-[clamp(24px,4vw,34px)] font-normal leading-[1.18] tracking-[-0.6px] text-[#13111E]">
@@ -207,14 +207,14 @@ export default function HomePage() {
         </h2>
         <p className="mx-auto mb-10 max-w-[620px] text-center text-[14.5px] leading-[1.75] text-[#4B5275]">
           A real timetable isn&rsquo;t a guess. schedU is the lived experience of building real
-          schedules — the rules, the edge cases, the fairness — planned, turned into transparent
+          schedules - the rules, the edge cases, the fairness - planned, turned into transparent
           logic, and implemented so you can see exactly why every decision was made. Predictable,
           explainable, and yours to override.
         </p>
         <div className="grid w-full max-w-[920px] gap-4 sm:grid-cols-3">
           {[
-            { icon: '🧠', title: 'Practically experienced', body: 'Modelled on how schedules are really made — dispersal times, double periods, electives, staggered lunches, day-offs.' },
-            { icon: '📐', title: 'Planned & algorithmed', body: 'Every constraint is deliberate logic with a national-policy brain behind it — not a statistical black box that hallucinates.' },
+            { icon: '🧠', title: 'Practically experienced', body: 'Modelled on how schedules are really made - dispersal times, double periods, electives, staggered lunches, day-offs.' },
+            { icon: '📐', title: 'Planned & algorithmed', body: 'Every constraint is deliberate logic with a national-policy brain behind it - not a statistical black box that hallucinates.' },
             { icon: '🔍', title: 'Explainable & yours', body: 'See why each slot got its teacher and subject, and hand-edit any cell. The engine assists; you stay in control.' },
           ].map(c => (
             <div key={c.title} className="rounded-[14px] border border-[#EFEBFF] bg-[#FCFBFF] px-[22px] py-6">
@@ -226,37 +226,37 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Try it live — a genuinely interactive Live board, not a video */}
+      {/* Try it live - a genuinely interactive Live board, not a video */}
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#FAFAFE] px-6 py-16">
-        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">No signup needed — try it right here</p>
+        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">No signup needed - try it right here</p>
         <h2 className="mb-2 max-w-[640px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
           Drag through a school day, <span className="italic text-[#7C6FE0]">live.</span>
         </h2>
         <p className="mb-8 max-w-[560px] text-center text-[14px] leading-[1.65] text-[#4B5275]">
-          This is the Live board. Drag the timeline, sort free faculty by load, mark someone absent and assign a fairness-checked substitute — the same mechanics as the product.
+          This is the Live board. Drag the timeline, sort free faculty by load, mark someone absent and assign a fairness-checked substitute - the same mechanics as the product.
         </p>
         <LiveDemo />
       </section>
 
-      {/* Calendar mode — full-width day timetable with the real red Playhead */}
+      {/* Calendar mode - full-width day timetable with the real red Playhead */}
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#FAFAFE] px-6 py-16">
-        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Calendar mode — every lens, one timeline</p>
+        <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Calendar mode - every lens, one timeline</p>
         <h2 className="mb-2 max-w-[680px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
-          The day, hour by hour — with the <span className="italic text-[#EF4444]">red Playhead</span> on your clock.
+          The day, hour by hour - with the <span className="italic text-[#EF4444]">red Playhead</span> on your clock.
         </h2>
         <p className="mb-9 max-w-[600px] text-center text-[14px] leading-[1.65] text-[#4B5275]">
-          The same school day through four lenses — Classes, Faculty, Venues, Subjects. The timeline is the heading, and the Playhead is genuinely your local time, moving as you read this.
+          The same school day through four lenses - Classes, Faculty, Venues, Subjects. The timeline is the heading, and the Playhead is genuinely your local time, moving as you read this.
         </p>
         <CalendarShowcase />
       </section>
 
-      {/* Unique features — dense grid, no empty space */}
+      {/* Unique features - dense grid, no empty space */}
       <section id="unique" className="flex flex-col items-center bg-white px-6 py-16">
         <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">Not used by anyone else</p>
         <h2 className="mb-9 max-w-[560px] text-center text-[clamp(24px,4vw,32px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
           Six things <span className="italic text-[#7C6FE0]">only schedU does.</span>
         </h2>
-        <p className="mb-7 text-center text-[13px] text-[#8B87AD]">Click any card to try the actual mechanic — every demo is interactive.</p>
+        <p className="mb-7 text-center text-[13px] text-[#8B87AD]">Click any card to try the actual mechanic - every demo is interactive.</p>
         <UniqueFeatures />
       </section>
 
@@ -274,7 +274,7 @@ export default function HomePage() {
         </div>
         <p className="mt-5 max-w-[480px] text-[13px] leading-[1.6] text-[#8B87AD]">
           No built-in board restrictions. Enter your own period counts, subject names,
-          and grading labels — schedU adapts to any institution.
+          and grading labels - schedU adapts to any institution.
         </p>
       </section>
 
@@ -350,7 +350,7 @@ export default function HomePage() {
       </section>
 
       {/* Bottom CTA */}
-      {/* FAQ — the marked-up questions must be visible on the page, or Google
+      {/* FAQ - the marked-up questions must be visible on the page, or Google
           drops the structured data. */}
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#F8F7FF] px-6 py-16">
         <h2 className="mb-2 text-[28px] font-normal text-[#13111E]">Questions schools ask</h2>

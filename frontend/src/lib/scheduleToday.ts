@@ -1,5 +1,5 @@
 /**
- * "What does today look like?" — shared by the Dashboard stats row and the
+ * "What does today look like?" - shared by the Dashboard stats row and the
  * Today panel so both surfaces agree on what counts as a period, a teacher
  * on leave, or a slot still needing cover. Computing this in one place also
  * keeps the (non-trivial) uncovered-slot logic from drifting between them.
@@ -23,7 +23,7 @@ export interface TodayPeriodRow {
   uncovered: number   // count of sections needing a sub in this period slot
 }
 
-/** A (teacher, section, period) slot affected by a leave — with enough detail
+/** A (teacher, section, period) slot affected by a leave - with enough detail
  *  (subject, class, time) to act on without opening the full editor. */
 export interface AffectedSlot {
   teacher: string; section: string; subject: string
@@ -32,7 +32,7 @@ export interface AffectedSlot {
 }
 
 /** A room used by two different classes (different teachers) in the same
- *  period today — a genuine double-booking, not a merged/combined block. */
+ *  period today - a genuine double-booking, not a merged/combined block. */
 export interface RoomClash {
   room: string; periodId: string; periodName: string
   startMin: number; endMin: number; sections: string[]
@@ -71,10 +71,10 @@ export function computeTodaySummary(params: {
   const onLeaveSet = new Set(teachersOnLeave)
 
   // Period → wall-clock minutes, computed first so affected slots carry a
-  // real time (not just a period id) — needed to sort/display them usefully.
+  // real time (not just a period id) - needed to sort/display them usefully.
   // From the bell, not from adding durations up. These minutes go onto the
   // slots somebody reads while arranging a cover, and a day with an assembly
-  // or a lunch row is longer than its teaching periods total — by an hour, by
+  // or a lunch row is longer than its teaching periods total - by an hour, by
   // the third period of an ordinary morning. Falls back to the same sum when
   // a schedule has no bell rows.
   const bell = schedulePeriodTimes(config, periods, sections ?? [])
@@ -136,7 +136,7 @@ export function computeTodaySummary(params: {
         // An OR cell is a subject CHOICE for the whole class, and only one of
         // its teachers actually stands up. Counting the others as teaching
         // sends the cover flow hunting a substitute for a lesson that will not
-        // happen — and hides the fact that they were free to cover something
+        // happen - and hides the fact that they were free to cover something
         // that will. An undecided slot still holds everyone, which is the safe
         // direction.
         const inCell = teachingPairsOnDate(c, s.name, isoDate, p.id, orDecisions, plans)

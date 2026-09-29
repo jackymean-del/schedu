@@ -1,5 +1,5 @@
 /**
- * Education norms knowledge base — national policy on instructional time
+ * Education norms knowledge base - national policy on instructional time
  * (students, grade-wise) and safe teaching load (faculty), per country and
  * board. This powers:
  *
@@ -10,7 +10,7 @@
  *   3. Teacher requirement: total demand vs safe per-teacher load → "you need
  *      ~N more teachers" recommendation before generation.
  *
- * Sources (verified July 2026 — figures are statutory where marked, typical
+ * Sources (verified July 2026 - figures are statutory where marked, typical
  * guidance otherwise):
  *   IN  RTE Act 2009: Classes 1–5 → 800 instructional h/yr over ≥200 days;
  *       Classes 6–8 → 1000 h/yr over ≥220 days; teachers minimum 45 h/wk
@@ -19,7 +19,7 @@
  *   GB  STPCD: 1265 directed hours over 195 days/yr; DfE expectation of a
  *       32.5-hour school week (Mon–Fri); PPA ≥10% of timetabled teaching.
  *   US  State-set: most states ≈180 days/yr; instructional hours typically
- *       ~900 h (elementary) to ~990–1080 h (secondary) — varies by state.
+ *       ~900 h (elementary) to ~990–1080 h (secondary) - varies by state.
  *   AU  VIC: face-to-face teaching ≤22.5 h/wk (primary), ≤20 h/wk
  *       (secondary); NSW secondary ≈20 h/wk. ~200 school days/yr.
  *   Others (AE/SG/DE/NG…): see lib/standardsDB.ts (teacher-side norms with
@@ -108,9 +108,9 @@ const STUDENT_NORMS: Record<string, { label: string; bands: BandNorms }> = {
   IN: { label: 'India (RTE/NCTE/NCF)', bands: IN_BANDS },
   // CBSE and ICSE follow the same statutory floor (RTE) with board-specific
   // curricula; period weights differ (see SUBJECT_WEIGHTS), hour norms align.
-  'IN-CBSE': { label: 'India — CBSE', bands: IN_BANDS },
-  'IN-ICSE': { label: 'India — CISCE (ICSE/ISC)', bands: IN_BANDS },
-  'IN-STATE': { label: 'India — State Board', bands: IN_BANDS },
+  'IN-CBSE': { label: 'India - CBSE', bands: IN_BANDS },
+  'IN-ICSE': { label: 'India - CISCE (ICSE/ISC)', bands: IN_BANDS },
+  'IN-STATE': { label: 'India - State Board', bands: IN_BANDS },
   GB: {
     label: 'England (DfE/STPCD)',
     bands: {
@@ -153,11 +153,11 @@ const STUDENT_NORMS: Record<string, { label: string; bands: BandNorms }> = {
   },
 }
 
-// ── Regional fallback — EVERY country the app supports maps to a region, so a
+// ── Regional fallback - EVERY country the app supports maps to a region, so a
 //    country without an explicit statute entry still gets a sensible, region-
 //    appropriate norm (not a flat global default). Values are grounded regional
 //    approximations from OECD Education-at-a-Glance + Eurydice/regional patterns
-//    — NOT per-country statute, so all are flagged non-statutory. The explicit
+//    - NOT per-country statute, so all are flagged non-statutory. The explicit
 //    countries above (IN + boards, GB, US, AU) always win over the region.
 export type Region =
   | 'EUROPE_WEST' | 'NORDIC' | 'EUROPE_EAST' | 'CIS' | 'MENA_GULF' | 'MENA'
@@ -181,7 +181,7 @@ function mkBands(hours: [number, number, number, number, number], days: number, 
 
 const REGION_STUDENT: Record<Region, { label: string; bands: BandNorms }> = {
   EUROPE_WEST:   { label: 'Western Europe',              bands: mkBands([600, 850, 900, 950, 950], 185, 6, 50, 'OECD/Eurydice Western-Europe norms') },
-  NORDIC:        { label: 'Nordic',                      bands: mkBands([550, 700, 800, 850, 850], 190, 6, 45, 'Nordic norms — fewer contact hours, high teacher autonomy') },
+  NORDIC:        { label: 'Nordic',                      bands: mkBands([550, 700, 800, 850, 850], 190, 6, 45, 'Nordic norms - fewer contact hours, high teacher autonomy') },
   EUROPE_EAST:   { label: 'Central & Eastern Europe',    bands: mkBands([560, 700, 800, 870, 900], 185, 6, 45, 'Eurydice Central/Eastern-Europe norms') },
   CIS:           { label: 'CIS & Central Asia',          bands: mkBands([560, 720, 820, 880, 900], 185, 6, 45, 'Post-Soviet regional education norms') },
   MENA_GULF:     { label: 'Gulf (GCC)',                  bands: mkBands([600, 800, 850, 900, 900], 180, 6, 45, 'Gulf MoE norms (UAE/KSA-style; Fri–Sat weekend)') },
@@ -223,7 +223,7 @@ export function regionForCountry(country: string): Region | null {
 /**
  * Every country code this module has a real norm for: the explicit-statute
  * countries plus every region-mapped one. A code outside this list still
- * resolves — via the international default — it just isn't grounded in
+ * resolves - via the international default - it just isn't grounded in
  * anything local. Exported so the coverage check can enumerate what we claim.
  */
 export const NORM_COUNTRIES: string[] = [...new Set([
@@ -257,11 +257,11 @@ export interface TeacherNorm {
 const TEACHER_NORMS: Record<string, TeacherNorm> = {
   IN: {
     safeMaxPeriodsWeek: 30, hardMaxPeriodsWeek: 36,
-    source: 'NCTE 2014: ≤36 teaching periods/wk; RTE: 45 h/wk incl. preparation — planning to ~30 keeps prep time real',
+    source: 'NCTE 2014: ≤36 teaching periods/wk; RTE: 45 h/wk incl. preparation - planning to ~30 keeps prep time real',
   },
   GB: {
     safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 25,
-    source: 'STPCD 1265 directed h/195 days with ≥10% PPA — ≈22 hour-periods teaching/wk is a sustainable plan',
+    source: 'STPCD 1265 directed h/195 days with ≥10% PPA - ≈22 hour-periods teaching/wk is a sustainable plan',
   },
   US: {
     safeMaxPeriodsWeek: 25, hardMaxPeriodsWeek: 30,
@@ -280,14 +280,14 @@ const TEACHER_NORMS: Record<string, TeacherNorm> = {
 // Safe teaching-load per region (same regional buckets as the student side).
 const REGION_TEACHER: Record<Region, TeacherNorm> = {
   EUROPE_WEST:   { safeMaxPeriodsWeek: 23, hardMaxPeriodsWeek: 27, source: 'Western-Europe teaching load (with protected PPA time)' },
-  NORDIC:        { safeMaxPeriodsWeek: 20, hardMaxPeriodsWeek: 24, source: 'Nordic teaching load — lower contact, high prep time' },
+  NORDIC:        { safeMaxPeriodsWeek: 20, hardMaxPeriodsWeek: 24, source: 'Nordic teaching load - lower contact, high prep time' },
   EUROPE_EAST:   { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 26, source: 'Central/Eastern-Europe teaching norm (Pflichtstunden-style)' },
   CIS:           { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 27, source: 'Post-Soviet teaching-load norm' },
   MENA_GULF:     { safeMaxPeriodsWeek: 24, hardMaxPeriodsWeek: 30, source: 'Gulf MoE teaching load (≈24 periods/week)' },
   MENA:          { safeMaxPeriodsWeek: 24, hardMaxPeriodsWeek: 30, source: 'MENA teaching-load norm' },
   SOUTH_ASIA:    { safeMaxPeriodsWeek: 30, hardMaxPeriodsWeek: 36, source: 'South-Asia teaching load, RTE/NCTE-aligned' },
   SEA:           { safeMaxPeriodsWeek: 24, hardMaxPeriodsWeek: 30, source: 'ASEAN teaching-load norm' },
-  EAST_ASIA:     { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 28, source: 'East-Asia teaching load — lower contact, long school day' },
+  EAST_ASIA:     { safeMaxPeriodsWeek: 22, hardMaxPeriodsWeek: 28, source: 'East-Asia teaching load - lower contact, long school day' },
   AFRICA:        { safeMaxPeriodsWeek: 28, hardMaxPeriodsWeek: 36, source: 'Sub-Saharan teaching-load norm (~36-period ceiling)' },
   LATAM:         { safeMaxPeriodsWeek: 25, hardMaxPeriodsWeek: 32, source: 'Latin-America teaching-load norm' },
   OCEANIA:       { safeMaxPeriodsWeek: 20, hardMaxPeriodsWeek: 22, source: 'Oceania face-to-face caps (AU/NZ)' },
@@ -319,13 +319,13 @@ export function effectiveTeacherMaxPeriods(
   return teacherNorms(country).safeMaxPeriodsWeek
 }
 
-/** The national safe teaching load expressed in HOURS/week — the default shown
+/** The national safe teaching load expressed in HOURS/week - the default shown
  *  next to the custom teacher-hours field. */
 export function normTeacherHoursWeek(country: string, periodMinutes: number): number {
   return Math.round(teacherNorms(country).safeMaxPeriodsWeek * periodMinutes / 60 * 10) / 10
 }
 
-/** National typical instructional HOURS/week for a band — the default shown next
+/** National typical instructional HOURS/week for a band - the default shown next
  *  to each custom student-hours field (typical periods/day × length × days). */
 export function normStudentHoursWeek(
   country: string, board: string | undefined, band: GradeBand, workDaysPerWeek: number,
@@ -423,7 +423,7 @@ const GENERIC_WEIGHTS: Record<GradeBand, WeightRule[]> = {
 function weightFor(subjectName: string, band: GradeBand, country: string): number {
   const rules = ((country || '').toUpperCase() === 'IN' ? IN_WEIGHTS : GENERIC_WEIGHTS)[band]
   for (const r of rules) if (r.match.test(subjectName)) return r.weight
-  return 5 // unrecognised subject — small but present
+  return 5 // unrecognised subject - small but present
 }
 
 /**
@@ -455,7 +455,7 @@ export function suggestAllocation(
     base[order[k % order.length].i]++
     used++; k++
   }
-  while (used > weeklySlots) { // over from the ≥1 floors — trim the largest
+  while (used > weeklySlots) { // over from the ≥1 floors - trim the largest
     const maxI = base.indexOf(Math.max(...base))
     if (base[maxI] <= 1) break
     base[maxI]--; used--
@@ -494,9 +494,9 @@ export function checkBellCompliance(
   const status: BellCompliance['status'] = ratio < 0.92 ? 'short' : ratio > 1.35 ? 'high' : 'ok'
   const message =
     status === 'short'
-      ? `${BAND_LABELS[band]} is projected at ~${Math.round(yearlyHours)} h/yr — below the ${n.instructionalHoursYear} h/yr ${n.statutory ? 'statutory minimum' : 'guideline'} (${norms.label}). Add periods or minutes.`
+      ? `${BAND_LABELS[band]} is projected at ~${Math.round(yearlyHours)} h/yr - below the ${n.instructionalHoursYear} h/yr ${n.statutory ? 'statutory minimum' : 'guideline'} (${norms.label}). Add periods or minutes.`
       : status === 'high'
-        ? `${BAND_LABELS[band]} is projected at ~${Math.round(yearlyHours)} h/yr — well above the ${n.instructionalHoursYear} h/yr norm; check the day isn't overloaded for this age group.`
+        ? `${BAND_LABELS[band]} is projected at ~${Math.round(yearlyHours)} h/yr - well above the ${n.instructionalHoursYear} h/yr norm; check the day isn't overloaded for this age group.`
         : `${BAND_LABELS[band]} meets the ${n.instructionalHoursYear} h/yr ${n.statutory ? 'statutory minimum' : 'guideline'} (~${Math.round(yearlyHours)} h/yr projected).`
   return {
     band, bandLabel: BAND_LABELS[band],
@@ -525,7 +525,7 @@ export interface TeacherRequirement {
 /**
  * Compare total weekly period demand against the staff's SAFE capacity per
  * national workload norms. `over` means the plan forces teachers beyond the
- * safe load — recommend hiring; `tight` means >90% utilisation.
+ * safe load - recommend hiring; `tight` means >90% utilisation.
  */
 export function computeTeacherRequirement(
   demandPeriodsWeek: number, teacherCount: number, country: string,
@@ -540,7 +540,7 @@ export function computeTeacherRequirement(
     status === 'over'
       ? `Your plan needs ${demandPeriodsWeek} periods/week but ${teacherCount} teacher${teacherCount === 1 ? '' : 's'} can safely cover ${safeCapacity} (at ${n.safeMaxPeriodsWeek}/week each). Recommend adding ~${additionalTeachers} teacher${additionalTeachers === 1 ? '' : 's'} to stay within the safe workload.`
       : status === 'tight'
-        ? `Staffing is tight: ${demandPeriodsWeek} of ${safeCapacity} safe periods/week used (${Math.round(utilization * 100)}%). One absence will strain coverage — consider one more teacher.`
+        ? `Staffing is tight: ${demandPeriodsWeek} of ${safeCapacity} safe periods/week used (${Math.round(utilization * 100)}%). One absence will strain coverage - consider one more teacher.`
         : `Staffing is healthy: ${demandPeriodsWeek} of ${safeCapacity} safe periods/week used (${Math.round(utilization * 100)}%).`
   return {
     demandPeriodsWeek, teacherCount,

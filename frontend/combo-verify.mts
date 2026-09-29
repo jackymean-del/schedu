@@ -1,5 +1,5 @@
 // Verify elective SCOPE: PE taught everywhere but elective ONLY in XI/XII
-// must produce a combo card spanning XI/XII sections only — not LKG–X.
+// must produce a combo card spanning XI/XII sections only - not LKG–X.
 import { suggestAndComboGroups } from './src/routes/wizard/step-student-groups'
 
 const allSections = ['LKG-A', 'I-A', 'V-A', 'IX-A', 'XI-A', 'XI-B', 'XII-A']

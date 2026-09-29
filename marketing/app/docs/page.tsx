@@ -5,7 +5,7 @@ import { DOC_ARTICLES } from '@/content/docs'
 
 const STEPS = [
   { n: 1, title: 'Enter the basics', desc: 'Name your institution, pick a board (or define your own), and add class ranges, teachers, and rooms.' },
-  { n: 2, title: 'Generate the timetable', desc: 'schedU builds period allocations, cross-class groups and constraints automatically — no manual tables — and tells you which rule blocked anything it could not place.' },
+  { n: 2, title: 'Generate the timetable', desc: 'schedU builds period allocations, cross-class groups and constraints automatically - no manual tables - and tells you which rule blocked anything it could not place.' },
   { n: 3, title: 'Review & refine', desc: 'Edit inline like a spreadsheet. schedU re-validates on every change and explains each choice.' },
   { n: 4, title: 'Export & publish', desc: 'Download class-wise, teacher-wise, and room-wise timetables as PDF or Excel, or print them directly.' },
 ]
@@ -14,8 +14,8 @@ const cardHover =
   'transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(124,111,224,0.10)] hover:border-[#D8D2FF]'
 
 export const metadata: Metadata = {
-  title: 'Documentation — How to Build a School Timetable',
-  description: 'Learn how schedU works — from your first conflict-free timetable to advanced electives, room planning, and exports. Guides for schools, colleges, and universities.',
+  title: 'Documentation - How to Build a School Timetable',
+  description: 'Learn how schedU works - from your first conflict-free timetable to advanced electives, room planning, and exports. Guides for schools, colleges, and universities.',
   alternates: { canonical: '/docs' },
 }
 

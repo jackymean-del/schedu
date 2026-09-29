@@ -41,7 +41,7 @@ func TestVerifyWebhookSignature(t *testing.T) {
 	}
 
 	// With no secret configured, verification must always fail (never panic,
-	// never accept) — a misconfigured deploy can't be tricked into trusting a
+	// never accept) - a misconfigured deploy can't be tricked into trusting a
 	// forged webhook.
 	empty := Config{}
 	if empty.VerifyWebhookSignature(body, good) {

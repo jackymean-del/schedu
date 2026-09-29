@@ -1,4 +1,4 @@
-// Package versioning manages curriculum_versions — immutable snapshots of a
+// Package versioning manages curriculum_versions - immutable snapshots of a
 // board's curriculum for a specific academic year.
 package versioning
 

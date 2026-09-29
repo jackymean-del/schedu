@@ -17,7 +17,7 @@ const DAY_LABEL: Record<string, string> = {
   THURSDAY: "Thursday", FRIDAY: "Friday", SATURDAY: "Saturday", SUNDAY: "Sunday",
 }
 
-// 8-colour palette for subject pills — cycles via index
+// 8-colour palette for subject pills - cycles via index
 const SUBJECT_COLORS = [
   { bg: "#EDE9FF", border: "#D8D2FF", text: "#4338ca" },  // indigo
   { bg: "#fef3c7", border: "#fcd34d", text: "#92400e" },  // amber
@@ -436,7 +436,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                       }}
                     />
                     <p style={{ fontSize: 10.5, color: "#94a3b8", margin: "4px 0 0" }}>
-                      Separate subject names with " {mode} " (with spaces) — exactly as you want it to appear in the cell.
+                      Separate subject names with " {mode} " (with spaces) - exactly as you want it to appear in the cell.
                     </p>
                   </div>
                 ) : (
@@ -560,7 +560,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                             minWidth: 0,
                           }}
                         >
-                          <option value="">— {org.staffLabel.toLowerCase()} —</option>
+                          <option value="">- {org.staffLabel.toLowerCase()} -</option>
                           {eligible.map(t => (
                             <option key={t.id ?? t.name} value={t.name}>
                               {t.match ? "★ " : ""}{t.name}
@@ -580,7 +580,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                             minWidth: 0,
                           }}
                         >
-                          <option value="">— room —</option>
+                          <option value="">- room -</option>
                           {roomOptions.map(r => (
                             <option key={r} value={r}>
                               {r}{section?.room === r ? " ✓" : ""}
@@ -709,13 +709,13 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                   background: "#fff", cursor: "pointer",
                 }}
               >
-                <option value="">— Select {org.staffLabel.toLowerCase()} —</option>
+                <option value="">- Select {org.staffLabel.toLowerCase()} -</option>
                 {eligibleTeachers.map(t => (
                   <option key={t.id ?? t.name} value={t.name}>
                     {t.match ? "★ " : "  "}
                     {t.name}
                     {t.role ? ` (${t.role})` : ""}
-                    {t.match ? " — eligible" : ""}
+                    {t.match ? " - eligible" : ""}
                     {t.conflictSection ? ` ⚠ busy in ${t.conflictSection}` : ""}
                   </option>
                 ))}
@@ -750,7 +750,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                     background: "#fff", cursor: "pointer",
                   }}
                 >
-                  <option value="">— Select room —</option>
+                  <option value="">- Select room -</option>
                   {roomOptions.map(r => (
                     <option key={r} value={r}>
                       {r}{section?.room === r ? " (class default)" : ""}

@@ -1,5 +1,5 @@
 /**
- * SubjectsPanel — Tab 2.  Curriculum-aware AI edition.
+ * SubjectsPanel - Tab 2.  Curriculum-aware AI edition.
  *
  * Architecture (correct academic model):
  *   Subject + Class Mapping → slots/week
@@ -13,9 +13,9 @@
  *
  * Features:
  * - Board selector  (CBSE / ICSE / IB / Cambridge / Custom)
- * - Load Unit selector (Slots/Wk · Hours/Wk · etc.) — applies to expanded per-class view
- * - Global AI Assign — delegates to parent engine (all 4 resource types)
- * - Undo HI — snapshot-based rollback
+ * - Load Unit selector (Slots/Wk · Hours/Wk · etc.) - applies to expanded per-class view
+ * - Global AI Assign - delegates to parent engine (all 4 resource types)
+ * - Undo HI - snapshot-based rollback
  * - All chips shown (no truncation)
  */
 
@@ -124,10 +124,10 @@ function EditCell({ value, onSave, placeholder = '…', style: extra }: {
 }
 
 
-/** Built-in category options — two canonical types; user can add more via the Category Manager */
+/** Built-in category options - two canonical types; user can add more via the Category Manager */
 const BUILTIN_CATS = ['Scholastic', 'Co-scholastic']
 
-/** Heuristic category from a subject's name — used by the "HI Categorize" bulk button.
+/** Heuristic category from a subject's name - used by the "HI Categorize" bulk button.
  *  Co-scholastic = PE / arts / music / CCA / library / assembly / pre-school activities.
  *  Everything academic → Scholastic. */
 export function inferCategory(sub: Subject): string {
@@ -138,7 +138,7 @@ export function inferCategory(sub: Subject): string {
     'art','painting','craft','drawing','scout','guide','library','assembly',
     'morning meeting','cca','co-curricular','cocurricular','club',
     'value education','moral science','free play',
-    // NOTE: do NOT match 'story'/'rhyme' here — 'history' contains 'story',
+    // NOTE: do NOT match 'story'/'rhyme' here - 'history' contains 'story',
     // and Nursery Rhymes & Stories is a pre-primary language (scholastic) subject.
   ])) return 'Co-scholastic'
   return 'Scholastic'
@@ -362,7 +362,7 @@ function SectionSubRow({
   // Keep maxDayText in sync when external value changes
   useEffect(() => { if (!maxDayFocused) setMaxDayText(String(maxDay)) }, [maxDay, maxDayFocused])
 
-  // Warm yellow tint — all section rows share the same warm base
+  // Warm yellow tint - all section rows share the same warm base
   const rowBg = index % 2 === 0 ? '#FFFBEB' : '#FFF6D8'
 
   const secInp: React.CSSProperties = {
@@ -377,7 +377,7 @@ function SectionSubRow({
       onMouseEnter={e => (e.currentTarget.style.background = '#FEF3C7')}
       onMouseLeave={e => (e.currentTarget.style.background = rowBg)}
     >
-      {/* Section name — indented, no arrow prefix */}
+      {/* Section name - indented, no arrow prefix */}
       <td style={{ padding: '2px 6px 2px 20px' }}>
         <span style={{ fontSize: 10.5, color: '#5B50B8', fontWeight: 700, letterSpacing: '0.01em' }}>
           {secName}
@@ -415,7 +415,7 @@ function SectionSubRow({
         />
       </td>
       <td />
-      {/* Elective — per-section toggle + optional slot name */}
+      {/* Elective - per-section toggle + optional slot name */}
       <td style={{ padding: '2px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <input type="checkbox"
@@ -425,7 +425,7 @@ function SectionSubRow({
               ...(!e.target.checked ? { electiveSlotId: undefined } : {}),
             })}
             style={{ accentColor: P, width: 12, height: 12, flexShrink: 0, cursor: 'pointer' }}
-            title="Mark as elective for this class — students choose from a list of options"
+            title="Mark as elective for this class - students choose from a list of options"
           />
           {cfg?.isOptional && (
             <input
@@ -512,7 +512,7 @@ function GradeSlotRow({
         onMouseEnter={e => (e.currentTarget.style.background = '#F0EDFF')}
         onMouseLeave={e => (e.currentTarget.style.background = '')}
       >
-        {/* Grade chip — click to expand/collapse per-section rows */}
+        {/* Grade chip - click to expand/collapse per-section rows */}
         <td style={{ padding: '3px 8px' }}>
           <button
             onClick={() => setExpandedSections(o => !o)}
@@ -532,13 +532,13 @@ function GradeSlotRow({
           </button>
         </td>
 
-        {/* Slots/Wk — READ-ONLY here. Blueprint v6 scopes Resources to WHICH
+        {/* Slots/Wk - READ-ONLY here. Blueprint v6 scopes Resources to WHICH
             subjects a class takes; HOW MANY periods each gets is derived by the
             Period Allocation Engine and edited on Mapping (Step 5). Editing it
             in two places let the typed number drift from the schedule. */}
         <td style={{ padding: '3px 8px' }}>
           <div
-            title={`${displayVal} — derived from your board's curriculum norm, working days and period length. Change it on the Mapping step.`}
+            title={`${displayVal} - derived from your board's curriculum norm, working days and period length. Change it on the Mapping step.`}
             style={{
               width: '100%', padding: '3px 6px', border: '1.5px dashed #D8D2FF', borderRadius: 5,
               fontSize: 12.5, color: P_D, fontWeight: 800,
@@ -550,7 +550,7 @@ function GradeSlotRow({
           </div>
         </td>
 
-        {/* Max/day — applies to all sections of this grade */}
+        {/* Max/day - applies to all sections of this grade */}
         <td style={{ padding: '3px 8px' }}>
           <input
             type="text" inputMode="numeric"
@@ -566,7 +566,7 @@ function GradeSlotRow({
 
         <td />
 
-        {/* Elective — aggregate for this grade (indeterminate if mixed) */}
+        {/* Elective - aggregate for this grade (indeterminate if mixed) */}
         <td style={{ padding: '3px 6px' }}>
           {(() => {
             const cfgs = sections.map(sn => (sub.classConfigs ?? []).find(c => c.sectionName === sn))
@@ -580,7 +580,7 @@ function GradeSlotRow({
                   ref={el => { if (el) el.indeterminate = someEl && !allEl }}
                   onChange={e => onUpdateGradeElective(sections, e.target.checked)}
                   style={{ accentColor: P, width: 13, height: 13, cursor: 'pointer', flexShrink: 0 }}
-                  title={allEl ? 'All sections elective — click to unset' : someEl ? 'Partial — expand to set per section' : 'Mark all sections of this grade as elective'}
+                  title={allEl ? 'All sections elective - click to unset' : someEl ? 'Partial - expand to set per section' : 'Mark all sections of this grade as elective'}
                 />
                 {slotName && allEl && (
                   <span style={{ fontSize: 9, color: P, background: P_L, borderRadius: 3, padding: '0 4px', border: `1px solid ${P_B}`, whiteSpace: 'nowrap' }}>{slotName}</span>
@@ -593,7 +593,7 @@ function GradeSlotRow({
           })()}
         </td>
 
-        {/* Lab Required — tick-all for this grade */}
+        {/* Lab Required - tick-all for this grade */}
         <td style={{ padding: '3px 6px', textAlign: 'center' as const }}>
           <input type="checkbox"
             checked={sections.every(sn => {
@@ -659,7 +659,7 @@ function ClassSlotsExpanded({
   if (classes.length === 0) {
     return (
       <div style={{ padding: '8px 16px', background: '#FAFAFE', borderTop: '1px solid #EEE9FF', fontSize: 11.5, color: '#767384', fontStyle: 'italic' }}>
-        No classes assigned — use the Applicable Classes column above to assign.
+        No classes assigned - use the Applicable Classes column above to assign.
       </div>
     )
   }
@@ -788,7 +788,7 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
       </td>
       <td style={TD}>
         <span style={{ fontSize: 11, color: P_D, fontWeight: 700, background: P_L, padding: '1px 5px', borderRadius: 3 }}>
-          {name.trim() ? generateShortName(name.trim()) : '—'}
+          {name.trim() ? generateShortName(name.trim()) : '-'}
         </span>
       </td>
       <td style={TD}>
@@ -838,7 +838,7 @@ function CategoryHeaderRow({ cat, count, collapsed, onToggle, onRename }: {
               style={{ fontSize: 12, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.08em', border: `1.5px solid ${P_B}`, borderRadius: 4, padding: '2px 8px', outline: 'none', background: '#fff', fontFamily: 'inherit' }}
             />
           ) : (
-            <span onClick={() => onRename && setEditing(true)} title={onRename ? 'Click to rename category — applies to all its subjects' : undefined}
+            <span onClick={() => onRename && setEditing(true)} title={onRename ? 'Click to rename category - applies to all its subjects' : undefined}
               style={{ fontSize: 12, fontWeight: 800, color: P_D, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: onRename ? 'text' : 'default', padding: '2px 6px', borderRadius: 4 }}
               onMouseEnter={e => { if (onRename) e.currentTarget.style.background = '#DDD8FF' }}
               onMouseLeave={e => (e.currentTarget.style.background = '')}
@@ -896,7 +896,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
     })
   }
 
-  // Atomically update slots for ALL sections of a grade — always syncs sections too
+  // Atomically update slots for ALL sections of a grade - always syncs sections too
   function handleUpdateGradeSlots(classNames: string[], periodsPerWeek: number) {
     const classSet    = new Set(classNames)
     // CRITICAL: build from ALL currently assigned classes (sections OR classConfigs).
@@ -1089,7 +1089,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
             style={{ fontSize: 12, fontWeight: 700, color: P_D }} />
         </td>
 
-        {/* Applicable Classes — ALL chips, no truncation, + AI suggestion */}
+        {/* Applicable Classes - ALL chips, no truncation, + AI suggestion */}
         <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, flexWrap: 'wrap' }}>
             <InlineChipSelect
@@ -1117,7 +1117,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
                 onMouseLeave={e => (e.currentTarget.style.background = P)}
               >
                 {/* Labelled "AI" until now, which was both off-brand and untrue:
-                    suggestClassesForSubject is a curriculum lookup by board — a
+                    suggestClassesForSubject is a curriculum lookup by board - a
                     table, not a model. */}
                 ⚡ {shortHint ? `(${aiSuggestion.length})` : `Suggest (${aiSuggestion.length})`}
               </button>
@@ -1227,7 +1227,7 @@ export function SubjectsPanel({
   const catMgrBtnRef = useRef<HTMLButtonElement>(null)
   const undoHistory = useUndoHistory<Subject[]>()
 
-  // Extra (custom) category options — persist to localStorage
+  // Extra (custom) category options - persist to localStorage
   const [extraCats, setExtraCats] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('schedu-subject-extra-cats') ?? '[]') } catch { return [] }
   })
@@ -1263,7 +1263,7 @@ export function SubjectsPanel({
     }
   }
 
-  // Academic Load Unit — applies to per-class slots in expanded view
+  // Academic Load Unit - applies to per-class slots in expanded view
   const [unit, setUnit] = useState<AllocationUnit>(() => {
     const stored = localStorage.getItem('schedu-alloc-unit') as AllocationUnit | null
     return stored && UNIT_ORDER.includes(stored) ? stored : 'slots_week'
@@ -1348,7 +1348,7 @@ export function SubjectsPanel({
   function remove(id: string) { undoHistory.push(subjects); setSubjects(subjects.filter(s => s.id !== id)) }
   function add(s: Subject)    { undoHistory.push(subjects); setSubjects([...subjects, s]) }
 
-  // ── Smart create — seed the standard CBSE/NCERT subjects for the current
+  // ── Smart create - seed the standard CBSE/NCERT subjects for the current
   //    class list (grade + stream aware), with per-section slots. Used by the
   //    first-run empty state's "Let me create smartly" choice.
   function handleSmartCreate() {
@@ -1375,7 +1375,7 @@ export function SubjectsPanel({
   }
 
   // ── Local auto-assign (subject-only fallback) ───────────────────────────────
-  // Re-evaluates ALL subjects every run — no "already assigned" guard.
+  // Re-evaluates ALL subjects every run - no "already assigned" guard.
   // buildClassConfigs() preserves any existing per-class slot overrides.
   function localAiAssignAll() {
     if (!sections.length) return
@@ -1435,7 +1435,7 @@ export function SubjectsPanel({
     else localUndoAI()
   }
 
-  // Ctrl+Z handler — fires on keydown bubbled from any focused child input
+  // Ctrl+Z handler - fires on keydown bubbled from any focused child input
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       const prev = undoHistory.undo()
@@ -1481,7 +1481,7 @@ export function SubjectsPanel({
           {subjects.length > 0 && unassignedCount > 0 && (
             <button
               onClick={() => setFilterUnassigned(p => !p)}
-              title={filterUnassigned ? 'Showing only unassigned — click to clear filter' : `Click to show only the ${unassignedCount} unassigned subject${unassignedCount !== 1 ? 's' : ''}`}
+              title={filterUnassigned ? 'Showing only unassigned - click to clear filter' : `Click to show only the ${unassignedCount} unassigned subject${unassignedCount !== 1 ? 's' : ''}`}
               style={{
                 fontSize: 10, fontWeight: 700, padding: '1px 7px 2px', borderRadius: 4,
                 border: `1.5px solid ${filterUnassigned ? '#D97706' : '#FDE68A'}`,
@@ -1544,13 +1544,13 @@ export function SubjectsPanel({
             value={unit}
             onChange={e => setUnit(e.target.value as AllocationUnit)}
             style={{ border: 'none', background: 'transparent', padding: '2px 4px', fontSize: 11, color: P_D, outline: 'none', fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer' }}
-            title="Change academic load display unit — no data lost"
+            title="Change academic load display unit - no data lost"
           >
             {UNIT_ORDER.map(u => <option key={u} value={u}>{ALLOCATION_LABELS[u]}</option>)}
           </select>
         </div>
 
-        {/* Board — readonly badge (set during school profile setup) */}
+        {/* Board - readonly badge (set during school profile setup) */}
         <span
           title="Board set during school profile setup"
           style={{
@@ -1616,7 +1616,7 @@ export function SubjectsPanel({
             onClick={isAiLoading ? undefined : triggerAIAssign}
             disabled={isAiLoading}
             title={hasGlobalAI
-              ? `Auto-assign subjects to relevant classes — ${board} standards`
+              ? `Auto-assign subjects to relevant classes - ${board} standards`
               : `Auto-assign ${unassignedCount} unassigned subject${unassignedCount !== 1 ? 's' : ''} to relevant classes`
             }
             style={{
@@ -1655,7 +1655,7 @@ export function SubjectsPanel({
 
       {sections.length === 0 && (
         <div style={{ margin: '0 0 6px', padding: '5px 10px', background: '#FFFBF0', border: '1px solid #FFE8A0', borderRadius: 5, fontSize: 11, color: '#7A5800', flexShrink: 0 }}>
-          💡 Add classes first — the engine will automatically assign subjects to the right grade levels based on {BOARD_LABELS[board]} curriculum.
+          💡 Add classes first - the engine will automatically assign subjects to the right grade levels based on {BOARD_LABELS[board]} curriculum.
         </div>
       )}
 
@@ -1666,13 +1666,13 @@ export function SubjectsPanel({
             icon={<BookOpen size={26} color={P} />}
             title="No subjects yet"
             subtitle={sections.length === 0
-              ? `Add your classes first — then schedU can build a ${BOARD_LABELS[board]} curriculum for them automatically, or you can enter subjects by hand.`
-              : `Let schedU build the standard ${BOARD_LABELS[board]} subjects for your ${sections.length} class${sections.length !== 1 ? 'es' : ''} — grade- and stream-aware, with periods per week — or start from a blank table.`}
+              ? `Add your classes first - then schedU can build a ${BOARD_LABELS[board]} curriculum for them automatically, or you can enter subjects by hand.`
+              : `Let schedU build the standard ${BOARD_LABELS[board]} subjects for your ${sections.length} class${sections.length !== 1 ? 'es' : ''} - grade- and stream-aware, with periods per week - or start from a blank table.`}
             smartLabel="Let me create smartly"
             smartSubtext={sections.length > 0 ? `${BOARD_LABELS[board]} subjects for ${sections.length} class${sections.length !== 1 ? 'es' : ''}` : undefined}
             onSmart={handleSmartCreate}
             smartDisabled={sections.length === 0}
-            smartDisabledHint="Add at least one class first — smart create reads your class list to pick the right subjects."
+            smartDisabledHint="Add at least one class first - smart create reads your class list to pick the right subjects."
             manualLabel="Add manually"
             manualSubtext="Start with a blank table"
             onManual={() => setManualMode(true)}

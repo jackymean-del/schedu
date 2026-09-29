@@ -19,7 +19,7 @@ import { RouteLoadingFallback } from "./components/RouteLoadingFallback"
 // downstream libs like AG Grid/xlsx pulled in by the wizard) is in the chunk
 // a homepage/marketing visitor downloads. `pendingComponent` gives each route
 // its OWN Suspense boundary (see TanStack Router's Match.js), so only the
-// route content — not the surrounding AppShell — shows the loading fallback.
+// route content - not the surrounding AppShell - shows the loading fallback.
 const DashboardPage  = lazyRouteComponent(() => import("./pages/dashboard"), "DashboardPage")
 const WizardPage     = lazyRouteComponent(() => import("./pages/wizard"), "WizardPage")
 const MasterDataPage = lazyRouteComponent(() => import("./pages/master-data"), "MasterDataPage")
@@ -28,7 +28,7 @@ const SettingsPage   = lazyRouteComponent(() => import("./pages/settings"), "Set
 const InsightsPage   = lazyRouteComponent(() => import("./pages/insights"), "InsightsPage")
 const CalendarPage   = lazyRouteComponent(() => import("./pages/calendar"), "CalendarPage")
 const BoardPage      = lazyRouteComponent(() => import("./pages/board"), "BoardPage")
-// timetable is 4,567 lines and syllabus 1,344 — both were in the chunk every
+// timetable is 4,567 lines and syllabus 1,344 - both were in the chunk every
 // visitor downloads just to see the login screen.
 const TimetablePage  = lazyRouteComponent(() => import("./pages/timetable"), "TimetablePage")
 const SyllabusPage   = lazyRouteComponent(() => import("./pages/syllabus"), "SyllabusPage")
@@ -63,7 +63,7 @@ const profileRoute       = createRoute({ getParentRoute: () => rootRoute, path: 
 const subscriptionRoute  = createRoute({ getParentRoute: () => rootRoute, path: "/subscription",  component: SubscriptionPage, pendingComponent: RouteLoadingFallback })
 const configureRoute     = createRoute({ getParentRoute: () => rootRoute, path: "/configure",     component: ConfigurePage })
 const syllabusRoute      = createRoute({ getParentRoute: () => rootRoute, path: "/syllabus",      component: SyllabusPage, pendingComponent: RouteLoadingFallback })
-// Corridor/staffroom display. Its own full-screen chrome — no sidebar, no topbar.
+// Corridor/staffroom display. Its own full-screen chrome - no sidebar, no topbar.
 const boardRoute         = createRoute({ getParentRoute: () => rootRoute, path: "/board",         component: BoardPage, pendingComponent: RouteLoadingFallback })
 
 export const routeTree = rootRoute.addChildren([

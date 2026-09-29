@@ -36,7 +36,7 @@ export function toMembers(rows: ServerMember[] | undefined): Member[] {
   for (const r of rows ?? []) {
     const email = normEmail(r.email)
     // A row with no email cannot be matched to anybody, and one email cannot
-    // belong to two rows — the server's UNIQUE(owner_id, email) says so, and
+    // belong to two rows - the server's UNIQUE(owner_id, email) says so, and
     // trusting it here would mean a duplicate silently shadowing the first.
     if (!email || seen.has(email)) continue
     seen.add(email)
@@ -57,13 +57,13 @@ export function toMembers(rows: ServerMember[] | undefined): Member[] {
  *
  * A member with no staff name is an account the server cannot match to any
  * lesson: they sign in, see the school listed, and every period reads "not
- * yours to change" — with nothing on screen explaining why. That is worth
+ * yours to change" - with nothing on screen explaining why. That is worth
  * saying on the page that creates them rather than leaving them to discover it.
  */
 export function unmappedMembers(members: Member[]): Member[] {
   // Teachers only. An administrator is the account that OWNS the timetable and
   // is authorised as its owner however they are named; nagging them to map a
-  // staff name they may not have — plenty of heads do not teach — is the kind
+  // staff name they may not have - plenty of heads do not teach - is the kind
   // of warning people learn to scroll past, which costs the real one its force.
   return members.filter(m => m.role === 'teacher' && !(m.staffName ?? '').trim())
 }
@@ -71,7 +71,7 @@ export function unmappedMembers(members: Member[]): Member[] {
 /**
  * Staff names that do not appear on the timetable's roster.
  *
- * A typo here fails the same way an empty name does — silently — because the
+ * A typo here fails the same way an empty name does - silently - because the
  * server compares the member's staff name against the names in the timetable
  * and simply finds nothing.
  */

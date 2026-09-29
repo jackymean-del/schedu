@@ -12,7 +12,7 @@
  * own column so a custom value always reads as a departure from it rather than
  * a number from nowhere.
  *
- * Edits are held as a DRAFT and applied on Save — this changes what the engine
+ * Edits are held as a DRAFT and applied on Save - this changes what the engine
  * will produce for the whole school, which is not something to fire off on every
  * keystroke.
  */
@@ -38,7 +38,7 @@ interface Row {
   label: string
   /** The reference this row would follow if left blank, in hours per week. */
   norm: number
-  /** The school's own figure, in hours per week — undefined when following the norm. */
+  /** The school's own figure, in hours per week - undefined when following the norm. */
   custom?: number
   band?: GradeBand
   cls?: string
@@ -60,7 +60,7 @@ const SCOPE_LABELS: Record<Scope, string> = {
 }
 const SCOPE_HINTS: Record<Scope, string> = {
   band: 'The whole primary/middle/secondary stage, plus the faculty teaching load.',
-  class: 'One year group that differs from its stage — a board-exam class, a half-day nursery.',
+  class: 'One year group that differs from its stage - a board-exam class, a half-day nursery.',
   subject: 'Weekly periods for one subject in one class, overriding the curriculum norm.',
 }
 
@@ -85,7 +85,7 @@ export function WorkloadNormModal({
   const [span, setSpan] = useState<WorkloadSpan>('week')
   /** key → what the admin has typed, in HOURS PER WEEK. '' means "clear it". */
   const [draft, setDraft] = useState<Record<string, string>>({})
-  // Show the country by name — "IN national norms" reads like a bug.
+  // Show the country by name - "IN national norms" reads like a bug.
   const countryName = countryHours(country)?.name ?? country
 
   // Classes the school runs, in school order, each with the band it belongs to.
@@ -106,12 +106,12 @@ export function WorkloadNormModal({
   // narrower grains can't apply.
   const scope: Scope = classes.length ? pickedScope : 'band'
 
-  // Only the bands this school actually runs — a primary school has no business
+  // Only the bands this school actually runs - a primary school has no business
   // being shown senior-secondary norms it will never use.
   const rows: Row[] = useMemo(() => {
     if (scope === 'band') {
-      // Normally only the stages this school runs. With no schedule loaded —
-      // Settings, before any timetable exists — show them all rather than an
+      // Normally only the stages this school runs. With no schedule loaded -
+      // Settings, before any timetable exists - show them all rather than an
       // empty table, since there is nothing yet to narrow by.
       const bands = sections.length
         ? [...new Set(sections.map(s => bandForSection(s.name)))]
@@ -126,7 +126,7 @@ export function WorkloadNormModal({
       out.push({
         key: 'faculty',
         label: 'Faculty (teaching load)',
-        // The SAFE TEACHING norm, not the published total — that is the figure
+        // The SAFE TEACHING norm, not the published total - that is the figure
         // the allocation engine actually falls back to.
         norm: normTeacherHoursWeek(country, periodMinutes),
         custom: teacherMaxHoursWeek,
@@ -136,8 +136,8 @@ export function WorkloadNormModal({
     }
 
     if (scope === 'class') {
-      // The "norm" column here is the STAGE figure this class inherits — the
-      // thing it would follow if left blank — not the national one, so the
+      // The "norm" column here is the STAGE figure this class inherits - the
+      // thing it would follow if left blank - not the national one, so the
       // comparison shown is the one actually being overridden.
       return classes.map(({ cls, band }) => ({
         key: `class:${cls}`,
@@ -150,7 +150,7 @@ export function WorkloadNormModal({
       }))
     }
 
-    // Subject-wise: periods per week, not hours — that is how a curriculum is
+    // Subject-wise: periods per week, not hours - that is how a curriculum is
     // stated, and converting it to hours would only invite rounding.
     const group = getGradeGroup(getGrade(activeClass || 'I'))
     const boardKey = normalizeBoardType(board)
@@ -169,7 +169,7 @@ export function WorkloadNormModal({
 
   /** Hours/week → whatever the admin is currently looking at. */
   const show = (hoursWeek: number): string => {
-    if (!(hoursWeek > 0)) return '—'
+    if (!(hoursWeek > 0)) return '-'
     const periodsWeek = periodsFromHours(hoursWeek, periodMinutes)
     if (span === 'week') return unit === 'hours' ? `${hoursWeek} h` : `${periodsWeek}p`
     const periodsDay = perDayFromPerWeek(periodsWeek, workDays)
@@ -179,7 +179,7 @@ export function WorkloadNormModal({
   /**
    * What the admin typed, back into hours per week for storage.
    *
-   * Storage is hours/week, so an hours entry is kept VERBATIM — converting it
+   * Storage is hours/week, so an hours entry is kept VERBATIM - converting it
    * to periods and back would floor it (15 h at 40 min → 22p → 14.7 h) and hand
    * back a number nobody typed. Only a periods entry needs converting, and that
    * direction is exact.
@@ -194,7 +194,7 @@ export function WorkloadNormModal({
 
   const currentValue = (r: Row): string => {
     if (draft[r.key] !== undefined) return draft[r.key]
-    // Subject rows are always plain weekly periods — the unit/span switches
+    // Subject rows are always plain weekly periods - the unit/span switches
     // don't apply to "how many Maths periods a week", which is already the
     // native way a curriculum states itself.
     if (r.isSubject) return r.customPeriods != null && r.customPeriods > 0 ? String(r.customPeriods) : ''
@@ -259,7 +259,7 @@ export function WorkloadNormModal({
           </button>
         </div>
 
-        {/* minHeight:0 is what actually lets a flex child shrink and scroll —
+        {/* minHeight:0 is what actually lets a flex child shrink and scroll -
             without it the body keeps its content height and pushes the footer
             off-screen regardless of the parent's maxHeight. */}
         <div style={{ padding: 18, flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -284,7 +284,7 @@ export function WorkloadNormModal({
           </div>
           <div style={{ fontSize: 11, color: '#777391', marginBottom: 12 }}>{SCOPE_HINTS[scope]}</div>
 
-          {/* Unit + span switches — the same four ways of stating a load the
+          {/* Unit + span switches - the same four ways of stating a load the
               per-teacher caps accept, so nobody converts by hand. Subject rows
               are always weekly periods, so the switches don't apply there. */}
           <div style={{ display: 'flex', gap: 14, marginBottom: 13, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -334,7 +334,7 @@ export function WorkloadNormModal({
                   <tr key={r.key} style={{ borderTop: '1px solid #F1EFFA' }}>
                     <td style={{ ...td, fontWeight: 600, color: '#13111E' }}>{r.label}</td>
                     <td style={{ ...td, textAlign: 'right', fontFamily: "'DM Mono', monospace", color: '#6D6A8A' }}>
-                      {r.isSubject ? (r.normPeriods ? `${r.normPeriods}p` : '—') : show(r.norm)}
+                      {r.isSubject ? (r.normPeriods ? `${r.normPeriods}p` : '-') : show(r.norm)}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       <input
@@ -377,7 +377,7 @@ export function WorkloadNormModal({
             {scope === 'class' && ' A class figure overrides its stage for that year group only.'}
             {scope === 'subject' && ` Set once for ${activeClass} and it applies to every section of it.`}
             {' '}A custom value takes precedence for every allocation and load-balancing run until you
-            change it again — including the period counts derived on this page.
+            change it again - including the period counts derived on this page.
           </p>
         </div>
 
@@ -429,7 +429,7 @@ function Switch<T extends string>({ label, value, onChange, options }: {
 const th: React.CSSProperties = {
   padding: '7px 10px', fontSize: 10, fontWeight: 800, color: '#6D6A8A',
   textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left',
-  // Sticky within the scrolling body — a long subject list otherwise scrolls
+  // Sticky within the scrolling body - a long subject list otherwise scrolls
   // its own column headings away, leaving three unlabelled numbers.
   position: 'sticky', top: 0, zIndex: 1, background: '#F8F7FF',
 }

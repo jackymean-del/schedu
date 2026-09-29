@@ -66,16 +66,16 @@ export const billingApi = {
 // These five are the whole server-side surface, and they match
 // backend/cmd/server/main.go one for one.
 //
-// This file used to declare 53 endpoints. Forty-four of them — CRUD for
+// This file used to declare 53 endpoints. Forty-four of them - CRUD for
 // classes, teachers, subjects, rooms, students, sessions, profiles, clusters,
 // parallel blocks, bell schedules, a scheduler job runner, per-entity timetable
-// views, and a substitution service — had no route on the backend and no caller
+// views, and a substitution service - had no route on the backend and no caller
 // in the app. They were the shape of an earlier architecture, where the solver
 // ran on the server; it runs in a Web Worker in the browser now, and resources
 // live in the per-schedule snapshot rather than in tables.
 //
 // Left in place they were a trap: `timetableApi.publish()` reads as a working
-// call and returns a 404 in production. Deleted rather than commented out —
+// call and returns a 404 in production. Deleted rather than commented out -
 // git has them if the server-side plan ever comes back.
 
 export const timetableApi = {
@@ -100,7 +100,7 @@ export const timetableApi = {
 export interface MemberRow {
   id: string
   email: string
-  /** How this person is named in the timetable — the join that makes the rest work. */
+  /** How this person is named in the timetable - the join that makes the rest work. */
   staffName: string
   role: 'admin' | 'teacher' | 'viewer'
   status: 'active' | 'invited'
@@ -124,7 +124,7 @@ export interface MySchedule {
 }
 
 export interface OrDecisionRow {
-  /** `section|YYYY-MM-DD|periodId` — the same key lib/orChoice builds. */
+  /** `section|YYYY-MM-DD|periodId` - the same key lib/orChoice builds. */
   key: string
   section: string
   date: string
@@ -141,7 +141,7 @@ export interface OrSlotRow {
   /** The subject running this date, if somebody has decided. */
   decided?: string
   decidedBy?: string
-  /** The subject THIS caller could take here — a hint for the page; the server
+  /** The subject THIS caller could take here - a hint for the page; the server
    *  re-checks every claim regardless. */
   claimable?: string
 }
@@ -155,7 +155,7 @@ export const collabApi = {
     apiClient.get<{ decisions: OrDecisionRow[] }>(
       `/timetables/${timetableId}/or-decisions`, { params: { from, to } }),
 
-  /** The choice periods on one date, from the SCHOOL's timetable — a teacher's
+  /** The choice periods on one date, from the SCHOOL's timetable - a teacher's
    *  own browser holds no copy of it, so without this they could only hand
    *  back decisions that already existed, never take a period. */
   orSlots: (timetableId: string, date: string) =>

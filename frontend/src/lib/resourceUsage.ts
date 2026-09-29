@@ -3,19 +3,19 @@
  *
  * Deleting a row in Master Data removes it from the roster and nothing else.
  * The generated timetable is a separate structure, so a teacher deleted while
- * timetabled leaves her name in every cell she held — and the consequences are
+ * timetabled leaves her name in every cell she held - and the consequences are
  * worse than a cosmetic ghost:
  *
  *   · the timetable, the Live board and the corridor display all still name
  *     her, so a class looks staffed when nobody is coming;
  *   · she can no longer be marked absent, because the absence picker lists the
- *     roster — so those lessons can never be covered;
+ *     roster - so those lessons can never be covered;
  *   · workload and coverage reports count periods against somebody the school
  *     no longer employs.
  *
  * Cascading the delete into the timetable would be worse still: it would
  * silently punch holes in a published schedule the school has already handed
- * out. So the answer is neither — say exactly what the deletion will orphan,
+ * out. So the answer is neither - say exactly what the deletion will orphan,
  * and let the person decide. This module computes that count; the grids show
  * it (see EntityGrids) and the user confirms.
  */
@@ -31,7 +31,7 @@ export interface Usage {
 
 const EMPTY: Usage = { periods: 0, sections: [] }
 
-/** Subjects a cell carries — an OR/AND slot can hold several at once. */
+/** Subjects a cell carries - an OR/AND slot can hold several at once. */
 function cellSubjects(cell: any): string[] {
   if (!cell) return []
   return cell.groupAssignments?.length
@@ -39,7 +39,7 @@ function cellSubjects(cell: any): string[] {
     : (cell.subject ? [cell.subject] : [])
 }
 
-/** Teachers a cell carries — likewise, one per parallel group. */
+/** Teachers a cell carries - likewise, one per parallel group. */
 function cellTeachers(cell: any): string[] {
   if (!cell) return []
   const fromGroups = cell.groupAssignments?.length
@@ -52,7 +52,7 @@ function cellTeachers(cell: any): string[] {
  * How much of the timetable depends on `name`.
  *
  * Matching is by NAME, because that is the only link a generated cell has back
- * to a roster row — cells store names, not ids. A rename is therefore its own
+ * to a roster row - cells store names, not ids. A rename is therefore its own
  * separate hazard, and not one this function can see.
  */
 export function usageOf(classTT: any, kind: ResourceKind, name: string): Usage {
@@ -125,13 +125,13 @@ const listSections = (s: string[]) =>
  * The sentence shown before deleting, or null when nothing is affected.
  *
  * Deliberately states the count and the consequence rather than asking "are
- * you sure?" — the number is the whole reason to hesitate, and a bare
+ * you sure?" - the number is the whole reason to hesitate, and a bare
  * confirmation teaches people to click through.
  */
 export function deleteWarning(kind: ResourceKind, name: string, usage: Usage): string | null {
   if (usage.periods === 0) return null
   const p = `${usage.periods} period${usage.periods === 1 ? '' : 's'}`
-  // Naming the affected classes is the useful half — except for a class, where
+  // Naming the affected classes is the useful half - except for a class, where
   // it would read "I-A holds 3 periods … (I-A)".
   const where = kind === 'section' ? '' : ` (${listSections(usage.sections)})`
   return `${name || 'This row'} ${VERB[kind]} ${p} a week in the generated timetable${where}. `

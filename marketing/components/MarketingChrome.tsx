@@ -1,5 +1,5 @@
 /**
- * Shared chrome for all marketing pages — sticky nav + footer. Mirrors
+ * Shared chrome for all marketing pages - sticky nav + footer. Mirrors
  * frontend/src/components/marketing/MarketingChrome.tsx; internal links use
  * next/link (same-origin), auth CTAs cross to the app subdomain.
  */

@@ -1,4 +1,4 @@
--- SmartSched v3 Schema — PostgreSQL 17 + Drizzle ORM
+-- SmartSched v3 Schema - PostgreSQL 17 + Drizzle ORM
 -- Run: psql $DATABASE_URL -f 001_initial.sql
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

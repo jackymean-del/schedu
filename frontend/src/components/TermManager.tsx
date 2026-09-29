@@ -1,5 +1,5 @@
 /**
- * Academic terms — ADMIN ONLY, same authority as holidays.
+ * Academic terms - ADMIN ONLY, same authority as holidays.
  *
  * Declaring a term doesn't change a single timetable. It changes the WINDOW
  * every hours figure is measured over, which is the difference between "this
@@ -27,7 +27,7 @@ const todayISO = () => {
 const fmt = (s: string) =>
   new Date(`${s}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
-/** Teaching days in a range, weekends excluded — a rough size, not the hours
+/** Teaching days in a range, weekends excluded - a rough size, not the hours
  *  figure, which depends on each schedule's own bell. */
 function weekdaysBetween(start: string, end: string): number {
   const a = new Date(`${start}T00:00:00`), b = new Date(`${end}T00:00:00`)
@@ -69,12 +69,12 @@ export function TermManager({ onSaved }: { onSaved?: () => void }) {
       <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6D6A8A', lineHeight: 1.5 }}>
         Split the year into the periods you report on. The Syllabus page can then measure hours,
         pace and time remaining per term instead of across the whole schedule. Timetables are not
-        affected — this only changes what the figures are measured over.
+        affected - this only changes what the figures are measured over.
       </p>
 
       {terms.length === 0 && (
         <div style={emptyBox}>
-          No terms declared. Every figure is measured across each schedule's full run — which is
+          No terms declared. Every figure is measured across each schedule's full run - which is
           fine for a school that doesn't split its year.
         </div>
       )}
@@ -109,7 +109,7 @@ export function TermManager({ onSaved }: { onSaved?: () => void }) {
           {gaps.map((g, i) => (
             <div key={i}>
               {g.days} day{g.days === 1 ? '' : 's'} between <strong>{g.after.name}</strong> and{' '}
-              <strong>{g.before.name}</strong> — expected if that's the break, worth checking if not.
+              <strong>{g.before.name}</strong> - expected if that's the break, worth checking if not.
             </div>
           ))}
         </div>

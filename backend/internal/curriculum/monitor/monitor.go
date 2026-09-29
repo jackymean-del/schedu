@@ -16,7 +16,7 @@ import (
 // configurable schedule, detects content changes via SHA-256 hash comparison,
 // and hands changed documents to the parser for diff generation.
 //
-// Detected changes are stored as pending curriculum_changes rows — they are
+// Detected changes are stored as pending curriculum_changes rows - they are
 // NEVER auto-applied. An admin must approve each change via the review API.
 type Monitor struct {
 	sourceSvc  *sources.Service
@@ -121,7 +121,7 @@ func (m *Monitor) processSource(ctx context.Context, src curriculum.Source) {
 		return
 	}
 
-	// 304 Not Modified — server confirmed no change.
+	// 304 Not Modified - server confirmed no change.
 	if result.NotModified {
 		slog.Debug("curriculum monitor: source not modified (304)",
 			"source_id", src.ID, "url", src.URL)
@@ -155,7 +155,7 @@ func (m *Monitor) processSource(ctx context.Context, src curriculum.Source) {
 		return
 	}
 
-	slog.Info("curriculum monitor: source changed — queuing parse",
+	slog.Info("curriculum monitor: source changed - queuing parse",
 		"source_id", src.ID, "board", src.Board, "name", src.Name)
 
 	// Hand off to parser asynchronously so one slow parse doesn't block the loop.

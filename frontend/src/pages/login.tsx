@@ -1,8 +1,8 @@
 /**
- * Sign-in page — custom schedU UI, powered by real Clerk auth (custom flow).
+ * Sign-in page - custom schedU UI, powered by real Clerk auth (custom flow).
  *
  * The presentational <LoginCard> is identical regardless of backend; a
- * controller supplies the handlers — Clerk when configured, the local mock
+ * controller supplies the handlers - Clerk when configured, the local mock
  * store otherwise. Email/password uses signIn.create; Google uses Clerk OAuth.
  */
 
@@ -35,7 +35,7 @@ const FAKE_GOOGLE_USERS = [
 function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
   onEmailSignIn: (email: string, password: string) => Promise<void>
   onGoogle: () => Promise<void>
-  /** True in local mock mode (no Clerk key) — shows a "demo mode" notice. */
+  /** True in local mock mode (no Clerk key) - shows a "demo mode" notice. */
   mock?: boolean
 }) {
   const [email, setEmail] = useState('')
@@ -95,12 +95,12 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
               sched<span style={{ color: '#685DBC', fontFamily: "'Plus Jakarta Sans', Georgia, serif", fontStyle: 'italic' }}>U</span>
             </span>
           </a>
-          <p style={{ fontSize: 13, color: '#69707E', marginTop: 2 }}>Human-Intelligence scheduling — built from real experience</p>
+          <p style={{ fontSize: 13, color: '#69707E', marginTop: 2 }}>Human-Intelligence scheduling - built from real experience</p>
         </div>
 
         {mock && (
           <div style={{ marginBottom: 18, padding: '9px 12px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12, lineHeight: 1.5 }}>
-            ⚠️ <strong>Demo mode</strong> — real sign-in isn’t configured. Sign-ins here are simulated. Set <code>VITE_CLERK_PUBLISHABLE_KEY</code> to enable real authentication.
+            ⚠️ <strong>Demo mode</strong> - real sign-in isn’t configured. Sign-ins here are simulated. Set <code>VITE_CLERK_PUBLISHABLE_KEY</code> to enable real authentication.
           </div>
         )}
 
@@ -178,7 +178,7 @@ function ClerkLogin() {
     if (authLoaded && isSignedIn) window.location.replace('/dashboard')
   }, [authLoaded, isSignedIn])
   const onEmailSignIn = async (email: string, password: string) => {
-    if (!isLoaded || !signIn) throw new Error('Authentication is still loading — please try again.')
+    if (!isLoaded || !signIn) throw new Error('Authentication is still loading - please try again.')
     const res = await signIn.create({ identifier: email, password })
     if (res.status === 'complete') {
       await setActive({ session: res.createdSessionId })
@@ -196,7 +196,7 @@ function ClerkLogin() {
     })
   }
   // While Clerk is still resolving the session, or an already-signed-in user is
-  // being redirected to the app, show the branded loader — not the form. This
+  // being redirected to the app, show the branded loader - not the form. This
   // kills the "login form flashes for a moment after sign-in" glitch.
   if (!authLoaded || isSignedIn) return <BrandedLoader label="Signing you in…" />
   return <LoginCard onEmailSignIn={onEmailSignIn} onGoogle={onGoogle} />

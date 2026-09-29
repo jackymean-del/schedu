@@ -1,11 +1,11 @@
 /**
- * Period Allocation Engine — the master document's "STEP 6".
+ * Period Allocation Engine - the master document's "STEP 6".
  *
  *   "System automatically generates: Subject | Weekly Periods … based on
  *    CBSE norms, working days, period duration, academic hours."
  *
- * Inputs are the four things the school has already told us — board, working
- * days, period duration, and the student hours/week norm from Step 0 — plus the
+ * Inputs are the four things the school has already told us - board, working
+ * days, period duration, and the student hours/week norm from Step 0 - plus the
  * subject→class assignment made in Resources. The OUTPUT is weekly periods per
  * subject per section. Nobody types those.
  *
@@ -19,7 +19,7 @@
  * become the source of truth.
  *
  * Here the norm is the source of truth and the admin's override is an explicit
- * exception on top — which is the order Blueprint v6 asks for (Step 0's figure
+ * exception on top - which is the order Blueprint v6 asks for (Step 0's figure
  * "becomes the seed input to the allocation engine used in Step 5", and Step 5
  * is where load is edited).
  */
@@ -65,11 +65,11 @@ export interface SectionAllocation {
   capacity: number
   /** Periods the student-hours norm implies (undefined when no norm applies). */
   normPeriods?: number
-  /** The cap actually used — the lower of capacity and the norm. */
+  /** The cap actually used - the lower of capacity and the norm. */
   target: number
   /** Sum of the board's ideal figures before scaling. */
   totalIdeal: number
-  /** Sum after scaling — never above target. */
+  /** Sum after scaling - never above target. */
   totalSlots: number
   /** True when the curriculum asked for more than the timetable can hold. */
   scaled: boolean
@@ -135,7 +135,7 @@ export function scaleToTarget(ideal: number[], target: number): number[] {
 }
 
 /**
- * Derive weekly periods for every (section, subject) — the whole point of the
+ * Derive weekly periods for every (section, subject) - the whole point of the
  * engine. `overrides` are explicit per-section figures the admin set on Mapping;
  * they replace the derived value and are excluded from scaling so an override
  * can't be silently trimmed away.
@@ -168,7 +168,7 @@ export function deriveWeeklySlots(
     const capacity = Math.max(0, input.capacityFor(section))
     const normHours = input.studentHoursWeekFor?.(section)
     const normPeriods = normHours != null ? periodsForHours(normHours, input.periodMinutes) : undefined
-    // The norm is a target, the bell is a hard ceiling — take the lower.
+    // The norm is a target, the bell is a hard ceiling - take the lower.
     const target = normPeriods != null && normPeriods > 0 ? Math.min(capacity || normPeriods, normPeriods) : capacity
 
     const fixed = rows.filter(r => r.overridden)
@@ -198,7 +198,7 @@ export type ManualCells = Record<string, Record<string, true>>
  * a cell, their figure stands until they clear it.
  *
  * Manual cells survive even when the derivation no longer produces that
- * (section, subject) at all — deleting someone's entry because the curriculum
+ * (section, subject) at all - deleting someone's entry because the curriculum
  * norm stopped suggesting the subject would be the same silent loss in a
  * different disguise.
  */
@@ -214,7 +214,7 @@ export function mergePreservingManual(
   for (const section in manual) {
     for (const subject in manual[section]) {
       const value = current?.[section]?.[subject]
-      if (value == null || value === '') continue      // cleared — let the norm apply again
+      if (value == null || value === '') continue      // cleared - let the norm apply again
       if (!grid[section]) grid[section] = {}
       // Only counts as "kept" when it actually differs from what we'd derive;
       // reporting cells that happen to match would overstate the rescue.

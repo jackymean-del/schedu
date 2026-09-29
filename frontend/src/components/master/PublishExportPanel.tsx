@@ -1,11 +1,11 @@
 /**
- * PublishExportPanel — modal for exporting / publishing a generated timetable.
+ * PublishExportPanel - modal for exporting / publishing a generated timetable.
  *
  * Four export shapes:
- *   1. Class timetables  (XLSX)  — one sheet per section, periods × days grid
- *   2. Teacher timetables (XLSX) — one sheet per teacher, periods × days grid
- *   3. Master data        (CSV)  — flat row-per-assignment interchange format
- *   4. Print / PDF        (HTML) — opens new tab, auto-triggers browser print
+ *   1. Class timetables  (XLSX)  - one sheet per section, periods × days grid
+ *   2. Teacher timetables (XLSX) - one sheet per teacher, periods × days grid
+ *   3. Master data        (CSV)  - flat row-per-assignment interchange format
+ *   4. Print / PDF        (HTML) - opens new tab, auto-triggers browser print
  *
  * Options
  *   • Show teacher name in cell
@@ -207,7 +207,7 @@ export function PublishExportPanel({ onClose, exportOptions }: Props) {
         setDone(d => [...d, 'print'])
       }
 
-      // The button reads "Publish & Export" — actually mark the timetable
+      // The button reads "Publish & Export" - actually mark the timetable
       // published once the chosen exports have succeeded (previously nothing
       // in the app ever set this, so a "published" timetable still showed as
       // a draft on the dashboard).

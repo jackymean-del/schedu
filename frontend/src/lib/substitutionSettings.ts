@@ -1,5 +1,5 @@
 /**
- * Substitution Settings — how Calendar ranks and auto-picks substitute
+ * Substitution Settings - how Calendar ranks and auto-picks substitute
  * teachers. Lives on the active schedule (persisted via the timetable
  * snapshot, same as `substitutions` itself) so different academic years or
  * schools using the same account can tune this independently.
@@ -32,7 +32,7 @@ export interface SubstitutionDefaults {
    *
    * NOT the same thing as Staff.maxPeriodsPerDay, which is the regular teaching
    * cap the scheduling engine enforces when building the timetable. This one is
-   * higher by design — a school will let someone exceed their normal daily shape
+   * higher by design - a school will let someone exceed their normal daily shape
    * to cover an absence, but not without limit.
    */
   maxPeriodsPerDay: number
@@ -85,7 +85,7 @@ export function effectiveMaxPerWeek(settings: SubstitutionSettings, staffId: str
   return overrideFor(settings, staffId).maxSubsPerWeek ?? settings.defaults.maxSubstitutesPerWeek
 }
 
-/** Combined weighted score — higher is better. Match tier dominates (scaled
+/** Combined weighted score - higher is better. Match tier dominates (scaled
  *  up ×100) so it always outranks workload/balance tie-breaking, which then
  *  decides between otherwise-equal candidates. */
 export function scoreCandidate(weights: ScoringWeights, params: {
@@ -108,14 +108,14 @@ export function scoreCandidate(weights: ScoringWeights, params: {
  *
  * These settings are persisted per schedule, so a snapshot saved before a field
  * existed comes back without it. The read site used `settings ?? DEFAULTS`,
- * which only helps when the WHOLE object is absent — a partial one passes
+ * which only helps when the WHOLE object is absent - a partial one passes
  * straight through, and the first read of `weights.dailyWorkloadBalance` throws.
  * That took out the calendar entirely: the ops console a school uses every
  * morning to arrange cover, replaced by an error boundary, because one nested
  * key was added after they last saved.
  *
  * Merged per group rather than deeply, because these three are flat records of
- * scalars — and facultyOverrides is a map of real per-teacher decisions, so it
+ * scalars - and facultyOverrides is a map of real per-teacher decisions, so it
  * is taken as-is rather than merged against a default that has no entries.
  */
 export function withSubstitutionDefaults(stored: Partial<SubstitutionSettings> | null | undefined): SubstitutionSettings {

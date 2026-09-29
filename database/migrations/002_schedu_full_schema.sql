@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- Migration 002 — Schedu Full Schema
+-- Migration 002 - Schedu Full Schema
 -- Adds all tables for the complete Schedu academic scheduling model
 -- ═══════════════════════════════════════════════════════════════
 

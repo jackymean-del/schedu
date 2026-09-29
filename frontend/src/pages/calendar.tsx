@@ -1,5 +1,5 @@
 /**
- * Calendar — scheduling operations console.
+ * Calendar - scheduling operations console.
  *
  * Day view: a clean time-axis grid (entity rows × wall-clock columns) with
  * colored session cells, a live current-time cursor, and Faculty / Classes /
@@ -73,11 +73,11 @@ const EVENT_TYPES = [
 ] as const
 
 // ── timeline geometry ──────────────────────────────────────────
-// Generous scale + gap keep cells readable at a glance — a period's subject
+// Generous scale + gap keep cells readable at a glance - a period's subject
 // name should never need truncation, just a two-line wrap at worst.
 const ENTITY_W   = 196   // left entity column width (px)
 const PX_PER_MIN = 3.05  // horizontal scale
-const ROW_H      = 122   // entity row height — fits title + teacher + venue + time lines
+const ROW_H      = 122   // entity row height - fits title + teacher + venue + time lines
 const RULER_H    = 54    // time-ruler header height
 const CELL_GAP   = 9
 
@@ -96,7 +96,7 @@ const DURATIONS = [
 ]
 interface Block {
   key: string
-  title: string          // primary line — the CLASS in faculty/venue lenses, the subject in class lens
+  title: string          // primary line - the CLASS in faculty/venue lenses, the subject in class lens
   chip?: string          // subject shown as a coloured chip when it isn't the title
   line2: string; room: string
   startMin: number; endMin: number
@@ -106,9 +106,9 @@ interface Block {
   brk?: boolean          // a break/assembly/dispersal slot, not a lesson
 }
 
-// Amber identity for task blocks — visually distinct from any subject colour.
+// Amber identity for task blocks - visually distinct from any subject colour.
 const TASK_COLOR: SubjectColor = { accent: '#B45309', bg: '#B453091A' }
-// Softer amber for break/assembly/dispersal blocks — same family as TASK_COLOR
+// Softer amber for break/assembly/dispersal blocks - same family as TASK_COLOR
 // (and Live's BREAK_BAND) but a paler fill so it doesn't compete with a real
 // substitution/task block if they ever land in the same row.
 const BREAK_COLOR: SubjectColor = { accent: '#C2760B', bg: '#FBEBD2' }
@@ -143,7 +143,7 @@ function toISODate(d: Date): string {
 
 // Flat list of every scheduled cell for one weekday across a set of schedule
 // bundles, each carrying its own wall-clock start/end and any substitution.
-// Called with the VISIBLE (view-scoped) bundles — the Day/Month grid and
+// Called with the VISIBLE (view-scoped) bundles - the Day/Month grid and
 // Live's busy/free detection both reflect only what the multi-active picker
 // currently shows (see viewIds above). Cross-schedule clash prevention for
 // actual scheduling actions (substitution candidacy, task anchoring) is a
@@ -157,7 +157,7 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string, isoDate: string) 
   for (const b of srcs) {
     const wd: string[] = b.config?.workDays?.length ? b.config.workDays : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
     wd.forEach(d => workUnion.add(d))
-    // Teacher name -> shared directory link (store/directoryStore.ts), if any —
+    // Teacher name -> shared directory link (store/directoryStore.ts), if any -
     // lets teacherClashes below tell "confirmed, same directoryId" apart from
     // "same name only" instead of treating every name match identically.
     const directoryIdByName = new Map<string, string>()
@@ -183,7 +183,7 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string, isoDate: string) 
   }
   if (!isFinite(lo)) { lo = 540; hi = 900 }
   // One representative break/assembly/dispersal schedule per bundle (not per
-  // section — staggered per-class break times are a Live/class-view nuance;
+  // section - staggered per-class break times are a Live/class-view nuance;
   // here we just need "is this schedule on a break right now" for the grid).
   const breaksByBundle: Record<string, { periodId: string; name: string; startMin: number; endMin: number }[]> = {}
   for (const b of srcs) {
@@ -199,7 +199,7 @@ function buildGridData(srcs: ScheduleBundle[], dayKey: string, isoDate: string) 
   return { cells, timeById, gridStart: lo, gridEnd: hi, isWorkDay: workUnion.has(dayKey), breaksByBundle }
 }
 
-/** Shared empty fallbacks — see the store reads below for why they are not
+/** Shared empty fallbacks - see the store reads below for why they are not
  *  written inline. */
 const NO_ROWS: any[] = []
 const NO_MAP: Record<string, any> = {}
@@ -237,7 +237,7 @@ export function CalendarPage() {
   // to whoever typed it. See lib/schoolEvents.
   const events = useSchoolEvents(s => s.events)
   const saveEvents = useSchoolEvents(s => s.setEvents)
-  // Add-Event modal — holds the ISO date it should open on (null = closed), so
+  // Add-Event modal - holds the ISO date it should open on (null = closed), so
   // a click on a month cell adds to THAT day, not whatever day is selected.
   const [addOpen, setAddOpen] = useState<string | null>(null)
 
@@ -300,7 +300,7 @@ export function CalendarPage() {
   const isWorkDay = workDays.includes(dayKey)
 
   // ── School holidays (admin) ────────────────────────────────────────────
-  // Declared once and shared with Settings and the Syllabus coverage maths —
+  // Declared once and shared with Settings and the Syllabus coverage maths -
   // this page is just a second, more natural place to declare one: click the
   // day on the calendar. The hours each subject loses are DERIVED from the
   // timetable (lib/holidays), so a holiday added here updates lost classes and
@@ -308,16 +308,16 @@ export function CalendarPage() {
   const { holidays, addHoliday, removeHoliday } = useHolidays()
   const periodMinutes = config.periodMinutes ?? 40
   // Blueprint v6 splits these rights (see lib/permissions): declaring a holiday
-  // removes teaching time from the whole school, so it is an admin action —
+  // removes teaching time from the whole school, so it is an admin action -
   // unlike a teacher logging one missed period of their own.
   const canManageHolidays = useCan('holiday.manage')
   const canMarkAbsence = useCan('absence.mark')
   const canArrangeCover = useCan('cover.arrange')
   const canManageEvents = useCan('event.manage')
-  /** Every class-section name — the vocabulary of every "applies to" picker. */
+  /** Every class-section name - the vocabulary of every "applies to" picker. */
   const sectionNames: string[] = sections.map((s: any) => s.name).filter(Boolean)
 
-  /** Hours the school loses to a prospective holiday on `iso` — the same
+  /** Hours the school loses to a prospective holiday on `iso` - the same
    *  derivation the real thing uses, run on a throwaway holiday. An empty
    *  `scope` means the whole school. */
   const holidayHoursOn = (iso: string, scope?: string[]): number =>
@@ -391,7 +391,7 @@ export function CalendarPage() {
   }, [multiActive, rawBundles, activeScheduleId, sections, staff, rooms, subjects, periods, classTT, substitutions, config.startTime])
 
   const bundleById = (sid: string): ScheduleBundle => sources.find(b => b.id === sid) ?? sources[0]
-  // Substitute pool spans every active schedule's staff (deduped by name) — a
+  // Substitute pool spans every active schedule's staff (deduped by name) - a
   // free teacher in any active timetable can cover, subject to their caps.
   const staffPool = useMemo(() => {
     if (!multiActive) return staff
@@ -400,17 +400,17 @@ export function CalendarPage() {
     return out
   }, [multiActive, sources, staff])
 
-  // Which active schedules the Day/Month grid and Live rows currently show —
+  // Which active schedules the Day/Month grid and Live rows currently show -
   // "All" (null) by default, or a chosen subset via the card picker below.
   // This is a genuine FOCUS filter: in-session/free-now on Live, and the
-  // Day/Month grid, all reflect ONLY the selected schedule(s)' own teaching —
+  // Day/Month grid, all reflect ONLY the selected schedule(s)' own teaching -
   // a teacher who's a member of the visible schedule but currently mid-lesson
   // in a HIDDEN schedule shows as free here, not busy (confirmed desired
-  // behavior — the hidden schedule's activity is simply out of view, the same
+  // behavior - the hidden schedule's activity is simply out of view, the same
   // way it would be if that teacher didn't teach there at all). Substitution
   // candidacy (busyIn/candidatesFor) and task anchoring (anchorFor) are a
   // SEPARATE, unaffected code path that always checks every active schedule
-  // directly via `sources` — actual double-booking prevention when arranging
+  // directly via `sources` - actual double-booking prevention when arranging
   // cover or assigning a task doesn't depend on what this filter shows.
   const [viewIds, setViewIds] = useState<string[] | null>(null)
   const visibleSources = useMemo(() => {
@@ -424,7 +424,7 @@ export function CalendarPage() {
   const gridData = useMemo(() => buildGridData(visibleSources, dayKey, isoDate), [visibleSources, dayKey, isoDate])
 
   // A schedule exists to show when ANY schedule currently in view has actually
-  // been generated — not just the single open one, so switching "All" on with
+  // been generated - not just the single open one, so switching "All" on with
   // a not-yet-generated schedule open (but another active one populated)
   // doesn't show a false empty state.
   const hasTimetable = multiActive
@@ -434,11 +434,11 @@ export function CalendarPage() {
   // Cross-schedule teacher clash: the same staff NAME is scheduled to teach in
   // two different active schedules at overlapping wall-clock times on the
   // selected day. The app's multi-active model treats teacher identity as a
-  // name string (deliberately — so one real teacher working across schedules
+  // name string (deliberately - so one real teacher working across schedules
   // is recognized as busy in one when checked from another). That means two
   // DIFFERENT people who happen to share an auto-generated/placeholder name
   // (e.g. two independently-wizard-generated "Mathematics Teacher 4"s) look
-  // identical to the app — one of them silently disappears behind the other
+  // identical to the app - one of them silently disappears behind the other
   // in Teachers-mode Live view instead of surfacing as a problem. Flag it
   // instead. Deliberately scans ALL active schedules (not just the picker's
   // visible subset) since this is a data problem the school needs to see
@@ -450,7 +450,7 @@ export function CalendarPage() {
   //   - directoryId missing on one/both → same as before, name-only signal.
   //   - directoryId present but DIFFERENT on both sides → the school already
   //     told the app these are two distinct people (e.g. via the Directory
-  //     tab or a deliberate "keep separate" during Add) — don't re-alarm on
+  //     tab or a deliberate "keep separate" during Add) - don't re-alarm on
   //     a coincidence that's already been resolved.
   const teacherClashes = useMemo(() => {
     if (!multiActive) return [] as { teacher: string; a: DayCell; b: DayCell; confirmed: boolean }[]
@@ -518,7 +518,7 @@ export function CalendarPage() {
   }
   const onLeave = (teacher: string) => isOnLeaveOn(leaves, teacher, isoDate)
 
-  // Periods the given teacher covers on the selected day — across EVERY active
+  // Periods the given teacher covers on the selected day - across EVERY active
   // schedule, each slot tagged with the schedule (sid) that owns it so cover is
   // written back to the right timetable. Single-active spans only the open one.
   const slotsOf = (teacher: string) => {
@@ -562,7 +562,7 @@ export function CalendarPage() {
     return { reg, sub }
   }
 
-  // Wall-clock busy check ACROSS other active schedules — a candidate free in
+  // Wall-clock busy check ACROSS other active schedules - a candidate free in
   // the open schedule may be teaching in another at the same clock time (their
   // bells differ), which would be a real double-booking.
   const bundleWallTimes = (b: ScheduleBundle) => {
@@ -585,7 +585,7 @@ export function CalendarPage() {
           if (!c?.subject) continue
           // A substitute replaces the whole slot; otherwise ANY teacher in the
           // cell counts. Reading only c.teacher made a teacher mid-lesson in a
-          // parallel group look free — so this offered them as a substitute
+          // parallel group look free - so this offered them as a substitute
           // and created the double-booking itself.
           const cover = b.substitutions[subKey(s.name, isoDate, pid)]
           // …and an OR period runs only ONE of its subjects, so the option
@@ -689,8 +689,8 @@ export function CalendarPage() {
     else { patchBundleSubstitutions(uid, sid, next); setSubNonce(n => n + 1) }
   }
   // ── The syllabus side of a cover (Blueprint v6) ───────────────────────────
-  // Arranging cover stays one click. Whoever is doing it — often in a hurry,
-  // often before the day has even happened — can't know what the substitute
+  // Arranging cover stays one click. Whoever is doing it - often in a hurry,
+  // often before the day has even happened - can't know what the substitute
   // will actually teach, so we don't ask. The period is logged with no effect
   // on any figure, and the subject's own teacher says what happened on the
   // Syllabus page, where they're already ticking chapters.
@@ -709,7 +709,7 @@ export function CalendarPage() {
     recordCoverage({
       date: isoDate, sid, section, periodId,
       subject: cell?.subject ?? '', absent: cell?.teacher ?? '', substitute: subName,
-      // Logged, not judged — 'skip' has no effect on any figure until the
+      // Logged, not judged - 'skip' has no effect on any figure until the
       // subject teacher says what actually happened.
       intent: 'skip',
       hours: periodHours(sid, periodId),
@@ -722,7 +722,7 @@ export function CalendarPage() {
   }
 
   // ── urgent pull-out helpers ───────────────────────────────────────────────
-  // Rooms with nothing scheduled at this period in the owning schedule — the
+  // Rooms with nothing scheduled at this period in the owning schedule - the
   // pool an in-session venue can be swapped into when pulled for a task.
   const freeRoomsAt = (sid: string, periodId: string, exceptRoom: string): string[] => {
     const tb = bundleById(sid)
@@ -772,7 +772,7 @@ export function CalendarPage() {
 
   const clearPullout = (id: string) => updatePullouts(pullouts.filter(p => p.id !== id))
   // Auto-assign the best candidate to every uncovered slot of the absent
-  // teacher — only among faculty flagged Auto (not Manual) in Faculty Settings.
+  // teacher - only among faculty flagged Auto (not Manual) in Faculty Settings.
   // Slots can span several schedules, so writes are batched per owning schedule.
   const autoAssign = (teacher: string) => {
     const bySid: Record<string, Record<string, string>> = {}
@@ -789,7 +789,7 @@ export function CalendarPage() {
       if (best) {
         map[key] = best.name
         ;(usedAtClock[clock] ??= new Set()).add(best.name)
-        // Auto-assigned cover gets the same syllabus record as a manual one —
+        // Auto-assigned cover gets the same syllabus record as a manual one -
         // it starts as "continues the syllabus" and is still unconfirmed, so it
         // shows up for the absent teacher to confirm exactly like the rest.
         recordCoverage({
@@ -810,12 +810,12 @@ export function CalendarPage() {
       const key = `${c.sid}|${c.section}|${c.periodId}`
       // An urgent pull-out for this exact slot on this date overrides the
       // effective teacher/room: the original is gone (on a task), the
-      // replacement stands in — a teacher pull-out even overrides any recurring
+      // replacement stands in - a teacher pull-out even overrides any recurring
       // substitution. Empty replacement = the slot is left uncovered.
       const cov = coverFor(pullouts, isoDate, c.sid, c.section, c.periodId)
       const effT = cov?.kind === 'teacher' ? (cov.teacher ?? '') : (c.sub || c.teacher || '')
       const effR = cov?.kind === 'room' ? (cov.room ?? '') : (c.room || '')
-      // `sub` drives the "covered" chip styling — set when this slot is covered
+      // `sub` drives the "covered" chip styling - set when this slot is covered
       // (by a recurring sub or a pull-out) so all lenses flag it.
       const subChip = cov?.kind === 'teacher' ? (cov.teacher || undefined) : (c.sub || undefined)
       if (mode === 'class') {
@@ -833,7 +833,7 @@ export function CalendarPage() {
       }
     }
     // Free-slot assignments for this entity today render as dashed TASK blocks.
-    // Resolve each task's time against ITS OWN schedule's bell (a.sid) — the
+    // Resolve each task's time against ITS OWN schedule's bell (a.sid) - the
     // flat gridData.timeById can collide when two schedules share a periodId.
     // Legacy untagged records (a.sid undefined) fall back to the open schedule.
     if (mode !== 'subject') {
@@ -858,7 +858,7 @@ export function CalendarPage() {
         }
       }
     }
-    // Break/assembly/dispersal blocks — one per schedule this entity actually
+    // Break/assembly/dispersal blocks - one per schedule this entity actually
     // belongs to, using that schedule's own (representative) bell. Only for
     // class/teacher: room/subject aren't tied to one schedule's break clock.
     if (mode === 'class' || mode === 'teacher') {
@@ -885,7 +885,7 @@ export function CalendarPage() {
     else if (mode === 'teacher') list = staff.map(s => ({ id: s.name, name: s.name }))
     else if (mode === 'room') {
       // Union of defined venues and any venue referenced inline in the
-      // schedule, so a playground assigned on a cell still gets a row — and
+      // schedule, so a playground assigned on a cell still gets a row - and
       // shows as "Empty now" in Live when unoccupied.
       const names = new Set<string>()
       for (const r of rooms) {
@@ -913,7 +913,7 @@ export function CalendarPage() {
     return q ? list.filter(e => e.name.toLowerCase().includes(q)) : list
   }, [mode, sections, staff, rooms, subjects, classTT, dayKey, query])
 
-  // Day-grid entity rows — the UNION across VISIBLE (view-scoped) schedules
+  // Day-grid entity rows - the UNION across VISIBLE (view-scoped) schedules
   // (single-active reduces to the same set as entityList). Live's rows and its
   // busy/free detection both use this same visible scope (see viewIds above).
   const gridEntities = useMemo(() => {
@@ -951,12 +951,12 @@ export function CalendarPage() {
   const liveStart = multiActive ? gridStart : dayStart
   const liveEnd = multiActive ? gridEnd : dayEnd
   const clampDay = (m: number) => Math.max(liveStart, Math.min(liveEnd, m))
-  // Following the clock on TODAY means the real minute — never clamped into
+  // Following the clock on TODAY means the real minute - never clamped into
   // the school day. Clamping used to force the moment onto the day's edge, so
   // at 00:52 the board read "Assembly · 15 min left" and the header froze at
   // the day's end all evening. Outside the day there is simply no active
   // period, which is what "Before/After school" and the idle board want.
-  // (The scrubber handle clamps its own position — see MomentScrubber.)
+  // (The scrubber handle clamps its own position - see MomentScrubber.)
   const activeScrub = scrub ?? (viewingToday ? nowMin : clampDay(nowMin))
 
   const dayEvents = events
@@ -964,7 +964,7 @@ export function CalendarPage() {
     .filter(e => eventCoversDate(e, toISODate(date)))
     .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
 
-  // Month view: what each weekday actually holds — session count plus the
+  // Month view: what each weekday actually holds - session count plus the
   // distinct classes / teachers / venues / subjects in play that day.
   const statsByDay = useMemo(() => {
     const out: Record<string, { sessions: number; classes: number; teachers: number; venues: number; subjects: number }> = {}
@@ -1021,7 +1021,7 @@ export function CalendarPage() {
             </div>
           </div>
 
-          {/* Wraps on a phone — this row ran to 500px on a 375px screen and the
+          {/* Wraps on a phone - this row ran to 500px on a 375px screen and the
               icon actions were clipped out of reach. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             {canManageEvents && (
@@ -1039,11 +1039,11 @@ export function CalendarPage() {
                 <Plus size={18} strokeWidth={2.6} /> Add Event
               </button>
             )}
-            {/* Derived from the schedule's own timings — the sheet a school
+            {/* Derived from the schedule's own timings - the sheet a school
                 actually pins up in the corridor and the office. */}
             <button title="Bell schedule" aria-label="Bell schedule" onClick={() => setBellOpen(true)} style={iconBtn}><Bell size={17} /></button>
             {/* Opens in its own tab because that tab is what gets left running
-                on the corridor screen — navigating away from it is the whole
+                on the corridor screen - navigating away from it is the whole
                 thing you don't want to do. */}
             <button title="Open corridor display" aria-label="Open corridor display" onClick={() => window.open('/board', '_blank')} style={iconBtn}><Monitor size={17} /></button>
             {canArrangeCover && (
@@ -1137,7 +1137,7 @@ export function CalendarPage() {
           </div>
         )}
 
-        {/* Cross-schedule teacher clash banner — see teacherClashes above for why
+        {/* Cross-schedule teacher clash banner - see teacherClashes above for why
             this can happen even without any OR/AND group configured. Confirmed
             (same directoryId on both sides) and unconfirmed (name-only match,
             no directory link yet) render as separate groups so a school with a
@@ -1167,14 +1167,14 @@ export function CalendarPage() {
                     {confirmed.map((cl, i) => <ClashLine key={i} cl={cl} />)}
                   </div>
                   <div style={{ fontSize: 11, color: '#9F1239', marginTop: 6 }}>
-                    Same directory entry in both schedules — this is the same real person, genuinely booked twice.
+                    Same directory entry in both schedules - this is the same real person, genuinely booked twice.
                   </div>
                 </div>
               )}
               {unconfirmed.length > 0 && (
                 <div style={{ padding: '10px 14px', borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#78350F' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 800, color: '#B45309', marginBottom: 6 }}>
-                    <AlertTriangle size={14} /> {unconfirmed.length} possible name clash{unconfirmed.length > 1 ? 'es' : ''} — not yet linked in your directory
+                    <AlertTriangle size={14} /> {unconfirmed.length} possible name clash{unconfirmed.length > 1 ? 'es' : ''} - not yet linked in your directory
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {unconfirmed.map((cl, i) => <ClashLine key={i} cl={cl} />)}
@@ -1188,7 +1188,7 @@ export function CalendarPage() {
           )
         })()}
 
-        {/* Multi-active picker — All + one card per active schedule. Toggling
+        {/* Multi-active picker - All + one card per active schedule. Toggling
             individual schedules scopes what the grid/Live board SHOW; cross-
             schedule clash checks (busy detection, sub availability, task
             anchoring) always span every active schedule regardless of this. */}
@@ -1236,7 +1236,7 @@ export function CalendarPage() {
           </div>
         )}
 
-        {/* A declared holiday changes what every row below means — say so once,
+        {/* A declared holiday changes what every row below means - say so once,
             at the top, rather than leaving a full grid of lessons that won't run. */}
         {view !== 'month' && holidays.some(h => h.date === isoDate) && (
           <div style={{
@@ -1247,7 +1247,7 @@ export function CalendarPage() {
             <CalendarDays size={14} />
             <strong>
               {holidays.filter(h => h.date === isoDate).every(h => h.sections?.length) ? 'Holiday' : 'School holiday'}
-              {' — '}
+              {' - '}
               {holidays.filter(h => h.date === isoDate)
                 .map(h => `${h.name} (${describeScope(h.sections, sectionNames)})`).join(', ')}
             </strong>
@@ -1298,7 +1298,7 @@ export function CalendarPage() {
             <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, overflow: 'hidden' }}>
               <div className="cal-scroll" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '70vh' }}>
                 <div style={{ minWidth: ENTITY_W + gridTrackW }}>
-                  {/* Ruler — sticky to the top of the scroll pane; its entity-
+                  {/* Ruler - sticky to the top of the scroll pane; its entity-
                       label cell is ALSO sticky to the left, so the top-left
                       corner stays pinned through scrolling in either direction. */}
                   <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 3, background: 'linear-gradient(#FBFAFF,#F4F2FE)', borderBottom: '1px solid #ECE9FB' }}>
@@ -1456,7 +1456,7 @@ export function CalendarPage() {
       )}
 
       {taskFor && (() => {
-        // Work history for this resource — powers the fairness note and the
+        // Work history for this resource - powers the fairness note and the
         // "recent extra work" list inside the dialog.
         const history = assignments
           .filter(a => a.kind === taskFor.kind && a.entity === taskFor.entity && a.date <= isoDate)
@@ -1497,11 +1497,11 @@ export function CalendarPage() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  Live view — the schedule as a scrubbable moment in time.
+//  Live view - the schedule as a scrubbable moment in time.
 //  Drag the timeline to travel through the day; the board shows what
 //  every class / teacher / venue is doing at that exact minute, with a
 //  progress ring per session. In the Faculty and Venue lenses it also
-//  surfaces who's free / what's empty right now — an original take, not a grid.
+//  surfaces who's free / what's empty right now - an original take, not a grid.
 // ══════════════════════════════════════════════════════════════
 interface LiveActivity {
   id: string
@@ -1510,8 +1510,8 @@ interface LiveActivity {
   sub: string
   color: SubjectColor
   elapsed: number; total: number
-  sid: string; sname: string   // owning schedule — groups "In session" by timetable
-  // Slot context for the in-session lesson — enables "pull out for urgent task"
+  sid: string; sname: string   // owning schedule - groups "In session" by timetable
+  // Slot context for the in-session lesson - enables "pull out for urgent task"
   // (present only on busy teacher/venue cards).
   slot?: { kind: PullKind; section: string; periodId: string; subject: string; original: string }
 }
@@ -1560,7 +1560,7 @@ function LiveBoard(props: {
     return cov?.kind === 'room' ? (cov.room ?? '') : (c.room ?? '')
   }
 
-  // With several schedules live, "the active period" dissolves — each bell runs
+  // With several schedules live, "the active period" dissolves - each bell runs
   // its own periods, so at a given wall-clock minute one group can be mid-lesson
   // while another is on break. We drive the whole board off the flat cross-
   // schedule cell list (each cell already carries its own wall-clock interval)
@@ -1647,7 +1647,7 @@ function LiveBoard(props: {
   // "Free Now" eligibility is deliberately stricter than the In-session display
   // above: an idle-in-the-VISIBLE-schedules entity must ALSO be genuinely free
   // in every OTHER active schedule (visible or not) before it's offered as
-  // assignable — a resource busy in a hidden schedule should never be handed a
+  // assignable - a resource busy in a hidden schedule should never be handed a
   // task right now. This is the one place multi-active Live still looks past
   // the picker's selection; everything else (In-session grouping, the Day/
   // Month grid) reflects the selection exactly.
@@ -1671,7 +1671,7 @@ function LiveBoard(props: {
   // The (schedule, period) that "this slot" means for a given idle entity right
   // now. Single-active: the one concrete period at the scrub instant, owned by
   // the open schedule. Multi-active: a synthetic 'live'/'gap' id stands in for
-  // "the moment" overall, which isn't a real period on any one bell — so for
+  // "the moment" overall, which isn't a real period on any one bell - so for
   // each entity we find a schedule it actually belongs to (preferring the open
   // one) whose OWN bell has a teaching period covering the scrub instant, and
   // anchor the task to that. A room with no matching schedule (or a moment
@@ -1687,7 +1687,7 @@ function LiveBoard(props: {
       const isMember =
         assignKind === 'teacher' ? b.staff.some((s: any) => s.name === name) :
         assignKind === 'class'   ? b.sections.some((s: any) => s.name === name) :
-        true // rooms are shared physical resources — any active schedule's bell is eligible
+        true // rooms are shared physical resources - any active schedule's bell is eligible
       if (!isMember) continue
       const times = schedulePeriodTimes(b.config, b.periods, b.sections)
       for (const [pid, t] of times) {
@@ -1702,7 +1702,7 @@ function LiveBoard(props: {
 
   // Split idle into "on assignment" (given a task for this slot) vs truly free.
   // Anyone busyElsewhere (occupied in another active schedule right now) is
-  // skipped entirely — not free, not offered a task, genuinely unavailable.
+  // skipped entirely - not free, not offered a task, genuinely unavailable.
   const onTask: { entity: string; a: FreeAssignment }[] = []
   const onPull: { entity: string; p: UrgentPullout }[] = []
   const free: string[] = []
@@ -1734,7 +1734,7 @@ function LiveBoard(props: {
 
   // Fair-pick ordering: today's total load (lessons + extra duties) per free
   // resource, lightest first by default so the fairest choice is always the
-  // first chip — with a toggle to flip the order.
+  // first chip - with a toggle to flip the order.
   const [freeSort, setFreeSort] = useState<'light' | 'heavy'>('light')
   const loadOf = (name: string): number => {
     // Multi-active load spans every schedule the resource appears in (the cell
@@ -1851,7 +1851,7 @@ function LiveBoard(props: {
         {!active ? (
           <Idle icon="🌙" text={scrub < dayStart ? 'The school day hasn’t started yet.' : 'The school day has ended.'} />
         ) : isBreak ? (
-          <Idle icon="☕" text={`${active.name ?? 'Break'} — no classes in session right now.`} />
+          <Idle icon="☕" text={`${active.name ?? 'Break'} - no classes in session right now.`} />
         ) : (
           <>
             {busy.length > 0 && (
@@ -1862,7 +1862,7 @@ function LiveBoard(props: {
                     {(() => {
                       const withCards = visibleSchedules.filter(sch => busy.some(b => b.sid === sch.id))
                       return (
-                        // Fixed N-track grid — one column per selected timetable, always
+                        // Fixed N-track grid - one column per selected timetable, always
                         // side by side. A schedule with many entries just grows its own
                         // column taller (and wraps 2-3 cards per row inside it); it never
                         // pushes another schedule's column onto a new line the way a
@@ -1905,7 +1905,7 @@ function LiveBoard(props: {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#777391', marginBottom: 2 }}>{entity} <span style={{ color: '#C2410C', fontWeight: 800 }}>· pulled out</span></div>
                         <div style={{ fontSize: 13.5, fontWeight: 800, color: '#C2410C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>⚡ {p.task}</div>
-                        <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.replacement ? `${p.section} covered by ${p.replacement}` : `${p.section} — uncovered`}</div>
+                        <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.replacement ? `${p.section} covered by ${p.replacement}` : `${p.section} - uncovered`}</div>
                       </div>
                       <button onClick={() => onClearPull(p.id)} title="Undo pull-out"
                         style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#D08A5C', display: 'inline-flex', flexShrink: 0 }}>
@@ -1933,7 +1933,7 @@ function LiveBoard(props: {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                   <SectionLabel text={`${idleLabel} · ${free.length}`} tone="#777391" />
-                  {/* Segmented sort — you click the order you want and the
+                  {/* Segmented sort - you click the order you want and the
                       selected option stays highlighted, so there's no
                       "does the label mean current state or the action?" doubt. */}
                   {assignKind && free.length > 1 && (
@@ -1960,8 +1960,8 @@ function LiveBoard(props: {
                       <button key={name}
                         onClick={() => onAssignTask(assignKind!, name, anchor.sid, anchor.periodId, anchor.periodName, anchor.sname)}
                         title={multiActive
-                          ? `${load} on the plate today — assign a task for this slot (${anchor.sname})`
-                          : `${load} on the plate today — assign a task for this slot`}
+                          ? `${load} on the plate today - assign a task for this slot (${anchor.sname})`
+                          : `${load} on the plate today - assign a task for this slot`}
                         className="cal-free-chip"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 8, background: '#fff', border: '1px solid #ECE9FB', fontSize: 12.5, fontWeight: 600, color: '#69707E', cursor: 'pointer', fontFamily: 'inherit' }}>
                         {name}
@@ -2048,12 +2048,12 @@ function Idle({ icon, text }: { icon: string; text: string }) {
 // One band per period on the scrubber, coloured by what the school is doing:
 // violet = teaching, amber = break. A mixed moment (some classes in class,
 // others on break / without a period) renders as horizontal strips whose
-// heights are proportional to each share — so the timeline itself tells the
+// heights are proportional to each share - so the timeline itself tells the
 // day's story at a glance.
 interface ScrubSegment { id: string; name?: string; startMin: number; endMin: number; isBreak: boolean; teachFrac: number }
 
-const TEACH_BAND = '#B9AFF0'   // violet — darker in grayscale
-const BREAK_BAND = '#F7D9A0'   // amber — clearly lighter in grayscale
+const TEACH_BAND = '#B9AFF0'   // violet - darker in grayscale
+const BREAK_BAND = '#F7D9A0'   // amber - clearly lighter in grayscale
 
 // Draggable day timeline: click or drag anywhere to seek; shows activity
 // bands, break shares, and a live "now" tick.
@@ -2088,7 +2088,7 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
           const teachPct = seg.isBreak ? 0 : Math.round(seg.teachFrac * 100)
           const title = seg.isBreak ? (seg.name ?? 'Break')
             : teachPct >= 100 ? (seg.name ?? 'Period')
-            : `${seg.name ?? 'Period'} — ${teachPct}% of classes in session`
+            : `${seg.name ?? 'Period'} - ${teachPct}% of classes in session`
           return (
             <div key={seg.id} title={title} style={{
               position: 'absolute', left: `${left}%`, width: `${w}%`, top: 6, bottom: 6,
@@ -2114,7 +2114,7 @@ function MomentScrubber({ dayStart, dayEnd, value, onChange, nowMin, segments, h
         {nowMin !== null && nowMin >= dayStart && nowMin <= dayEnd && (
           <div style={{ position: 'absolute', left: `${pct(nowMin)}%`, top: 0, bottom: 0, width: 2, background: '#EF4444', opacity: 0.5, pointerEvents: 'none' }} />
         )}
-        {/* handle — the moment can legitimately sit outside the school day
+        {/* handle - the moment can legitimately sit outside the school day
             (before/after hours while following the clock), so pin the handle
             to the track's edge rather than letting it render off-scale. */}
         <div style={{ position: 'absolute', left: `${handlePct}%`, top: -3, bottom: -3, width: 3, background: '#685DBC', borderRadius: 3, transform: 'translateX(-50%)', pointerEvents: 'none', boxShadow: '0 0 0 3px rgba(124,111,224,0.18)' }} />
@@ -2138,7 +2138,7 @@ function SessionCell({ b, dayStart, h24, top, height }: {
   b: Block; dayStart: number; h24: boolean; top: number; height: number
 }) {
   const left = (b.startMin - dayStart) * PX_PER_MIN + CELL_GAP / 2
-  // Break/assembly slots are often short (10-20 min) — the 76px legibility
+  // Break/assembly slots are often short (10-20 min) - the 76px legibility
   // floor for lesson cells would visually bleed into the next (non-overlapping
   // in time) block, so breaks get a much smaller floor.
   const width = Math.max(b.brk ? 28 : 76, (b.endMin - b.startMin) * PX_PER_MIN - CELL_GAP)
@@ -2168,7 +2168,7 @@ function SessionCell({ b, dayStart, h24, top, height }: {
       {b.chip && (
         <span style={{ alignSelf: 'flex-start', maxWidth: '100%', fontSize: 10.5, fontWeight: 800, color: '#fff', background: accent, padding: '1.5px 8px', borderRadius: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>{b.chip}</span>
       )}
-      {/* Who / where / when — one calm line each, nothing hidden behind “…”. */}
+      {/* Who / where / when - one calm line each, nothing hidden behind “…”. */}
       {compact ? (
         <>{(b.line2 || b.room) && <div style={metaLine}>{[b.line2, b.room].filter(Boolean).join(' · ')}</div>}</>
       ) : (
@@ -2197,7 +2197,7 @@ function EmptyState() {
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>
       <div style={{ fontSize: 38, marginBottom: 12 }}>🗓️</div>
       <h3 style={{ fontSize: 17, fontWeight: 800, color: '#13111E', margin: '0 0 6px' }}>No schedule generated yet</h3>
-      <p style={{ fontSize: 13.5, color: '#6D6A8A', margin: '0 0 18px' }}>Complete the wizard to generate a schedule — it will appear here automatically.</p>
+      <p style={{ fontSize: 13.5, color: '#6D6A8A', margin: '0 0 18px' }}>Complete the wizard to generate a schedule - it will appear here automatically.</p>
       <a href="/dashboard" style={{ display: 'inline-block', padding: '10px 22px', background: '#685DBC', color: '#fff', borderRadius: 10, fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>Go to Dashboard</a>
     </div>
   )
@@ -2213,7 +2213,7 @@ function RestDay({ day }: { day: string }) {
 }
 
 // ── Month grid (planning view) ─────────────────────────────────
-/** What a day-of-week actually holds in the schedule — shown on month cells. */
+/** What a day-of-week actually holds in the schedule - shown on month cells. */
 interface DayStats { sessions: number; classes: number; teachers: number; venues: number; subjects: number }
 
 function MonthGrid({
@@ -2235,7 +2235,7 @@ function MonthGrid({
   const today = new Date()
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)]
   while (cells.length % 7 !== 0) cells.push(null)
-  // A multi-day event belongs to every day it covers — an exam fortnight that
+  // A multi-day event belongs to every day it covers - an exam fortnight that
   // appeared only on its first Monday was the reason nobody trusted the month.
   const evByDay: Record<number, CalEvent[]> = {}
   events.forEach(e => {
@@ -2250,7 +2250,7 @@ function MonthGrid({
     if (!isNaN(d.getTime()) && d.getFullYear() === y && d.getMonth() === m) (holByDay[d.getDate()] ??= []).push(h)
   })
 
-  // Day the admin is marking (ISO) — the inline "mark this day" panel.
+  // Day the admin is marking (ISO) - the inline "mark this day" panel.
   const [markOn, setMarkOn] = useState<string | null>(null)
   const isoOf = (d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 
@@ -2298,7 +2298,7 @@ function MonthGrid({
                       <span style={{ fontSize: 10, fontWeight: 800, color: '#685DBC', background: '#EFEBFF', padding: '1px 7px', borderRadius: 9 }}>{st.sessions}</span>
                     )}
                     {isAdmin && (
-                      <button className="cal-mark-btn" title="Mark this day — holiday or event"
+                      <button className="cal-mark-btn" title="Mark this day - holiday or event"
                         onClick={e => { e.stopPropagation(); setMarkOn(iso) }}
                         style={{
                           width: 18, height: 18, borderRadius: 6, border: '1px solid #E0DBF2', background: '#fff',
@@ -2309,7 +2309,7 @@ function MonthGrid({
                   </span>
                 </div>
               )}
-              {/* Declared holidays first — they change what the rest of the day means. */}
+              {/* Declared holidays first - they change what the rest of the day means. */}
               {hols.map(h => (
                 <div key={h.id} title={`${h.name} · ${describeScope(h.sections, sections)}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 700, color: '#92400E', background: '#FDE68A', borderRadius: 5, padding: '2px 4px 2px 6px', marginBottom: 3 }}>
@@ -2325,7 +2325,7 @@ function MonthGrid({
                   )}
                 </div>
               ))}
-              {/* Day workload — hidden when the whole school is off, where
+              {/* Day workload - hidden when the whole school is off, where
                   nothing is actually taught; kept when only a class is out. */}
               {st && st.sessions > 0 && !wholeSchoolOff && (
                 <div style={{ fontSize: 9.5, fontWeight: 600, color: '#777391', lineHeight: 1.5, marginBottom: evs.length ? 4 : 0 }}>
@@ -2363,7 +2363,7 @@ function MonthGrid({
 }
 
 /**
- * Mark a day from the calendar — Blueprint v6 ("admin can set an ad hoc missed
+ * Mark a day from the calendar - Blueprint v6 ("admin can set an ad hoc missed
  * day at any point"). Two outcomes, deliberately one click apart:
  *   - Holiday  → declared school-wide; the periods that day were carrying are
  *                derived from the timetable and removed from every subject's
@@ -2392,7 +2392,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       {/* Height-bounded so a school with many classes can't push the header and
-          the Declare button off-screen — see WorkloadNormModal for the same. */}
+          the Declare button off-screen - see WorkloadNormModal for the same. */}
       <div style={{
         width: '100%', maxWidth: 460, maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
@@ -2420,7 +2420,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
                   onKeyDown={e => { if (e.key === 'Enter') onHoliday(name, scope) }}
                   style={inp} />
               </div>
-              {/* Not every closure is school-wide — an exam, a trip or a local
+              {/* Not every closure is school-wide - an exam, a trip or a local
                   observance can take one class out while the rest teach on. */}
               <ScopePicker sections={sections} value={scope} onChange={setScope} />
               <div style={{
@@ -2430,7 +2430,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
                 color: lost > 0 ? '#92400E' : '#4B5275',
               }}>
                 {lost > 0
-                  ? <>Declaring this for <strong>{scopePhrase(scope, sections)}</strong> removes <strong>{lost} teaching hours</strong> from the syllabus time available — every affected subject's remaining hours update at once.</>
+                  ? <>Declaring this for <strong>{scopePhrase(scope, sections)}</strong> removes <strong>{lost} teaching hours</strong> from the syllabus time available - every affected subject's remaining hours update at once.</>
                   : <>Nothing is scheduled for {scopePhrase(scope, sections)} on this weekday, so no teaching hours are lost.</>}
               </div>
               <button onClick={() => onHoliday(name, scope)}
@@ -2442,7 +2442,7 @@ function MarkDayModal({ iso, sections, hoursLostOn, alreadyHoliday, onClose, onH
 
           <div style={{ borderTop: '1px solid #F1EFFA', paddingTop: 13 }}>
             <div style={{ fontSize: 12, color: '#6D6A8A', marginBottom: 8 }}>
-              Classes still running that day? Add it as an event instead — nothing is deducted.
+              Classes still running that day? Add it as an event instead - nothing is deducted.
             </div>
             <button onClick={onEvent}
               style={{ padding: '10px 16px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', color: '#4B5275', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -2461,7 +2461,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   /** Every class-section, so an event can be narrowed to some of them. */
   sections: string[]
   onClose: () => void; onCreate: (e: CalEvent) => void
-  /** Picking the "Holiday" type here declares a real holiday too — otherwise
+  /** Picking the "Holiday" type here declares a real holiday too - otherwise
    *  the label would be decoration and coverage would silently over-count. */
   onDeclareHoliday: (iso: string, name: string, scope?: string[]) => void
   hoursLostOn: (iso: string, scope?: string[]) => number
@@ -2477,7 +2477,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   const [scope, setScope] = useState<string[]>([])
   // Whether normal lessons stop. An exam or a sports day says yes; a staff
   // meeting says no. Pre-answered from the type, because that is the honest
-  // default for each, but always the admin's call — see lib/schoolEvents.
+  // default for each, but always the admin's call - see lib/schoolEvents.
   const [suspends, setSuspends] = useState(false)
   const suspendsTouched = useRef(false)
   useEffect(() => {
@@ -2554,13 +2554,13 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
               The end date is before the start date.
             </div>
           )}
-          {/* An exam, assembly or trip rarely involves every class — say who
+          {/* An exam, assembly or trip rarely involves every class - say who
               it's for, and (for a holiday) only their hours come off. */}
           <div style={{ marginBottom: 14 }}>
             <ScopePicker sections={sections} value={scope} onChange={setScope} label="Applies to" />
           </div>
           {/* Does the timetable actually stop? A coloured chip that changes no
-              hours is what made events untrustworthy — a fortnight of board
+              hours is what made events untrustworthy - a fortnight of board
               exams left every subject's "remaining hours" untouched. */}
           {type !== 'holiday' && (
             <label style={{
@@ -2580,7 +2580,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
                 {suspends
                   ? <> These periods come off the syllabus time available{spanDays > 1 ? <>, across all <strong>{spanDays} days</strong></> : null}.
                     Staff are still in, so this is not a holiday; nobody will be asked to cover a period that isn't running.</>
-                  : <> Leave this unticked for anything that doesn't displace a lesson — a staff meeting, an after-hours event. Hours stay as they are.</>}
+                  : <> Leave this unticked for anything that doesn't displace a lesson - a staff meeting, an after-hours event. Hours stay as they are.</>}
               </span>
             </label>
           )}
@@ -2590,7 +2590,7 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
               background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
             }}>
               {hoursLostOn(when, scope) > 0
-                ? <>This also declares a holiday for <strong>{scopePhrase(scope, sections)}</strong> — <strong>{hoursLostOn(when, scope)} teaching hours</strong> come off the syllabus time available, and every affected subject's remaining hours update at once.</>
+                ? <>This also declares a holiday for <strong>{scopePhrase(scope, sections)}</strong> - <strong>{hoursLostOn(when, scope)} teaching hours</strong> come off the syllabus time available, and every affected subject's remaining hours update at once.</>
                 : <>This also declares a holiday for {scopePhrase(scope, sections)}. Nothing is scheduled on this weekday, so no teaching hours are lost.</>}
             </div>
           )}
@@ -2736,7 +2736,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ width: 38, height: 38, borderRadius: 10, background: '#E8F0FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Repeat size={18} color="#2563EB" /></span>
             <div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E' }}>Arrange cover — {teacher}</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#13111E' }}>Arrange cover - {teacher}</div>
               <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>{dayLabel} · {covered}/{slots.length} period{slots.length !== 1 ? 's' : ''} covered</div>
             </div>
           </div>
@@ -2840,7 +2840,7 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
                     {current && (
                       <div style={{ borderTop: '1px solid #F2F0FB', paddingTop: 10, fontSize: 11.5, color: '#777391' }}>
                         Logged for the syllabus record. {slot.subject}'s teacher confirms what was
-                        actually covered on the Syllabus page — coverage doesn't move until they do.
+                        actually covered on the Syllabus page - coverage doesn't move until they do.
                       </div>
                     )}
                   </div>
@@ -2907,12 +2907,12 @@ function PulloutModal({ target, terms, onClose, onConfirm }: {
           <Field label={`Cover ${target.section} with (${kindLabel.toLowerCase()})`}>
             {target.suggestions.length > 0 ? (
               <select value={replacement} onChange={e => setReplacement(e.target.value)} style={inp}>
-                {target.suggestions.map((s, i) => <option key={s} value={s}>{s}{i === 0 ? ' — best free pick' : ''}</option>)}
-                <option value="">— leave uncovered —</option>
+                {target.suggestions.map((s, i) => <option key={s} value={s}>{s}{i === 0 ? ' - best free pick' : ''}</option>)}
+                <option value="">- leave uncovered -</option>
               </select>
             ) : (
               <div style={{ fontSize: 12.5, color: '#B45309', fontWeight: 600 }}>
-                No free {kindLabel.toLowerCase()} is available for this period — the lesson will be left uncovered.
+                No free {kindLabel.toLowerCase()} is available for this period - the lesson will be left uncovered.
               </div>
             )}
           </Field>
@@ -2951,14 +2951,14 @@ function AssignTaskModal({ target, date, terms, history, weekCount, multiActive,
   const name = target.entity
   const advisory =
     target.kind === 'teacher'
-      ? weekCount === 0 ? { text: `This would be ${name}’s first extra duty this week — a fair pick. 👍`, tone: '#0A8136' }
-      : weekCount <= 2 ? { text: `${name} has taken ${weekCount} extra dut${weekCount === 1 ? 'y' : 'ies'} this week — still a reasonable ask.`, tone: '#B45309' }
-      : { text: `Heads up — ${name} already has ${weekCount} extra duties this week. Someone lighter might be fairer.`, tone: '#DC2626' }
+      ? weekCount === 0 ? { text: `This would be ${name}’s first extra duty this week - a fair pick. 👍`, tone: '#0A8136' }
+      : weekCount <= 2 ? { text: `${name} has taken ${weekCount} extra dut${weekCount === 1 ? 'y' : 'ies'} this week - still a reasonable ask.`, tone: '#B45309' }
+      : { text: `Heads up - ${name} already has ${weekCount} extra duties this week. Someone lighter might be fairer.`, tone: '#DC2626' }
     : target.kind === 'room'
       ? weekCount === 0 ? { text: `${name} hasn’t been booked for anything extra this week.`, tone: '#0A8136' }
       : { text: `${name} has ${weekCount} extra booking${weekCount === 1 ? '' : 's'} this week.`, tone: '#B45309' }
       : weekCount === 0 ? { text: `No extra activities for ${name} this week yet.`, tone: '#0A8136' }
-      : { text: `${name} has had ${weekCount} extra activit${weekCount === 1 ? 'y' : 'ies'} this week — keep the balance in mind.`, tone: '#B45309' }
+      : { text: `${name} has had ${weekCount} extra activit${weekCount === 1 ? 'y' : 'ies'} this week - keep the balance in mind.`, tone: '#B45309' }
 
   const fmtHist = (iso: string) => { const d = new Date(iso + 'T00:00:00'); return `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` }
 
@@ -2987,7 +2987,7 @@ function AssignTaskModal({ target, date, terms, history, weekCount, multiActive,
         </div>
 
         <div style={{ padding: 22 }}>
-          {/* Fairness note — schedU talking like a colleague, not a dashboard */}
+          {/* Fairness note - schedU talking like a colleague, not a dashboard */}
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: `${advisory.tone}10`, border: `1px solid ${advisory.tone}33`, borderRadius: 10, padding: '10px 13px', marginBottom: 16 }}>
             <span style={{ width: 8, height: 8, borderRadius: 4, background: advisory.tone, marginTop: 5, flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#3F3A55', lineHeight: 1.45 }}>{advisory.text}</span>
@@ -3011,7 +3011,7 @@ function AssignTaskModal({ target, date, terms, history, weekCount, multiActive,
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Any detail worth remembering…" style={inp} />
           </Field>
 
-          {/* Recent extra work — so the decision is informed, right here */}
+          {/* Recent extra work - so the decision is informed, right here */}
           {history.length > 0 && (
             <div style={{ marginTop: 2 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#777391', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Recent extra work</div>
@@ -3020,7 +3020,7 @@ function AssignTaskModal({ target, date, terms, history, weekCount, multiActive,
                   <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5 }}>
                     <span style={{ width: 62, flexShrink: 0, fontWeight: 700, color: '#777391' }}>{fmtHist(h.date)}</span>
                     <span style={{ fontWeight: 700, color: '#3F3A55', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title}</span>
-                    {h.note && <span style={{ color: '#777489', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>— {h.note}</span>}
+                    {h.note && <span style={{ color: '#777489', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>- {h.note}</span>}
                   </div>
                 ))}
               </div>

@@ -55,7 +55,7 @@ export function buildPeriodSequenceFromCw(
 ): Period[] {
   const result: Period[] = [...fixedStartBreaks]
 
-  // Canonical: one break per afterPeriod — prefer lunch then longest
+  // Canonical: one break per afterPeriod - prefer lunch then longest
   const byPos = new Map<number, typeof cwBrks[0]>()
   for (const brk of cwBrks) {
     const ex = byPos.get(brk.afterPeriod)
@@ -99,10 +99,10 @@ function isTeacherBusy(
 // ─── Find Available Teacher ───────────────────────────────
 // Priority ladder (each step only reached if the previous yields nothing):
 //  1. Subject-match  + not double-booked  + under maxPeriodsPerWeek  → least-loaded first
-//  2. Subject-match  + not double-booked  (at/over limit — spread the overload evenly)
+//  2. Subject-match  + not double-booked  (at/over limit - spread the overload evenly)
 //  3. Any staff      + not double-booked  + under maxPeriodsPerWeek
-//  4. Any staff      + not double-booked  (unavoidable double-book — least loaded)
-//  5. Any staff (last resort — generates a conflict)
+//  4. Any staff      + not double-booked  (unavoidable double-book - least loaded)
+//  5. Any staff (last resort - generates a conflict)
 function findTeacher(
   subjectName: string, day: string, periodId: string,
   staff: Staff[], classTT: ClassTimetable,
@@ -131,7 +131,7 @@ function findTeacher(
   const anyFree = staff.filter(notBusy)
   if (anyFree.length) return anyFree.sort(byLoad)[0].name
 
-  // 5. Last resort — will register as a double-booking conflict
+  // 5. Last resort - will register as a double-booking conflict
   return [...staff].sort(byLoad)[0]?.name ?? ''
 }
 
@@ -192,7 +192,7 @@ export function generateTimetable(
         }
 
         // Try to avoid the same subject appearing more than twice in a single day
-        // for this section — rotate through alternatives if needed
+        // for this section - rotate through alternatives if needed
         const dayKey = (sub: Subject) => `${sec.name}|${day}|${sub.name}`
         const maxSameDay = (subject as any).maxPeriodsPerDay ?? 2
         if ((subjectDayCount[dayKey(subject)] ?? 0) >= maxSameDay) {
@@ -296,7 +296,7 @@ export function rebuildTeacherTT(
   })
 }
 
-// ─── Shift Period — swap A↔B in ALL class TTs ────────────
+// ─── Shift Period - swap A↔B in ALL class TTs ────────────
 export function shiftPeriod(
   periods: Period[],
   classTT: ClassTimetable,
@@ -323,13 +323,13 @@ export function shiftPeriod(
         dayData[pB.id] = tmp
       })
     })
-    // Return unchanged period array — headers stay
+    // Return unchanged period array - headers stay
     return periods
   } else {
     // CASE 2: Break ↔ Period
     // Just swap the positions in the periods array.
     // The renderer uses period.id to look up cell data, so data automatically 
-    // follows the period to its new position — no cell data manipulation needed.
+    // follows the period to its new position - no cell data manipulation needed.
     newPeriods[indexA] = pB
     newPeriods[indexB] = pA
     return newPeriods
@@ -408,7 +408,7 @@ export function autoAssign(
     maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2,
     classConfigs: sub.classConfigs ?? [],
     // Preserve any already-scoped sections; only fall back to empty (all classes)
-    // when none were ever assigned — do NOT assign every section to every subject.
+    // when none were ever assigned - do NOT assign every section to every subject.
     sections: sub.sections?.length ? sub.sections : [],
   }))
 

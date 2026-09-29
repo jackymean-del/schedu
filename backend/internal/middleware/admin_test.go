@@ -29,7 +29,7 @@ func TestParseAdmins(t *testing.T) {
 }
 
 // Fiber v3 takes middleware variadically AFTER the handler, so the registration
-// reads as though the handler runs first. It does not — but that is worth
+// reads as though the handler runs first. It does not - but that is worth
 // pinning rather than trusting, because getting it backwards would leave the
 // route wide open while looking exactly like this.
 func TestRequireAdminRunsBeforeTheHandler(t *testing.T) {
@@ -78,7 +78,7 @@ func TestRequireAdminRunsBeforeTheHandler(t *testing.T) {
 }
 
 // A refusal has to be actionable. Enabling these endpoints means putting the
-// caller's own id in ADMIN_CLERK_IDS, so the refusal says what that id is —
+// caller's own id in ADMIN_CLERK_IDS, so the refusal says what that id is -
 // otherwise the only way to learn it is the Clerk dashboard, for a value the
 // request already carried.
 func TestRequireAdminRefusalNamesTheCallersOwnId(t *testing.T) {

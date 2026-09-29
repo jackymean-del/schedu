@@ -1,5 +1,5 @@
 /**
- * Global workload limits — a school-wide override for the max weekly hours the
+ * Global workload limits - a school-wide override for the max weekly hours the
  * planner will schedule for TEACHERS (all of them) and for CHILDREN (per grade
  * band). Persisted globally (not per-schedule), so it applies to every schedule
  * the user generates. When a value is unset, the national norm from the
@@ -16,7 +16,7 @@ import { resolveCountryInput, detectCountry } from '@/lib/countryHours'
 interface WorkloadLimitsState {
   /**
    * The education system this school operates under (ISO-3166 alpha-2, or
-   * 'OECD' for the average). Held at SCHOOL level rather than per-schedule —
+   * 'OECD' for the average). Held at SCHOOL level rather than per-schedule -
    * per Blueprint v5, a school's country doesn't change between schedule
    * cycles, so capturing it once and reading it everywhere avoids re-asking.
    */
@@ -26,13 +26,13 @@ interface WorkloadLimitsState {
   /** Max instructional hours/week per grade band (missing band ⇒ national norm). */
   studentMaxHoursWeek: Partial<Record<GradeBand, number>>
   /**
-   * Instructional hours/week for one CLASS — "Class V runs 25 h while the rest
+   * Instructional hours/week for one CLASS - "Class V runs 25 h while the rest
    * of Primary runs 22.5". Blueprint v6 Step 5: "User can edit load class-wise."
    * Missing class ⇒ fall back to its band.
    */
   studentMaxHoursWeekByClass: Record<string, number>
   /**
-   * Weekly periods for one SUBJECT within one class — the finest grain, and the
+   * Weekly periods for one SUBJECT within one class - the finest grain, and the
    * one that overrides the curriculum knowledge base. class → subject → periods.
    * Missing entry ⇒ fall back to the board norm for that subject.
    */
@@ -113,7 +113,7 @@ export function rememberSignupCountry(input: string | null | undefined): void {
 }
 
 /**
- * Seed the school country from the browser when nothing has been chosen yet —
+ * Seed the school country from the browser when nothing has been chosen yet -
  * timezone first, then locale. Never overwrites an explicit choice, and returns
  * the code it settled on (or undefined if it couldn't tell).
  */

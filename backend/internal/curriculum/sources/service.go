@@ -9,7 +9,7 @@ import (
 	"github.com/jackymean-del/smart-sched/internal/curriculum"
 )
 
-// Service orchestrates source management — seeding, listing, and status.
+// Service orchestrates source management - seeding, listing, and status.
 type Service struct {
 	repo *Repository
 }

@@ -1,13 +1,13 @@
 /**
- * THE SMARTBOARD — a corridor or staffroom display.
+ * THE SMARTBOARD - a corridor or staffroom display.
  *
  * Read from four metres away by someone walking past, so: very large type, no
  * navigation, no controls that matter, dark by default because it sits on a
  * screen that is on all day. It refreshes itself; nobody touches it.
  *
  * It answers three questions and refuses to pad. What is on now, when does the
- * bell go, and is any class sitting without a teacher. The derivation — and in
- * particular every awkward state, which is where a board earns or loses trust —
+ * bell go, and is any class sitting without a teacher. The derivation - and in
+ * particular every awkward state, which is where a board earns or loses trust -
  * lives in lib/smartboard so it can be tested at 7am, mid-lesson and midnight.
  */
 import { useEffect, useMemo, useState } from 'react'
@@ -81,7 +81,7 @@ export function BoardPage() {
   const dayKey = DAY_KEY[now.getDay()]
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  // Why there might be no lessons — three different sources, one answer.
+  // Why there might be no lessons - three different sources, one answer.
   const holidayToday = holidays.find(h => h.date === isoDate && !h.sections?.length)
   const suspended = teachingSuspendedOn(events, isoDate)
   // The union: if ANY active schedule teaches today, the school is open.
@@ -90,12 +90,12 @@ export function BoardPage() {
         b.config?.workDays?.length ? b.config.workDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'])))
     : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
   const closedReason = holidayToday
-    ? `${holidayToday.name} — school holiday`
+    ? `${holidayToday.name} - school holiday`
     : suspended
-    ? `${suspended.title} — normal lessons suspended`
+    ? `${suspended.title} - normal lessons suspended`
     : undefined
 
-  // Each schedule resolves against ITS OWN bell — see lib/smartboard.
+  // Each schedule resolves against ITS OWN bell - see lib/smartboard.
   const rings = useMemo(
     () => soonestRings(bundles.map(b => ({
       sections: (b.sections ?? []).map((s: any) => s.name).filter(Boolean),
@@ -132,7 +132,7 @@ export function BoardPage() {
       fontFamily: 'inherit', padding: 'clamp(18px, 2.6vw, 40px)',
       display: 'flex', flexDirection: 'column', gap: 'clamp(14px, 1.8vw, 26px)',
     }}>
-      {/* Header — who and when */}
+      {/* Header - who and when */}
       <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 'clamp(20px, 2.6vw, 38px)', fontWeight: 800, letterSpacing: -0.5 }}>
@@ -146,7 +146,7 @@ export function BoardPage() {
       {/* The one line everyone looks for */}
       <StatusBand state={state} />
 
-      {/* Sound is on but the browser has not allowed it — say so, loudly, or
+      {/* Sound is on but the browser has not allowed it - say so, loudly, or
           the bell fails where nobody is standing to notice. */}
       {bell.needsTap && <NeedsTapBand onTap={bell.armNow} />}
       {bell.flash && <RingFlash due={bell.flash} />}
@@ -200,7 +200,7 @@ export function BoardPage() {
                   {r.subject}
                 </div>
                 <div style={{ fontSize: 'clamp(12px, 1.15vw, 17px)', color: DIM, marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span>{r.uncovered ? 'No teacher assigned' : (r.teacher || '—')}</span>
+                  <span>{r.uncovered ? 'No teacher assigned' : (r.teacher || '-')}</span>
                   {r.isSub && (
                     <span style={{ fontSize: '0.78em', fontWeight: 800, letterSpacing: 0.4, color: '#FCD34D', background: 'rgba(252,211,77,0.14)', padding: '2px 7px', borderRadius: 20 }}>
                       COVER
@@ -239,7 +239,7 @@ export function BoardPage() {
  *
  * The board re-derives the whole day when it ticks, which is why it ticks every
  * fifteen seconds. A clock showing seconds has to tick sixty times a minute,
- * and this screen is on all day on hardware that is usually a cheap stick PC —
+ * and this screen is on all day on hardware that is usually a cheap stick PC -
  * so the clock keeps its own interval and re-renders nothing but itself.
  *
  * Seconds are set smaller and dimmer than the time on purpose. The hour and
@@ -302,7 +302,7 @@ function StatusBand({ state }: { state: ReturnType<typeof boardNow> }) {
       <div style={box}>
         <div style={big}>School hasn't started</div>
         <div style={small}>
-          First bell at {fmtRingTime(state.firstBellAt!)} — in {state.nextBellIn} min.
+          First bell at {fmtRingTime(state.firstBellAt!)} - in {state.nextBellIn} min.
         </div>
       </div>
     )
@@ -321,7 +321,7 @@ function StatusBand({ state }: { state: ReturnType<typeof boardNow> }) {
         Next bell in {state.nextBellIn} min
       </span>
       <span style={small}>
-        {fmtRingTime(state.nextBellAt!)} — {state.nextBellMeans}
+        {fmtRingTime(state.nextBellAt!)} - {state.nextBellMeans}
       </span>
     </div>
   )

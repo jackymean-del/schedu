@@ -1,4 +1,4 @@
-# Hero Walkthrough — Device Frame, Loop Mechanism & System Rules
+# Hero Walkthrough - Device Frame, Loop Mechanism & System Rules
 
 The hero section fills the viewport immediately below the nav (no section in
 between). It is a **simulated product walkthrough**: a browser-frame device
@@ -6,7 +6,7 @@ containing miniature but faithful HTML/CSS/SVG reproductions of the real
 screens, driven by a simulated cursor, looping continuously.
 
 Every scene doc in this folder was written **after reading the actual source
-file it reproduces** — file and line references are given per scene. Anything
+file it reproduces** - file and line references are given per scene. Anything
 the real product does differently from the original brief is listed in
 `99-open-questions.md`, not silently idealized.
 
@@ -31,7 +31,7 @@ the real product does differently from the original brief is listed in
   `app.schedu.bhusku.com` in DM Mono 11px, on `#F4F2FE` with a 1px
   `#ECE9FB` bottom border. This frames everything as "the real app."
 - Stage: white `#fff` (the app is a light product; do NOT reuse the
-  marketing site's dark cinematic stage here — the walkthrough must look
+  marketing site's dark cinematic stage here - the walkthrough must look
   like the product). Height `clamp(420px, calc(100dvh - 190px), 640px)`.
 - Caption: below the frame, 15–19px Plus Jakarta Sans 700, ink `#13111E`,
   centered. Rendered in an `aria-live="polite"` region so the sequence is
@@ -45,7 +45,7 @@ the real product does differently from the original brief is listed in
 Same substrate already proven in `marketing/components/animations/HeroMovie.tsx`:
 
 - One `setTimeout`-chain sequencer in React state (`sceneIdx`), gated by the
-  shared `useInView` hook — never plays off-screen.
+  shared `useInView` hook - never plays off-screen.
 - Each scene is a standalone component keyed by `sceneIdx` so its CSS
   animations restart cleanly on entry (`key={sceneIdx}` remount).
 - All motion is CSS keyframes with absolute `animation-delay` offsets from
@@ -74,12 +74,12 @@ ms offsets. Additions for this walkthrough:
 
 - **Drag state**: while "dragging" (scene 9 scrubber), swap the arrow for a
   grabbing-hand glyph (CSS class toggle at a keyframe boundary via a second
-  element + opacity swap — same `hm-swap` grid-stack trick).
+  element + opacity swap - same `hm-swap` grid-stack trick).
 - **Click outcomes are mandatory**: every click must visibly change the
   mockup before the scene cuts (state swap via the `hm-swap` pattern or a
   delayed `hm-lane-in` reveal). No click may be cosmetic.
 
-## 4. Interactivity — manual scrub
+## 4. Interactivity - manual scrub
 
 - Each progress dot is a real `<button aria-label="Scene N: {caption}">`.
 - Clicking a dot sets `sceneIdx` and **pauses autoplay for 8s** (resume
@@ -90,8 +90,8 @@ ms offsets. Additions for this walkthrough:
 
 ## 5. prefers-reduced-motion
 
-- Sequencer pins to **scene 7 (finished timetable)** — the most
-  informative single resolved frame — with its static caption.
+- Sequencer pins to **scene 7 (finished timetable)** - the most
+  informative single resolved frame - with its static caption.
 - Progress dots remain fully clickable: reduced-motion users can still
   step through every scene manually; each scene renders its **resolved
   end state** (documented per scene doc as "RM frame") with no cursor, no
@@ -104,7 +104,7 @@ ms offsets. Additions for this walkthrough:
   CSS/SVG, zero images, zero new deps.
 - Budget: **≤ 52 KB raw source / ≤ 15 KB gzip** in the built chunk
   (HeroMovie today is ~31 KB raw; 13 richer scenes justify the increase but
-  the shared primitives — Cursor, swap, card, grid — amortize).
+  the shared primitives - Cursor, swap, card, grid - amortize).
 - Hard bans unchanged: no video, no Lottie/GSAP, no canvas, no new fonts.
 
 ## 7. Visual system (must match the app, not the marketing site)

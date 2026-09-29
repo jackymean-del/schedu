@@ -1,5 +1,5 @@
 /**
- * Reports & Analytics — leave, substitution, and cancelled-lesson insight
+ * Reports & Analytics - leave, substitution, and cancelled-lesson insight
  * across the active schedule. All derived from dated leave records + the
  * schedule + coverage (see lib/reportsData.ts); no separate logging layer.
  */
@@ -55,7 +55,7 @@ export function InsightsPage() {
   const sections = store.sections ?? NO_ROWS
 
   // Analytics span every ACTIVE schedule (multi-active); a single active
-  // reduces to one source built from the store — same numbers as before.
+  // reduces to one source built from the store - same numbers as before.
   const bundles = useMemo(() => loadActiveBundles(uid), [uid])
   const multiActive = bundles.length > 1
   // Memoised: rebuilt inline this was a new array on every render, so every
@@ -73,9 +73,9 @@ export function InsightsPage() {
     leaves, sources, holidays, range: rangeFor(rangeKey), plans: syllabusPlans,
   }), [leaves, sources, holidays, rangeKey, syllabusPlans])
 
-  // Extra duties (free-slot task assignments) in the selected range — same
+  // Extra duties (free-slot task assignments) in the selected range - same
   // date-scoped records the Calendar writes, so the audit trail is automatic.
-  // periodName resolves against the OWNING schedule's periods (a.sid) — a
+  // periodName resolves against the OWNING schedule's periods (a.sid) - a
   // flat cross-schedule search would be ambiguous when two schedules reuse the
   // same period id at a different time. Legacy untagged records (pre-dating
   // schedule tagging) fall back to the flat search.
@@ -162,7 +162,7 @@ export function InsightsPage() {
 
             {tab === 'duties' ? (
               <Card>
-                {duties.length === 0 ? <NoActivity msg="No extra duties in this range — assign tasks to free resources from the Calendar’s Live view." /> : (
+                {duties.length === 0 ? <NoActivity msg="No extra duties in this range - assign tasks to free resources from the Calendar’s Live view." /> : (
                   <Table head={['Date', 'Period', 'Type', 'Assigned To', 'Task', 'Note']}
                     rows={duties.map(d => [fmtDate(d.date), d.periodName, d.kind === 'room' ? 'Venue' : d.kind === 'class' ? 'Class' : 'Teacher', d.entity, d.title, d.note ?? ''])} />
                 )}
@@ -172,12 +172,12 @@ export function InsightsPage() {
             ) : tab === 'summary' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-                  <Highlight label="Coverage rate" value={coverageRate === null ? '—' : `${coverageRate}%`}
+                  <Highlight label="Coverage rate" value={coverageRate === null ? '-' : `${coverageRate}%`}
                     sub={coverageRate === null ? 'No absences' : `${reports.totals.substitutes} of ${reports.totals.substitutes + reports.totals.cancelled} periods covered`}
                     tint={coverageRate !== null && coverageRate < 80 ? '#DC2626' : '#0A8136'} />
-                  <Highlight label="Most affected faculty" value={reports.mostAffectedFaculty?.name ?? '—'} sub={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} periods` : ''} tint="#685DBC" />
-                  <Highlight label="Most affected class" value={reports.mostAffectedClass?.name ?? '—'} sub={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} periods` : ''} tint="#2563EB" />
-                  <Highlight label="Top cancel reason" value={reports.topReason?.reason ?? '—'} sub={reports.topReason ? `${reports.topReason.count} lessons` : ''} tint="#D97706" />
+                  <Highlight label="Most affected faculty" value={reports.mostAffectedFaculty?.name ?? '-'} sub={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} periods` : ''} tint="#685DBC" />
+                  <Highlight label="Most affected class" value={reports.mostAffectedClass?.name ?? '-'} sub={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} periods` : ''} tint="#2563EB" />
+                  <Highlight label="Top cancel reason" value={reports.topReason?.reason ?? '-'} sub={reports.topReason ? `${reports.topReason.count} lessons` : ''} tint="#D97706" />
                 </div>
                 <Card><TrendsChart points={reports.trends} /></Card>
               </div>
@@ -199,12 +199,12 @@ export function InsightsPage() {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12, marginBottom: 14 }}>
                   <MiniCard tint="#DC2626" bg="#FEF2F2" label="Total Cancelled" big={String(reports.totals.cancelled)} />
-                  <MiniCard tint="#2563EB" bg="#EFF6FF" label="Most Affected Faculty" big={reports.mostAffectedFaculty?.name ?? '—'} small={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} lessons` : ''} />
-                  <MiniCard tint="#0A8136" bg="#F0FDF4" label="Most Affected Class" big={reports.mostAffectedClass?.name ?? '—'} small={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} lessons` : ''} />
-                  <MiniCard tint="#D97706" bg="#FFFBEB" label="Top Reason" big={reports.topReason?.reason ?? '—'} small={reports.topReason ? `${reports.topReason.count} lessons` : ''} />
+                  <MiniCard tint="#2563EB" bg="#EFF6FF" label="Most Affected Faculty" big={reports.mostAffectedFaculty?.name ?? '-'} small={reports.mostAffectedFaculty ? `${reports.mostAffectedFaculty.count} lessons` : ''} />
+                  <MiniCard tint="#0A8136" bg="#F0FDF4" label="Most Affected Class" big={reports.mostAffectedClass?.name ?? '-'} small={reports.mostAffectedClass ? `${reports.mostAffectedClass.count} lessons` : ''} />
+                  <MiniCard tint="#D97706" bg="#FFFBEB" label="Top Reason" big={reports.topReason?.reason ?? '-'} small={reports.topReason ? `${reports.topReason.count} lessons` : ''} />
                 </div>
                 <Card>
-                  {reports.cancelled.length === 0 ? <NoActivity msg="No cancelled lessons in this range — every absence was covered." /> : (
+                  {reports.cancelled.length === 0 ? <NoActivity msg="No cancelled lessons in this range - every absence was covered." /> : (
                     <Table head={['Date', 'Period', 'Time', 'Subject', 'Faculty', 'Class', 'Reason']}
                       rows={reports.cancelled.map(e => [fmtDate(e.date), e.periodName, fmtClock(e.startMin), e.subject, e.faculty, e.section, e.reason ?? ''])} />
                   )}
@@ -350,7 +350,7 @@ function Empty() {
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: '52px 24px', textAlign: 'center' }}>
       <BarChart3 size={30} color="#C9C3EC" />
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#13111E', margin: '12px 0 6px' }}>No data yet</h3>
-      <p style={{ fontSize: 13, color: '#6D6A8A', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar — analytics will build from there.</p>
+      <p style={{ fontSize: 13, color: '#6D6A8A', margin: '0 0 16px' }}>Generate a schedule and record leaves in the Calendar - analytics will build from there.</p>
       <a href="/calendar" style={{ display: 'inline-block', padding: '9px 18px', borderRadius: 9, background: '#685DBC', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>Go to Calendar</a>
     </div>
   )

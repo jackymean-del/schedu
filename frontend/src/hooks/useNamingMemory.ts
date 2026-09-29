@@ -1,5 +1,5 @@
 /**
- * useNamingMemory — per-user AI naming brain.
+ * useNamingMemory - per-user AI naming brain.
  *
  * Learns from every commit the user makes in the data grids:
  *  - Subject name → Short form  (e.g. "Mathematics" → "MATH")

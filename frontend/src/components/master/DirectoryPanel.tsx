@@ -1,5 +1,5 @@
 /**
- * Directory — visibility + maintenance for the shared cross-schedule staff &
+ * Directory - visibility + maintenance for the shared cross-schedule staff &
  * venue roster (store/directoryStore.ts). Renaming or merging here cascades
  * into every active schedule's own local roster via lib/directoryManagement.ts
  * so the directory never silently drifts from what schedules actually show.
@@ -23,7 +23,7 @@ function EntryRow<T extends { id: string; name: string }>({
   const [mergePick, setMergePick] = useState('')
   // Not memoized: a rename/merge writes cross-schedule data straight into
   // localStorage (lib/directoryManagement.ts), which doesn't change `entry.id`
-  // or `kind` — memoizing on those alone left this stale after a merge even
+  // or `kind` - memoizing on those alone left this stale after a merge even
   // though the underlying schedules were correctly updated.
   const usage = usageOf(entry.id, kind)
   const mergeable = others.filter(o => o.id !== entry.id)
@@ -51,7 +51,7 @@ function EntryRow<T extends { id: string; name: string }>({
       <button
         disabled={!mergePick}
         onClick={() => { onMerge(mergePick); setMergePick('') }}
-        title="Merge this entry into the selected one — every schedule using this entry switches to the target"
+        title="Merge this entry into the selected one - every schedule using this entry switches to the target"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6,
           border: `1.5px solid ${mergePick ? P_B : '#E4E0FF'}`, background: mergePick ? P_L : '#fff',
@@ -102,7 +102,7 @@ function DirectorySection<T extends { id: string; name: string }>({
       </div>
       {entries.length === 0 ? (
         <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 12, color: '#767384' }}>
-          Nothing here yet — entries are added automatically as schedules use them.
+          Nothing here yet - entries are added automatically as schedules use them.
         </div>
       ) : entries.map(entry => (
         <EntryRow key={entry.id} entry={entry} kind={kind} others={entries}

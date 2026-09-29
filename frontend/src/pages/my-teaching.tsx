@@ -3,7 +3,7 @@
  *
  * Everything else in this app is built for whoever plans the timetable. This
  * page is for the person who teaches it: the schedules a school has put them
- * on, today's lessons, and — where the school runs an OR group — the button
+ * on, today's lessons, and - where the school runs an OR group - the button
  * that says "I'll take this one".
  *
  * An OR group is a subject CHOICE for a whole class, "Physics OR Chemistry",
@@ -11,7 +11,7 @@
  * teacher may override that for one day, because they know things the
  * percentages do not: a lab free this morning, an exam next week, a topic left
  * half-finished. They may only ever claim a slot for a subject THEY teach, and
- * the server enforces that rather than this page — a button that is merely
+ * the server enforces that rather than this page - a button that is merely
  * hidden is not a permission.
  *
  * Decisions are DATED. "We are doing Physics this Tuesday" is a fact about
@@ -77,7 +77,7 @@ export function MyTeachingPage() {
    * Take a slot, or hand it back.
    *
    * The options travel with the request so the server can check the caller
-   * teaches the subject being claimed — this page never decides that. A refusal
+   * teaches the subject being claimed - this page never decides that. A refusal
    * is shown as it arrives rather than being pre-empted, because the honest
    * answer to "why can I not press this" comes from whoever enforces it.
    */
@@ -113,7 +113,7 @@ export function MyTeachingPage() {
         {schedules?.length === 0 && (
           <Note>
             No school has added you to a schedule yet. Ask whoever manages your
-            timetable to add your email on the Users page — the address you signed
+            timetable to add your email on the Users page - the address you signed
             in with, and the name they use for you in the timetable.
           </Note>
         )}
@@ -124,7 +124,7 @@ export function MyTeachingPage() {
               <select value={activeId} onChange={e => setActiveId(e.target.value)} style={input}>
                 {schedules.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.name}{s.mine ? '' : ` — ${s.role}`}
+                    {s.name}{s.mine ? '' : ` - ${s.role}`}
                   </option>
                 ))}
               </select>
@@ -239,7 +239,7 @@ function OrSlots({ schedule, date, slots, busyKey, onClaim, me }: {
                   ? <span style={{ fontSize: 11, color: DIM }}>
                       {sl.decidedBy ? `taken by ${sl.decidedBy}` : 'set by the school'}
                     </span>
-                  : <span style={{ fontSize: 11, color: DIM }}>undecided — syllabus decides</span>}
+                  : <span style={{ fontSize: 11, color: DIM }}>undecided - syllabus decides</span>}
 
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                   {isMine && (

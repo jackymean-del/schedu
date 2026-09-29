@@ -1,5 +1,5 @@
 /**
- * THE BOARD'S BELL — the ringing itself, and the small panel that configures it.
+ * THE BOARD'S BELL - the ringing itself, and the small panel that configures it.
  *
  * Two things live here that the board deliberately keeps at arm's length:
  *
@@ -11,7 +11,7 @@
  *  - the sound permission. A browser will not let a page make a noise until
  *    somebody has interacted with it, which an unattended corridor screen never
  *    provides. So the board arms on the first tap ANYWHERE on the page, and
- *    says so in plain words until that has happened — a bell that is silently
+ *    says so in plain words until that has happened - a bell that is silently
  *    disallowed is the whole failure mode of this feature.
  */
 import { useEffect, useRef, useState } from 'react'
@@ -31,7 +31,7 @@ const LINE = '#262234'
 const DIM = '#8B87AD'
 const ACCENT = '#9E92FF'
 
-/** The order the groups are shown in — loudest and most school-like first. */
+/** The order the groups are shown in - loudest and most school-like first. */
 const RING_GROUPS: RingGroup[] = ['Bells', 'Chimes', 'Signals']
 
 /** How long the board shows what just rang. */
@@ -116,7 +116,7 @@ export function RingFlash({ due }: { due: DueRing }) {
   )
 }
 
-/** Shown while sound is on but disallowed — the failure that is otherwise silent. */
+/** Shown while sound is on but disallowed - the failure that is otherwise silent. */
 export function NeedsTapBand({ onTap }: { onTap: () => void }) {
   return (
     <button onClick={onTap} style={{
@@ -178,7 +178,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
 
   // Named from the catalogue, so adding a ring cannot leave this text lying.
   const sustainedNames = BUILT_IN_RINGS.filter(r => r.sustained).map(r => r.name).join(', ')
-  const oneShotNote = 'The rest have a length of their own — a chime is as long as a chime is.'
+  const oneShotNote = 'The rest have a length of their own - a chime is as long as a chime is.'
 
   const addAlarm = () => {
     const min = parseClock(at)
@@ -202,7 +202,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
           <div>
             <div style={{ fontSize: 19, fontWeight: 800 }}>Bell</div>
             <div style={{ fontSize: 12.5, color: DIM, marginTop: 2 }}>
-              This screen only — other devices showing the board stay silent.
+              This screen only - other devices showing the board stay silent.
             </div>
           </div>
           <button onClick={onClose} style={iconBtn}><X size={16} /></button>
@@ -214,7 +214,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
           <Toggle checked={s.enabled} onChange={s.setEnabled} />
         </Row>
 
-        {/* Sound — pick with the left button, hear it with the right one */}
+        {/* Sound - pick with the left button, hear it with the right one */}
         <div style={{ flexShrink: 0 }}>
           <Head>Sound</Head>
           {RING_GROUPS.map(group => (
@@ -265,7 +265,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
             )}
           </div>
           <div style={{ fontSize: 11.5, color: DIM, marginTop: 6 }}>
-            Any audio file up to {Math.round(MAX_RING_BYTES / 1024)} KB — roughly a minute
+            Any audio file up to {Math.round(MAX_RING_BYTES / 1024)} KB - roughly a minute
             of sound, far more than a bell needs. It is stored on this screen and
             never uploaded anywhere. One recorded strike is enough: it is looped to
             fill the length above.
@@ -311,7 +311,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
         <div style={{ flexShrink: 0 }}>
           <Head>Extra alarms</Head>
           <div style={{ fontSize: 11.5, color: DIM, marginBottom: 8 }}>
-            Rings on top of the timetable — a staff briefing, a gate closing.
+            Rings on top of the timetable - a staff briefing, a gate closing.
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
             <input type="time" value={at} onChange={e => setAt(e.target.value)} style={{ ...inp, width: 120 }} />
@@ -322,7 +322,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
             </button>
           </div>
           {s.alarms.length === 0 ? (
-            <div style={{ fontSize: 12, color: '#4A4560' }}>None — the timetable's own bells are enough for most schools.</div>
+            <div style={{ fontSize: 12, color: '#4A4560' }}>None - the timetable's own bells are enough for most schools.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {s.alarms.map(a => (
@@ -342,7 +342,7 @@ export function BellPanel({ onClose, rings }: { onClose: () => void; rings: Ring
         {err && <div style={{ fontSize: 12.5, color: '#FCA5A5', flexShrink: 0 }}>{err}</div>}
 
         <div style={{ fontSize: 11.5, color: '#4A4560', flexShrink: 0 }}>
-          A bell the screen misses — asleep, or the tab suspended — stays missed rather than
+          A bell the screen misses - asleep, or the tab suspended - stays missed rather than
           ringing late. Nothing rings on a holiday, or on a day the school is closed.
         </div>
       </div>

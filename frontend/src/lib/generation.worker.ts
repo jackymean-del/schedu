@@ -1,5 +1,5 @@
 /**
- * Timetable-generation Web Worker — runs the pure pipeline off the main
+ * Timetable-generation Web Worker - runs the pure pipeline off the main
  * thread so the UI never freezes during a solve, no matter the school size.
  * The page stays fully interactive (progress ring animates, tabs respond).
  *

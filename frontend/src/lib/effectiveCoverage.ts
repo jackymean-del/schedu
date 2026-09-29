@@ -9,7 +9,7 @@
  *   3. an absence nobody covered  (lib/substitutionCoverage)
  *   4. periods faculty logged as missed  (already on the plan)
  *
- * The Syllabus page and the always-on dashboard alert must agree on all four —
+ * The Syllabus page and the always-on dashboard alert must agree on all four -
  * an alert that shows a rosier picture than the page it links to is worse than
  * no alert. So the composition lives here and both consume it, instead of each
  * assembling its own and drifting the first time a fifth source appears.
@@ -53,7 +53,7 @@ const NOTE = {
  */
 export function composeEffectivePlans(input: {
   plans: Record<string, SyllabusPlan>
-  /** Every ACTIVE schedule — losses are derived per bundle, using its own bell. */
+  /** Every ACTIVE schedule - losses are derived per bundle, using its own bell. */
   bundles: ScheduleBundle[]
   holidays: Holiday[]
   subRecords: Parameters<typeof coverageLoss>[0]
@@ -77,7 +77,7 @@ export function composeEffectivePlans(input: {
   }
 
   // Holidays and uncovered absences are counted PER SCHEDULE, because each one
-  // has its own period length — merging the timetables and applying a single
+  // has its own period length - merging the timetables and applying a single
   // figure would mis-price every schedule but one.
   for (const b of bundles) {
     const periodMinutes = b.config?.periodMinutes ?? 40
@@ -101,7 +101,7 @@ export interface EffectiveCoverage {
   leaves: CalLeave[]
   /** Class-sections, subjects and staff across ALL active schedules. */
   entities: UnionEntities
-  /** The owning schedule's bell/term for a section — pace needs the right one. */
+  /** The owning schedule's bell/term for a section - pace needs the right one. */
   contextFor: (section: string) => ReturnType<typeof contextForSection>
   /** planKey → hours that ran but went to another subject (pace correction). */
   notSpent: Record<string, number>
@@ -122,7 +122,7 @@ export interface EffectiveCoverage {
  * The hook every coverage surface should use.
  *
  * `term` narrows every hours figure to that academic term (lib/academicTerms).
- * Undefined — the default — means the whole of each schedule, which is exactly
+ * Undefined - the default - means the whole of each schedule, which is exactly
  * what every caller got before terms existed.
  */
 export function useEffectiveCoverage(term?: AcademicTerm | null): EffectiveCoverage {
@@ -144,7 +144,7 @@ export function useEffectiveCoverage(term?: AcademicTerm | null): EffectiveCover
   const openTT = useTimetableStore(s => (s as any).classTT)
 
   // Coverage spans every ACTIVE schedule, not whichever one happens to be open
-  // — a school running "I–V TT" and "VI–X TT" side by side was seeing only the
+  // - a school running "I–V TT" and "VI–X TT" side by side was seeing only the
   // last one it opened. Falls back to the open store when nothing is published
   // yet, so a draft still shows its own sections.
   const bundles = useMemo<ScheduleBundle[]>(() => {

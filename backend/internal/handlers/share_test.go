@@ -2,7 +2,7 @@ package handlers
 
 import "testing"
 
-// A one-time code is six digits inside a ten-minute window — roughly 10^6
+// A one-time code is six digits inside a ten-minute window - roughly 10^6
 // values, which a script walks through in minutes. The window was never the
 // defence; the guess budget is. These pin the rule that spends it.
 func TestJudgeCode(t *testing.T) {

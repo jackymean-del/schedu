@@ -58,7 +58,7 @@ export function DemoPage() {
       <h1 className="font-serif" style={{ fontSize: 32 }}>Live Demo</h1>
       <p style={{ color: '#6a6860', maxWidth: 380, lineHeight: 1.65 }}>
         India school · 4 classes · 8 teachers · 6-day week<br />
-        All features enabled — shifts, substitution, export
+        All features enabled - shifts, substitution, export
       </p>
 
       <button onClick={loadDemo} style={{

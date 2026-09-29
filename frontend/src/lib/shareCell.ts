@@ -3,7 +3,7 @@
  *
  * Its own module because lib/share reaches the API, and this mapping needs
  * checking without a network or a booted app behind it. It is small, and it
- * decides what a teacher sees on the link their school sends them — which it
+ * decides what a teacher sees on the link their school sends them - which it
  * got wrong for every parallel cell until now.
  */
 export interface SharedCell {
@@ -14,7 +14,7 @@ export interface SharedCell {
    * The parallel groups in this cell, when it has them.
    *
    * Without this a shared timetable flattened "Physics OR Chemistry" to the
-   * combined label and the FIRST group's teacher and room — so the second
+   * combined label and the FIRST group's teacher and room - so the second
    * group's teacher was simply absent from the timetable their school had just
    * sent them, and half the class was pointed at the wrong room.
    *
@@ -27,7 +27,7 @@ export interface SharedCell {
 /**
  * One timetable cell as a shared link should show it.
  *
- * Split out so it can be checked without a store behind it — the mapping is
+ * Split out so it can be checked without a store behind it - the mapping is
  * small, but it decides what a teacher sees on the link their school sends
  * them, and it silently dropped half of every parallel cell.
  */

@@ -4,7 +4,7 @@ import { distributeSections } from './src/lib/sectionDistribution'
 let fail = 0
 const ok = (c: boolean, m: string) => { console.log((c ? '✓' : '✗ FAIL') + ' ' + m); if (!c) fail++ }
 
-// ── Step 1 auto-distribution — the 5 worked cases from the blueprint ──
+// ── Step 1 auto-distribution - the 5 worked cases from the blueprint ──
 // "Distribute 2 sections per class starting from the LOWEST class, moving
 //  upward, until the section pool runs out. Remaining higher classes get 1 each."
 const cases: Array<{ n: number; label: string; total: number; want: number[] }> = [
@@ -39,7 +39,7 @@ for (const c of cases) {
   ok(got.every((v, i) => i === 0 || got[i - 1] >= v), `lower classes never get fewer than higher (${c.label}/${c.total})`)
 }
 
-// ── Step 2 Block/Building Distance Matrix — the blueprint's worked 4-block school ──
+// ── Step 2 Block/Building Distance Matrix - the blueprint's worked 4-block school ──
 // A–B:1 A–C:2 A–D:3 B–C:1 B–D:2 C–D:1  (symmetric; lower = closer)
 import { pairKey, distanceBetween, rankVenuesByProximity, allPairs, missingPairs } from './src/lib/blockDistance'
 
@@ -71,7 +71,7 @@ const withUnknown = [...venues, { name: 'r-z', building: 'Z' }]
 ok(rankVenuesByProximity('A', withUnknown, D).map(v => v.name).pop() === 'r-z',
   'blocks with no recorded distance sort last')
 
-// ── Part C — Syllabus Tracking (shared service) ──
+// ── Part C - Syllabus Tracking (shared service) ──
 import {
   planKey, requiredHours, coveredHours, remainingHours, coveragePct, isCovered,
   rankOrGroupBySessionNeed, suggestSlotDonor, coverageRows, summariseBy, classOfSection,
@@ -81,7 +81,7 @@ import {
 const mkPlan = (subject: string, section: string, o: Partial<SyllabusPlan> = {}): SyllabusPlan =>
   ({ subject, section, chapters: [], loggedHours: 0, ...o })
 
-// §1 required hours — the subject's own figure. Chapters say WHAT to cover,
+// §1 required hours - the subject's own figure. Chapters say WHAT to cover,
 // never how long it takes: nobody could estimate per-chapter hours honestly, so
 // that box is gone and every chapter now counts equally.
 ok(requiredHours(mkPlan('Phy', 'XI-A', { requiredHours: 40 })) === 40, 'required hours: direct figure')
@@ -161,7 +161,7 @@ ok(summariseBy(rows, 'section').find(r => r.label === 'VI-A')?.remaining === 25,
 // §8 class-wise is its own dimension (sections VI-A + VI-B roll up into class VI)
 ok(classOfSection('VI-A') === 'VI' && classOfSection('Grade 3-B') === 'Grade 3', 'class derived from section name')
 ok(classOfSection('XI-Sci-A') === 'XI-Sci', 'stream sections keep their stream in the class label')
-ok(classOfSection('Nursery') === 'Nursery' && classOfSection('') === '—', 'unsuffixed / empty section names handled')
+ok(classOfSection('Nursery') === 'Nursery' && classOfSection('') === '-', 'unsuffixed / empty section names handled')
 const byClass = summariseBy(rows, 'class')
 ok(byClass.length === 1 && byClass[0].label === 'VI', 'class-wise: VI-A and VI-B roll up into one class VI')
 ok(byClass[0].required === 50 && byClass[0].remaining === 25, 'class-wise: VI totals 50 h required, 25 h remaining')
@@ -182,7 +182,7 @@ const withLoss = mkPlan('Hist', 'IX-B', {
 })
 ok(lostHours(withLoss) === 5, 'lost hours sum across sessions (2 + 3)')
 ok(riskOf(withLoss) === 'critical',
-  'SAME 75% coverage becomes critical once sessions were lost — the hours must be found again')
+  'SAME 75% coverage becomes critical once sessions were lost - the hours must be found again')
 ok(riskOf(mkPlan('Done', 'X-A', { requiredHours: 10, loggedHours: 10, lostSessions: [{ id: 'l', date: 'd', hours: 4, reason: 'holiday' }] })) === 'covered',
   'a finished syllabus is not "critical" even if time was lost along the way')
 ok(riskOf(mkPlan('Slow', 'X-A', { requiredHours: 40, loggedHours: 5 })) === 'behind', 'under half taught → behind')
@@ -214,13 +214,13 @@ ok(COUNTRY_HOURS.length === 42, `reference dataset loaded (${COUNTRY_HOURS.lengt
 
 // The blueprint's worked example table
 ok(OECD_AVERAGE.daysPerWeek === 5 && OECD_AVERAGE.studentHoursWeek.primary === 21.2 && OECD_AVERAGE.teacherHoursYear.primary === 780 && OECD_AVERAGE.confidence === 'verified',
-  'worked example — OECD average: 5 days, 21.2 primary student hrs/wk, 780 teacher hrs/yr, Verified')
+  'worked example - OECD average: 5 days, 21.2 primary student hrs/wk, 780 teacher hrs/yr, Verified')
 const ind = countryHours('IN')!
 ok(ind.daysPerWeek === 6 && ind.studentHoursWeek.primary === 22.5 && ind.teacherHoursYear.primary === 1600 && ind.confidence === 'verified',
-  'worked example — India (CBSE): 6 days, 22.5 primary student hrs/wk, ~1600 teacher hrs/yr, Verified')
+  'worked example - India (CBSE): 6 days, 22.5 primary student hrs/wk, ~1600 teacher hrs/yr, Verified')
 const aus = countryHours('AU')!
 ok(aus.daysPerWeek === 5 && aus.studentHoursWeek.primary === 25 && aus.teacherHoursYear.primary === 870 && aus.confidence === 'approximate',
-  'worked example — Australia: 5 days, 25.0 primary student hrs/wk, 870 teacher hrs/yr, Approximate')
+  'worked example - Australia: 5 days, 25.0 primary student hrs/wk, 870 teacher hrs/yr, Approximate')
 
 // A country sees ITS OWN figures, not a global default
 ok(studentHoursWeekFor('IN', 'lowerPrimary')!.hours === 22.5, 'India primary student hours = 22.5 h/wk')
@@ -233,7 +233,7 @@ const fi = countryHours('FI')!
 ok(Math.abs(fi.studentHoursWeek.primary - fi.weeksPerYear * 0 - 693 / 38) < 0.1,
   'weekly hours derive from weeks in session (Finland 693 h ÷ 38 wks ≈ 18.2), not ÷ 52')
 
-// Pre-primary is published annually — converted with that country's weeks
+// Pre-primary is published annually - converted with that country's weeks
 ok(studentHoursWeekFor('IN', 'prePrimary')!.hours === 12.5, 'India pre-primary 500 h/yr ÷ 40 wks = 12.5 h/wk')
 
 // Band → reference level mapping
@@ -245,7 +245,7 @@ ok(refLevelForBand('lowerPrimary') === 'primary' && refLevelForBand('upperPrimar
 const indT = teacherHoursWeekFor('IN', 'lowerPrimary')!
 ok(indT.basis === 'total' && indT.usable === false,
   "India's teacher figure is flagged 'total' (incl. prep) and NOT usable as a teaching cap")
-ok(Math.abs(indT.hours - 40) < 0.1, 'India 1600 h/yr ÷ 40 wks = 40 h/wk — which as a teaching cap would be ~60 periods, hence the guard')
+ok(Math.abs(indT.hours - 40) < 0.1, 'India 1600 h/yr ÷ 40 wks = 40 h/wk - which as a teaching cap would be ~60 periods, hence the guard')
 const oecdT = teacherHoursWeekFor('OECD', 'lowerPrimary')!
 ok(oecdT.basis === 'teaching' && oecdT.usable === true && Math.abs(oecdT.hours - 20.5) < 0.2,
   'OECD teacher figure is net teaching time and usable (780 ÷ 38 ≈ 20.5 h/wk)')
@@ -265,7 +265,7 @@ const opts = countryOptions()
 ok(opts[0].code === 'OECD' && opts.length === 42 && opts[1].name.localeCompare(opts[2].name) <= 0,
   'country picker lists the OECD average first, then countries alphabetically')
 
-// ── v5 "borrow & replace" — same teacher, same section, only from a covered subject ──
+// ── v5 "borrow & replace" - same teacher, same section, only from a covered subject ──
 import { suggestBorrowSwaps } from './src/lib/syllabusTracking'
 
 const swapPlans: Record<string, SyllabusPlan> = {
@@ -281,17 +281,17 @@ const swapPlans: Record<string, SyllabusPlan> = {
 }
 const swaps = suggestBorrowSwaps(swapPlans)
 // Art (Anita, VI-A, covered) can feed BOTH lagging subjects Anita teaches in
-// that section — Maths and EVS. Anything else in the fixture is excluded.
+// that section - Maths and EVS. Anything else in the fixture is excluded.
 ok(swaps.length === 2, `only the same-teacher/same-section pairs qualify (got ${swaps.length})`)
 ok(swaps.every(s => s.donor === 'Art' && s.section === 'VI-A' && s.teacher === 'Anita'),
   'every suggestion borrows from Art, same teacher (Anita) and same section (VI-A)')
 ok(swaps[0].lagging === 'Maths' && swaps[1].lagging === 'EVS',
-  'worst-first ordering — Maths (30 h left) offered before EVS (25 h left)')
+  'worst-first ordering - Maths (30 h left) offered before EVS (25 h left)')
 ok(!swaps.some(s => s.donor === 'Music'), 'never borrows from a different teacher, even in the same section')
-ok(!swaps.some(s => s.section === 'VI-B'), 'never borrows across sections — different students in the room')
+ok(!swaps.some(s => s.section === 'VI-B'), 'never borrows across sections - different students in the room')
 ok(!swaps.some(s => s.donor === 'EVS'), 'never borrows from a subject that is itself behind')
 ok(swaps[0].hours <= swaps[0].laggingRemaining, 'never moves more hours than the lagging subject actually needs')
-// Maths needs 30 h but Art only ever had 20 h of slots — it cannot lend 30.
+// Maths needs 30 h but Art only ever had 20 h of slots - it cannot lend 30.
 ok(swaps[0].hours === 20, `never lends more than the donor was allocated (Art has 20 h, offered ${swaps[0].hours} h)`)
 ok(suggestBorrowSwaps({}).length === 0, 'no plans → no suggestions')
 // A school where nothing is ahead gets no false hope
@@ -301,13 +301,13 @@ const noDonor: Record<string, SyllabusPlan> = {
 }
 ok(suggestBorrowSwaps(noDonor).length === 0, 'nothing ahead → no swap offered (rather than a bad one)')
 
-// ── v6 Content coverage — TWO entry methods, chosen per faculty/subject ──
+// ── v6 Content coverage - TWO entry methods, chosen per faculty/subject ──
 import { effectiveMethod, contentFraction, chapterFraction, hasContentSignal } from './src/lib/syllabusTracking'
 
-// (0) Simplest of all: faculty just STATES the figure — "75% covered".
+// (0) Simplest of all: faculty just STATES the figure - "75% covered".
 const byPercent = mkPlan('Civics', 'IX-A', { requiredHours: 40, method: 'percent', overallPercentCovered: 75 })
 ok(effectiveMethod(byPercent) === 'percent', 'stated-percentage method recognised')
-ok(contentFraction(byPercent) === 0.75, 'a stated 75% is taken at face value — nothing to tick or list')
+ok(contentFraction(byPercent) === 0.75, 'a stated 75% is taken at face value - nothing to tick or list')
 ok(coveredHours(byPercent) === 30 && coveragePct(byPercent) === 75, '75% of a 40 h syllabus = 30 h covered')
 ok(hasContentSignal(byPercent), 'a stated percentage is a real content signal')
 ok(contentFraction(mkPlan('X', 'Y', { requiredHours: 10, method: 'percent', overallPercentCovered: 140 })) === 1,
@@ -337,14 +337,14 @@ ok(coveredHours(byNames) === 15, 'partial chapters contribute their share of hou
 ok(chapterFraction({ id: 'z', name: 'z', hours: 1, coveredAt: 'x', percentCovered: 20 }) === 1,
   'a ticked chapter is 100% even if a stale percentage lingers')
 
-// The two methods are per SUBJECT, not system-wide — both can coexist
+// The two methods are per SUBJECT, not system-wide - both can coexist
 const mixedPlans: Record<string, SyllabusPlan> = {
   [planKey('Hist', 'IX-A')]: byCount,
   [planKey('Geo', 'IX-A')]: byNames,
 }
 const mixedRows = coverageRows(mixedPlans)
 ok(mixedRows.length === 2 && mixedRows.every(r => r.required > 0),
-  'one school can run both entry methods at once — dashboards consume either transparently')
+  'one school can run both entry methods at once - dashboards consume either transparently')
 
 // ── v6's hard rule: a holiday must NEVER move content coverage ──
 const contentBefore = coveragePct(byNames)
@@ -355,14 +355,14 @@ const holidayHit = withHolidayImpact(
 ok(coveragePct(holidayHit) === contentBefore,
   'a holiday leaves the CONTENT percentage untouched (v6: it only affects duration)')
 ok(lostHours(holidayHit) === 6, 'the same holiday does show up as lost DURATION')
-ok(riskOf(holidayHit) === 'critical', 'and it still raises the risk flag, via time — not by faking content')
+ok(riskOf(holidayHit) === 'critical', 'and it still raises the risk flag, via time - not by faking content')
 
 // Logged hours must not inflate content either, once a content signal exists
 const loggedButUntaught = mkPlan('Bio', 'IX-A', { chapters: [{ id: 'x', name: 'C1', hours: 20 }], loggedHours: 15 })
 ok(coveredHours(loggedButUntaught) === 0,
-  'logging 15 h against an untaught chapter covers NO syllabus — duration is not content')
+  'logging 15 h against an untaught chapter covers NO syllabus - duration is not content')
 
-// ── v5 Holiday handling — declared once, hours DERIVED from the timetable ──
+// ── v5 Holiday handling - declared once, hours DERIVED from the timetable ──
 import { holidayImpact, totalHolidayHours, weekdayOf, type Holiday } from './src/lib/holidays'
 import { withHolidayImpact } from './src/lib/syllabusTracking'
 
@@ -405,7 +405,7 @@ const allSecs = ['VI-A', 'VI-B', 'VII-A', 'VIII-A']
 const grouped = groupSections(allSecs)
 ok(grouped.length === 3 && grouped[0].cls === 'VI' && grouped[0].sections.length === 2,
   'sections group under their class, so "all of VI" is one tap')
-ok(describeScope([], allSecs) === 'Whole school', 'an empty scope IS the whole school — the default needs no thought')
+ok(describeScope([], allSecs) === 'Whole school', 'an empty scope IS the whole school - the default needs no thought')
 ok(describeScope(undefined, allSecs) === 'Whole school', 'and so is an absent one (older records)')
 ok(describeScope(['VI-A', 'VI-B'], allSecs) === 'VI',
   'every section of a class reads as the class, not a list of its sections')
@@ -421,7 +421,7 @@ ok(riskOf(holPlans[planKey('Maths', 'VI-A')]) === 'on-track', 'before holidays: 
 const merged = withHolidayImpact(holPlans, imp)
 ok(lostHours(merged[planKey('Maths', 'VI-A')]) === 2, 'merged plan carries the 2 holiday hours')
 ok(riskOf(merged[planKey('Maths', 'VI-A')]) === 'critical',
-  'after holidays: the SAME 75% becomes critical — lost time must be found again')
+  'after holidays: the SAME 75% becomes critical - lost time must be found again')
 ok(withHolidayImpact(holPlans, {})[planKey('Maths', 'VI-A')] === holPlans[planKey('Maths', 'VI-A')],
   'no holidays → plans returned untouched (no needless copying)')
 ok(Object.keys(withHolidayImpact({}, imp)).length === 0,
@@ -437,14 +437,14 @@ const paceTT: any = {
 const TERM = { termStart: '2026-01-05', termEnd: '2026-03-30', today: '2026-02-02', periodMinutes: 60 }
 // Jan 5→Feb 2 inclusive = 5 Mondays = 10 h spent; Feb 3→Mar 30 = 8 Mondays = 16 h left.
 ok(scheduledHoursBetween(paceTT, 'Maths', 'VI-A', '2026-01-05', '2026-02-02', 60) === 10,
-  'time spent is DERIVED from the timetable (5 Mondays × 2 periods = 10 h) — nobody types it')
+  'time spent is DERIVED from the timetable (5 Mondays × 2 periods = 10 h) - nobody types it')
 ok(scheduledHoursBetween(paceTT, 'Maths', 'VI-A', '2026-02-03', '2026-03-30', 60) === 16,
   'time remaining likewise derived (8 Mondays = 16 h)')
 ok(scheduledHoursBetween(paceTT, 'Science', 'VI-A', '2026-01-05', '2026-02-02', 60) === 0,
   'only the subject actually on the timetable counts')
 
 const ch = (id: string, hours: number, done?: boolean) => ({ id, name: id, hours, coveredAt: done ? 'x' : undefined })
-/** Hour-less chapter — the shape all new data takes; chapters weigh equally. */
+/** Hour-less chapter - the shape all new data takes; chapters weigh equally. */
 const ch2 = (id: string, done?: boolean) => ({ id, name: id, coveredAt: done ? 'x' : undefined })
 
 // SAME 10 h taught. Different amounts of syllabus actually covered.
@@ -464,15 +464,15 @@ ok(fastR.projectedHoursNeeded === 10 && fastR.willFinish && fastR.shortfallHours
 
 // The point of the whole exercise: hours alone would have called these identical.
 ok(slowR.timeSpent === fastR.timeSpent && slowR.willFinish !== fastR.willFinish,
-  'identical hours taught, opposite verdicts — which is exactly what hours-only tracking missed')
+  'identical hours taught, opposite verdicts - which is exactly what hours-only tracking missed')
 
 // Holidays: a lost day adds no content and no time spent, but permanently
-// removes time that was remaining — so the projection gets worse by itself.
+// removes time that was remaining - so the projection gets worse by itself.
 const holidayOnAMonday: Holiday[] = [{ id: 'h', date: '2026-02-09', name: 'Holiday' }]
 const afterHoliday = paceFor(fast, paceTT, { ...TERM, holidays: holidayOnAMonday })
 ok(afterHoliday.timeSpent === 10, 'a FUTURE holiday does not change time already spent')
 ok(afterHoliday.timeRemaining === 14, 'the holiday permanently removes that Monday’s 2 h from the time left (16 → 14)')
-ok(afterHoliday.contentCovered === fastR.contentCovered, 'a holiday covers no syllabus — content is unchanged')
+ok(afterHoliday.contentCovered === fastR.contentCovered, 'a holiday covers no syllabus - content is unchanged')
 // Even at a perfect pace of 1.0, a subject can simply not have enough slots left:
 // 1 period/week → 5 h spent, 8 h remaining, but 12 h of syllabus still to cover.
 const paceTTtight: any = { 'VI-A': { MONDAY: { p1: { subject: 'Maths', teacher: 'A' } } } }
@@ -481,7 +481,7 @@ ok(tight.pace === 1 && !tight.willFinish && tight.shortfallHours === 4,
   'on-pace but under-scheduled: 12 h of syllabus vs 8 h of slots left → 4 h short, caught before the term ends')
 
 // Past the term end, the term is over: spent stops at the last teaching day and
-// nothing remains — it must not keep accruing for months afterwards.
+// nothing remains - it must not keep accruing for months afterwards.
 const afterTerm = paceFor(fast, paceTT, { ...TERM, today: '2026-12-31' })
 ok(afterTerm.timeSpent === 26 && afterTerm.timeRemaining === 0,
   'after the term ends, time spent stops at the final teaching day (26 h) and 0 h remain')
@@ -491,7 +491,7 @@ ok(beforeTerm.timeSpent === 0, 'before the term starts, no time has been spent')
 // No chapters → no content signal; we say so rather than invent a pace.
 const bulk = mkPlan('Maths', 'VI-A', { requiredHours: 40, loggedHours: 10, teacher: 'A' })
 ok(paceFor(bulk, paceTT, TERM).hasContentSignal === false,
-  'a school logging only bulk hours has no content signal — flagged, not faked')
+  'a school logging only bulk hours has no content signal - flagged, not faked')
 
 // The at-risk feed
 const pacePlans: Record<string, SyllabusPlan> = {
@@ -519,7 +519,7 @@ const sub = (o: Partial<SubCoverageRecord>): SubCoverageRecord => ({
 //    teacher's chapter ticks remain the only measure of coverage.
 const undecided = [sub({ intent: 'skip', hours: 2 })]
 ok(Object.keys(coverageLoss(undecided)).length === 0,
-  'an unanswered cover costs nothing — silence is not evidence the lesson was wasted')
+  'an unanswered cover costs nothing - silence is not evidence the lesson was wasted')
 ok(Object.keys(hoursNotSpent(undecided)).length === 0, 'nor is any time credited back')
 ok(Object.keys(bonusSessions(undecided)).length === 0, 'nor gifted to another subject')
 ok(awaitingConfirmation(undecided).length === 1,
@@ -530,7 +530,7 @@ const contd = [sub({ intent: 'continue' })]
 ok(Object.keys(coverageLoss(contd)).length === 0, 'a substitute continuing the syllabus costs the subject nothing')
 ok(Object.keys(hoursNotSpent(contd)).length === 0, 'continuing cover spends the hour as normal')
 ok(awaitingConfirmation(contd).length === 1,
-  'but the claim is unconfirmed until the absent teacher confirms it — never auto-counted')
+  'but the claim is unconfirmed until the absent teacher confirms it - never auto-counted')
 ok(awaitingConfirmation([sub({ intent: 'continue', confirmedAt: 'now' })]).length === 0,
   'once confirmed it stops asking')
 
@@ -539,8 +539,8 @@ const occupied = [sub({ intent: 'occupy', hours: 2 })]
 ok(coverageLoss(occupied)[planKey('Maths', 'VI-A')].hours === 2,
   'taking the class without the syllabus loses those 2 h of syllabus time')
 ok(hoursNotSpent(occupied)[planKey('Maths', 'VI-A')] === undefined,
-  'that time WAS spent on this subject — it just produced nothing, so pace is not credited back')
-ok(awaitingConfirmation(occupied).length === 0, 'nothing to confirm — no coverage was claimed')
+  'that time WAS spent on this subject - it just produced nothing, so pace is not credited back')
+ok(awaitingConfirmation(occupied).length === 0, 'nothing to confirm - no coverage was claimed')
 
 // 3. Teaches another subject → the owner loses the period; the other subject
 //    gains content WITHOUT spending any of its own hours.
@@ -559,7 +559,7 @@ const sciTT: any = { 'VI-A': { MONDAY: { p1: { subject: 'Science', teacher: 'B' 
 const sciPlan = mkPlan('Science', 'VI-A', { teacher: 'B', requiredHours: 40, chapters: [ch2('c1', true), ch2('c2'), ch2('c3'), ch2('c4')] })
 const sciBase = paceFor(sciPlan, sciTT, TERM)
 ok(sciBase.timeSpent === 5 && sciBase.contentCovered === 10, 'Science: 5 h spent, 10 h of syllabus covered')
-ok(sciBase.pace === 2, 'so its pace is 2.0 — the free session cost it no time at all')
+ok(sciBase.pace === 2, 'so its pace is 2.0 - the free session cost it no time at all')
 
 // Whereas the subject that LOST the period is not charged for it.
 const mathsPlan = mkPlan('Maths', 'VI-A', { teacher: 'A', requiredHours: 40, chapters: [ch2('c1', true), ch2('c2'), ch2('c3'), ch2('c4')] })
@@ -570,15 +570,15 @@ ok(charged.timeSpent === 10 && notCharged.timeSpent === 8,
 ok(notCharged.pace > charged.pace, 'so the teacher is not blamed for a lesson they never got to give')
 
 // Folded into the plans, a non-continuing cover reads as lost syllabus time and
-// escalates the subject exactly like a holiday does — same machinery.
+// escalates the subject exactly like a holiday does - same machinery.
 const subPlans = { [planKey('Maths', 'VI-A')]: mkPlan('Maths', 'VI-A', { requiredHours: 40, loggedHours: 10, teacher: 'A' }) }
 const afterSub = withLostImpact(subPlans, coverageLoss(occupied), {
   reason: 'absence', idPrefix: 'substitution', note: () => 'cover did not advance the syllabus',
 })
 ok(lostHours(afterSub[planKey('Maths', 'VI-A')]) === 2, 'the 2 lost hours land on the plan')
 ok(riskOf(afterSub[planKey('Maths', 'VI-A')]) === 'critical',
-  'and the subject is flagged for rescheduling — that time has to be found again')
-ok(lostHours(subPlans[planKey('Maths', 'VI-A')]) === 0, 'the original plan is untouched — effects are derived, not written')
+  'and the subject is flagged for rescheduling - that time has to be found again')
+ok(lostHours(subPlans[planKey('Maths', 'VI-A')]) === 0, 'the original plan is untouched - effects are derived, not written')
 
 // ── THE ABSENCE NOBODY COVERED ──
 // The case the old model missed: a teacher is out, no substitute is found, and
@@ -601,18 +601,18 @@ const absLoss = uncoveredAbsenceLoss(leaveA, absTT, [], 60)
 ok(absLoss[planKey('Maths', 'VI-A')]?.hours === 2,
   'an uncovered absence loses every period that teacher was due to teach (2 h)')
 ok(!absLoss[planKey('Science', 'VI-A')],
-  'the colleague who turned up is untouched — absence is per teacher, not per day')
+  'the colleague who turned up is untouched - absence is per teacher, not per day')
 
 // Cover one of the two periods: only the uncovered one is still lost.
 const oneCovered = [sub({ date: '2026-01-12', section: 'VI-A', periodId: 'p1', subject: 'Maths', absent: 'A' })]
 ok(uncoveredAbsenceLoss(leaveA, absTT, oneCovered, 60)[planKey('Maths', 'VI-A')]?.hours === 1,
-  'a period that got a substitute is not counted again here — its record already says what happened')
+  'a period that got a substitute is not counted again here - its record already says what happened')
 // …and it must be that DATE's cover, not the same weekday a week earlier.
 const wrongWeek = [sub({ date: '2026-01-05', section: 'VI-A', periodId: 'p1', subject: 'Maths', absent: 'A' })]
 ok(uncoveredAbsenceLoss(leaveA, absTT, wrongWeek, 60)[planKey('Maths', 'VI-A')]?.hours === 2,
   'cover arranged on a different date does not excuse this one')
 
-// A long absence spans every date in the range — two Mondays here.
+// A long absence spans every date in the range - two Mondays here.
 const longLeave: CalLeave[] = [{ id: 'l2', teacher: 'A', date: '2026-01-12', endDate: '2026-01-23', duration: 'long', type: 'Training' }]
 const longLoss = uncoveredAbsenceLoss(longLeave, absTT, [], 60)
 ok(longLoss[planKey('Maths', 'VI-A')]?.hours === 4 && longLoss[planKey('Maths', 'VI-A')].dates.length === 2,
@@ -621,12 +621,12 @@ ok(longLoss[planKey('Maths', 'VI-A')]?.hours === 4 && longLoss[planKey('Maths', 
 // Half-day leave is NOT guessed at: we know half the day was missed, not which half.
 const halfLeave: CalLeave[] = [{ id: 'l3', teacher: 'A', date: '2026-01-12', duration: 'half', type: 'Personal' }]
 ok(Object.keys(uncoveredAbsenceLoss(halfLeave, absTT, [], 60)).length === 0,
-  'half-day leave charges nothing automatically — inventing which periods were missed would be fabrication')
+  'half-day leave charges nothing automatically - inventing which periods were missed would be fabrication')
 
 // A day the school was closed anyway must not be charged twice.
 const onHoliday = uncoveredAbsenceLoss(leaveA, absTT, [], 60, (d) => d === '2026-01-12')
 ok(Object.keys(onHoliday).length === 0,
-  'an absence on a declared holiday costs nothing extra — the holiday already took that time')
+  'an absence on a declared holiday costs nothing extra - the holiday already took that time')
 
 // Period length feeds through the same way it does for holidays.
 ok(uncoveredAbsenceLoss(leaveA, absTT, [], 40)[planKey('Maths', 'VI-A')]?.hours === 1.3,
@@ -662,26 +662,26 @@ const bundleB: any = {
 
 // 13 Mondays in the term. A: 13 × 60 min = 13 h. B: 13 × 30 min = 6.5 h.
 const alloc = allocatedHoursByPlan([bundleA, bundleB])
-ok(alloc[planKey('English', 'I-A')] === 13, 'allocation is derived from the timetable — 13 Mondays × 60 min = 13 h')
+ok(alloc[planKey('English', 'I-A')] === 13, 'allocation is derived from the timetable - 13 Mondays × 60 min = 13 h')
 ok(alloc[planKey('Physics', 'X-A')] === 6.5,
-  "each schedule uses ITS OWN period length — 30-min periods give 6.5 h, not 13")
+  "each schedule uses ITS OWN period length - 30-min periods give 6.5 h, not 13")
 
 // The union is what a school with two active schedules must see.
 const union = unionEntities([bundleA, bundleB])
 ok(union.sections.length === 2 && union.sections.includes('I-A') && union.sections.includes('X-A'),
-  'both schedules contribute their class-sections — not just whichever was opened last')
+  'both schedules contribute their class-sections - not just whichever was opened last')
 ok(union.subjects.join() === 'English,Physics' && union.staff.join() === 'Anita,Bhaskar',
   'subjects and staff are unioned too')
 ok(union.scheduleOf['X-A'] === 'VI–X TT', 'each section remembers which schedule it came from')
 
 // Class order is school order, not alphabetical.
 ok(compareSection('Nursery-A', 'I-A') < 0, 'Nursery sorts before Class I')
-ok(compareSection('II-A', 'X-A') < 0, 'II sorts before X — alphabetically it would not')
+ok(compareSection('II-A', 'X-A') < 0, 'II sorts before X - alphabetically it would not')
 ok(classRank('Nursery') < classRank('I') && classRank('I') < classRank('II'), 'ranks ascend as a school lists them')
 
 // A DROPPED class must not haunt the pickers. A generated timetable keeps
 // whatever sections existed when it ran, so a school that has since removed its
-// Nursery classes had them appearing in every dropdown — labelled with the
+// Nursery classes had them appearing in every dropdown - labelled with the
 // schedule they were removed from. The roster is the authority on what exists.
 const staleTT: any = {
   id: 'c', name: 'I–V TT', staff: [], rooms: [], subjects: [], periods: [],
@@ -706,18 +706,18 @@ ok(allocatedHoursByPlan([staleTT])[planKey('English', 'I-A')] === 13,
 // The other half: a section in the roster that nobody scheduled adds no row.
 const unscheduled: any = { ...staleTT, sections: [{ name: 'I-A' }, { name: 'V-C' }] }
 ok(!unionEntities([unscheduled]).sections.includes('V-C'),
-  'a rostered section with no periods stays out — there is nothing to report on it')
+  'a rostered section with no periods stays out - there is nothing to report on it')
 
 // Older snapshots that never stored a roster must still work.
 const noRoster: any = { ...staleTT, sections: [] }
 ok(liveSections(noRoster).length === 2,
   'a bundle with no roster falls back to its timetable rather than showing nothing')
 
-// ── SPENT is derived, COVERAGE is recorded — never the same number ──
+// ── SPENT is derived, COVERAGE is recorded - never the same number ──
 // The schedule is published, so the app knows which periods have already run.
 // Jan 5 → Feb 2 inclusive is 5 Mondays; the term runs to Mar 30.
 ok(elapsedHoursByPlan([bundleA], '2026-02-02')[planKey('English', 'I-A')] === 5,
-  'hours already run come from the published schedule — 5 Mondays elapsed, nobody typed it')
+  'hours already run come from the published schedule - 5 Mondays elapsed, nobody typed it')
 ok(elapsedHoursByPlan([bundleA], '2026-01-04')[planKey('English', 'I-A')] === undefined,
   'nothing has run before the term starts')
 ok(elapsedHoursByPlan([bundleA], '2026-12-31')[planKey('English', 'I-A')] === 13,
@@ -727,7 +727,7 @@ ok(elapsedHoursByPlan([bundleA], '2026-02-02', () => [{ id: 'h', date: '2026-01-
 // The distinction that matters: spent moves on its own, covered does not.
 const spentPlan = withAllocatedHours({}, allocatedHoursByPlan([bundleA]))[planKey('English', 'I-A')]
 ok(requiredHours(spentPlan) === 13 && coveredHours(spentPlan) === 0,
-  'five hours can have run with zero syllabus covered — the gap is the whole point')
+  'five hours can have run with zero syllabus covered - the gap is the whole point')
 
 // TIME LEFT is measured, not subtracted. Allocated is the term as planned;
 // spent has holidays removed. So allocated − spent would hand back every past
@@ -739,7 +739,7 @@ const leftA  = futureHoursByPlan([bundleA], '2026-02-02', holidayOnJan12)[planKe
 ok(allocA === 13 && spentA === 4 && leftA === 8,
   'allocated 13 h, 4 h run (one Monday lost to a holiday), 8 h still to come')
 ok(allocA - spentA === 9 && leftA === 8,
-  'and subtracting would have claimed 9 h left — the extra hour is the holiday, which is gone')
+  'and subtracting would have claimed 9 h left - the extra hour is the holiday, which is gone')
 ok(spentA + leftA + 1 === allocA,
   'spent + left + time lost = allocated, so the figures reconcile instead of overlapping')
 ok(futureHoursByPlan([bundleA], '2026-03-30')[planKey('English', 'I-A')] === undefined,
@@ -752,13 +752,13 @@ const onATeachingDay = {
   left: futureHoursByPlan([bundleA], '2026-01-12')[planKey('English', 'I-A')],
 }
 ok(onATeachingDay.spent + onATeachingDay.left === 13,
-  "a lesson today is counted once — spent, not also still to come")
+  "a lesson today is counted once - spent, not also still to come")
 
 // The bug this replaced: with nothing covered, "remaining syllabus" equals
 // "allocated", so showing both said the same thing twice.
 const nothingCovered = withAllocatedHours({}, allocatedHoursByPlan([bundleA]))[planKey('English', 'I-A')]
 ok(requiredHours(nothingCovered) === remainingHours(nothingCovered),
-  'remaining-syllabus IS allocated until something is recorded — which is why the headline now shows time left instead')
+  'remaining-syllabus IS allocated until something is recorded - which is why the headline now shows time left instead')
 ok(leftA !== allocA, 'time left is a different measurement, so it never mirrors allocated')
 
 // ── CASCADING PICKERS: any of the three can be the entry point ──
@@ -800,18 +800,18 @@ ok(teacherFor(map, 'Maths', 'II-A') === 'Chandra', 'and the teacher of a slot is
 ok(matchStaffName(map, { name: 'anita' }) === 'Anita', 'case-insensitive name match')
 ok(matchStaffName(map, { name: '', email: 'bhaskar@school.edu' }) === 'Bhaskar', 'falls back to the email local part')
 ok(matchStaffName(map, { name: 'chandra.k', email: 'x@y.z' }) === undefined,
-  'a near-miss is NOT matched — showing someone else\'s classes would be worse than showing none')
+  'a near-miss is NOT matched - showing someone else\'s classes would be worse than showing none')
 
 // Folding allocation into the plans: seeds what has none, respects an override.
 const seeded = withAllocatedHours({}, alloc)
 ok(requiredHours(seeded[planKey('English', 'I-A')]) === 13,
-  'a subject nobody has touched still shows its allocated hours — no empty box to fill in')
+  'a subject nobody has touched still shows its allocated hours - no empty box to fill in')
 ok(riskOf(seeded[planKey('English', 'I-A')]) === 'untracked',
   'but with nothing recorded it stays UNTRACKED, so seeding cannot flood the alert')
 const overridden = withAllocatedHours(
   { [planKey('English', 'I-A')]: mkPlan('English', 'I-A', { requiredHours: 20 }) }, alloc)
 ok(requiredHours(overridden[planKey('English', 'I-A')]) === 20,
-  'an explicit figure wins — a syllabus needing more than it was allocated must show the gap')
+  'an explicit figure wins - a syllabus needing more than it was allocated must show the gap')
 const filled = withAllocatedHours(
   { [planKey('English', 'I-A')]: mkPlan('English', 'I-A', { overallPercentCovered: 50 }) }, alloc)
 ok(requiredHours(filled[planKey('English', 'I-A')]) === 13 && coveredHours(filled[planKey('English', 'I-A')]) === 6.5,
@@ -826,7 +826,7 @@ ok(riskOf(filled[planKey('English', 'I-A')]) === 'on-track',
 import { scaleToTarget, periodsForHours, deriveWeeklySlots, toAllocationGrid } from './src/lib/periodAllocationEngine'
 
 ok(periodsForHours(22.5, 45) === 30, '22.5 h/week at 45-min periods = 30 periods')
-ok(periodsForHours(22.5, 60) === 22, 'the same norm at 60-min periods = 22 — period duration is a real input')
+ok(periodsForHours(22.5, 60) === 22, 'the same norm at 60-min periods = 22 - period duration is a real input')
 ok(periodsForHours(0, 45) === 0 && periodsForHours(22, 0) === 0, 'no norm or no duration → nothing derived')
 
 // Scaling: the total must land EXACTLY on target, never near it.
@@ -834,7 +834,7 @@ ok(scaleToTarget([5, 5, 5], 30).join() === '5,5,5', 'a curriculum that already f
 const squeezed = scaleToTarget([8, 6, 4, 2], 15)
 ok(squeezed.reduce((a, b) => a + b, 0) === 15, 'a curriculum that overflows is scaled to fit the week exactly (sums to 15)')
 ok(squeezed.every(v => v >= 1), 'and every subject keeps at least one period')
-ok(squeezed[0] > squeezed[3], 'relative weight survives scaling — the heavier subject stays heavier')
+ok(squeezed[0] > squeezed[3], 'relative weight survives scaling - the heavier subject stays heavier')
 const tightWeek = scaleToTarget([5, 4, 3, 2, 1], 3)
 ok(tightWeek.reduce((a, b) => a + b, 0) === 3 && tightWeek.filter(v => v > 0).length === 3,
   'when there is not even one period each, the heaviest three are served and the rest are honestly zero')
@@ -843,7 +843,7 @@ ok(scaleToTarget([], 10).length === 0 && scaleToTarget([3, 3], 0).join() === '0,
 // Largest-remainder, not naive rounding: 3 equal subjects into 10 periods.
 const remainder = scaleToTarget([4, 4, 4], 10)
 ok(remainder.reduce((a, b) => a + b, 0) === 10,
-  'ten periods across three equal subjects sums to 10 — naive rounding would have given 9 or 12')
+  'ten periods across three equal subjects sums to 10 - naive rounding would have given 9 or 12')
 
 // End to end: the same subjects, two different period lengths → different slots.
 const engineInput = {
@@ -859,7 +859,7 @@ const engineInput = {
 }
 const derived = deriveWeeklySlots(engineInput)[0]
 ok(derived.rows.length === 3 && derived.rows.every(r => r.ideal > 0),
-  'the board knowledge base supplies the ideal weekly periods — nobody typed them')
+  'the board knowledge base supplies the ideal weekly periods - nobody typed them')
 ok(derived.totalSlots <= derived.target, 'the derivation never exceeds what the week can hold')
 
 // The Step 0 norm caps the bell: 20 h/week at 45 min = 26 periods, below the
@@ -894,10 +894,10 @@ import {
 // The blueprint's linkage, both directions.
 ok(perWeekFromPerDay(5, 5) === 25, 'per-day × working days = per-week (5/day × 5 = 25)')
 ok(perDayFromPerWeek(25, 5) === 5, 'and back again (25/week ÷ 5 = 5/day)')
-// Rounding is asymmetric ON PURPOSE — a derived daily figure must never make the
+// Rounding is asymmetric ON PURPOSE - a derived daily figure must never make the
 // admin's own weekly figure unreachable.
 ok(perDayFromPerWeek(32, 5) === 7,
-  '32/week over 5 days rounds UP to 7/day — rounding down to 6 would cap the week at 30 and contradict the stated 32')
+  '32/week over 5 days rounds UP to 7/day - rounding down to 6 would cap the week at 30 and contradict the stated 32')
 ok(perWeekFromPerDay(perDayFromPerWeek(32, 5), 5) >= 32,
   'so the round-trip never shrinks the weekly budget')
 // Hours → periods rounds DOWN, because a cap is a limit.
@@ -910,30 +910,30 @@ ok(displayCap(30, 'hours', 40) === 20 && displayCap(30, 'periods', 40) === 30, '
 const asWeekPeriods = resolveCaps({ value: 25, span: 'week', unit: 'periods', workingDays: 5, periodMinutes: 40 })
 const asDayPeriods  = resolveCaps({ value: 5,  span: 'day',  unit: 'periods', workingDays: 5, periodMinutes: 40 })
 ok(asWeekPeriods.perWeek === 25 && asWeekPeriods.perDay === 5, '25 periods/week resolves to 5/day')
-ok(asDayPeriods.perDay === 5 && asDayPeriods.perWeek === 25, '5 periods/day resolves to 25/week — the same constraint either way')
+ok(asDayPeriods.perDay === 5 && asDayPeriods.perWeek === 25, '5 periods/day resolves to 25/week - the same constraint either way')
 const asDayHours = resolveCaps({ value: 4, span: 'day', unit: 'hours', workingDays: 5, periodMinutes: 40 })
 ok(asDayHours.perDay === 6 && asDayHours.perWeek === 30, '4 hours/day at 40 min = 6 periods/day = 30/week')
-// The span the admin CHOSE stays authoritative — typing 5/day must not come
+// The span the admin CHOSE stays authoritative - typing 5/day must not come
 // back as 6/day via a weekly round-trip.
 ok(resolveCaps({ value: 5, span: 'day', unit: 'periods', workingDays: 6, periodMinutes: 40 }).perDay === 5,
   'a stated per-day figure is never overwritten by re-deriving it from the week')
 ok(resolveCaps({ value: 0, span: 'week', unit: 'periods', workingDays: 5, periodMinutes: 40 }).perWeek === 0,
   'a zero or blank entry means no cap, not a cap of zero-ish')
 
-// Effective caps: own override first, else the norm — and the two must agree.
+// Effective caps: own override first, else the norm - and the two must agree.
 const norm = { perWeek: 30, perDay: 6 }
 ok(effectiveCaps(undefined, norm, 5).perWeek === 30, 'a teacher with no overrides takes the school norm')
 const weekOnly = effectiveCaps({ maxPeriodsPerWeek: 20 }, norm, 5)
 ok(weekOnly.perWeek === 20 && weekOnly.perDay === 4,
-  "a weekly-only override derives its OWN daily figure (4), not the norm's 6 — otherwise the two would contradict")
+  "a weekly-only override derives its OWN daily figure (4), not the norm's 6 - otherwise the two would contradict")
 ok(weekOnly.weekOverridden && !weekOnly.dayOverridden, 'and only the week reads as overridden')
 const dayOnly = effectiveCaps({ maxPeriodsPerDay: 3 }, norm, 5)
 ok(dayOnly.perDay === 3 && dayOnly.perWeek === 30, 'a daily-only override keeps the norm week but binds each day at 3')
 
-// Enforcement — the reason this is a constraint and not a form field.
+// Enforcement - the reason this is a constraint and not a form field.
 ok(atDailyLimit(5, 5) && atDailyLimit(6, 5), 'a teacher at or past their daily cap is unavailable')
 ok(!atDailyLimit(4, 5), 'and available below it')
-ok(!atDailyLimit(99, 0), 'no cap set means no limit — never accidentally zero')
+ok(!atDailyLimit(99, 0), 'no cap set means no limit - never accidentally zero')
 
 // ── THREE GRAINS: national → stage → class, and per-subject on top ──
 // Each level states only what differs from the one above, so a school sets a
@@ -948,11 +948,11 @@ ok(studentHoursFor('V', 'lowerPrimary', { studentMaxHoursWeek: { lowerPrimary: 2
 ok(studentHoursFor('V', 'lowerPrimary', {
   studentMaxHoursWeek: { lowerPrimary: 25 },
   studentMaxHoursWeekByClass: { V: 28 },
-}, 22.5) === 28, 'and a CLASS figure overrides the stage — narrowest wins')
+}, 22.5) === 28, 'and a CLASS figure overrides the stage - narrowest wins')
 ok(studentHoursFor('IV', 'lowerPrimary', {
   studentMaxHoursWeek: { lowerPrimary: 25 },
   studentMaxHoursWeekByClass: { V: 28 },
-}, 22.5) === 25, 'while its siblings keep following the stage — an override is not contagious')
+}, 22.5) === 25, 'while its siblings keep following the stage - an override is not contagious')
 ok(studentHoursFor('V', 'lowerPrimary', { studentMaxHoursWeekByClass: { V: 0 } }, 22.5) === 22.5,
   'a cleared class figure falls back rather than capping the class at zero')
 
@@ -994,10 +994,10 @@ const editedGrid  = { 'I-A': { Maths: '9', English: '5' }, 'I-B': { Maths: '6', 
 
 const untouched = mergePreservingManual(derivedGrid, editedGrid, {})
 ok(untouched.grid['I-A'].Maths === '6' && untouched.kept === 0,
-  'with nothing marked manual, the derivation applies in full — the default behaviour is unchanged')
+  'with nothing marked manual, the derivation applies in full - the default behaviour is unchanged')
 
 const keptEdit = mergePreservingManual(derivedGrid, editedGrid, { 'I-A': { Maths: true } })
-ok(keptEdit.grid['I-A'].Maths === '9', "a hand-typed cell survives re-derivation — Suggest no longer overwrites it")
+ok(keptEdit.grid['I-A'].Maths === '9', "a hand-typed cell survives re-derivation - Suggest no longer overwrites it")
 ok(keptEdit.grid['I-A'].English === '5' && keptEdit.grid['I-B'].Maths === '6',
   'while every other cell still takes the freshly derived figure')
 ok(keptEdit.kept === 1, 'and the count reports exactly what was rescued, for telling the user')
@@ -1017,7 +1017,7 @@ const same = mergePreservingManual(derivedGrid, derivedGrid, { 'I-A': { Maths: t
 ok(same.kept === 0, 'a manual cell that agrees with the norm is not reported as an override')
 
 // END TO END: does the SOLVER honour it? A cap the engine ignores is a form
-// field, not a constraint — today's load used to be a -3 scoring nudge only.
+// field, not a constraint - today's load used to be a -3 scoring nudge only.
 import { solveTimetable } from './src/lib/schedulingEngine'
 
 const capDays = ['MONDAY']
@@ -1025,7 +1025,7 @@ const capPeriods = Array.from({ length: 6 }, (_, i) => ({
   id: `p${i + 1}`, name: `P${i + 1}`, type: 'class', startTime: '09:00', endTime: '09:40', duration: 40,
 })) as any[]
 // One section, six Monday periods, one subject. Two teachers can teach it, but
-// the first is capped at 2 periods a day — so they must not take all six.
+// the first is capped at 2 periods a day - so they must not take all six.
 const capStaff: any[] = [
   { id: 't1', name: 'Capped', shortName: 'CP', subjects: ['Maths'], classes: ['I-A'], isClassTeacher: '', maxPeriodsPerWeek: 40, maxPeriodsPerDay: 2 },
   { id: 't2', name: 'Spare',  shortName: 'SP', subjects: ['Maths'], classes: ['I-A'], isClassTeacher: '', maxPeriodsPerWeek: 40 },
@@ -1041,12 +1041,12 @@ const capOut = solveTimetable({
 const cappedLoad = Object.values(capOut.classTT?.['I-A']?.MONDAY ?? {})
   .filter((c: any) => c?.teacher === 'Capped').length
 ok(cappedLoad <= 2,
-  `the solver respects a 2-periods/day cap — "Capped" took ${cappedLoad} of Monday's periods, not more`)
+  `the solver respects a 2-periods/day cap - "Capped" took ${cappedLoad} of Monday's periods, not more`)
 
 // ── IS THE DEFAULT WORKLOAD ACTUALLY THE NORM? ──
 // The teacher cap defaults were hardcoded literals (30 in Resources, 32 in the
 // allocation passes, 40 in most consumers, 36 in orgData's own country table).
-// India's safe load happens to be 30, which is why the figure looked right —
+// India's safe load happens to be 30, which is why the figure looked right -
 // but every other system was being overloaded by 20–100%.
 import { teacherNorms, effectiveTeacherMaxPeriods as effMax } from './src/lib/educationNorms'
 import { getCountry } from './src/lib/orgData'
@@ -1055,25 +1055,25 @@ for (const [code, safe] of [['IN', 30], ['US', 25], ['GB', 22], ['AU', 20]] as A
   ok(teacherNorms(code).safeMaxPeriodsWeek === safe,
     `${code}: the norms database says ${safe} teaching periods/week is the safe load`)
   ok(effMax(code, 40, undefined) === safe,
-    `${code}: with no custom override the default cap IS that norm — not a literal`)
+    `${code}: with no custom override the default cap IS that norm - not a literal`)
 }
 // The literals that were in the code, measured against the norm they replaced.
 ok(effMax('GB', 40, undefined) === 22 && 32 - 22 === 10,
   'the old hardcoded 32 would have given a UK teacher 10 periods/week over the norm')
 ok(effMax('AU', 40, undefined) === 20 && 40 / 20 === 2,
   'and the old ?? 40 fallback was double the Australian norm')
-// A custom override still wins — that is the point of an override.
+// A custom override still wins - that is the point of an override.
 ok(effMax('GB', 40, 20) === 30, 'a custom 20 h/week at 40-min periods overrides the norm with 30p')
 // orgData's figure is the SCHOOL DAY (6 periods/day × 6 days = 36), not a
-// teacher's teaching cap (30). Both are correct for what they describe — the bug
+// teacher's teaching cap (30). Both are correct for what they describe - the bug
 // was reading one as the other, which no code does now. Pinned so the two stay
 // distinguishable rather than being "reconciled" into a single wrong number.
 ok(getCountry('IN').maxPeriodsWeek === 36 && teacherNorms('IN').safeMaxPeriodsWeek === 30,
-  "orgData describes the school day (36); the norms database describes the teaching cap (30) — different questions, different answers")
+  "orgData describes the school day (36); the norms database describes the teaching cap (30) - different questions, different answers")
 
 // ── SCHOOL ROSTER: the thing that makes the permissions model reachable ──
 // The Users page used to be a mock, so no role was ever assigned and every
-// account behaved as an administrator — a faculty member could declare a
+// account behaved as an administrator - a faculty member could declare a
 // school-wide holiday.
 import { roleForEmail, canDemote, type Member } from './src/store/members'
 import { can } from './src/lib/permissionPolicy'
@@ -1089,7 +1089,7 @@ const roster: Member[] = [
 
 ok(roleForEmail(roster, 'anita@school.edu') === 'teacher', 'the roster answers what a signed-in person may do')
 ok(roleForEmail(roster, 'ANITA@School.edu ') === 'teacher',
-  'matched case- and space-insensitively — an email typed with capitals is the same person')
+  'matched case- and space-insensitively - an email typed with capitals is the same person')
 ok(roleForEmail(roster, 'stranger@school.edu') === undefined,
   'someone not on the roster gets no answer, so the caller can fall back rather than guess')
 ok(roleForEmail(roster, undefined) === undefined && roleForEmail(roster, '') === undefined,
@@ -1105,7 +1105,7 @@ ok(!can('viewer', 'syllabus.record') && !can('viewer', 'period.markMissed'),
 
 // Lock-out guard: this roster is client-side with no server to repair it.
 ok(!canDemote(roster, 'head@school.edu'),
-  'the only administrator cannot be demoted — the school would lose holidays and settings with no way back')
+  'the only administrator cannot be demoted - the school would lose holidays and settings with no way back')
 ok(canDemote(roster, 'anita@school.edu'), 'anyone who is not an admin can be changed freely')
 const twoAdmins = [...roster, mkMember('deputy@school.edu', 'admin')]
 ok(canDemote(twoAdmins, 'head@school.edu'),
@@ -1147,7 +1147,7 @@ ok(afterMove.some(l => l.teacher === 'Ravi'), 'the absence only the second admin
 ok(afterMove.filter(l => l.teacher === 'Anita').length === 1,
   'the same teacher marked absent twice on one day counts once, not twice')
 ok(legacyLeaveKeys(legacyStore).length === 0,
-  'the old keys are removed — otherwise deleting a leave would resurrect it on next load')
+  'the old keys are removed - otherwise deleting a leave would resurrect it on next load')
 
 migrateLegacyLeaves(legacyStore)
 ok(useLeaves.getState().leaves.length === 2, 'running the migration again changes nothing')
@@ -1240,7 +1240,7 @@ const shortSchedule = { start: '2026-04-01', end: '2026-06-30' }
 ok(clampToTerm(shortSchedule, t1)!.end === '2026-06-30',
   'a term outlasting the schedule is cut to the schedule')
 
-// No overlap at all must count NOTHING, not fall back to the whole range —
+// No overlap at all must count NOTHING, not fall back to the whole range -
 // otherwise a term the schedule never ran in would report a full year of hours.
 const nextYearSchedule = { start: '2027-04-01', end: '2028-03-31' }
 ok(clampToTerm(nextYearSchedule, t1) === null,
@@ -1248,7 +1248,7 @@ ok(clampToTerm(nextYearSchedule, t1) === null,
 ok(clampToTerm({ start: '2026-10-01', end: '2026-10-14' }, t2) === null,
   'a schedule falling entirely in the between-term break contributes nothing')
 
-// Touching at exactly one day still counts — the boundaries are inclusive.
+// Touching at exactly one day still counts - the boundaries are inclusive.
 ok(clampToTerm({ start: '2026-09-30', end: '2027-03-31' }, t1)!.start === '2026-09-30',
   'a single shared day is an overlap, not a miss')
 
@@ -1264,7 +1264,7 @@ ok(defaultTerm([t1, t2], '2027-06-01')?.id === 't2',
   'after the last term ends, the default is the one that just finished')
 ok(defaultTerm([], '2026-05-10') === undefined, 'a school with no terms has no default')
 
-// Overlaps are reported, not rejected — a school mid-edit will briefly have them.
+// Overlaps are reported, not rejected - a school mid-edit will briefly have them.
 const clashing = mkTerm('t3', 'Term 2 (draft)', '2026-09-01', '2027-03-31')
 ok(overlappingTerms([t1, clashing]).length === 1, 'overlapping terms are reported')
 ok(overlappingTerms([t1, t2]).length === 0, 'terms with a gap between them are not')
@@ -1283,7 +1283,7 @@ const summerTerm: AcademicTerm = { id: 'u', name: 'Summer', start: '2026-02-09',
 const otherYear: AcademicTerm = { id: 'o', name: 'Last year', start: '2025-01-01', end: '2025-12-31' }
 
 ok(allocatedHoursByPlan([bundleA])[planKey('English', 'I-A')] === 13,
-  'no term chosen still reports the whole run — declaring terms changes nothing by itself')
+  'no term chosen still reports the whole run - declaring terms changes nothing by itself')
 
 // 5 Jan, 12, 19, 26, 2 Feb = 5 Mondays.
 ok(allocatedHoursByPlan([bundleA], springTerm)[planKey('English', 'I-A')] === 5,
@@ -1294,7 +1294,7 @@ ok(allocatedHoursByPlan([bundleA], summerTerm)[planKey('English', 'I-A')] === 8,
 ok(
   allocatedHoursByPlan([bundleA], springTerm)[planKey('English', 'I-A')] +
   allocatedHoursByPlan([bundleA], summerTerm)[planKey('English', 'I-A')] === 13,
-  'the terms add back up to the whole run — no hour is counted twice or lost',
+  'the terms add back up to the whole run - no hour is counted twice or lost',
 )
 ok(allocatedHoursByPlan([bundleA], otherYear)[planKey('English', 'I-A')] === undefined,
   'a term the schedule never ran in reports nothing, not a full year')
@@ -1378,7 +1378,7 @@ ok(movedEvents.length === 2, 'the same day entered by two admins collapses to on
 ok(movedEvents.some(e => e.title === 'Parents evening'),
   'and an event only one of them knew about is now visible to all')
 ok(movedEvents.every(e => e.suspendsTeaching === false),
-  'anything recorded before events had consequences keeps none — migrating must not rewrite a school\'s hours')
+  'anything recorded before events had consequences keeps none - migrating must not rewrite a school\'s hours')
 ok(legacyEventKeys(evStore).length === 0, 'the old keys are removed')
 
 ok(mergeEvents([ev()], [ev()]).length === 1, 'the same event seen twice is kept once')
@@ -1416,7 +1416,7 @@ const ringsIA = ringsForSection('I-A', bellConfig, bellPeriods)
 // 10:35 P3 ends + dispersal starts, 10:40 dispersal ends.
 ok(ringsIA[0].at === 8 * 60, 'the first bell is the start of the day')
 ok(ringsIA[ringsIA.length - 1].at === 10 * 60 + 40,
-  'the last bell is home time — built from slot ENDS, so it is never dropped')
+  'the last bell is home time - built from slot ENDS, so it is never dropped')
 
 // The point of the whole module: one moment is ONE bell, described both ways.
 const changeover = ringsIA.find(r => r.at === 8 * 60 + 55)!
@@ -1424,7 +1424,7 @@ ok(!!changeover, 'the moment P1 ends and P2 starts exists')
 ok(changeover.ends === 'Period 1' && changeover.starts === 'Period 2',
   'and is a single bell that means both, not two bells a minute apart')
 ok(describeRing(changeover) === 'Period 2',
-  'a bell is named for what STARTS — one moment described twice reads as two events')
+  'a bell is named for what STARTS - one moment described twice reads as two events')
 ok(describeRing({ at: 0, ends: 'Period 3' }) === 'End of day',
   'the last bell of the day starts nothing, and says so rather than naming a period that just finished')
 ok(ringsIA.filter(r => r.at === 8 * 60 + 55).length === 1, 'never listed twice')
@@ -1436,7 +1436,7 @@ ok(ringsIA.every((r, i) => i === 0 || r.at > ringsIA[i - 1].at), 'bells come bac
 // Nursery has no P3 and no dispersal row, so it rings differently.
 const nurseryRings = ringsForSection('Nursery-A', bellConfig, bellPeriods)
 ok(nurseryRings[0].at === 8 * 60,
-  'Nursery shares the assembly bell — it is the SAME schedule, not a fallback clock')
+  'Nursery shares the assembly bell - it is the SAME schedule, not a fallback clock')
 ok(nurseryRings[nurseryRings.length - 1].at === 9 * 60 + 55 &&
    ringsIA[ringsIA.length - 1].at === 10 * 60 + 40,
   'but goes home 45 minutes earlier, which is exactly the case one flat list would get wrong')
@@ -1455,7 +1455,7 @@ ok(nextRing(ringsIA, 8 * 60 + 30)?.at === 8 * 60 + 55, 'the next bell is the nex
 ok(nextRing(ringsIA, 8 * 60 + 55)?.at === 8 * 60 + 55, 'a bell due this very minute is still next')
 ok(minutesToNextRing(ringsIA, 8 * 60 + 45) === 10, 'the countdown is in whole minutes')
 ok(nextRing(ringsIA, 23 * 60) === undefined,
-  "after the last bell there is no next one — a board reading 'next bell in 14 hours' is noise")
+  "after the last bell there is no next one - a board reading 'next bell in 14 hours' is noise")
 
 ok(fmtRingTime(8 * 60 + 5) === '8:05 AM' && fmtRingTime(13 * 60 + 5) === '1:05 PM', '12-hour clock')
 ok(fmtRingTime(13 * 60 + 5, true) === '13:05', '24-hour clock when the school prefers it')
@@ -1468,7 +1468,7 @@ ok(naiveRings.length > 0 && naiveRings[0].at === 9 * 60,
 
 // ── The corridor display ──
 // A board that shows a cheerful grid on a holiday, or counts down to a bell
-// that will not ring, is worse than a blank screen — people trust it.
+// that will not ring, is worse than a blank screen - people trust it.
 import { boardNow, boardRows, uncoveredRows, soonestRings } from './src/lib/smartboard'
 
 const boardRings = ringsForSection('I-A', bellConfig, bellPeriods)   // 8:00 → 10:40
@@ -1480,7 +1480,7 @@ ok(during.nextBellIn === 35 && during.nextBellAt === 9 * 60 + 35,
   'and the countdown is to the next bell that will actually ring')
 ok(during.nextBellMeans === 'Break', 'saying what is coming, not what is ending')
 
-// Before and after the day — the two states a naive board gets wrong by
+// Before and after the day - the two states a naive board gets wrong by
 // counting down to a bell fourteen hours away.
 const before = boardNow(boardRings, 7 * 60, { isWorkDay: true })
 ok(before.state === 'before' && before.nextBellIn === 60,
@@ -1488,14 +1488,14 @@ ok(before.state === 'before' && before.nextBellIn === 60,
 const after = boardNow(boardRings, 22 * 60, { isWorkDay: true })
 ok(after.state === 'after', 'after the last bell the day is over')
 ok(after.nextBellIn === undefined,
-  'with NO countdown — a board reading "next bell in 10 hours" at 10pm is noise')
+  'with NO countdown - a board reading "next bell in 10 hours" at 10pm is noise')
 ok(after.lastBellAt === 10 * 60 + 40, 'but it still says when the day ended')
 
 // Closed, for each of the three different reasons.
 ok(boardNow(boardRings, 9 * 60, { isWorkDay: false }).state === 'closed',
   'a weekend is closed even though bells exist')
-const boardOnHoliday = boardNow(boardRings, 9 * 60, { isWorkDay: true, closedReason: 'Diwali — school holiday' })
-ok(boardOnHoliday.state === 'closed' && boardOnHoliday.reason === 'Diwali — school holiday',
+const boardOnHoliday = boardNow(boardRings, 9 * 60, { isWorkDay: true, closedReason: 'Diwali - school holiday' })
+ok(boardOnHoliday.state === 'closed' && boardOnHoliday.reason === 'Diwali - school holiday',
   'a holiday names itself rather than showing a timetable nobody is following')
 ok(boardNow([], 9 * 60, { isWorkDay: true }).state === 'closed',
   'a working day with no bells at all is a schedule that was never generated, not a day to count down')
@@ -1518,7 +1518,7 @@ ok(at830.length === 2, 'every class gets a row')
 ok(at830.find(r => r.section === 'I-A')?.subject === 'English', 'showing what is on right now')
 ok(at830.find(r => r.section === 'I-A')?.endMin === 8 * 60 + 55, 'and when it finishes')
 
-// A free class keeps its row rather than vanishing — a list that changes
+// A free class keeps its row rather than vanishing - a list that changes
 // length through the day reads as a fault.
 const at940 = boardRows([boardBundle], 'MONDAY', '2026-08-17', 9 * 60 + 40, new Set<string>())
 ok(at940.length === 2 && at940.every(r => !r.subject),
@@ -1531,7 +1531,7 @@ ok(teacherOut.find(r => r.section === 'I-A')?.uncovered === true,
 ok(teacherOut.find(r => r.section === 'I-B')?.uncovered === false, 'and the others are not')
 ok(uncoveredRows(teacherOut).length === 1, 'only that one is worth flashing')
 
-// Dated, as the app now writes it — a weekday key here would pass only
+// Dated, as the app now writes it - a weekday key here would pass only
 // because the board ignored it, which is the bug this replaced.
 const covered: any = { ...boardBundle, substitutions: { 'I-A|2026-08-17|p1': 'Meera' } }
 const withSub = boardRows([covered], 'MONDAY', '2026-08-17', 8 * 60 + 30, new Set(['Anita']))
@@ -1543,7 +1543,7 @@ ok(uncoveredRows(withSub).length === 0, 'so nothing flashes')
 
 // The corridor screen is the one surface where naming the wrong person is
 // public. When covers became dated this lookup was left on the weekday key,
-// so it matched nothing and the board showed the ABSENT teacher — verified
+// so it matched nothing and the board showed the ABSENT teacher - verified
 // here by feeding it exactly that stale shape.
 const staleWeekdayCover: any = { ...boardBundle, substitutions: { 'I-A|MONDAY|p1': 'Meera' } }
 const staleRows = boardRows([staleWeekdayCover], 'MONDAY', '2026-08-17', 8 * 60 + 30, new Set(['Anita']))
@@ -1556,7 +1556,7 @@ ok(otherDay.find(r => r.section === 'I-A')?.teacher === 'Anita',
 // Sections on different clocks must not be merged into one countdown wrongly.
 const mergedRings = soonestRings([{ sections: ['I-A', 'Nursery-A'], config: bellConfig, periods: bellPeriods }])
 ok(mergedRings.some(r => r.at === 10 * 60 + 40),
-  "the board's next-bell list spans every group — it is the next moment ANYTHING changes")
+  "the board's next-bell list spans every group - it is the next moment ANYTHING changes")
 ok(mergedRings.filter(r => r.at === 9 * 60 + 55).length === 1,
   'a minute where two groups both ring is one entry, not two')
 const shared = mergedRings.find(r => r.at === 9 * 60 + 55)!
@@ -1580,7 +1580,7 @@ const twoBells = soonestRings([
 ])
 ok(twoBells.some(r => r.at === 8 * 60), "the morning schedule's first bell is there")
 ok(twoBells.some(r => r.at === 13 * 60),
-  "and so is the afternoon schedule's — each resolved against ITS OWN bell, not the first one's")
+  "and so is the afternoon schedule's - each resolved against ITS OWN bell, not the first one's")
 ok(twoBells.every((r, i) => i === 0 || r.at > twoBells[i - 1].at),
   'the combined list is still one ordered sequence of moments')
 
@@ -1592,7 +1592,7 @@ const { useFreeAssignments, migrateLegacyAssignments, assignmentIdentity } =
 const { useUrgentPullouts, migrateLegacyPullouts } = await import('./src/lib/urgentReassignments')
 const { useNamingTerms, migrateLegacyNaming, loadTerms, TERM_DEFAULTS } = await import('./src/lib/terms')
 
-// Free-slot assignments — invigilation rotas, club bookings. These feed the
+// Free-slot assignments - invigilation rotas, club bookings. These feed the
 // Live board and the corridor display, which exist to tell a passer-by who is
 // where, so one admin's private copy is the worst possible place for them.
 const fa = new MemStorage() as unknown as Storage
@@ -1600,7 +1600,7 @@ fa.setItem('schedu-free-tasks:admin-1', JSON.stringify([
   { id: 'a1', date: '2026-03-02', periodId: 'p1', kind: 'teacher', entity: 'Anita', title: 'Exam invigilation' },
 ]))
 fa.setItem('schedu-free-tasks:admin-2', JSON.stringify([
-  // The same duty, entered independently — one job, not two.
+  // The same duty, entered independently - one job, not two.
   { id: 'b1', date: '2026-03-02', periodId: 'p1', kind: 'teacher', entity: 'Anita', title: 'Invigilation' },
   { id: 'b2', date: '2026-03-03', periodId: 'p2', kind: 'room', entity: 'Hall', title: 'Club activity' },
 ]))
@@ -1616,7 +1616,7 @@ ok(assignmentIdentity(duties[0]).includes('2026-03-02'),
 migrateLegacyAssignments(fa)
 ok(useFreeAssignments.getState().assignments.length === 2, 'running it again changes nothing')
 
-// Urgent pull-outs — the most time-critical record in the app: a teacher has
+// Urgent pull-outs - the most time-critical record in the app: a teacher has
 // left a lesson and somebody else is covering it right now.
 const up = new MemStorage() as unknown as Storage
 up.setItem('schedu-urgent-pullout:admin-1', JSON.stringify([
@@ -1628,7 +1628,7 @@ ok(useUrgentPullouts.getState().pullouts.length === 1,
   'a pull-out recorded by one admin is visible to the whole school')
 ok(up.length === 0, 'and its old key is removed')
 
-// Institution naming — the words the school calls things. Renaming Class to
+// Institution naming - the words the school calls things. Renaming Class to
 // Batch for yourself alone is the exact opposite of the feature's purpose.
 const nm = new MemStorage() as unknown as Storage
 nm.setItem('schedu-terms:admin-1', JSON.stringify({ class: 'Batch', teacher: 'Faculty' }))
@@ -1650,7 +1650,7 @@ ok(nm2.length === 0, 'but the stray key is still cleaned up')
 
 // ── Deleting a resource a timetable still depends on ──
 // Deleting a row in Master Data removes it from the roster and nothing else.
-// A teacher deleted while timetabled leaves her name in every cell she held —
+// A teacher deleted while timetabled leaves her name in every cell she held -
 // and those lessons can then never be covered, because the absence picker
 // lists the roster.
 import { usageOf, usageAcross, deleteWarning } from './src/lib/resourceUsage'
@@ -1678,7 +1678,7 @@ ok(usageOf(usedTT, 'room', 'R1').periods === 3, 'so are venues')
 ok(usageOf(usedTT, 'section', 'I-A').periods === 3, 'a class counts its own booked periods')
 ok(usageOf(usedTT, 'section', 'I-Z').periods === 0, 'a class with no timetable is free to delete')
 
-// Parallel (OR/AND) slots carry several subjects and teachers in one cell —
+// Parallel (OR/AND) slots carry several subjects and teachers in one cell -
 // counting only cell.subject would under-report and wave a delete through.
 const parallelTT: any = {
   'IX-A': {
@@ -1707,7 +1707,7 @@ const warn = deleteWarning('teacher', 'Anita', anita)!
 ok(warn.includes('3 periods'), 'the warning states how much is at stake')
 ok(warn.includes('I-A') && warn.includes('I-B'), 'and which classes')
 ok(/nobody can be marked absent/i.test(warn),
-  'and the specific consequence — those lessons can never be covered')
+  'and the specific consequence - those lessons can never be covered')
 ok(!deleteWarning('section', 'I-A', usageOf(usedTT, 'section', 'I-A'))!.includes('(I-A)'),
   'a class does not list itself as the class it affects')
 
@@ -1742,7 +1742,7 @@ const baseTT: any = {
 }
 
 ok(!renameIsValid('Anita', 'Anita'), 'renaming to the same name is a no-op')
-ok(!renameIsValid('Anita', '  '), 'renaming to blank is refused — that erases the link, not moves it')
+ok(!renameIsValid('Anita', '  '), 'renaming to blank is refused - that erases the link, not moves it')
 ok(!renameIsValid('', 'Anita'), 'and there is nothing to rename from')
 
 const teacherRenamed = renameInClassTT(baseTT, 'teacher', 'Anita', 'Anita Rao')
@@ -1763,7 +1763,7 @@ ok(sectionRenamed['I-Alpha'].MONDAY.p1.subject === 'English', 'carrying its less
 ok(!!sectionRenamed['I-B'], 'other classes are untouched')
 
 // Renaming onto a class that already exists would silently merge two
-// timetables — keep the incumbent instead of destroying it.
+// timetables - keep the incumbent instead of destroying it.
 const collide = renameInClassTT(baseTT, 'section', 'I-A', 'I-B')
 ok(collide['I-B'].MONDAY.p1.room === 'R2',
   "renaming a class onto an existing one does not overwrite the existing class's timetable")
@@ -1877,13 +1877,13 @@ ok(!lateRow.cells[nurseryCol].label,
   "a column with nothing running is blank rather than showing a neighbour's block")
 ok(!!lateRow.cells[1 - nurseryCol].label, 'while the column still in session names its block')
 
-// A block spanning several bands is named ONCE, on the row it starts —
+// A block spanning several bands is named ONCE, on the row it starts -
 // otherwise a long lesson repeats its name down the column like an error.
 const p1Rows = grid.filter(r => r.cells.some(c => c.label === 'Period 1'))
 ok(p1Rows.filter(r => r.cells.some(c => c.label === 'Period 1' && c.isStart)).length === 1,
   'a block that spans rows is named once, where it begins')
 
-// No row where every column is empty — that is a gap in nobody's day.
+// No row where every column is empty - that is a gap in nobody's day.
 ok(grid.every(r => r.cells.some(c => c.label)), 'no empty bands are printed')
 
 // ── Column headings compressed to a from–to range ──
@@ -1895,7 +1895,7 @@ ok(rangeLabel(['I-A']) === 'I-A', 'a single class is its own heading, not a rang
 ok(rangeLabel([]) === '', 'no classes, no heading')
 ok(rangeLabel(['I-A', 'I-B', 'I-C']) === 'I-A – I-C', 'a run of sections becomes first – last')
 
-// School order, not alphabetical — the whole point of the range ends.
+// School order, not alphabetical - the whole point of the range ends.
 ok(rangeLabel(['X-A', 'II-A', 'I-A']) === 'I-A – X-A',
   'sorted in SCHOOL order: I before II before X, which alphabetical sorting gets wrong')
 ok(rangeLabel(['I-A', 'Nursery-A']) === 'Nursery-A – I-A',
@@ -1904,7 +1904,7 @@ ok(rangeLabel(['V-B', 'V-A']) === 'V-A – V-B', 'and sections within a class or
 
 // ── THE ENGINE, ON A REAL-SIZED SCHOOL ──
 // 2,000 lines of solver had exactly one end-to-end assertion (the daily cap).
-// These are the invariants a timetable must satisfy to be usable at all — if
+// These are the invariants a timetable must satisfy to be usable at all - if
 // any breaks, the product ships a schedule that cannot be taught.
 const engDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
 const engPeriods = Array.from({ length: 8 }, (_, i) => ({
@@ -1963,12 +1963,12 @@ ok(engClashes === 0,
 ok(engIneligible === 0, 'nobody is assigned a subject they cannot teach')
 ok([...engWeek.values()].every(v => v <= 30), 'no teacher exceeds their weekly cap')
 ok(engShort.length === 0, 'every subject gets exactly the periods per week it asked for')
-ok(engPlaced === engDemand, `the whole curriculum is placed when it fits — ${engPlaced}/${engDemand}`)
+ok(engPlaced === engDemand, `the whole curriculum is placed when it fits - ${engPlaced}/${engDemand}`)
 ok(engMs < 5000, `a 40-section school solves in well under 5s (took ${engMs}ms)`)
 
 // Regenerating must not reshuffle a published week.
 ok(JSON.stringify(solveTimetable(engInput).classTT) === JSON.stringify(engOut.classTT),
-  'the solver is deterministic — same input, same timetable, so "regenerate" is safe')
+  'the solver is deterministic - same input, same timetable, so "regenerate" is safe')
 
 // ── IMPOSSIBLE SCHOOLS MUST STILL PRODUCE A LEGAL TIMETABLE ──
 // Far too few teachers: 4 staff capped at 30 cannot cover 160 periods.
@@ -2002,7 +2002,7 @@ for (const sec of Object.keys(shortOut.classTT ?? {}))
 // shortPlaced is half the claim: a timetable with NO lessons in it also has no
 // double-bookings, so "legal" has to mean lessons were actually placed.
 ok(shortClashes === 0 && shortPlaced > 0,
-  'an understaffed school still gets a LEGAL timetable — the engine leaves slots empty rather than double-booking',
+  'an understaffed school still gets a LEGAL timetable - the engine leaves slots empty rather than double-booking',
   )
 ok([...shortLoad.values()].every(v => v <= 30),
   'and never solves the shortage by pushing a teacher past their cap')
@@ -2046,7 +2046,7 @@ ok(!isDuplicateName(staffRows, r => r.name, ''), 'a blank name never clashes')
 const nameWarn = conflictWarning('teacher', conflicts)!
 ok(nameWarn.includes('Anita Sharma'), 'the warning names the clash')
 ok(/marking one absent marks both/.test(nameWarn) && /\. [A-Z]/.test(nameWarn),
-  'and states what it actually costs, as a sentence — leave, cover and workload are name-matched')
+  'and states what it actually costs, as a sentence - leave, cover and workload are name-matched')
 ok(/syllabus coverage/i.test(conflictWarning('subject', conflicts)!),
   'each kind gets its own consequence, in the school\'s terms')
 ok(/double-booked/.test(conflictWarning('room', conflicts)!), 'venues clash-detect by name')
@@ -2089,8 +2089,8 @@ ok(contrast('#767393', '#F5F2FF') < AA, 'the old muted purple did NOT meet AA on
 ok(contrast('#16A34A', '#FFFFFF') < AA, 'the old success green did NOT meet AA on white')
 ok(contrast('#9B97B8', '#FFFFFF') < AA, 'the old grid dim text did NOT meet AA on white')
 
-// The brand accent. #7C6FE0 failed in BOTH directions — as text on its own
-// lavender tints and as the background behind white button text — so a school
+// The brand accent. #7C6FE0 failed in BOTH directions - as text on its own
+// lavender tints and as the background behind white button text - so a school
 // could not read the product's most-used colour either way round. #685DBC is
 // the same hue, 16% darker, and clears every case.
 for (const bg of ['#FFFFFF', '#EDE9FF', '#F0EDFF', '#F9F8FF']) {
@@ -2098,15 +2098,15 @@ for (const bg of ['#FFFFFF', '#EDE9FF', '#F0EDFF', '#F9F8FF']) {
 }
 ok(contrast('#FFFFFF', '#685DBC') >= AA, 'and white button text on the brand meets AA')
 ok(contrast('#7C6FE0', '#EDE9FF') < AA && contrast('#FFFFFF', '#7C6FE0') < AA,
-  'the old accent failed both ways — kept so the reason for the change is on the record')
+  'the old accent failed both ways - kept so the reason for the change is on the record')
 
 // #8B87AD stays: on the dark Pro card and the corridor board it is correct,
 // and darkening it there would make it worse, not better.
-ok(contrast('#8B87AD', '#13111E') >= AA, 'the dim purple is fine where it belongs — on dark')
+ok(contrast('#8B87AD', '#13111E') >= AA, 'the dim purple is fine where it belongs - on dark')
 // ── The timetable outliving the roster ──
 // A teacher who leaves in March is deleted from the roster; the timetable
 // deliberately keeps her lessons. The warning at delete time is shown once,
-// and the school then lives in that state for a term — so it has to stay
+// and the school then lives in that state for a term - so it has to stay
 // visible afterwards.
 import { findOrphans, orphanWarning } from './src/lib/rosterOrphans'
 
@@ -2164,7 +2164,7 @@ ok(/and 1 more/.test(orphanWarning('teacher', orphanMany)!), 'a long list is sum
 // The cascade rewrote every active schedule's CELLS and none of their ROSTERS,
 // which is worse than not cascading: the other schedule ended up with a lesson
 // taught by the new name and a roster listing the old one, so one person
-// became two — an orphaned lesson beside a roster row teaching nothing.
+// became two - an orphaned lesson beside a roster row teaching nothing.
 import { renameInRecords as rrec, renameInStringLists as rlist } from './src/lib/resourceRename'
 
 const rosterStaff = [
@@ -2178,7 +2178,7 @@ ok(renamedStaff[1].name === 'Ravi Kumar', 'and nobody else moves')
 
 // The one that silently broke generation: teachers list the subject NAMES they
 // can teach, so a renamed subject left every teacher unqualified for it and the
-// engine — which matches teacher to subject by name — reported it unstaffable.
+// engine - which matches teacher to subject by name - reported it unstaffable.
 const requalified = rlist(rosterStaff, 'subjects', 'English', 'English Language')!
 ok(requalified[0].subjects.join() === 'English Language,Maths',
   "a subject rename follows into each teacher's can-teach list")
@@ -2256,7 +2256,7 @@ const allocCaps = rkeys({ 'I-A': 40 }, ['section'], 'section', 'I-A', 'I-Alpha')
 ok(allocCaps['I-Alpha'] === 40, 'a flat section-keyed map renames too')
 // ── Student counts are name-keyed on both axes ──
 // One row per class-section, each holding per-SUBJECT numbers. These decide how
-// many students take each subject, which drives room capacity and grouping — so
+// many students take each subject, which drives room capacity and grouping - so
 // a stale key is not cosmetic, it is a class sent to a room that cannot hold it.
 import { renameInRecords as srec, renameInRecordMaps as smaps } from './src/lib/resourceRename'
 
@@ -2281,7 +2281,7 @@ ok(smaps(strengthRows, 'subjectStrengths', ['subject'], 'teacher', 'Anita', 'Ani
 ok(smaps(strengthRows, 'subjectStrengths', ['subject'], 'subject', 'Nothing', 'X') === strengthRows,
   'no match returns the same reference')
 
-// Renaming onto a subject the section already counts must not overwrite it —
+// Renaming onto a subject the section already counts must not overwrite it -
 // same incumbent-wins rule as everywhere else, since these are typed-in numbers.
 const strengthCollide = smaps([{ id: 'c', subjectStrengths: { English: 40, Maths: 30 } }],
   'subjectStrengths', ['subject'], 'subject', 'English', 'Maths')!
@@ -2309,7 +2309,7 @@ ok(registryFields.join() === dashboardFields.join(),
   'ttRegistry and dashboard save exactly the same fields')
 
 // A snapshot is rebuilt from this list and overwrites the whole key, so a
-// name-keyed structure missing here is not merely unsaved — it is destroyed on
+// name-keyed structure missing here is not merely unsaved - it is destroyed on
 // the next save, and the globally-persisted copy then bleeds across schedules.
 for (const field of [
   'sectionStrengths', 'subjectAllocations', 'manualSubjectAllocations',
@@ -2326,8 +2326,8 @@ for (const field of ['teacherAllocations', 'sectionCapacityOverrides', 'sectionS
   ok(storeSrc.includes(`${setter}:`), `${field} has the ${setter} the loader looks for`)
 }
 // ── Backward sync: the two allocation matrices must agree with the timetable ──
-// The store documents the invariant — the sum of teacherAllocations[*][sec][sub]
-// equals the parsed total of subjectAllocations[sec][sub] — and nothing checked
+// The store documents the invariant - the sum of teacherAllocations[*][sec][sub]
+// equals the parsed total of subjectAllocations[sec][sub] - and nothing checked
 // it. These are the structures the rename cascade now moves, so they are worth
 // pinning against real solver output rather than a hand-built fixture.
 import { deriveTeacherAllocations, deriveSubjectAllocations } from './src/lib/schedulingEngine'
@@ -2379,12 +2379,12 @@ ok(gS['XI-A'].Physics === '1' && gS['XI-A'].Biology === '1', 'and on their own s
 // KNOWN, DELIBERATE ASYMMETRY: an unstaffed lesson is a real class-period, so
 // the class side counts it; there is no teacher to file it under, so the
 // faculty side cannot. The invariant above therefore holds for a fully staffed
-// timetable only — which is what the solver produces when the school fits.
+// timetable only - which is what the solver produces when the school fits.
 const dUnstaffed: any = { 'I-A': { MONDAY: { p1: { subject: 'English' } } } }
 ok(deriveSubjectAllocations(dUnstaffed)['I-A'].English === '1', 'an unstaffed lesson still counts as a class period')
 ok(Object.keys(deriveTeacherAllocations(dUnstaffed)).length === 0, 'but is filed against no teacher')
 
-// Empty in, empty out — a not-yet-generated schedule must not invent rows.
+// Empty in, empty out - a not-yet-generated schedule must not invent rows.
 ok(Object.keys(deriveTeacherAllocations({} as any)).length === 0, 'no timetable derives no faculty matrix')
 ok(Object.keys(deriveSubjectAllocations({} as any)).length === 0, 'and no class plan')
 // ── Renaming and deriving have to commute ──
@@ -2437,7 +2437,7 @@ ok(resolveCountryInput('') === undefined && resolveCountryInput(null) === undefi
 
 // ── A cover belongs to a date, not to every Monday ──
 // Substitutions used to be keyed section|MONDAY|period, so cover arranged for
-// one absence reappeared every week — and, worse, made two teachers look like
+// one absence reappeared every week - and, worse, made two teachers look like
 // one to room-clash detection, hiding genuine double-bookings on later weeks.
 import { localISO, subKey, isDatedSubKey, migrateWeekdaySubs } from './src/lib/substitutionKeys'
 
@@ -2454,7 +2454,7 @@ ok(!isDatedSubKey('I-A|MONDAY|p1'), 'and a legacy weekday key is not')
 
 // Migration: a weekday key becomes the matching weekday of the week it is run
 // in. The date it was originally meant for was never stored, so this is the
-// least-harmful guess — the cover happens once, near when it was arranged,
+// least-harmful guess - the cover happens once, near when it was arranged,
 // and stops repeating.
 const wed = new Date(2026, 7, 19)           // Wednesday 19 Aug 2026
 const m1 = migrateWeekdaySubs({ 'I-A|MONDAY|p1': 'Ravi Kumar' }, wed)
@@ -2462,7 +2462,7 @@ ok(m1.migrated === 1, 'a legacy key is migrated')
 ok(m1.next['I-A|2026-08-17|p1'] === 'Ravi Kumar', 'onto the Monday of that same week')
 ok(!('I-A|MONDAY|p1' in m1.next), 'and the weekday key is gone')
 
-// Idempotent — running it again must not move an already-dated cover.
+// Idempotent - running it again must not move an already-dated cover.
 const m2 = migrateWeekdaySubs(m1.next, wed)
 ok(m2.migrated === 0 && m2.next['I-A|2026-08-17|p1'] === 'Ravi Kumar', 'a second run changes nothing')
 
@@ -2489,8 +2489,8 @@ ok(all.next['A|2026-08-22|p'] === '3', 'and Saturday ends it')
 // substitutionSettings is persisted per schedule. The read site used
 // `stored ?? DEFAULTS`, which only helps when the WHOLE object is missing; a
 // partial one passed straight through and the first read of
-// weights.dailyWorkloadBalance threw, replacing the ops console — the screen a
-// school uses every morning to arrange cover — with an error boundary.
+// weights.dailyWorkloadBalance threw, replacing the ops console - the screen a
+// school uses every morning to arrange cover - with an error boundary.
 import { withSubstitutionDefaults, DEFAULT_SUBSTITUTION_SETTINGS } from './src/lib/substitutionSettings'
 
 const subsFromOldSnapshot: any = { defaults: { maxSubstitutesPerWeek: 1 }, facultyOverrides: {} }
@@ -2508,14 +2508,14 @@ ok(Object.keys(withSubstitutionDefaults({}).weights).length ===
    Object.keys(DEFAULT_SUBSTITUTION_SETTINGS.weights).length, 'an empty object yields every weight')
 
 // facultyOverrides is a map of real per-teacher decisions, not a shape with
-// defaults to fill in — merging a default that has no entries would be
+// defaults to fill in - merging a default that has no entries would be
 // meaningless, and inventing entries would be worse.
 const subsWithOverride = withSubstitutionDefaults({ facultyOverrides: { t1: { canSub: false, autoAssign: false } } } as any)
 ok(subsWithOverride.facultyOverrides.t1.canSub === false, 'per-teacher overrides are carried through untouched')
 ok(Object.keys(withSubstitutionDefaults({} as any).facultyOverrides).length === 0,
   'and no teacher is invented when there are none')
 
-// A stored partial must not be mutated in place — it belongs to the store.
+// A stored partial must not be mutated in place - it belongs to the store.
 const subsOriginal: any = { defaults: { maxPeriodsPerDay: 4 } }
 withSubstitutionDefaults(subsOriginal)
 ok(subsOriginal.weights === undefined && Object.keys(subsOriginal.defaults).length === 1,
@@ -2524,7 +2524,7 @@ ok(subsOriginal.weights === undefined && Object.keys(subsOriginal.defaults).leng
 // lib/days says so in a comment and provides sameDay for it: keys have been
 // written by several generations of the wizard and by pasted spreadsheets, so
 // 'MONDAY', 'Mon' and 'monday' all occur. Code that compares them with === gets
-// two of the three right, which is the worst possible outcome — it looks fine
+// two of the three right, which is the worst possible outcome - it looks fine
 // on the developer's data and silently drops somebody else's.
 const dcWed = new Date(2026, 7, 19)   // Wednesday 19 Aug 2026
 for (const spelling of ['MONDAY', 'Mon', 'monday', 'mon', 'Monday']) {
@@ -2553,7 +2553,7 @@ ok(migrateWeekdaySubs({ 'A|Mondayy|p': 'x' }, dcWed).next['A|2026-08-17|p'] === 
 // ── Excel export is a Free-plan promise, and school names broke it ──
 // Sheet names come from section names, which a school types. book_append_sheet
 // throws on a duplicate or a forbidden character, and the caller dropped the
-// promise — so the menu closed and no file appeared, with nothing said.
+// promise - so the menu closed and no file appeared, with nothing said.
 import { safeSheetName } from './src/lib/sheetNames'
 
 const shUsed = () => new Set<string>()
@@ -2591,7 +2591,7 @@ ok(safeSheetName('', u) === 'Sheet' && safeSheetName('   ', u) === 'Sheet (2)',
 // ── Dates are the school's calendar day, not UTC's ──
 // Three places used `new Date().toISOString().slice(0, 10)`, which converts to
 // UTC first. India is UTC+5:30, so from midnight until 05:29 local that returns
-// YESTERDAY — a principal declaring an unexpected holiday at 6am would have
+// YESTERDAY - a principal declaring an unexpected holiday at 6am would have
 // filed it against the previous day and left today's lessons running.
 import { localISO as tzISO } from './src/lib/days'
 
@@ -2600,7 +2600,7 @@ ok(tzISO(new Date(2026, 7, 17, 0, 30)) === '2026-08-17', 'just after local midni
 ok(tzISO(new Date(2026, 7, 17, 5, 0)) === '2026-08-17', 'early morning, the window where UTC drifts in India')
 ok(tzISO(new Date(2026, 7, 17, 23, 30)) === '2026-08-17', 'and late evening, the window where it drifts the other way')
 
-// Every hour of a day must report that same day — the property toISOString breaks.
+// Every hour of a day must report that same day - the property toISOString breaks.
 let tzWrong = 0
 for (let h = 0; h < 24; h++) if (tzISO(new Date(2026, 0, 5, h, 30)) !== '2026-01-05') tzWrong++
 ok(tzWrong === 0, 'every hour of a day reports that day')
@@ -2616,7 +2616,7 @@ ok(tzToISODate === tzISO, 'scheduleToday.toISODate is the same function, not a c
 ok(tzFromSubKeys === tzISO, 'substitutionKeys.localISO is the same function, not a copy')
 
 // The formatter existed nine more times, verbatim, in components/, lib/ and
-// pages/. Every one was correct — which is exactly how the six day-name lists
+// pages/. Every one was correct - which is exactly how the six day-name lists
 // that created lib/days started out. This asserts the count stays at one.
 import { readFileSync as tzRead } from 'node:fs'
 import { globSync as tzGlob } from 'node:fs'
@@ -2631,7 +2631,7 @@ ok(tzInline.length === 0,
 // employ two people called Anita Sharma. This pins what that costs at
 // generation time, which is more than the roster-level conflation the banner
 // originally described: the two share a single weekly cap, so lessons go
-// unplaced — and when the cap is tight an entire subject gets nothing.
+// unplaced - and when the cap is tight an entire subject gets nothing.
 const dupBuild = (names: [string, string], cap: number) => ({
   sections: [{ id: 's1', name: 'I-A', grade: 'I' }],
   staff: [
@@ -2672,7 +2672,7 @@ const dupSubjects = (input: any) => {
 ok(dupPlaced(dupBuild(['Anita Sharma', 'Bela Rao'], 5)) === 10,
   'two distinct teachers with a cap of 5 each cover the whole 10-period demand')
 ok(dupPlaced(dupBuild(['Anita Sharma', 'Anita Sharma'], 5)) === 10,
-  'and the SAME two sharing a name cover it too — they are no longer one person')
+  'and the SAME two sharing a name cover it too - they are no longer one person')
 
 // The version that used to hurt most: with a tight cap a whole subject got
 // nothing, because both teachers' periods came out of one budget.
@@ -2694,7 +2694,7 @@ for (const day of Object.keys(dupCells ?? {}))
 ok(dupIds.size === 2, 'both people appear in the timetable under their own id, though they share a name')
 
 // The solver used to report the merge, because it could not avoid it. It no
-// longer merges, so it says nothing — a warning about a problem that does not
+// longer merges, so it says nothing - a warning about a problem that does not
 // happen trains people to ignore warnings that do.
 const dupConf = (names: [string, string]) => solveTimetable(dupBuild(names, 3)).conflicts
   .filter((c: any) => /named/.test(c.message ?? ''))
@@ -2708,7 +2708,7 @@ ok(dupConf(['Anita Sharma', 'Anita Sharma']).length === 0,
 // that making the key equal the name changes nothing: same school, ids that
 // differ from names vs ids identical to them, same timetable.
 //
-// It has to run on the BIG fixture. A small one passes either way — I wrote
+// It has to run on the BIG fixture. A small one passes either way - I wrote
 // this against six sections first and it did not notice the bug it exists to
 // catch, because the penalty it guards never changed an outcome at that size.
 const idShape = (staffIds: (i: number) => string) => {
@@ -2778,7 +2778,7 @@ ok(ldHalf.totals.leaveDays === 0.5, 'a half day on a teaching day counts as half
 // lib/subjectColors documents "one colour per subject, identical everywhere it
 // appears (Live, Day grid, Month, the schedule view)". The schedule view had
 // its own palette and its own hash, so that was false for every subject
-// tested — six of six disagreed. There is one implementation now.
+// tested - six of six disagreed. There is one implementation now.
 import { subjectColor as scColor } from './src/lib/subjectColors'
 import { readFileSync as scRead } from 'node:fs'
 
@@ -2867,7 +2867,7 @@ ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ign
 //
 // An OR/AND cell runs parallel subjects in one slot and names a teacher per
 // subject in groupAssignments, mirroring only the first into `teacher`. The
-// day summary checked that copy — so a teacher who was away and took a LATER
+// day summary checked that copy - so a teacher who was away and took a LATER
 // group was never listed as needing cover. The group sat with nobody in front
 // of it and the console that exists to catch exactly that reported a clear day.
 {
@@ -2918,7 +2918,7 @@ ok(hlRun([{ date: '', name: 'Malformed' }]) === 3, 'a record with no date is ign
 // then ran one more hook once it had.
 //
 // This used to be a regex scan of src/**/*.tsx. It reported clean while six
-// real violations sat in the tree — it only ever saw two-space-indented hooks
+// real violations sat in the tree - it only ever saw two-space-indented hooks
 // in top-level components, so nested components and indented hooks were
 // invisible. It has been replaced by the actual rule: eslint is wired up now
 // (eslint.config.js), and react-hooks/rules-of-hooks decides this properly.
@@ -2930,7 +2930,7 @@ const hkResults = await new ESLint({
 const hkOffenders = hkResults.flatMap(r =>
   r.messages
     .filter(m => m.ruleId === 'react-hooks/rules-of-hooks')
-    .map(m => `${r.filePath.split(/[\\/]/).slice(-2).join('/')}:${m.line} — ${m.message.slice(0, 70)}`))
+    .map(m => `${r.filePath.split(/[\\/]/).slice(-2).join('/')}:${m.line} - ${m.message.slice(0, 70)}`))
 
 ok(hkOffenders.length === 0,
   `no component calls a hook after an early return${hkOffenders.length ? ':\n    ' + hkOffenders.join('\n    ') : ''}`)
@@ -2938,7 +2938,7 @@ ok(hkOffenders.length === 0,
 // ──────────────────
 // ADD NEW CHECKS ABOVE THIS LINE.
 // process.exit() ends the run here, so anything appended below never
-// executes — and a check that never executes still reports as passing.
+// executes - and a check that never executes still reports as passing.
 // ──────────────────
 console.log(fail === 0 ? '\nALL BLUEPRINT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

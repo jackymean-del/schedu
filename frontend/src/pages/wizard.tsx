@@ -1,5 +1,5 @@
 /**
- * Wizard shell — Page 6+ redesign
+ * Wizard shell - Page 6+ redesign
  *
  * Layout (no left sidebar):
  *   ┌─ [Top bar from __root.tsx WizardTopbar] ────────────────────┐
@@ -33,12 +33,12 @@ import { markActiveTimetableUnpublished } from '@/lib/ttRegistry'
 // Inline guide content per step (index = step - 1). Matches the STEPS order.
 const STEP_GUIDES: { title: string; tips: string[] }[] = [
   { title: 'Step 1 · Resources', tips: [
-    'Add your classes, teachers, subjects and rooms — the building blocks of every schedule.',
+    'Add your classes, teachers, subjects and rooms - the building blocks of every schedule.',
     'In a hurry? Use “Generate” to create an editable starting set from your setup, then refine.',
     'Switch tabs to enter each type, or use + Add to enter rows manually.',
   ] },
   { title: 'Step 2 · Shift & Timing', tips: [
-    'Define your daily periods and breaks — start/end times, period length and lunch.',
+    'Define your daily periods and breaks - start/end times, period length and lunch.',
     'Set the working days and any shifts; this becomes the grid every class is scheduled into.',
   ] },
   { title: 'Step 3 · Groups & Combos', tips: [
@@ -48,7 +48,7 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
   ] },
   { title: 'Step 4 · Mapping', tips: [
     'Map each subject to its class-sections, then map those to teachers.',
-    'Subject and teacher mappings stay in sync — edit either side and the other reflows.',
+    'Subject and teacher mappings stay in sync - edit either side and the other reflows.',
     'Overloaded faculty or venues are flagged here, with one-click load optimisation.',
   ] },
   { title: 'Step 5 · Review & Generate', tips: [
@@ -60,12 +60,12 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
 // ── Step registry ─────────────────────────────────────────────
 // Groups & Combos comes BEFORE Mapping. Blueprint v6 Step 5: Mapping "depends
 // on Step 2 (subjects/teachers/venues), Step 3 (time grid), and Step 4
-// (parallel-subject rules) — this is the only step that requires all three prior
+// (parallel-subject rules) - this is the only step that requires all three prior
 // steps to be complete." Mapping consumes the AND/OR rules, so configuring them
 // afterwards meant mapping against rules that didn't exist yet.
 const STEPS = [StepResourcesV2, StepBell, StepStudentGroups, StepAllocation, Step6Generate]
 
-// Names live in lib/wizardSteps — see the note there on why they are not here.
+// Names live in lib/wizardSteps - see the note there on why they are not here.
 import { WIZARD_STEPS as STEP_META } from '@/lib/wizardSteps'
 
 
@@ -126,7 +126,7 @@ function WizardSetupGate() {
           Let’s set up your timetable first
         </h2>
         <p style={{ fontSize: 13.5, color: '#69707E', lineHeight: 1.6, margin: '0 0 22px' }}>
-          Before the wizard can help, it needs the basics — a name, your class range and
+          Before the wizard can help, it needs the basics - a name, your class range and
           approximate counts. Create a timetable to get started; you’ll land right back here.
         </p>
         <a href="/dashboard?new=1" style={{
@@ -145,7 +145,7 @@ export function WizardPage() {
 
   const CurrentStep = STEPS[step - 1] ?? StepBell
 
-  // Blueprint v3, Step 7: "Publishing locks the wizard steps — Steps 1–6 become
+  // Blueprint v3, Step 7: "Publishing locks the wizard steps - Steps 1–6 become
   // read-only until a new schedule cycle is started." The steps stay visible and
   // browsable (so the published setup can be inspected), but nothing is editable
   // until the admin explicitly unpublishes.
@@ -282,7 +282,7 @@ export function WizardPage() {
         }}>
           <Lock size={14} color="#B45309" />
           <span style={{ fontSize: 12.5, color: '#92400E' }}>
-            <strong>Published — steps are locked.</strong> This schedule is live, so the setup is read-only.
+            <strong>Published - steps are locked.</strong> This schedule is live, so the setup is read-only.
             Browse any step to review it; unpublish to make changes.
           </span>
           <div style={{ flex: 1 }} />

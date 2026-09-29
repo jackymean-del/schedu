@@ -1,19 +1,19 @@
 /**
- * curriculum.ts — SchedU AI Curriculum Intelligence Engine v2
+ * curriculum.ts - SchedU AI Curriculum Intelligence Engine v2
  *
  * Comprehensive knowledge base covering:
  *   CBSE · ICSE/ISC · IB (PYP/MYP/DP) · Cambridge · Custom
  *
  * Public API:
- *   generateShortName(name)                              — AI shortform engine
- *   suggestClassesForSubject(name, sections, board)      — grade + stream mapping
- *   suggestSlotsPerWeek(name, gradeGroup, board)         — slot recommendation
- *   getSubjectHint(name, board)                         — confidence hint text
- *   normalizeBoardType(raw)                              — BoardType → CurriculumBoard
- *   getGrade(sectionName)                                — "IX-Sci-A" → "IX"
- *   getGradeGroup(grade)                                 — "IX" → "secondary"
- *   gradeKey(grade)                                      — sort key
- *   detectStream(sectionName)                            — stream classification
+ *   generateShortName(name)                              - AI shortform engine
+ *   suggestClassesForSubject(name, sections, board)      - grade + stream mapping
+ *   suggestSlotsPerWeek(name, gradeGroup, board)         - slot recommendation
+ *   getSubjectHint(name, board)                         - confidence hint text
+ *   normalizeBoardType(raw)                              - BoardType → CurriculumBoard
+ *   getGrade(sectionName)                                - "IX-Sci-A" → "IX"
+ *   getGradeGroup(grade)                                 - "IX" → "secondary"
+ *   gradeKey(grade)                                      - sort key
+ *   detectStream(sectionName)                            - stream classification
  */
 
 import { parseGradeLevel } from '@/lib/gradeParse'
@@ -115,7 +115,7 @@ export function getGrade(sectionName: string): string {
 }
 
 /**
- * Detect stream from a section name. Robust to a trailing section NUMBER —
+ * Detect stream from a section name. Robust to a trailing section NUMBER -
  * the marker may be followed by a digit ("XI-COM1", "XI-HUM2") because schools
  * number multiple sections of the same stream. (The old `\bcom\b` required a
  * word boundary right after "com", so "COM1" silently fell through to science.)
@@ -131,11 +131,11 @@ export function getGrade(sectionName: string): string {
  */
 export function detectStream(sectionName: string): Stream {
   const n = sectionName.toLowerCase()
-  // Commerce — "com", "com1", "commerce", "bst", "acc"; never "computer"/"comp".
+  // Commerce - "com", "com1", "commerce", "bst", "acc"; never "computer"/"comp".
   if (/commerce|\bcom(?!p)|\bbst\b|\bacc/.test(n))              return 'commerce'
-  // Humanities / Arts — tolerant of a section-number suffix (hum1, arts2).
+  // Humanities / Arts - tolerant of a section-number suffix (hum1, arts2).
   if (/\bhum|humanities|\barts?\b|\blit\b/.test(n))            return 'arts'
-  // Explicit medical / PCB biology track — Botany + Zoology split.
+  // Explicit medical / PCB biology track - Botany + Zoology split.
   if (/\bpcb\b|\bbot\b|\bzoo\b|\bbio\b/.test(n))               return 'pcb'
   // Science / PCM, and the "Spark" gifted cohort (science by curriculum).
   if (/\bsci\b|\bpcm\b|\bphysics\b|\bspark\b|\bspa\b/.test(n)) return 'science'
@@ -149,7 +149,7 @@ export interface SectionLike { name: string; stream?: string }
 /**
  * Resolve a section's stream for subject assignment.
  *
- * The EXPLICIT stream set on the section (Classes tab — "Science", "Spark",
+ * The EXPLICIT stream set on the section (Classes tab - "Science", "Spark",
  * "Commerce", "Humanities") is authoritative, so a section called anything at
  * all is assigned by its stream, NOT by guessing from its name. Name-based
  * `detectStream` is only the fallback when no stream is recorded.
@@ -170,7 +170,7 @@ export function resolveStream(section: SectionLike): Stream {
 }
 
 // ─── AI Shortform Engine ──────────────────────────────────────────────────────
-/** Board-standard academic abbreviations — 70+ entries */
+/** Board-standard academic abbreviations - 70+ entries */
 export const SHORT_MAP: Record<string, string> = {
   // Core academics
   'Mathematics':              'MATH',
@@ -316,7 +316,7 @@ export interface SubjectRule {
  */
 export const CURRICULUM: Record<string, SubjectRule> = {
 
-  // ── Universal — all levels, all boards ───────────────────────────────────────
+  // ── Universal - all levels, all boards ───────────────────────────────────────
   'English': {
     grades: ['preK','primary','middle','secondary','srSec'],
     isLanguage: true,
@@ -324,112 +324,112 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     icseSlots:       { preK: 5, primary: 7, middle: 7, secondary: 6, srSec: 4 },
     ibSlots:         { preK: 5, primary: 7, middle: 6, secondary: 6, srSec: 5 },
     cambridgeSlots:  { preK: 5, primary: 7, middle: 7, secondary: 6, srSec: 5 },
-    hint: 'Core language — mandatory at every grade level across all boards',
+    hint: 'Core language - mandatory at every grade level across all boards',
   },
   'Physical Education': {
     grades: ['preK','primary','middle','secondary','srSec'],
     isActivity: true,
     slots:    { preK: 3, primary: 2, middle: 2, secondary: 2, srSec: 1 },
     ibSlots:  { preK: 4, primary: 3, middle: 3, secondary: 3, srSec: 2 },
-    hint: 'Mandatory co-curricular — all grade levels, all boards',
+    hint: 'Mandatory co-curricular - all grade levels, all boards',
   },
   'Painting': {
     grades: ['preK','primary','middle','secondary','srSec'],
     isActivity: true,
     slots: { preK: 2, primary: 2, middle: 1, secondary: 1, srSec: 1 },
-    hint: 'Fine arts / painting — co-curricular rotation at XI–XII alongside PE and Library',
+    hint: 'Fine arts / painting - co-curricular rotation at XI–XII alongside PE and Library',
   },
   'Art & Craft': {
     grades: ['preK','primary','middle','secondary'],
     isActivity: true,
     slots: { preK: 3, primary: 2, middle: 2, secondary: 1 },
-    hint: 'Creative arts — CBSE/ICSE through Class X; typically discontinued at XI–XII',
+    hint: 'Creative arts - CBSE/ICSE through Class X; typically discontinued at XI–XII',
   },
   'Music': {
     grades: ['preK','primary','middle'],
     isActivity: true,
     slots: { preK: 2, primary: 1, middle: 1 },
-    hint: 'CCA subject — pre-primary through middle school (VI–VIII)',
+    hint: 'CCA subject - pre-primary through middle school (VI–VIII)',
   },
   'Dance': {
     grades: ['preK','primary','middle'],
     isActivity: true,
     slots: { preK: 2, primary: 1, middle: 1 },
-    hint: 'CCA subject — pre-primary through middle school',
+    hint: 'CCA subject - pre-primary through middle school',
   },
   'Library': {
     grades: ['preK','primary','middle','secondary','srSec'],
     isActivity: true,
     slots: { preK: 1, primary: 1, middle: 1, secondary: 1, srSec: 1 },
-    hint: 'Library period — common across all grades, including the XI–XII PE/Painting/Library rotation',
+    hint: 'Library period - common across all grades, including the XI–XII PE/Painting/Library rotation',
   },
   'Moral Science': {
     grades: ['preK','primary','middle','secondary'],
     isActivity: true,
     slots: { preK: 1, primary: 1, middle: 1, secondary: 1 },
-    hint: 'Value education — CBSE/ICSE through Class X; omitted in IB/Cambridge',
+    hint: 'Value education - CBSE/ICSE through Class X; omitted in IB/Cambridge',
   },
   'Yoga & Health': {
     grades: ['primary','middle','secondary'],
     isActivity: true,
     slots: { primary: 1, middle: 1, secondary: 1 },
-    hint: 'Health & wellness — Indian school operational practice',
+    hint: 'Health & wellness - Indian school operational practice',
   },
   'G.K.': {
     grades: ['preK','primary','middle'],
     isActivity: true,
     slots: { preK: 1, primary: 2, middle: 1 },
-    hint: 'General Knowledge — phased out by upper-middle school in CBSE/ICSE',
+    hint: 'General Knowledge - phased out by upper-middle school in CBSE/ICSE',
   },
   'General Knowledge': {
     grades: ['preK','primary','middle'],
     isActivity: true,
     slots: { preK: 1, primary: 2, middle: 1 },
-    hint: 'Same as G.K. — general awareness for pre-primary through middle',
+    hint: 'Same as G.K. - general awareness for pre-primary through middle',
   },
   'Scout & Guide': {
     grades: ['middle','secondary'],
     isActivity: true,
     slots: { middle: 1, secondary: 1 },
-    hint: 'Co-curricular — typically introduced from middle school (VI), not earlier primary grades',
+    hint: 'Co-curricular - typically introduced from middle school (VI), not earlier primary grades',
   },
   'SUPW / Life Skills': {
     grades: ['middle','secondary'],
     isActivity: true,
     slots: { middle: 2, secondary: 1 },
-    hint: 'Socially Useful Productive Work — CBSE middle and secondary levels',
+    hint: 'Socially Useful Productive Work - CBSE middle and secondary levels',
   },
   'Life Skills': {
     grades: ['middle','secondary'],
     isActivity: true,
     slots: { middle: 2, secondary: 1 },
-    hint: 'Life skills development — various boards, middle and secondary',
+    hint: 'Life skills development - various boards, middle and secondary',
   },
 
   // ── Pre-K only ────────────────────────────────────────────────────────────────
   'Nursery Rhymes & Stories': {
     grades: ['preK'],
-    // Pre-primary LANGUAGE subject (like Number Work is pre-primary numeracy) —
+    // Pre-primary LANGUAGE subject (like Number Work is pre-primary numeracy) -
     // scholastic, not a co-scholastic activity.
     slots: { preK: 3 },
-    hint: 'Pre-primary only — language development through rhymes and storytelling',
+    hint: 'Pre-primary only - language development through rhymes and storytelling',
   },
   'Activity / Free Play': {
     grades: ['preK'],
     isActivity: true,
     slots: { preK: 4 },
-    hint: 'Pre-primary developmental activity — Nursery, LKG, UKG only',
+    hint: 'Pre-primary developmental activity - Nursery, LKG, UKG only',
   },
   'Number Work': {
     grades: ['preK'],
     slots: { preK: 4 },
-    hint: 'Pre-primary numeracy — replaces Mathematics at Nursery–UKG level',
+    hint: 'Pre-primary numeracy - replaces Mathematics at Nursery–UKG level',
   },
   'EVS': {
     grades: ['preK','primary'],
     slots:     { preK: 3, primary: 4 },
     icseSlots: { preK: 3, primary: 5 },
-    hint: 'Environmental Studies — Nursery through Class II only; Social Science takes over from Class III (see GRADE_LEVEL_OVERRIDES below)',
+    hint: 'Environmental Studies - Nursery through Class II only; Social Science takes over from Class III (see GRADE_LEVEL_OVERRIDES below)',
   },
   // 'Environmental Studies' intentionally omitted.
   // "EST" in Indian school timetables = Extra Study Time (a free/self-study period),
@@ -442,83 +442,83 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     icseSlots:       { primary: 6, middle: 6, secondary: 7, srSec: 6 },
     ibSlots:         { primary: 7, middle: 5, secondary: 5, srSec: 6 },
     cambridgeSlots:  { primary: 7, middle: 6, secondary: 6, srSec: 5 },
-    hint: 'Core academic — introduced in primary, continues through Sr. Secondary across all streams',
+    hint: 'Core academic - introduced in primary, continues through Sr. Secondary across all streams',
   },
   'Hindi': {
     grades: ['primary','middle','secondary'],
     isLanguage: true,
     slots: { primary: 4, middle: 4, secondary: 3 },
-    hint: 'Second language (CBSE/ICSE India) — primary through Class X; not continued at XI–XII',
+    hint: 'Second language (CBSE/ICSE India) - primary through Class X; not continued at XI–XII',
   },
   'Sanskrit': {
     grades: ['middle','secondary'],
     isLanguage: true,
     slots: { middle: 3, secondary: 2 },
-    hint: 'Classical language elective — CBSE Class VI–X; not in IB/Cambridge',
+    hint: 'Classical language elective - CBSE Class VI–X; not in IB/Cambridge',
   },
   'Sanskrit / MIL': {
     grades: ['middle','secondary'],
     isLanguage: true,
     slots: { middle: 3, secondary: 2 },
-    hint: 'Third language / Modern Indian Language — CBSE/ICSE Class VI–X',
+    hint: 'Third language / Modern Indian Language - CBSE/ICSE Class VI–X',
   },
   'Odia / Regional Language': {
     grades: ['primary','middle','secondary'],
     isLanguage: true,
     slots: { primary: 3, middle: 3, secondary: 2 },
-    hint: 'Mother-tongue / regional language — primary through Class X in Indian boards',
+    hint: 'Mother-tongue / regional language - primary through Class X in Indian boards',
   },
-  'Tamil':     { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — Tamil Nadu schools, primary through secondary' },
-  'Telugu':    { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — AP/Telangana schools, primary through secondary' },
-  'Kannada':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — Karnataka schools, primary through secondary' },
-  'Malayalam': { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — Kerala schools, primary through secondary' },
-  'Gujarati':  { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — Gujarat schools' },
-  'Punjabi':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — Punjab schools' },
-  'Marathi':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — Maharashtra schools' },
-  'Bengali':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language — West Bengal / Bengali-medium schools' },
-  'Urdu':      { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Language subject — CBSE/ICSE schools' },
+  'Tamil':     { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - Tamil Nadu schools, primary through secondary' },
+  'Telugu':    { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - AP/Telangana schools, primary through secondary' },
+  'Kannada':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - Karnataka schools, primary through secondary' },
+  'Malayalam': { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - Kerala schools, primary through secondary' },
+  'Gujarati':  { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - Gujarat schools' },
+  'Punjabi':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - Punjab schools' },
+  'Marathi':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - Maharashtra schools' },
+  'Bengali':   { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Regional language - West Bengal / Bengali-medium schools' },
+  'Urdu':      { grades: ['primary','middle','secondary'], isLanguage: true, slots: { primary: 4, middle: 4, secondary: 3 }, hint: 'Language subject - CBSE/ICSE schools' },
   'French': {
     grades: ['middle','secondary','srSec'],
     isLanguage: true,
     slots:           { middle: 3, secondary: 4, srSec: 5 },
     cambridgeSlots:  { middle: 4, secondary: 5, srSec: 6 },
-    hint: 'Foreign language — introduced middle school (VI); full elective at XI–XII',
+    hint: 'Foreign language - introduced middle school (VI); full elective at XI–XII',
   },
   'German': {
     grades: ['middle','secondary','srSec'],
     isLanguage: true,
     slots: { middle: 3, secondary: 4, srSec: 5 },
-    hint: 'Foreign language — middle school onwards; popular in CBSE international schools',
+    hint: 'Foreign language - middle school onwards; popular in CBSE international schools',
   },
   'Spanish': {
     grades: ['middle','secondary','srSec'],
     isLanguage: true,
     slots: { middle: 3, secondary: 4, srSec: 5 },
-    hint: 'Foreign language elective — middle school onwards',
+    hint: 'Foreign language elective - middle school onwards',
   },
   'Arabic': {
     grades: ['primary','middle','secondary','srSec'],
     isLanguage: true,
     slots: { primary: 3, middle: 4, secondary: 4, srSec: 5 },
-    hint: 'Language subject — Islamic schools, international schools, Middle East campuses',
+    hint: 'Language subject - Islamic schools, international schools, Middle East campuses',
   },
   'Computer': {
     grades: ['preK','primary'],
     slots: { preK: 1, primary: 2 },
-    hint: 'Basic computer literacy — junior grades (Nursery–V); becomes "Computer Science" as a formal subject from middle school.',
+    hint: 'Basic computer literacy - junior grades (Nursery–V); becomes "Computer Science" as a formal subject from middle school.',
   },
   'Computer Science': {
     grades: ['middle','secondary','srSec'],
     streams: ['science','general','commerce'],  // Science + untagged + Commerce; NOT Spark (pcb) or Humanities
     slots:    { middle: 3, secondary: 3, srSec: 5 },
     ibSlots:  { middle: 3, secondary: 4, srSec: 6 },
-    hint: 'Formal Computer Science — middle school (VI) onward; standalone subject at XI–XII for Science and Commerce. Junior grades use "Computer" instead. NOT assigned to Spark (PCB) or Humanities.',
+    hint: 'Formal Computer Science - middle school (VI) onward; standalone subject at XI–XII for Science and Commerce. Junior grades use "Computer" instead. NOT assigned to Spark (PCB) or Humanities.',
   },
 
   // ── Middle school (VI–VIII) ────────────────────────────────────────────────────
   //
   // Science scope note:
-  //   Standard CBSE — Science is a unified subject from I through X (Physics/Chemistry/
+  //   Standard CBSE - Science is a unified subject from I through X (Physics/Chemistry/
   //   Biology are introduced as separate subjects only at XI–XII).
   //   Many Indian schools however split earlier: "Science" for Classes I–V (primary),
   //   then separate Physics, Chemistry, Biology from Class VI onwards.
@@ -532,16 +532,16 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     icseSlots:       { primary: 4, middle: 5 },
     ibSlots:         { primary: 4, middle: 5 },
     cambridgeSlots:  { primary: 4, middle: 5 },
-    hint: 'Unified Science — typically I–V (primary) or I–VIII (middle); Physics/Chemistry/Biology take over from IX or VI depending on school. Adjust per your board.',
+    hint: 'Unified Science - typically I–V (primary) or I–VIII (middle); Physics/Chemistry/Biology take over from IX or VI depending on school. Adjust per your board.',
   },
   'Social Science': {
     grades: ['primary','middle','secondary'],
     slots:     { primary: 4, middle: 5, secondary: 5 },
     icseSlots: { primary: 4, middle: 4, secondary: 4 },
-    hint: 'SSC (History + Geography + Civics/Pol.Sci combined) — Class III–X; replaces EVS from Class III (see GRADE_LEVEL_OVERRIDES below)',
+    hint: 'SSC (History + Geography + Civics/Pol.Sci combined) - Class III–X; replaces EVS from Class III (see GRADE_LEVEL_OVERRIDES below)',
   },
 
-  // ── Secondary (IX–X) — science disciplines ────────────────────────────────────
+  // ── Secondary (IX–X) - science disciplines ────────────────────────────────────
   'Physics': {
     grades: ['secondary','srSec'],
     streams: ['science','general','pcb'],  // science + untagged + Spark (PCB); NOT commerce/arts
@@ -550,7 +550,7 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     icseSlots:       { secondary: 4, srSec: 6 },
     ibSlots:         { secondary: 5, srSec: 5 },
     cambridgeSlots:  { secondary: 5, srSec: 6 },
-    hint: 'Physics — Science stream XI–XII only; 4 theory + 1 practical per week; requires lab',
+    hint: 'Physics - Science stream XI–XII only; 4 theory + 1 practical per week; requires lab',
   },
   'Chemistry': {
     grades: ['secondary','srSec'],
@@ -560,7 +560,7 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     icseSlots:       { secondary: 4, srSec: 6 },
     ibSlots:         { secondary: 5, srSec: 5 },
     cambridgeSlots:  { secondary: 5, srSec: 6 },
-    hint: 'Chemistry — Science stream XI–XII only; 4 theory + 1 practical per week; requires lab',
+    hint: 'Chemistry - Science stream XI–XII only; 4 theory + 1 practical per week; requires lab',
   },
   'Biology': {
     grades: ['secondary','srSec'],
@@ -570,160 +570,160 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     icseSlots:       { secondary: 4, srSec: 6 },
     ibSlots:         { secondary: 4, srSec: 5 },
     cambridgeSlots:  { secondary: 4, srSec: 5 },
-    hint: 'Biology — PCB science stream at XI–XII; 4 theory + 1 practical per week; requires lab',
+    hint: 'Biology - PCB science stream at XI–XII; 4 theory + 1 practical per week; requires lab',
   },
   'Botany': {
     grades: ['srSec'],
     streams: ['pcb'],    // Spark (PCB) sections ONLY
     requiresLab: true,
     slots: { srSec: 4 },
-    hint: 'Botany — Spark (PCB) sections only at XI–XII; requires lab',
+    hint: 'Botany - Spark (PCB) sections only at XI–XII; requires lab',
   },
   'Zoology': {
     grades: ['srSec'],
     streams: ['pcb'],    // Spark (PCB) sections ONLY
     requiresLab: true,
     slots: { srSec: 4 },
-    hint: 'Zoology — Spark (PCB) sections only at XI–XII; requires lab',
+    hint: 'Zoology - Spark (PCB) sections only at XI–XII; requires lab',
   },
   'Biotechnology': {
     grades: ['srSec'],
     streams: ['science'],
     requiresLab: true,
     slots: { srSec: 5 },
-    hint: 'Biotechnology — Sr. Secondary Science-stream elective; lab required',
+    hint: 'Biotechnology - Sr. Secondary Science-stream elective; lab required',
   },
 
-  // ── Secondary — social sciences ───────────────────────────────────────────────
+  // ── Secondary - social sciences ───────────────────────────────────────────────
   'History': {
     grades: ['secondary','srSec'],
     streams: ['arts'],                // Humanities sections only (XI-HUM, XII-HUM)
     slots:     { secondary: 3, srSec: 4 },
     icseSlots: { secondary: 4, srSec: 4 },
-    hint: 'History — Humanities stream only at XI–XII (4 p/w)',
+    hint: 'History - Humanities stream only at XI–XII (4 p/w)',
   },
   'Geography': {
     grades: ['secondary','srSec'],
     streams: ['arts'],                // Humanities sections only
     slots:     { secondary: 3, srSec: 4 },
     icseSlots: { secondary: 4, srSec: 4 },
-    hint: 'Geography — Humanities stream only at XI–XII (4 p/w)',
+    hint: 'Geography - Humanities stream only at XI–XII (4 p/w)',
   },
   'Political Science': {
     grades: ['secondary','srSec'],
     streams: ['arts'],                // Humanities sections only
     slots:     { secondary: 2, srSec: 6 },
     icseSlots: { secondary: 3, srSec: 6 },
-    hint: 'Political Science — Humanities core at XI–XII; 5–6 periods per week',
+    hint: 'Political Science - Humanities core at XI–XII; 5–6 periods per week',
   },
   'Economics': {
     grades: ['secondary','srSec'],
     streams: ['commerce','arts'],   // Commerce + Humanities ONLY
     // Science sections that use ECO as a 5th-subject option (e.g. XI-D) should
-    // add it manually — auto-assign must not push ECO onto any science/Spark section.
+    // add it manually - auto-assign must not push ECO onto any science/Spark section.
     slots: { secondary: 3, srSec: 5 },
-    hint: 'Economics — auto-assigned to Commerce and Humanities only. Add manually to individual science sections where it is used as a 5th subject.',
+    hint: 'Economics - auto-assigned to Commerce and Humanities only. Add manually to individual science sections where it is used as a 5th subject.',
   },
   'Artificial Intelligence': {
     grades: ['secondary','srSec'],
     slots: { secondary: 2, srSec: 3 },
-    hint: 'AI — CBSE vocational/skill subject for Class IX–XII',
+    hint: 'AI - CBSE vocational/skill subject for Class IX–XII',
   },
   'Information Technology': {
     grades: ['secondary','srSec'],
     slots: { secondary: 3, srSec: 4 },
-    hint: 'IT — vocational subject, Class IX–XII across CBSE/State boards',
+    hint: 'IT - vocational subject, Class IX–XII across CBSE/State boards',
   },
   'Home Science': {
     grades: ['secondary','srSec'],
     streams: ['arts','general'],
     slots: { secondary: 4, srSec: 5 },
-    hint: 'Home Science — available secondary and Sr. Secondary, Arts/general stream',
+    hint: 'Home Science - available secondary and Sr. Secondary, Arts/general stream',
   },
   'Vocational Studies': {
     grades: ['secondary','srSec'],
     streams: ['general'],
     slots: { secondary: 4, srSec: 4 },
-    hint: 'Vocational Education — skill-based subject, Class IX–XII',
+    hint: 'Vocational Education - skill-based subject, Class IX–XII',
   },
 
-  // ── Sr. Secondary — Science stream (XI–XII) ───────────────────────────────────
+  // ── Sr. Secondary - Science stream (XI–XII) ───────────────────────────────────
   'Mathematics (Optional)': {
     grades: ['srSec'],
     streams: ['science','commerce','general'],
     slots: { srSec: 6 },
-    hint: 'Optional/PCM Mathematics — CBSE XI–XII for Science (PCM) and Commerce streams',
+    hint: 'Optional/PCM Mathematics - CBSE XI–XII for Science (PCM) and Commerce streams',
   },
   'Applied Mathematics': {
     grades: ['srSec'],
     streams: ['commerce','arts','general'],
     slots: { srSec: 5 },
-    hint: 'Applied Mathematics — CBSE XI–XII alternative to pure Math for non-PCM streams',
+    hint: 'Applied Mathematics - CBSE XI–XII alternative to pure Math for non-PCM streams',
   },
   'Informatics Practices': {
     grades: ['srSec'],
     streams: ['science','commerce','general'],
     slots: { srSec: 4 },
-    hint: 'IP — CBSE XI–XII alternative to CS; Science and Commerce streams',
+    hint: 'IP - CBSE XI–XII alternative to CS; Science and Commerce streams',
   },
 
-  // ── Sr. Secondary — Commerce stream (XI–XII) ─────────────────────────────────
+  // ── Sr. Secondary - Commerce stream (XI–XII) ─────────────────────────────────
   'Accountancy': {
     grades: ['srSec'],
     streams: ['commerce'],
     slots: { srSec: 6 },
-    hint: 'Accountancy — Commerce stream core subject at XI–XII; 5 theory + 1 practical per week',
+    hint: 'Accountancy - Commerce stream core subject at XI–XII; 5 theory + 1 practical per week',
   },
   'Business Studies': {
     grades: ['srSec'],
     streams: ['commerce'],
     slots: { srSec: 4 },
-    hint: 'Business Studies — Commerce stream core subject at XI–XII (4 p/w)',
+    hint: 'Business Studies - Commerce stream core subject at XI–XII (4 p/w)',
   },
   'Entrepreneurship': {
     grades: ['srSec'],
     streams: ['commerce','arts'],     // Commerce + Humanities only; NOT science sections
     slots: { srSec: 4 },
-    hint: 'Entrepreneurship — Commerce and Humanities 5th-subject elective at XI–XII',
+    hint: 'Entrepreneurship - Commerce and Humanities 5th-subject elective at XI–XII',
   },
   'Legal Studies': {
     grades: ['srSec'],
     streams: ['commerce','arts','general'],
     slots: { srSec: 4 },
-    hint: 'Legal Studies — Sr. Secondary elective for Commerce and Humanities streams',
+    hint: 'Legal Studies - Sr. Secondary elective for Commerce and Humanities streams',
   },
   'Statistics': {
     grades: ['srSec'],
     streams: ['commerce','science','general'],
     slots: { srSec: 4 },
-    hint: 'Statistics — elective for Commerce and Science streams at XI–XII',
+    hint: 'Statistics - elective for Commerce and Science streams at XI–XII',
   },
 
-  // ── Sr. Secondary — Arts/Humanities stream (XI–XII) ──────────────────────────
+  // ── Sr. Secondary - Arts/Humanities stream (XI–XII) ──────────────────────────
   'Psychology': {
     grades: ['srSec'],
     streams: ['arts'],                // Humanities sections only
     slots: { srSec: 4 },
-    hint: 'Psychology — Humanities 5th subject elective at XI–XII (4 p/w)',
+    hint: 'Psychology - Humanities 5th subject elective at XI–XII (4 p/w)',
   },
   'Sociology': {
     grades: ['srSec'],
     streams: ['arts'],                // Humanities sections only
     slots: { srSec: 4 },
-    hint: 'Sociology — Humanities 5th subject elective at XI–XII (4 p/w)',
+    hint: 'Sociology - Humanities 5th subject elective at XI–XII (4 p/w)',
   },
   'Philosophy': {
     grades: ['srSec'],
     streams: ['arts','general'],
     slots: { srSec: 4 },
     cambridgeSlots: { srSec: 5 },
-    hint: 'Philosophy — Humanities elective; Cambridge A-Level and IB DP Group 3',
+    hint: 'Philosophy - Humanities elective; Cambridge A-Level and IB DP Group 3',
   },
   'Fine Arts': {
     grades: ['srSec'],
     streams: ['arts','general'],
     slots: { srSec: 5 },
-    hint: 'Fine Arts — Arts-stream elective; also available as 5th optional across streams',
+    hint: 'Fine Arts - Arts-stream elective; also available as 5th optional across streams',
   },
 
   // ── ICSE/ISC-specific subjects ────────────────────────────────────────────────
@@ -732,14 +732,14 @@ export const CURRICULUM: Record<string, SubjectRule> = {
     isLanguage: true,
     slots:     { secondary: 3, srSec: 5 },
     icseSlots: { secondary: 4, srSec: 6 },
-    hint: 'English Literature — separate paper in ICSE (Class IX–X); core ISC subject at XI–XII',
+    hint: 'English Literature - separate paper in ICSE (Class IX–X); core ISC subject at XI–XII',
   },
   'English Language': {
     grades: ['secondary','srSec'],
     isLanguage: true,
     slots:     { secondary: 3, srSec: 4 },
     icseSlots: { secondary: 4, srSec: 5 },
-    hint: 'English Language — separate paper in ICSE; ISC Paper 1',
+    hint: 'English Language - separate paper in ICSE; ISC Paper 1',
   },
 }
 
@@ -774,7 +774,7 @@ function getRule(subjectName: string): SubjectRule | undefined {
 
 /**
  * Numeric-grade overrides for subjects whose applicability splits WITHIN a
- * single grade-group band — e.g. EVS and Social Science both fall in the
+ * single grade-group band - e.g. EVS and Social Science both fall in the
  * 'primary' band (I–V), but EVS only runs through Class II while Social
  * Science picks up from Class III. The grades[] band alone can't express
  * that split, so these predicates narrow it down to the exact grade level
@@ -793,11 +793,11 @@ function passesGradeLevelOverride(subjectName: string, gradeLabel: string): bool
 }
 
 /**
- * Whether a subject's curriculum rule applies to ANY of the given sections —
+ * Whether a subject's curriculum rule applies to ANY of the given sections -
  * respecting both the grade-group band AND any numeric-grade override above.
  * Unknown subjects (no rule) default to applicable, so custom/manually-added
  * subjects are never silently dropped. Used to generate ONLY subjects that
- * are actually relevant to the grade range the user configured — e.g. don't
+ * are actually relevant to the grade range the user configured - e.g. don't
  * generate "Social Science" or "Sanskrit / MIL" (middle/secondary only) for
  * a school that only has Classes I–V.
  */
@@ -896,7 +896,7 @@ export function getSubjectHint(
 ): string {
   const rule = getRule(subjectName)
   const boardLabel = BOARD_LABELS[board]
-  if (!rule) return `No specific curriculum rule found — assigned based on general K-8 pattern · ${boardLabel}`
+  if (!rule) return `No specific curriculum rule found - assigned based on general K-8 pattern · ${boardLabel}`
   const gradeLabels: Record<GradeGroup, string> = {
     preK:      'Pre-Primary (Nursery–UKG)',
     primary:   'Primary (I–V)',
@@ -919,7 +919,7 @@ export function getShortHint(
   board:       CurriculumBoard = 'CBSE',
 ): string {
   const rule = getRule(subjectName)
-  if (!rule) return `${BOARD_LABELS[board]} — general assignment`
+  if (!rule) return `${BOARD_LABELS[board]} - general assignment`
   const groupLabels: Record<GradeGroup, string> = {
     preK: 'pre-primary', primary: 'primary', middle: 'middle school',
     secondary: 'secondary', srSec: 'sr. secondary',
@@ -929,7 +929,7 @@ export function getShortHint(
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  STANDARD SUBJECT SETS — the "what subjects does a class take" brain
+//  STANDARD SUBJECT SETS - the "what subjects does a class take" brain
 //
 //  suggestClassesForSubject answers "which classes take THIS subject"; it can
 //  only map subjects the user already typed. To make "add a class → its subjects
@@ -938,54 +938,54 @@ export function getShortHint(
 //  NCERT scheme of studies and validated against real 2025-26 school timetables
 //  (Nursery–XII). Activities (PE/Art/Music) and the dominant electives are
 //  included; rarely-shared options (2nd foreign language, vocational tracks) are
-//  left out so the seeded list is a sensible default a user lightly edits — not
+//  left out so the seeded list is a sensible default a user lightly edits - not
 //  an exhaustive catalogue.
 // ════════════════════════════════════════════════════════════════════════════
 
-/** Pre-primary (Nursery, LKG, UKG) — developmental, activity-led. */
+/** Pre-primary (Nursery, LKG, UKG) - developmental, activity-led. */
 const STD_PREK = [
   'English', 'Number Work', 'EVS', 'Nursery Rhymes & Stories',
   'Art & Craft', 'Music', 'Physical Education', 'G.K.',
 ]
 
-/** Junior Primary (I–II) — EVS still combines science + social themes. */
+/** Junior Primary (I–II) - EVS still combines science + social themes. */
 const STD_PRIMARY_JUNIOR = [
   'English', 'Mathematics', 'EVS', 'Hindi',
   'Computer', 'G.K.', 'Art & Craft', 'Music',
   'Physical Education', 'Library',
 ]
 
-/** Senior Primary (III–V) — EVS splits into Science + Social Science. */
+/** Senior Primary (III–V) - EVS splits into Science + Social Science. */
 const STD_PRIMARY_SENIOR = [
   'English', 'Mathematics', 'Science', 'Social Science', 'Hindi',
   'Computer', 'G.K.', 'Art & Craft', 'Music',
   'Physical Education', 'Library',
 ]
 
-/** Middle (VI–VIII) — unified Science + Social Science, three languages. */
+/** Middle (VI–VIII) - unified Science + Social Science, three languages. */
 const STD_MIDDLE = [
   'English', 'Mathematics', 'Science', 'Social Science',
   'Hindi', 'Sanskrit', 'Computer Science', 'Art & Craft',
   'Physical Education', 'Library',
 ]
 
-/** Secondary (IX–X) — board-exam core + IT skill + health/PE. */
+/** Secondary (IX–X) - board-exam core + IT skill + health/PE. */
 const STD_SECONDARY = [
   'English', 'Mathematics', 'Science', 'Social Science',
   'Hindi', 'Information Technology', 'Physical Education',
 ]
 
-/** Sr. Secondary (XI–XII) — keyed by stream. 'science' defaults to PCM;
+/** Sr. Secondary (XI–XII) - keyed by stream. 'science' defaults to PCM;
  *  'pcb' is the medical/Spark biology track; unmarked sections fall back to
  *  PCM science (the most common Indian Sr.Sec default). */
 // Sr.Secondary stream → subject set. Calibrated against real CBSE school
 // timetables (MPS Khandagiri 2025-26, XI–XII): the subjects below are the ones
 // the majority of sections in each stream actually run. PE / Painting / Library
 // are the shared co-curricular rotation present across every stream.
-//   science  — PCMB core (Maths + Biology, since most science sections offer both)
-//   pcb      — medical track with the Botany + Zoology split
-//   commerce — Accountancy/BST/Eco + Maths, Computer Science & Entrepreneurship
-//   arts     — the five humanities + Maths & Entrepreneurship electives
+//   science  - PCMB core (Maths + Biology, since most science sections offer both)
+//   pcb      - medical track with the Botany + Zoology split
+//   commerce - Accountancy/BST/Eco + Maths, Computer Science & Entrepreneurship
+//   arts     - the five humanities + Maths & Entrepreneurship electives
 const STD_SRSEC: Record<Stream, string[]> = {
   science:  ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'Physical Education', 'Painting', 'Library'],
   pcb:      ['Physics', 'Chemistry', 'Botany', 'Zoology', 'Biology', 'English', 'Physical Education', 'Painting', 'Library'],
@@ -997,7 +997,7 @@ const STD_SRSEC: Record<Stream, string[]> = {
 /**
  * The curated standard subject names a section should take, by grade + stream.
  * Grade comes from the name; the XI–XII stream comes from the section's explicit
- * `stream` field (falling back to the name only when unset) — see resolveStream.
+ * `stream` field (falling back to the name only when unset) - see resolveStream.
  *
  * Accepts a section object; a bare string is still allowed for callers that only
  * have a name (then stream is inferred from the name).
@@ -1032,7 +1032,7 @@ function fallbackSlot(name: string, group: GradeGroup): number {
   return group === 'preK' ? 4 : group === 'srSec' ? 6 : 5
 }
 
-/** Category label for a seeded subject — drives the Subjects-tab grouping. */
+/** Category label for a seeded subject - drives the Subjects-tab grouping. */
 function seedCategory(name: string): string {
   const rule = getRule(name)
   if (rule?.isActivity) return 'Co-scholastic'
@@ -1057,7 +1057,7 @@ export interface SeededSubject {
  *
  * Returns one entry per distinct subject, each carrying the exact sections it
  * applies to plus per-section slot configs (board-recommended, grade-aware).
- * The caller adds ids / colors. Idempotent in spirit — call it on a fresh,
+ * The caller adds ids / colors. Idempotent in spirit - call it on a fresh,
  * subject-less resource set ("Let me create smartly") to bootstrap the whole
  * Subjects tab from just the class list.
  */

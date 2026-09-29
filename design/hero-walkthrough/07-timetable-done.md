@@ -1,9 +1,9 @@
-# Scene 7 — Finished timetable (Standard view)
+# Scene 7 - Finished timetable (Standard view)
 
 **Caption:** "Your timetable. Done."
 **Duration:** 2000ms
 **Source of truth:** `frontend/src/pages/timetable.tsx` (the post-generate
-destination — "View Schedule (Draft) →" navigates to `/timetable`), grid
+destination - "View Schedule (Draft) →" navigates to `/timetable`), grid
 cell components in `frontend/src/components/timetable/` (TimetableCell,
 PeriodHeader, Toolbar).
 
@@ -37,16 +37,16 @@ lunch row uses the real `#FEF3C7`/`#D97706` band.
 | ms | action |
 |---|---|
 | 0–200 | continuity from scene 6's click: page "loads" |
-| 200–1300 | cells cascade in column-by-column (Mon→Fri, ~120ms/column) — the reveal is the payoff of the whole wizard |
+| 200–1300 | cells cascade in column-by-column (Mon→Fri, ~120ms/column) - the reveal is the payoff of the whole wizard |
 | 1300–2000 | hold; no cursor interaction (breathing beat between two interactive scenes) |
 
 ## RM frame
 
 Full grid, static. **This is also the global reduced-motion pin scene**
-(see 00-frame-and-loop.md §5) — it's the single most informative frame.
+(see 00-frame-and-loop.md §5) - it's the single most informative frame.
 
 ## Fidelity notes
 
 - Grid orientation (periods as rows, days as columns) matches the app's
   class Standard view; the marketing hero's hour-column grids are a
-  different (calendar Day) surface — don't mix them here.
+  different (calendar Day) surface - don't mix them here.

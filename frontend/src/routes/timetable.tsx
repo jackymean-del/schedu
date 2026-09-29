@@ -30,8 +30,8 @@ const DAY_SHORT: Record<string,string> = {
 
 // ── Time calculator ────────────────────────────────────────
 // Formats the clock shown beside each period. The MINUTES come from the
-// school's bell (lib/bellTimes) — adding durations up from the start time puts
-// every period after an assembly or a lunch early, by an hour by mid-morning —
+// school's bell (lib/bellTimes) - adding durations up from the start time puts
+// every period after an assembly or a lunch early, by an hour by mid-morning -
 // and this only turns them into 12- or 24-hour text.
 function calcTimes(periods: any[], config: any, sections: any[] = []): Map<string,{start:string;end:string}> {
   const map = new Map<string,{start:string;end:string}>()
@@ -129,12 +129,12 @@ function shortRoomName(name: string): string { return name ? name.slice(0, 9) : 
 // teacher inside `options[]`. These helpers let teacher-view logic recognise
 // such blocks (e.g. an IP group taught to XI-Sci-A + XI-Sci-B by one teacher).
 // cellHasTeacher used to live here as a private copy that matched `options[]`
-// and missed `groupAssignments` — so a teacher taking a later OR/AND group was
+// and missed `groupAssignments` - so a teacher taking a later OR/AND group was
 // absent from their own teacher view and undercounted in every load figure on
 // this page. It is imported now; lib/cellTeachers reads both parallel shapes.
 //
 // These two had the same gap. A cell-level `subject` on an OR/AND cell reads
-// "Physics OR Chemistry" and its `room` is the FIRST group's — so the Chemistry
+// "Physics OR Chemistry" and its `room` is the FIRST group's - so the Chemistry
 // teacher's own timetable named both subjects and sent them to the physics lab.
 // Their own group is checked first now, and the cell-level values remain the
 // fallback for an ordinary lesson.
@@ -266,7 +266,7 @@ function getSectionOffDays(
 // step-bell persists the exact generated rows per generation unit (whole school,
 // or one entry per block in Advanced mode): real assembly length, capped and
 // concurrent period durations, per-group early dispersal. When present, every
-// per-section clock time is derived from these rows — the afterPeriod ×
+// per-section clock time is derived from these rows - the afterPeriod ×
 // defaultSessionDuration math below stays only as a legacy fallback.
 type BellRowLite  = { id: string; name: string; type: string; duration: number; classes: string[] }
 type BellSchedule = { startTime: string; rows: BellRowLite[] }
@@ -318,7 +318,7 @@ function bellScheduleForSection(
       // short-break / lunch → take the first unmatched break of the same type.
       // No class-wise breaks configured (simple single-lunch mode)? The store's
       // break entries were created FROM these same bell rows, so the bell row's
-      // own id is the store id — key by it directly.
+      // own id is the store id - key by it directly.
       let mi = unmatched.findIndex(b => ((b as any).type ?? '') === r.type)
       if (mi < 0) mi = unmatched.length ? 0 : -1
       if (mi >= 0) {
@@ -403,7 +403,7 @@ function calcSectionTimes(
 }
 
 /**
- * Build a class-specific period list for display — teaching periods
+ * Build a class-specific period list for display - teaching periods
  * interleaved with only the breaks that apply to this section.
  * When no class-wise breaks are configured, returns the unified periods array.
  */
@@ -418,7 +418,7 @@ function buildClassPeriods(
   // dropTrailingBreaks: in the global-periods fallback the break columns are
   // school-wide, so breaks after the section's last period must go too; in the
   // class-wise path the breaks are already the section's own (e.g. a senior
-  // group's lunch can legitimately sit after its final period) — keep them.
+  // group's lunch can legitimately sit after its final period) - keep them.
   const teachCount = bellTeachingCount(sectionName, bellSchedules)
   const truncate = (list: Period[], dropTrailingBreaks: boolean): Period[] => {
     if (teachCount == null) return list
@@ -436,7 +436,7 @@ function buildClassPeriods(
     return out
   }
 
-  // Order columns by the section's REAL bell times — the store's abstract
+  // Order columns by the section's REAL bell times - the store's abstract
   // sequence distributes breaks evenly (e.g. Short Break after P2) which can
   // disagree with where the bell actually placed them (after P3).
   const bellOrder = (list: Period[]): Period[] => {
@@ -458,7 +458,7 @@ function buildClassPeriods(
   if (!sectionBreaks.length) return truncate(allPeriods, true)
 
   // Deduplicate: keep only one break per (afterPeriod, kind) for this section.
-  // Kind = lunch vs short-break — DISTINCT kinds can legitimately share a slot
+  // Kind = lunch vs short-break - DISTINCT kinds can legitimately share a slot
   // (e.g. Morning Break + Pre-Primary's early lunch both after Period 1), so
   // dedupe per kind only. This still prevents double-lunch when a class-key
   // matches both a specific entry and an "all classes" entry at the same slot.
@@ -512,7 +512,7 @@ function buildClassPeriods(
 //  Rules (see PROJECT_REFERENCE.md §6):
 //   • A teaching column = a distinct (periodId, startMinute) pair.
 //   • A FULL break (classes=all) gets its own column.
-//   • A PARTIAL break (subset of classes) is NOT a column — it is overlaid
+//   • A PARTIAL break (subset of classes) is NOT a column - it is overlaid
 //     into the teaching columns whose time-range it overlaps, so a cell can
 //     show "Lunch Break" for the on-break sections while neighbouring cells in
 //     the same column show teaching for the in-session sections.
@@ -642,7 +642,7 @@ function buildUnifiedColumns(
   }
 
   const cols = new Map<string, UniCol>()
-  // 1) Fixed-start (Assembly) + fixed-end (Dispersal) from periods — universal
+  // 1) Fixed-start (Assembly) + fixed-end (Dispersal) from periods - universal
   const [sh,sm]=(config?.startTime ?? "09:00").split(":").map(Number)
   const dayStart=sh*60+sm
   periods.filter(p=>p.type==='fixed-start').forEach(p=>{
@@ -679,7 +679,7 @@ function buildUnifiedColumns(
       type:p.type, startMin:s.startMin, endMin:s.endMin,
       start:fmtMin(s.startMin,config), end:fmtMin(s.endMin,config) })
   })
-  // 4) fixed-end (Dispersal) — position after last teaching column
+  // 4) fixed-end (Dispersal) - position after last teaching column
   periods.filter(p=>p.type==='fixed-end').forEach(p=>{
     const lastEnd = Math.max(...[...cols.values()].map(c=>c.endMin), dayStart)
     cols.set(`${p.id}@${lastEnd}`, { key:`${p.id}@${lastEnd}`, periodId:p.id, name:p.name, type:p.type,
@@ -720,10 +720,10 @@ function resolveUniCell(
 }
 
 /**
- * isTeachingSlotForClass — class-bell-schedule-based slot eligibility.
+ * isTeachingSlotForClass - class-bell-schedule-based slot eligibility.
  *
  * Returns true ONLY when the destination (col) is a genuine teaching slot for
- * the given section according to THAT CLASS'S bell schedule — independent of
+ * the given section according to THAT CLASS'S bell schedule - independent of
  * how the visual teacher-timetable column is labelled.
  *
  * Rules (per PROJECT_REFERENCE §5–6 and the drag-drop spec):
@@ -731,14 +731,14 @@ function resolveUniCell(
  *  2. The section's bell schedule must place that teaching period at col.startMin.
  *  3. The section must NOT be on any class-specific break overlapping this slot.
  *
- * Never uses col.type for the eligibility decision — validation is entirely
+ * Never uses col.type for the eligibility decision - validation is entirely
  * driven by the class's bell schedule + conflict simulation.
  */
 function isTeachingSlotForClass(
   sectionName: string,
   col: UniCol,
   allSchedules: Map<string, Map<string, SlotMins>>,
-  teachingPeriods: Period[],           // classPeriods — only 'class'-type periods
+  teachingPeriods: Period[],           // classPeriods - only 'class'-type periods
   classwiseBreaks: CwBreakLite[] | undefined,
 ): boolean {
   // Rule 1: destination periodId must map to a real teaching period.
@@ -833,7 +833,7 @@ function mergeTeacherIdleColumns(
   return result
 }
 
-// ── Shared lunch break cell — shows compressed class names (no icon) ──
+// ── Shared lunch break cell - shows compressed class names (no icon) ──
 // isTarget    → valid drop zone (green fill)
 // hasConflict → cannot drop (red fill)
 // isUnavailable → dragging but this slot is not a valid target (red outline, yellow bg)
@@ -921,7 +921,7 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
   )
 }
 
-// ── Inter-teacher swap insight — inline banner (non-blocking) ──
+// ── Inter-teacher swap insight - inline banner (non-blocking) ──
 const InsightBanner = React.memo(function InsightBanner({ message, onClose }:{ message:string; onClose:()=>void }) {
   return (
     <div style={{
@@ -931,7 +931,7 @@ const InsightBanner = React.memo(function InsightBanner({ message, onClose }:{ m
     }}>
       <span style={{ fontSize:16, flexShrink:0 }}>↕️</span>
       <div style={{ flex:1, fontSize:12.5, color:"#065f46", lineHeight:1.55 }}>
-        <span style={{ fontWeight:700 }}>Schedule swapped — </span>{message}
+        <span style={{ fontWeight:700 }}>Schedule swapped - </span>{message}
       </div>
       <button onClick={onClose}
         style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer",
@@ -993,7 +993,7 @@ const DropIndicator = React.memo(function DropIndicator({ hasConflict }: { hasCo
   )
 })
 
-// ── Period header — draggable column header in edit mode ──────
+// ── Period header - draggable column header in edit mode ──────
 function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDimmed,
   onDragStart, onDragEnd, onDragOver, onDrop, breakGroupLabel }: {
   p: Period; times?: {start:string;end:string};
@@ -1003,7 +1003,7 @@ function PeriodCol({ p, times, editMode, isDragSrc, isDragOver, isSwapped, isDim
   onDragOver?: (e: React.DragEvent) => void; onDrop?: () => void;
   breakGroupLabel?: string;  // e.g. "VII-C, XI-Com-A" for partial lunch columns
 }) {
-  // No JS hover state — drag icon visibility handled by CSS `.period-col-drag`
+  // No JS hover state - drag icon visibility handled by CSS `.period-col-drag`
   // on `th:hover`. Eliminates re-renders on every mouse-enter/leave.
   const isBreak = p.type !== "class"
   const canDrag = !!(editMode && !isBreak)
@@ -1077,7 +1077,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   const dSub = (s?:string) => shortNames && s ? shortSubjectName(s, subjectsList ?? []) : (s ?? "")
   const dTch = (t?:string) => shortNames && t ? shortStaffName(t, staffList ?? []) : (t ?? "")
   const dRm  = (r?:string) => shortNames && r ? shortRoomName(r) : (r ?? "")
-  // No JS hover state — action buttons shown via CSS `.tt-cell-actions` on `td:hover`
+  // No JS hover state - action buttons shown via CSS `.tt-cell-actions` on `td:hover`
   const sharedTdProps = {
     onDragOver: (e:React.DragEvent) => { e.preventDefault(); onDragOver?.(e) },
     onDrop,
@@ -1085,7 +1085,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   }
   const isConflict = !!hasConflict
 
-  // ── Empty cell — fill only + DropIndicator on target ──────
+  // ── Empty cell - fill only + DropIndicator on target ──────
   if (!subject) return (
     <td style={{ ...dragTdStyle(!!isDropTarget, isConflict, false), position:"relative" as const }} {...sharedTdProps}>
       <div onClick={onClick} style={{ ...dragInnerStyle(!!isDropTarget, isConflict), position:"relative" as const }}>
@@ -1095,7 +1095,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
   )
   // ── Multi-option / parallel group block ──────────────────
   // Students split into parallel groups running simultaneously: every option
-  // shows its OWN subject + teacher + room (always — they're what distinguishes
+  // shows its OWN subject + teacher + room (always - they're what distinguishes
   // the groups), with an explicit OR chip between choices.
   if (options && options.length > 1) {
     // AND = parallel split (run simultaneously); OR = alternatives. Derived from
@@ -1141,7 +1141,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
       </td>
     )
   }
-  // ── Filled cell — outline only, no background change ─────
+  // ── Filled cell - outline only, no background change ─────
   const effectiveTeacher = teacher || options?.[0]?.teacher
   const effectiveRoom    = room    || options?.[0]?.room
   const colorClass = getSubjectColor(subject)
@@ -1188,7 +1188,7 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
   onDragStart?: (e: React.DragEvent) => void;
   onDelete?: () => void; isSrc?: boolean; shortNames?: boolean; subjectsList?: any[];
 }) {
-  // No JS hover state — action buttons shown via CSS `.tt-cell-actions` on `td:hover`
+  // No JS hover state - action buttons shown via CSS `.tt-cell-actions` on `td:hover`
   const hasFill = !!cell?.subject
   const subjBase = cell.subject ? cell.subject.replace(/\s*\(.*\)/, "") : ""
   const subjDisp = shortNames && subjBase ? shortSubjectName(subjBase, subjectsList ?? []) : subjBase
@@ -1239,7 +1239,7 @@ export function TimetablePage() {
   // No-op when the store already has data.
   useEffect(() => { loadActiveTimetableIntoStore() }, [])
 
-  // Institution naming (admin-set in Settings) — live-updates on save.
+  // Institution naming (admin-set in Settings) - live-updates on save.
   const termsUid = useAuthStore.getState().user?.id ?? ''
   const terms = useNamingTerms(s => s.terms)
 
@@ -1312,7 +1312,7 @@ export function TimetablePage() {
   // startTransition: marks view/mode switches as non-urgent so the browser
   // can show click/hover feedback immediately before the expensive re-render.
   const [isViewPending, startViewTransition] = useTransition()
-  // Keep CalendarView mounted after first visit — avoids full re-mount on every switch.
+  // Keep CalendarView mounted after first visit - avoids full re-mount on every switch.
   const [calendarEverMounted, setCalendarEverMounted] = useState(false)
   useEffect(() => {
     if (mainMode === "calendar" && !calendarEverMounted) setCalendarEverMounted(true)
@@ -1369,7 +1369,7 @@ export function TimetablePage() {
   const [subAbsentTeacher, setSubAbsentTeacher] = useState("")
   // An absence happens on a DATE. The weekday is derived from it, because the
   // timetable it looks up is a weekly template while the cover it writes is
-  // dated — keying the cover by weekday made it repeat every week.
+  // dated - keying the cover by weekday made it repeat every week.
   const [subAbsentDate, setSubAbsentDate] = useState(localISO(new Date()))
   const subAbsentDay = weekdayOf(subAbsentDate)
   const [subReason, setSubReason] = useState("")
@@ -1378,13 +1378,13 @@ export function TimetablePage() {
 
   const { exportXLSX } = useExport()
 
-  // Teacher workload (period load) is internal — only admins/authorities see it,
+  // Teacher workload (period load) is internal - only admins/authorities see it,
   // and it's never printed (hidden in the print document via CSS).
   const isAdmin = useAuthStore(s => (s.user?.role ?? "admin")) === "admin"
 
   // ── PDF print / preview ──────────────────────────────────
   // A print action opens an in-app preview (a portal) that renders the live
-  // grids — guaranteeing ALL entities appear (no LazyCard / content-visibility
+  // grids - guaranteeing ALL entities appear (no LazyCard / content-visibility
   // skipping). The user picks orientation + paper there and hits the big Print
   // button, which sets @page and calls window.print(). For the actual print we
   // isolate just the document (.schedu-print-root) via display (see index.css).
@@ -1396,7 +1396,7 @@ export function TimetablePage() {
 
   const country = getCountry(config.countryCode ?? "IN")
 
-  // ── Memoized derived values — avoid recomputation on every render ──────────
+  // ── Memoized derived values - avoid recomputation on every render ──────────
   // These are recomputed only when their actual data dependencies change,
   // NOT on drag-state changes (dragOverCell / dragItem), which fire 60fps.
   const periodTimes  = useMemo(() => calcTimes(periods, activeBlock ? { ...config, startTime: activeBlock.startTime } : config, sections),
@@ -1409,7 +1409,7 @@ export function TimetablePage() {
   //
   // This page used to read `conflicts` off the store. That field is written
   // when a schedule is generated and is deliberately NOT persisted, so after
-  // any plain reload it is empty — and this page then showed a green
+  // any plain reload it is empty - and this page then showed a green
   // "✓ No conflicts" pill, an empty conflict panel, and a publish dialog with
   // nothing to warn about, for a timetable that had them. Publishing a broken
   // schedule to a whole school while being told it is clean is the worst
@@ -1432,7 +1432,7 @@ export function TimetablePage() {
     [(config as any).classwiseBreaks]
   )
 
-  // School-wide per-class-group timing schedules — used by teacher-view helpers.
+  // School-wide per-class-group timing schedules - used by teacher-view helpers.
   // Expensive O(groups × periods × breaks). Stable between drops.
   const allSectionSchedules = useMemo(() => {
     const map = new Map<string, Map<string, SlotMins>>()
@@ -1464,7 +1464,7 @@ export function TimetablePage() {
     [sections, classPeriods, cwBreaksGlobal, config.startTime]
   )
 
-  // Unified columns over ALL sections — used by Room & Subject views so their
+  // Unified columns over ALL sections - used by Room & Subject views so their
   // period columns reflect the SAME staggered (period, startTime) structure as
   // the teacher view. Avoids the time-accumulation trap of periodTimes (which
   // walks the canonical periods array that contains all staggered lunches).
@@ -1503,7 +1503,7 @@ export function TimetablePage() {
     return null
   }, [cwBreaksGlobal, allSectionSchedules, allClassKeys, config])
 
-  // Per-teacher unified columns + schedules — the most expensive computation.
+  // Per-teacher unified columns + schedules - the most expensive computation.
   // Keyed by teacher name. Recomputes only when classTT / sections / periods change.
   const teacherTTCache = useMemo(() => {
     const cache = new Map<string, {
@@ -1523,9 +1523,9 @@ export function TimetablePage() {
    
   }, [staff, sections, classTT, classPeriods, periods, cwBreaksGlobal, config])
 
-  // Uncovered periods — recomputes only when class timetable / periods change.
+  // Uncovered periods - recomputes only when class timetable / periods change.
   // Periods a section doesn't have (early dispersal per the bell schedule) are
-  // not gaps — skip them.
+  // not gaps - skip them.
   const uncoveredPeriodsAll = useMemo(() =>
     sections.flatMap(sec => {
       const tc = bellTeachingCount(sec.name, (config as any).bellSchedules)
@@ -1568,7 +1568,7 @@ export function TimetablePage() {
   // uncoveredPeriods is memoized as uncoveredPeriodsAll above
   const uncoveredPeriods = uncoveredPeriodsAll
 
-  // ── Period Pool: subject deficits — view-mode-aware ──────
+  // ── Period Pool: subject deficits - view-mode-aware ──────
   // Teacher view + specific teacher → only that teacher's sections.
   // Class view + specific class     → only that class.
   // All other modes                 → all sections.
@@ -1639,9 +1639,9 @@ export function TimetablePage() {
         if (ca?.teacher) atA.set(ca.teacher, [...(atA.get(ca.teacher) ?? []), s.name])
         if (cb?.teacher) atB.set(cb.teacher, [...(atB.get(cb.teacher) ?? []), s.name])
       })
-      // After swap: pB teachers move to pA slot — conflict if a teacher teaches >1 section at pB
+      // After swap: pB teachers move to pA slot - conflict if a teacher teaches >1 section at pB
       atB.forEach(secs => { if (secs.length > 1) secs.forEach(s => conflictingSections.add(s)) })
-      // After swap: pA teachers move to pB slot — conflict if a teacher teaches >1 section at pA
+      // After swap: pA teachers move to pB slot - conflict if a teacher teaches >1 section at pA
       atA.forEach(secs => { if (secs.length > 1) secs.forEach(s => conflictingSections.add(s)) })
     })
     const conflicted = conflictingSections.size
@@ -1720,7 +1720,7 @@ export function TimetablePage() {
       return subs.includes(subjectName)
     }
 
-    // Exclude the current section's slot — we may be replacing it
+    // Exclude the current section's slot - we may be replacing it
     const isBusy = (name: string): boolean =>
       sections.some(s => s.name !== sectionName && classTT[s.name]?.[day]?.[periodId]?.teacher === name)
 
@@ -1740,7 +1740,7 @@ export function TimetablePage() {
   const pickHomeRoom = (sectionName: string): string =>
     (sections.find(s => s.name === sectionName) as any)?.room ?? ""
 
-  // ── commitTT — all mutations go through here for undo/redo + teacherTT rebuild ──
+  // ── commitTT - all mutations go through here for undo/redo + teacherTT rebuild ──
   const commitTT = (newTT: typeof classTT) => {
     setClassTTHistory(h => [...h.slice(-49), classTT])
     setClassTTFuture([])
@@ -1748,7 +1748,7 @@ export function TimetablePage() {
     const ntt = { ...teacherTT }
     rebuildTeacherTT(newTT, ntt, config.workDays)
     setTeacherTT(ntt)
-    // NOTE: the allocation matrix is deliberately NOT auto-synced here — grid
+    // NOTE: the allocation matrix is deliberately NOT auto-synced here - grid
     // edits only change the timetable. The user pushes changes back to the
     // Allocation plan on demand via the "Backward Sync" button (handleBackwardSync).
   }
@@ -1766,7 +1766,7 @@ export function TimetablePage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const r = kbRef.current
-      // Escape — dismiss drag, modals, and undo/redo pill
+      // Escape - dismiss drag, modals, and undo/redo pill
       if (e.key === 'Escape') {
         r.setDragItem(null); r.setPoolDragItem(null); r.setDragOverCell(null); r.setEditTarget(null)
         return
@@ -1800,12 +1800,12 @@ export function TimetablePage() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, []) // intentionally empty — we use kbRef for fresh values
+  }, []) // intentionally empty - we use kbRef for fresh values
 
   // ── Clear the swap highlight on Escape or a click anywhere ──
-  // This used to also dismiss a transient undo/redo "pill". That pill is gone —
+  // This used to also dismiss a transient undo/redo "pill". That pill is gone -
   // undo and redo are permanent toolbar buttons now, correctly disabled when
-  // there is nothing to undo — but its state, its ref and its dismissal
+  // there is nothing to undo - but its state, its ref and its dismissal
   // branches were left behind, setting a value nothing read on every commit,
   // undo, redo and Escape. The ref was attached to no element at all, so the
   // click-outside test could never be true.
@@ -1824,7 +1824,7 @@ export function TimetablePage() {
     }
   }, [])
 
-  // ── isDragging — true while any drag is active ───────────
+  // ── isDragging - true while any drag is active ───────────
   const isDragging = !!poolDragItem || !!dragItem
 
   // ── conflictWarning modal state ───────────────────────────
@@ -1834,7 +1834,7 @@ export function TimetablePage() {
   const [swapInsightTeacher, setSwapInsightTeacher] = useState<string|null>(null)
   const clearSwapInsight = () => { setSwapInsight(null); setSwapInsightTeacher(null) }
 
-  // ── Global dragend listener — clears ALL drag state when drag ends for any reason ──
+  // ── Global dragend listener - clears ALL drag state when drag ends for any reason ──
   // Prevents frozen state when user drops outside a target, presses Escape during drag,
   // or any other scenario where onDrop is not called on a valid target.
   useEffect(() => {
@@ -1853,7 +1853,7 @@ export function TimetablePage() {
   // moveOnly=true  →  used for teacher-view FREE / LUNCH cell drops.
   //   The destination teacher is NOT swapped back to the source slot; they just
   //   lose the slot. So we must NOT check "would the destination teacher conflict
-  //   at the source slot?" — that check is irrelevant and was the root cause of
+  //   at the source slot?" - that check is irrelevant and was the root cause of
   //   spurious "Teacher 20 is already teaching II-C" errors.
   //   Only check that the DRAGGING teacher (fromTeacher) is not double-booked
   //   at the destination, plus class-teacher protection.
@@ -1881,7 +1881,7 @@ export function TimetablePage() {
     if (toCell?.isClassTeacher && fromTeacher && fromTeacher !== toTeacher)
       return `${toTeacher} is the Class Teacher for ${section}. You cannot drop into a Class Teacher's protected slot.`
 
-    // Teacher clash: fromTeacher would be in (day, periodId) — already teaching another section there?
+    // Teacher clash: fromTeacher would be in (day, periodId) - already teaching another section there?
     if (fromTeacher) {
       const clash = sections.find(s =>
         s.name !== section && s.name !== dragItem.section &&
@@ -1890,19 +1890,19 @@ export function TimetablePage() {
       if (clash) return `${fromTeacher} is already teaching ${clash.name} at ${dstDay} (${dstPeriod}). A teacher cannot be in two classrooms at the same time.`
     }
 
-    // moveOnly: skip all reverse-swap checks — destination teacher is simply displaced.
+    // moveOnly: skip all reverse-swap checks - destination teacher is simply displaced.
     if (moveOnly) return null
 
-    // Teacher clash: toTeacher would be in (dragItem.day, dragItem.periodId) — already teaching there?
+    // Teacher clash: toTeacher would be in (dragItem.day, dragItem.periodId) - already teaching there?
     if (toTeacher && toTeacher !== fromTeacher) {
       const clash = sections.find(s =>
         s.name !== section && s.name !== dragItem.section &&
         classTT[s.name]?.[dragItem.day]?.[dragItem.periodId]?.teacher === toTeacher
       )
-      if (clash) return `Cannot swap — ${toTeacher} already has ${clash.name} scheduled at ${srcDay} (${srcPeriod}), which is where this period would move to. That would double-book ${toTeacher} at the same time.`
+      if (clash) return `Cannot swap - ${toTeacher} already has ${clash.name} scheduled at ${srcDay} (${srcPeriod}), which is where this period would move to. That would double-book ${toTeacher} at the same time.`
     }
 
-    // Teacher view: cross-section swap — check if target section already has ANOTHER teacher in source slot
+    // Teacher view: cross-section swap - check if target section already has ANOTHER teacher in source slot
     if (section !== dragItem.section) {
       const targetSectionSourceSlot = classTT[section]?.[dragItem.day]?.[dragItem.periodId]
       if (targetSectionSourceSlot?.teacher && targetSectionSourceSlot.teacher !== fromTeacher) {
@@ -1950,7 +1950,7 @@ export function TimetablePage() {
   const handleDrop = (e: React.DragEvent, section:string, day:string, periodId:string, forcedTeacher?: string, moveOnly?: boolean) => {
     e.preventDefault()
     setDragOverCell(null)
-    // Pool drag takes priority — save directly without opening modal
+    // Pool drag takes priority - save directly without opening modal
     if (poolDragItem) {
       // Guard: only allow dropping on the chip's own section
       if (poolDragItem.section !== section) {
@@ -1967,7 +1967,7 @@ export function TimetablePage() {
       if (teacherConflict) {
         // Through the same styled modal every other refusal on this page uses.
         // A native alert() blocks the tab, cannot be styled, and reads as a
-        // browser error rather than the page telling you why it said no —
+        // browser error rather than the page telling you why it said no -
         // while the identical refusal on a cell drag showed a proper dialog.
         const clashWith = sections.find(sec =>
           sec.name !== section && classTT[sec.name]?.[day]?.[periodId]?.teacher === teacher)
@@ -1993,7 +1993,7 @@ export function TimetablePage() {
     if (!dragItem) return
     const from = dragItem
     setDragItem(null)
-    // Direct cell-to-cell swap — no modal
+    // Direct cell-to-cell swap - no modal
     const fromCell = classTT[from.section]?.[from.day]?.[from.periodId]
     const toCell   = classTT[section]?.[day]?.[periodId]
     if (!fromCell?.subject) return  // nothing to drag
@@ -2163,7 +2163,7 @@ export function TimetablePage() {
                         <span style={{ fontSize:9, fontWeight:400, marginLeft:4, color:"#D1D5DB" }}>off</span>
                       </td>
                       <td colSpan={sectionPeriods.length} style={{ background:"#F3F4F6", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D1D5DB", fontSize:11, fontStyle:"italic", padding:"10px 0" }}>
-                        — Day off —
+                        - Day off -
                       </td>
                     </tr>
                   )
@@ -2228,7 +2228,7 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Class Timetable (Transposed — periods as rows)
+  // RENDER: Class Timetable (Transposed - periods as rows)
   // ═══════════════════════════════════════════════════════════
   const renderClassTTTransposed = (sn: string, absentHL?: { teacher:string; day:string }) => {
     const sd = classTT[sn]
@@ -2295,7 +2295,7 @@ export function TimetablePage() {
                       const isDayOff = offDaysT.has(day)
                       if (isDayOff) {
                         return (
-                          <td key={day} style={{ background:"#F3F4F6", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D1D5DB", fontSize:10, fontStyle:"italic", padding:4 }}>—</td>
+                          <td key={day} style={{ background:"#F3F4F6", border:"1px solid #E8E4FF", textAlign:"center" as const, color:"#D1D5DB", fontSize:10, fontStyle:"italic", padding:4 }}>-</td>
                         )
                       }
                       if (isBreak) return <td key={day} style={{ background:"#fffbeb", border:"1px solid #E8E4FF", textAlign:"center" as const, fontSize:9, color:"#D4920E", fontStyle:"italic", padding:6 }}>{p.name}</td>
@@ -2344,7 +2344,7 @@ export function TimetablePage() {
   }
 
   // Compact "subject (classes)" summary of everything a teacher is allotted,
-  // derived from the live timetable — e.g. "Maths (I-A&B, II-A&B), Physics (XI-C)".
+  // derived from the live timetable - e.g. "Maths (I-A&B, II-A&B), Physics (XI-C)".
   const teacherSubjectSummary = (tn: string): string => {
     const map = new Map<string, string[]>()  // subject → ordered, unique sections
     const seen = new Set<string>()
@@ -2415,7 +2415,7 @@ export function TimetablePage() {
     const isSameTeacherDrag  = isDragging && draggedCellTeacher === tn
     const loadColor = pct>100?"#dc2626":pct>85?"#D4920E":"#685DBC"
     const assignedStr = teacherSubjectSummary(tn)
-      || ((st?.subjects ?? []).filter(s => s.includes("::")).map(s => { const [cls,sub]=s.split("::"); return `${cls}: ${sub}` }).join(" · ") || (st?.subjects??[]).join(", ") || "—")
+      || ((st?.subjects ?? []).filter(s => s.includes("::")).map(s => { const [cls,sub]=s.split("::"); return `${cls}: ${sub}` }).join(" · ") || (st?.subjects??[]).join(", ") || "-")
 
     // ── Use pre-computed teacher cache (avoids recomputation on drag re-renders) ──
     const cwBreaksTT   = cwBreaksGlobal
@@ -2434,7 +2434,7 @@ export function TimetablePage() {
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:"#1e293b", fontFamily:"'Plus Jakarta Sans',Georgia,serif" }}>{tn}</div>
               {st?.role && <div style={{ fontSize:11, color:"#4B5275" }}>{st.role}</div>}
-              {assignedStr !== "—" && <div style={{ fontSize:11, color:"#4B5275", marginTop:2 }}><span style={{ fontWeight:600 }}>Teaches: </span>{assignedStr}</div>}
+              {assignedStr !== "-" && <div style={{ fontSize:11, color:"#4B5275", marginTop:2 }}><span style={{ fontWeight:600 }}>Teaches: </span>{assignedStr}</div>}
             </div>
             {/* Period load is internal (admins only on screen; never printed). */}
             {isAdmin && (
@@ -2504,7 +2504,7 @@ export function TimetablePage() {
                     // Drag/drop wiring
                     const ttCellKey = `${col.key}|${day}`
                     const poolSec   = poolDragItem && teacherSecNames.includes(poolDragItem.section) ? poolDragItem.section : ""
-                    // Bell-schedule-based slot eligibility — never uses col.type.
+                    // Bell-schedule-based slot eligibility - never uses col.type.
                     // True only when the dragged CLASS has a teaching period here per its own bell schedule.
                     const dragSlotHere = !!(isSameTeacherDrag && dragItem &&
                       isTeachingSlotForClass(dragItem.section, col, ttAllSchedules, classPeriods, cwBreaksTT))
@@ -2612,7 +2612,7 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Teacher Timetable (Transposed — periods as rows)
+  // RENDER: Teacher Timetable (Transposed - periods as rows)
   // ═══════════════════════════════════════════════════════════
   const renderTeacherTTTransposed = (tn: string) => {
     const tdata = teacherTT[tn]
@@ -2640,7 +2640,7 @@ export function TimetablePage() {
     return (
       <div>
         <div style={{ padding:"10px 16px", background:"#FAFAFE", borderBottom:"1px solid #E8E4FF", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{tn} <span style={{ fontSize:11, fontWeight:400, color:"#4B5275" }}>— {st?.role}</span></div>
+          <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{tn} <span style={{ fontSize:11, fontWeight:400, color:"#4B5275" }}>- {st?.role}</span></div>
           {isAdmin && <span className="tt-teacher-load" style={{ fontSize:12, fontWeight:700, fontFamily:"monospace", color:loadColor }}>{total}/{max} periods · {pct}% loaded</span>}
         </div>
         {swapInsight && swapInsightTeacher === tn && (
@@ -2786,7 +2786,7 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Subject Timetable — where & when is this subject taught (Normal)
+  // RENDER: Subject Timetable - where & when is this subject taught (Normal)
   // ═══════════════════════════════════════════════════════════
   const renderSubjectTT = (subName: string) => {
     const usedDays = config.workDays
@@ -2887,7 +2887,7 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Subject Timetable (Transposed — periods as rows)
+  // RENDER: Subject Timetable (Transposed - periods as rows)
   // ═══════════════════════════════════════════════════════════
   const renderSubjectTTTransposed = (subName: string) => {
     const usedDays = config.workDays
@@ -2996,7 +2996,7 @@ export function TimetablePage() {
   const renderRoomTT = (roomName: string) => {
     const usedDays = config.workDays
     const isSameRoomDrag = isDragging && (dragItem ? classTT[dragItem.section]?.[dragItem.day]?.[dragItem.periodId]?.room === roomName : false)
-    // Unified columns — same staggered (period, time) structure as the teacher view.
+    // Unified columns - same staggered (period, time) structure as the teacher view.
     const rmCols = unifiedAllCols.columns
     // Find the section occupying this room in an exact (periodId, startMin) slot.
     // Collect ALL sections occupying this room in the slot (parallel/group blocks
@@ -3096,7 +3096,7 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Room Timetable (Transposed — periods as rows)
+  // RENDER: Room Timetable (Transposed - periods as rows)
   // ═══════════════════════════════════════════════════════════
   const renderRoomTTTransposed = (roomName: string) => {
     const usedDays = config.workDays
@@ -3200,10 +3200,10 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Calendar View — real month/week/day calendar
+  // RENDER: Calendar View - real month/week/day calendar
   // ═══════════════════════════════════════════════════════════
   const renderCalendarView = (entityFilter: string) => {
-    // Always use the active viewMode tab — fixes teacher/room/subject calendar views
+    // Always use the active viewMode tab - fixes teacher/room/subject calendar views
     const calEntityMode = viewMode
 
     const absentHL = subPanelOpen && subAbsentTeacher
@@ -3260,7 +3260,7 @@ export function TimetablePage() {
           }
         }}
         onCellFill={(section, day, periodId, suggestedSubject) => {
-          // Allow replacing occupied cells — only reject on teacher clash
+          // Allow replacing occupied cells - only reject on teacher clash
           const teacher = pickBestTeacher(section, suggestedSubject, day, periodId)
           const teacherConflict = teacher && sections.some(s =>
             s.name !== section && classTT[s.name]?.[day]?.[periodId]?.teacher === teacher
@@ -3288,7 +3288,7 @@ export function TimetablePage() {
             classTT[sec.name]?.[from.day]?.[from.periodId]?.teacher === toTeacher
           )
           if (fromConflict || toConflict) return
-          // Bell-schedule guard — destination must be a teaching slot for `to.section`
+          // Bell-schedule guard - destination must be a teaching slot for `to.section`
           {
             const cwB = (config as any).classwiseBreaks as CwBreakLite[] | undefined
             const destSched = sectionScheduleMins(to.section, classPeriods, cwB, config)
@@ -3345,7 +3345,7 @@ export function TimetablePage() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // RENDER: Print preview — uses the shared, standardized PrintPreview
+  // RENDER: Print preview - uses the shared, standardized PrintPreview
   // ═══════════════════════════════════════════════════════════
   const renderPrintDoc = () => {
     if (!printJob) return null
@@ -3375,7 +3375,7 @@ export function TimetablePage() {
   const renderPoolPanel = () => (
     <div
       // The tray is also a drop target: dragging a placed lesson here clears
-      // its cell — the lesson "returns to the pool" (deficits recompute
+      // its cell - the lesson "returns to the pool" (deficits recompute
       // automatically, so it reappears as an unscheduled chip).
       onDragOver={e => { if (dragItem) { e.preventDefault(); e.dataTransfer.dropEffect = "move" } }}
       onDrop={e => {
@@ -3407,7 +3407,7 @@ export function TimetablePage() {
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <button onClick={() => setNewLessonOpen(o => !o)}
-            title="Create a lesson — it lands here until you drag it onto the grid"
+            title="Create a lesson - it lands here until you drag it onto the grid"
             style={{ padding:"4px 10px", borderRadius:6, border:"none", background: newLessonOpen ? "#4338ca" : "#685DBC", color:"#fff", fontSize:10.5, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
             + Lesson
           </button>
@@ -3417,7 +3417,7 @@ export function TimetablePage() {
 
       {/* Hint */}
       <div style={{ padding:"7px 12px 7px", background:"#F5F2FF", borderBottom:"1px solid #E8E4FF", fontSize:10, color:"#685DBC", lineHeight:1.4 }}>
-        {dragItem ? "Drop here to bench it — the lesson comes off the grid." : "Drag a lesson onto a cell to send it on, or drag a placed lesson here to bench it."}
+        {dragItem ? "Drop here to bench it - the lesson comes off the grid." : "Drag a lesson onto a cell to send it on, or drag a placed lesson here to bench it."}
       </div>
 
       {/* New-lesson mini form */}
@@ -3455,7 +3455,7 @@ export function TimetablePage() {
         )
       })()}
 
-      {/* Ad-hoc lessons — user-created, waiting for a slot */}
+      {/* Ad-hoc lessons - user-created, waiting for a slot */}
       {adhocPool.length > 0 && (
         <div style={{ borderBottom:"1px solid #E8E4FF" }}>
           <div style={{ padding:"5px 14px", background:"#FFF9EE", fontSize:10, fontWeight:800, color:"#B45309", letterSpacing:"0.04em" }}>CUSTOM LESSONS</div>
@@ -3524,7 +3524,7 @@ export function TimetablePage() {
         )
       })()}
 
-      {/* Body — scrollable list */}
+      {/* Body - scrollable list */}
       <div style={{ flex:1, overflowY:"auto" as const }}>
         {(() => {
           // Apply both filters to the pool data
@@ -3880,7 +3880,7 @@ export function TimetablePage() {
                   </button>
                 ))}
                 <div style={{ height:1, background:"#E5EBF5", margin:"6px 0" }} />
-                {/* PDF / Print — opens an in-app preview with orientation +
+                {/* PDF / Print - opens an in-app preview with orientation +
                     paper-size options and a big Print button. */}
                 <div style={{ padding:"4px 14px 6px", fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em" }}>
                   Print / PDF
@@ -3921,7 +3921,7 @@ export function TimetablePage() {
                   <>
                     {/* Visibility chooser */}
                     {([
-                      ["public", "Anyone with the link", "Anyone who has the link can view — no account needed."],
+                      ["public", "Anyone with the link", "Anyone who has the link can view - no account needed."],
                       ["restricted", "Specific people", "Only the email addresses you list can view it."],
                     ] as const).map(([val, label, desc]) => (
                       <label key={val}
@@ -3965,8 +3965,8 @@ export function TimetablePage() {
                   <>
                     <p style={{ fontSize:13, color:"#4B5275", lineHeight:1.6, margin:"6px 0 14px" }}>
                       {shareVisibility === "restricted"
-                        ? "Only the people you listed can open this — they’ll confirm their email to view."
-                        : "Anyone with this link can view a read-only copy — no account needed."}
+                        ? "Only the people you listed can open this - they’ll confirm their email to view."
+                        : "Anyone with this link can view a read-only copy - no account needed."}
                     </p>
                     <div style={{ display:"flex", gap:8 }}>
                       <input readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}
@@ -4011,9 +4011,9 @@ export function TimetablePage() {
                     background:"#fff", border:"1px solid #E5EBF5", borderRadius:10, boxShadow:"0 8px 30px rgba(0,0,0,0.12)", padding:"12px 14px" }}>
                   <div style={{ fontSize:10, fontWeight:800, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:8 }}>Legend</div>
                   {([
-                    ["▌", "Parallel groups — students share one slot", "#685DBC"],
-                    ["AND", "Parallel split — students divide into groups", "#685DBC"],
-                    ["OR", "Rotation — one subject runs per slot", "#D97706"],
+                    ["▌", "Parallel groups - students share one slot", "#685DBC"],
+                    ["AND", "Parallel split - students divide into groups", "#685DBC"],
+                    ["OR", "Rotation - one subject runs per slot", "#D97706"],
                     ["★", "Class teacher's period", "#685DBC"],
                     ["🔄", "Substituted teacher", "#D4920E"],
                     ["⚠", "Conflict / over capacity", "#DC2626"],
@@ -4049,7 +4049,7 @@ export function TimetablePage() {
                   🔒 Published
                 </span>
                 <button onClick={() => { setTimetableStatus("draft"); markActiveTimetableUnpublished() }}
-                  title="Revert to draft — removes it from the active schedule"
+                  title="Revert to draft - removes it from the active schedule"
                   style={{ padding:"5px 12px", borderRadius:6, border:"1px solid #E5EBF5", background:"#fff", color:"#64748b", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                   Unpublish
                 </button>
@@ -4065,11 +4065,11 @@ export function TimetablePage() {
 
         {/* Names the timetable still uses that the roster has dropped. Shown
             here as well as in Master Data: this is where the ghost is
-            actually visible — a lesson that looks staffed by somebody who
+            actually visible - a lesson that looks staffed by somebody who
             left. */}
         <TimetableOrphanBanner classTT={classTT} sections={sections} staff={staff} subjects={subjects} rooms={store.rooms} />
 
-        {/* ══ Unified toolbar — identical in Grid AND Timeline ══════════
+        {/* ══ Unified toolbar - identical in Grid AND Timeline ══════════
             One control surface for both modes: the same View pills (Normal /
             Transposed, plus Month in Timeline), the same Show toggles, the
             same Tools. No option exists in one mode but not the other. */}
@@ -4113,7 +4113,7 @@ export function TimetablePage() {
             🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
           </button>
           <button onClick={() => setPoolPanelOpen(o => !o)}
-            title="The Bench — every unplaced lesson waits here"
+            title="The Bench - every unplaced lesson waits here"
             style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#685DBC":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
             🪑 Bench{poolTotalDeficit + adhocPool.length > 0 ? ` (${poolTotalDeficit + adhocPool.length})` : ""}
           </button>
@@ -4134,9 +4134,9 @@ export function TimetablePage() {
             'Switch between Section, Faculty, Room and Subject tabs to see the schedule from each perspective.',
             'Toggle Faculty and Room labels on/off using the Show buttons in the toolbar.',
             'Click any cell to edit it, drag between cells to swap, or drag a lesson onto the Bench to take it off the grid.',
-            'The Bench holds every unplaced lesson — create one with + Lesson, then drag it onto a free cell to send it on.',
+            'The Bench holds every unplaced lesson - create one with + Lesson, then drag it onto a free cell to send it on.',
             'The View pills (Normal / Transposed) work the same in Grid and Timeline; Timeline adds a Month planner.',
-            'Use the Short toggle for compact abbreviations — useful when printing.',
+            'Use the Short toggle for compact abbreviations - useful when printing.',
             'Click Publish to lock the schedule and make it visible on the Calendar page.',
           ]} />
         </div>
@@ -4146,7 +4146,7 @@ export function TimetablePage() {
           onClick={() => { if (showExportMenu) setShowExportMenu(false) }}
         >
 
-          {/* ═══ Calendar mode — kept mounted after first visit (display:none when inactive) ═══ */}
+          {/* ═══ Calendar mode - kept mounted after first visit (display:none when inactive) ═══ */}
           <div style={{ display: mainMode==="calendar" ? "flex" : "none",
             flex:1, flexDirection:"column" as const, overflow:"hidden" }}>
             {calendarEverMounted && renderCalendarView(selectedEntity)}
@@ -4229,7 +4229,7 @@ export function TimetablePage() {
           <div style={{ flex:1, overflowY:"auto" }}>
             {subActiveTab === "assign" && (
               <div style={{ padding:12 }}>
-                {/* Absent date — a cover belongs to a day, not to every Monday */}
+                {/* Absent date - a cover belongs to a day, not to every Monday */}
                 <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Date</div>
                 <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12 }}>
                   <input type="date" value={subAbsentDate} onChange={e => setSubAbsentDate(e.target.value)}
@@ -4486,10 +4486,10 @@ export function TimetablePage() {
               <div style={{ fontSize:11, color:"#6D6A8A", marginBottom:16 }}>
                 {bothClass
                   ? "Period contents will be swapped. Headers stay in place."
-                  : "Slot positions will be reordered — headers and contents move together."}
+                  : "Slot positions will be reordered - headers and contents move together."}
               </div>
 
-              {/* Scope selector — only when a specific section is being viewed */}
+              {/* Scope selector - only when a specific section is being viewed */}
               {hasOrigin && bothClass && (
                 <div style={{ marginBottom:16 }}>
                   <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.07em", marginBottom:8 }}>Apply to</div>
@@ -4523,9 +4523,9 @@ export function TimetablePage() {
                   Affected: {targetSections.length} section{targetSections.length!==1?"s":""}
                 </div>
                 {!bothClass ? (
-                  <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ Break position change — no cell conflicts.</div>
+                  <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ Break position change - no cell conflicts.</div>
                 ) : noConflicts ? (
-                  <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ No conflicts detected — swap is safe.</div>
+                  <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ No conflicts detected - swap is safe.</div>
                 ) : (
                   <div style={{ display:"flex", gap:20 }}>
                     <div style={{ fontSize:12, color:"#059669", fontWeight:700 }}>✓ {safe} safe</div>
@@ -4604,7 +4604,7 @@ export function TimetablePage() {
         </div>
       )}
 
-      {/* Print/PDF preview — shared, standardized (PrintPreview portals itself) */}
+      {/* Print/PDF preview - shared, standardized (PrintPreview portals itself) */}
       {renderPrintDoc()}
     </div>
   )

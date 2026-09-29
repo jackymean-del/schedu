@@ -1,4 +1,4 @@
-/* Verifies deriveTeacherAllocations — the backward-sync helper. Run: npx tsx derive-alloc-verify.mts */
+/* Verifies deriveTeacherAllocations - the backward-sync helper. Run: npx tsx derive-alloc-verify.mts */
 import { deriveTeacherAllocations, deriveSubjectAllocations, mergeDerivedAllocations } from './src/lib/schedulingEngine'
 import type { ClassTimetable } from './src/types'
 
@@ -67,12 +67,12 @@ console.log('── backward sync: merge, do not flatten ──')
 {
   const typed = { 'VI-A': { Science: '2s=2p', Maths: '4', Art: '2' } }
 
-  // Same totals — nothing drifted, so nothing should be rewritten.
+  // Same totals - nothing drifted, so nothing should be rewritten.
   const same = mergeDerivedAllocations(typed, { 'VI-A': { Science: '4', Maths: '4', Art: '2' } })
   ok(same['VI-A'].Science === '2s=2p', 'a double-period cell survives a sync that agrees with it', same['VI-A'].Science)
   ok(same['VI-A'].Maths === '4' && same['VI-A'].Art === '2', 'plain cells are untouched')
 
-  // A real drift — the timetable now holds six periods, not four.
+  // A real drift - the timetable now holds six periods, not four.
   const drifted = mergeDerivedAllocations(typed, { 'VI-A': { Science: '6', Maths: '4', Art: '2' } })
   ok(drifted['VI-A'].Science === '6', 'a cell whose total really changed IS updated', drifted['VI-A'].Science)
 

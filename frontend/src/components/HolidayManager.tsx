@@ -1,5 +1,5 @@
 /**
- * School holiday calendar — ADMIN ONLY (Blueprint v6 permissions).
+ * School holiday calendar - ADMIN ONLY (Blueprint v6 permissions).
  *
  * "Admin can: set and mark holidays from the beginning of the session, set an
  *  ad hoc missed day at any point, mark a faculty member as absent.
@@ -11,7 +11,7 @@
  * is exactly the narrower right the blueprint grants them.
  *
  * Declared holidays are applied by deriving each subject's lost hours from the
- * timetable — see lib/holidays.ts — so one entry here updates coverage
+ * timetable - see lib/holidays.ts - so one entry here updates coverage
  * everywhere without anyone logging it per subject.
  */
 import { useMemo, useState } from 'react'
@@ -55,7 +55,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
   }
 
   /**
-   * Bulk paste — one holiday per line, "date, name, classes" (all but the date
+   * Bulk paste - one holiday per line, "date, name, classes" (all but the date
    * optional). Accepts YYYY-MM-DD or DD/MM/YYYY, tolerates a header row and
    * blank lines, and reports exactly what it skipped rather than failing
    * silently. The third field narrows the holiday to particular classes: a
@@ -88,7 +88,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
       : ''
     setBulkMsg(
       added === 0
-        ? `Nothing imported — no usable dates found${skipped.length ? ` (${skipped.length} line${skipped.length > 1 ? 's' : ''} unreadable)` : ''}.`
+        ? `Nothing imported - no usable dates found${skipped.length ? ` (${skipped.length} line${skipped.length > 1 ? 's' : ''} unreadable)` : ''}.`
         : `Added ${added} holiday${added > 1 ? 's' : ''}${skipped.length ? ` · skipped ${skipped.length} unreadable line${skipped.length > 1 ? 's' : ''}` : ''}${unknownNote}.`,
     )
     if (added > 0) { setBulk(''); onSaved?.() }
@@ -106,7 +106,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
         <CalendarDays size={15} color={ACCENT} /> School holidays
       </h2>
       <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: '4px 0 16px' }}>
-        Admin-only. Declare a holiday once — every subject scheduled that weekday loses its periods automatically,
+        Admin-only. Declare a holiday once - every subject scheduled that weekday loses its periods automatically,
         and remaining-hours figures update across the app. Faculty can still log a missed period for their own subject,
         but only an admin sets holidays.
       </p>
@@ -124,8 +124,8 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
             </strong>
             <span style={{ color: '#6D6A8A' }}>
               {total > 0
-                ? `— ${total} teaching hours removed from the year.`
-                : '— no teaching hours affected yet (generate a timetable and the impact appears here).'}
+                ? `- ${total} teaching hours removed from the year.`
+                : '- no teaching hours affected yet (generate a timetable and the impact appears here).'}
             </span>
           </div>
         )}
@@ -140,7 +140,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
               return (
                 <div key={h.id} style={{ display: 'grid', gridTemplateColumns: '110px 90px 1fr 90px 30px', gap: 8, alignItems: 'center', padding: '6px 9px', borderRadius: 8, border: '1px solid #ECE9FB' }}>
                   <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{h.date}</span>
-                  <span style={{ fontSize: 11, color: '#6D6A8A' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '—'}</span>
+                  <span style={{ fontSize: 11, color: '#6D6A8A' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '-'}</span>
                   <span style={{ fontSize: 12, color: '#13111E', fontWeight: 600 }}>
                     {h.name}
                     <span style={{ color: h.sections?.length ? '#4B41C4' : '#6D6A8A', fontWeight: h.sections?.length ? 600 : 400 }}>
@@ -148,7 +148,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
                     </span>
                   </span>
                   <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", textAlign: 'right', color: hrs > 0 ? '#B45309' : '#C9C3EC', fontWeight: 700 }}>
-                    {hrs > 0 ? `${Math.round(hrs * 10) / 10} h lost` : '—'}
+                    {hrs > 0 ? `${Math.round(hrs * 10) / 10} h lost` : '-'}
                   </span>
                   <button onClick={() => removeHoliday(h.id)} title="Remove holiday"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C3EC', display: 'flex', justifyContent: 'center' }}>
@@ -188,7 +188,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
           {bulkOpen && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11.5, color: '#6D6A8A' }}>
-                One per line: <code>date, name, classes</code> — e.g. <code>2026-08-15, Independence Day</code>.
+                One per line: <code>date, name, classes</code> - e.g. <code>2026-08-15, Independence Day</code>.
                 Dates may be <code>YYYY-MM-DD</code> or <code>DD/MM/YYYY</code>; a header row and blank lines are ignored.
                 Leave the third field out for the whole school, or list class-sections
                 (<code>IX-A IX-B</code>) to close only those.

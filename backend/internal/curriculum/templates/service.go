@@ -16,7 +16,7 @@ type Service struct{ repo *Repository }
 func NewService(db *pgxpool.Pool) *Service { return &Service{repo: NewRepository(db)} }
 
 // SeedBuiltIn inserts all built-in template seed data.
-// Safe to call on every startup — idempotent via ON CONFLICT DO UPDATE.
+// Safe to call on every startup - idempotent via ON CONFLICT DO UPDATE.
 func (s *Service) SeedBuiltIn(ctx context.Context) error {
 	seeds := SeedTemplates()
 	for _, t := range seeds {

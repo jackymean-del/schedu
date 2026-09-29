@@ -1,5 +1,5 @@
 /**
- * Organization profile — the generic, type-neutral identity the user enters on
+ * Organization profile - the generic, type-neutral identity the user enters on
  * first sign-in (name, kind, academic period). Drives the dashboard header and
  * the onboarding guide. Kept deliberately generic: no "school"/"CBSE" defaults.
  * Specific values appear only after the user enters them.

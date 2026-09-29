@@ -1,13 +1,13 @@
 /**
- * ScopeMatrixModal — author per-entity slot allowability.
+ * ScopeMatrixModal - author per-entity slot allowability.
  *
  * Lets the user define WHERE in the week an entity (teacher / subject /
  * room / section / activity) is structurally allowed to be scheduled.
  *
  * Three states per (day, period) cell:
- *   allowed  — entity may be scheduled here (default)
- *   disabled — soft penalty, AI avoids
- *   locked   — HARD constraint, AI must never violate
+ *   allowed  - entity may be scheduled here (default)
+ *   disabled - soft penalty, AI avoids
+ *   locked   - HARD constraint, AI must never violate
  *
  * Visual states per design spec:
  *   allowed  : #EEFDF3 bg, #0A8136 text
@@ -31,7 +31,7 @@ const STATE_STYLE: Record<ScopeState, {
   bg: string; fg: string; border: string; label: string; symbol: string;
 }> = {
   allowed:  { bg: '#DCFCE7', fg: '#15803D', border: '#86EFAC', label: 'Allowed',  symbol: '✓' },
-  disabled: { bg: '#F1F5F9', fg: '#94A3B8', border: '#CBD5E1', label: 'Disabled', symbol: '—' },
+  disabled: { bg: '#F1F5F9', fg: '#94A3B8', border: '#CBD5E1', label: 'Disabled', symbol: '-' },
   locked:   { bg: '#FEE2E2', fg: '#DC2626', border: '#FCA5A5', label: 'Locked',   symbol: '✕' },
 }
 
@@ -109,7 +109,7 @@ export function ScopeMatrixModal({
     return { position: 'fixed' as const, left, top, width: panelW, maxHeight: panelH, zIndex: 9999 }
   })()
 
-  // Local state — drafting until user saves
+  // Local state - drafting until user saves
   const [cells, setCells] = useState<Record<string, Record<string, ScopeState>>>(() => {
     return JSON.parse(JSON.stringify(scope?.cells ?? {}))
   })
@@ -190,7 +190,7 @@ export function ScopeMatrixModal({
     setCells(next)
   }
 
-  // Summary stats — use rowKeys so multi-week counts correctly
+  // Summary stats - use rowKeys so multi-week counts correctly
   const allCells = rowKeys.length * classPeriods.length
   const allowedCount = rowKeys.reduce((s, k) =>
     s + classPeriods.filter(p => getState(k, p.id) === 'allowed').length, 0)
@@ -214,7 +214,7 @@ export function ScopeMatrixModal({
     onClose()
   }
 
-  // Panel content — shared between modal and popover
+  // Panel content - shared between modal and popover
   const panel = (
     <div onClick={e => e.stopPropagation()} style={{
       background: '#fff', borderRadius: 16,
@@ -397,7 +397,7 @@ export function ScopeMatrixModal({
                       return (
                         <td key={p.id}
                           onClick={() => cycleCell(key, p.id)}
-                          title={`${rowLabel(key)} · ${p.name} — ${stStyle.label}`}
+                          title={`${rowLabel(key)} · ${p.name} - ${stStyle.label}`}
                           style={{
                             padding: 0,
                             background: stStyle.bg,
@@ -432,7 +432,7 @@ export function ScopeMatrixModal({
             </div>
             <input
               value={note} onChange={e => setNote(e.target.value)}
-              placeholder="e.g. Contractual — only Fri/Sat afternoons"
+              placeholder="e.g. Contractual - only Fri/Sat afternoons"
               style={{
                 width: '100%', padding: '9px 12px', fontSize: 12.5,
                 borderRadius: 8, border: '1px solid #ECEAFB',
@@ -450,7 +450,7 @@ export function ScopeMatrixModal({
         }}>
           <div style={{ fontSize: 11, color: '#6D6A8A' }}>
             {Object.keys(cells).length === 0
-              ? 'Unscoped — all slots allowed (default)'
+              ? 'Unscoped - all slots allowed (default)'
               : <>Saving as <strong style={{ color: '#13111E' }}>scoped</strong> constraint set.</>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

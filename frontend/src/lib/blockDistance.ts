@@ -1,10 +1,10 @@
 /**
- * Block / Building Distance Matrix — Blueprint v3, Step 2 (Resources).
+ * Block / Building Distance Matrix - Blueprint v3, Step 2 (Resources).
  *
  * Where a school spans multiple blocks or buildings and students physically move
  * between them for cross-block parallel sessions (Step 4 AND logic), the admin
  * records the *relative* proximity of each pair of blocks. These are an
- * admin-defined scale (lower = closer), not physical measurements — they only
+ * admin-defined scale (lower = closer), not physical measurements - they only
  * need to be internally consistent so schedU can rank "near" vs "far".
  *
  * Entered once and reused by every schedule cycle, so it lives in its own
@@ -83,7 +83,7 @@ export function distanceBetween(
 }
 
 /**
- * Rank candidate venues by how close their block is to `fromBlock` — the
+ * Rank candidate venues by how close their block is to `fromBlock` - the
  * blueprint's stated purpose: "prefer nearer blocks over farther ones,
  * minimizing how far students have to travel between sessions."
  *
@@ -105,7 +105,7 @@ export function rankVenuesByProximity<T extends { building?: string }>(
     .map(x => x.v)
 }
 
-/** Every unordered pair of the given blocks — the cells an admin must fill. */
+/** Every unordered pair of the given blocks - the cells an admin must fill. */
 export function allPairs(blocks: string[]): Array<[string, string]> {
   const out: Array<[string, string]> = []
   for (let i = 0; i < blocks.length; i++)
@@ -113,7 +113,7 @@ export function allPairs(blocks: string[]): Array<[string, string]> {
   return out
 }
 
-/** Pairs with no recorded distance yet — surfaced so the admin can complete them. */
+/** Pairs with no recorded distance yet - surfaced so the admin can complete them. */
 export function missingPairs(
   blocks: string[], distances: Record<string, number>,
 ): Array<[string, string]> {

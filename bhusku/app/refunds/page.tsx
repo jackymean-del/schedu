@@ -30,7 +30,7 @@ export default function RefundsPage() {
 
       <Section heading="3. Cancelling">
         <p>
-          You can cancel anytime from your account&rsquo;s subscription page. Cancellation stops future renewals — you keep Pro
+          You can cancel anytime from your account&rsquo;s subscription page. Cancellation stops future renewals - you keep Pro
           access until the end of the period you have already paid for, and you are not charged again after that.
         </p>
       </Section>
@@ -47,7 +47,7 @@ export default function RefundsPage() {
             operate at scale.
           </li>
           <li>
-            <strong>After the window:</strong> beyond 7 days, payments for the current period are generally non-refundable — but you
+            <strong>After the window:</strong> beyond 7 days, payments for the current period are generally non-refundable - but you
             can cancel to avoid future charges, and we&rsquo;ll always look at genuine issues case by case.
           </li>
         </ul>
@@ -63,7 +63,7 @@ export default function RefundsPage() {
 
       <Section heading="6. Contact">
         <p>
-          Questions about billing or refunds? We&rsquo;re happy to help — <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>.
+          Questions about billing or refunds? We&rsquo;re happy to help - <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>.
         </p>
       </Section>
     </PolicyShell>

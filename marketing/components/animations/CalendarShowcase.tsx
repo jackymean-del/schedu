@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 
 /**
- * CalendarShowcase — a full-width, day-wise Calendar-mode timetable with the
+ * CalendarShowcase - a full-width, day-wise Calendar-mode timetable with the
  * hour TIMELINE as the heading and the real red Playhead sweeping it.
  *
  * Mirrors the product's Calendar Day view (frontend/src/pages/calendar.tsx):
  * proportional blocks per row, amber lunch bands, and the full-height red
- * "now" line with the time badge — driven by the visitor's REAL clock, to
+ * "now" line with the time badge - driven by the visitor's REAL clock, to
  * the second. The four lens tabs (Classes / Faculty / Venues / Subjects)
  * are genuinely clickable and re-render the same day through each lens.
  * Rows are illustrative (Eden's Academy); the Playhead is not.
@@ -95,7 +95,7 @@ export function CalendarShowcase() {
             </button>
           ))}
         </div>
-        <span className="cs-livechip"><i className={inDay ? "cs-dot-red" : "cs-dot-gray"} />{inDay ? `Playhead is your real clock — ${clock}` : `Your local time: ${clock} · playhead appears 8 AM–3 PM`}</span>
+        <span className="cs-livechip"><i className={inDay ? "cs-dot-red" : "cs-dot-gray"} />{inDay ? `Playhead is your real clock - ${clock}` : `Your local time: ${clock} · playhead appears 8 AM–3 PM`}</span>
       </div>
 
       <div className="cs-board">
@@ -129,7 +129,7 @@ export function CalendarShowcase() {
               </div>
             </div>
           ))}
-          {/* The red Playhead — full height, real time */}
+          {/* The red Playhead - full height, real time */}
           {inDay && (
             <div className="cs-playhead" style={{ left: `calc(var(--label-w) + (100% - var(--label-w)) * ${frac})` }}>
               <span className="cs-ph-badge"><i />{clock}</span>
@@ -138,7 +138,7 @@ export function CalendarShowcase() {
           )}
         </div>
       </div>
-      <p className="cs-caption">Schedule data is illustrative — the red Playhead is your genuine local time, moving as you watch. Every lens carries it.</p>
+      <p className="cs-caption">Schedule data is illustrative - the red Playhead is your genuine local time, moving as you watch. Every lens carries it.</p>
 
       <style>{`
         .cs-wrap { width: 100%; max-width: 1240px; margin: 0 auto; font-family: 'Plus Jakarta Sans', sans-serif; --label-w: 148px; }

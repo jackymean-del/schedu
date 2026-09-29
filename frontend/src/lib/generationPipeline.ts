@@ -1,5 +1,5 @@
 /**
- * Generation pipeline — the PURE compute half of timetable generation,
+ * Generation pipeline - the PURE compute half of timetable generation,
  * extracted from step6-generate.tsx so it can run inside a Web Worker.
  *
  * Everything here takes plain serializable data and returns plain data:
@@ -9,7 +9,7 @@
  *
  * The helper functions (DLG/combo → OptionalBlock bridges, bell-row parsing,
  * early-dispersal locking, block period building) moved here verbatim from
- * step6-generate.tsx — the wizard re-imports the ones it still uses.
+ * step6-generate.tsx - the wizard re-imports the ones it still uses.
  */
 import { buildPeriodSequence, buildPeriodSequenceFromCw, rebuildTeacherTT } from './aiEngine'
 import { schoolTeacherCap } from './teacherCap'
@@ -18,14 +18,14 @@ import type { OptionalBlock, OptionalOption, Period, Suggestion } from '@/types'
 
 // ── DLG → OptionalBlock bridge ─────────────────────────────────────────────
 //
-// Step 4 (Student Groups) produces `dynamicLearningGroups` — one DLG per
+// Step 4 (Student Groups) produces `dynamicLearningGroups` - one DLG per
 // subject group with an explicit day + periodId (e.g. "Monday" / "P6").
 // The solver, however, expects `optionalBlocks` (OptionalBlock[]).
 //
 // When the user has gone through Step 4 but never hand-authored manual
 // optional blocks, we convert the Step-4 DLGs into OptionalBlocks so the
 // solver honours the user's period assignments instead of re-deriving from
-// scratch (which would pick Period 2 — the first available slot).
+// scratch (which would pick Period 2 - the first available slot).
 //
 // Normalisation:
 //   - day: "Monday" / "monday"  → "MONDAY"   (matches workDays format)
@@ -51,7 +51,7 @@ export function dlgsToOptionalBlocks(
   const blockMap = new Map<string, OptionalBlock & { _secSet?: Set<string> }>()
 
   dlgs.forEach(dlg => {
-    // Groups no longer carry a pinned slot — leave day/periodId EMPTY so the
+    // Groups no longer carry a pinned slot - leave day/periodId EMPTY so the
     // engine schedules the block across its full period quota on free slots.
     // (Any legacy day/periodId is still honoured as a starting hint if present.)
     const day = (dlg.day || '').toUpperCase()
@@ -61,7 +61,7 @@ export function dlgsToOptionalBlocks(
     // Grouping key:
     //  • slotted DLG (R1/R2/R3) → group by slotId, so all options of a slot form
     //    ONE block (Hindi/Odia/English under R1) and a DIFFERENT slot with the
-    //    same subject (R2:Hindi) stays a SEPARATE block — the section attends
+    //    same subject (R2:Hindi) stays a SEPARATE block - the section attends
     //    both, so the solver schedules them in different periods.
     //  • plain DLG → group by its section set (unchanged behaviour).
     const secKey = dlg.slotId
@@ -104,9 +104,9 @@ export function dlgsToOptionalBlocks(
 // OR/AND combos live in `store.subjectGroups` (SubjectAndOrGroup[]). The
 // solver only understands OptionalBlocks, so each combo becomes one block:
 //
-//   AND — all subjects run in parallel in the same slot, students split —
+//   AND - all subjects run in parallel in the same slot, students split -
 //         exactly the engine's parallel-options semantics.
-//   OR  — one of the subjects runs per slot (rotation). Same shared-slot
+//   OR  - one of the subjects runs per slot (rotation). Same shared-slot
 //         block; the engine books every option's teacher in those slots,
 //         the conservative reading that guarantees zero teacher clashes.
 //
@@ -191,7 +191,7 @@ export function comboGroupsToOptionalBlocks(
 // Each AndComboGroup defines mutually-exclusive bundles (PCM vs PCB).
 // For the solver, each bundle that runs parallel to other bundles in the same
 // time slot becomes an AND-logic OptionalBlock. We create one OptionalBlock
-// per AndComboGroup that has generated teaching groups — the solver then
+// per AndComboGroup that has generated teaching groups - the solver then
 // knows to run all bundles simultaneously in the same period.
 /** Map the Groups-step merge rule (Same/Cross × section/grade/stream/block) to a
  *  behaviour key the views label (NO_GROUPING/SAME_GRADE_ONLY/SAME_STREAM_ONLY/
@@ -230,7 +230,7 @@ export function andGroupsToOptionalBlocks(
 
     // If teaching groups have been generated, use them for precise room/section data
     if (group.generatedGroups && group.generatedGroups.length > 0) {
-      // Group by bundleId — each bundle's groups run in the same slot type
+      // Group by bundleId - each bundle's groups run in the same slot type
       const byBundle = new Map<string, typeof group.generatedGroups>()
       for (const tg of group.generatedGroups) {
         if (!byBundle.has(tg.bundleId)) byBundle.set(tg.bundleId, [])
@@ -300,7 +300,7 @@ function tg_teacher(tgs: Array<{ teacher?: string }>): string {
 // ── Block-wise (per-shift) timetable generation helpers ───────────────────────
 const _toMins = (s: string) => { const [h, m] = (s || '08:00').split(':').map(Number); return h * 60 + m }
 
-/** Class key from a section name — mirrors the timetable view's getSectionClassKey. */
+/** Class key from a section name - mirrors the timetable view's getSectionClassKey. */
 export function sectionKey(sectionName: string): string {
   const norm = sectionName.toLowerCase().replace(/[\s-]/g, '')
   if (norm.startsWith('nur')) return 'nur'
@@ -312,7 +312,7 @@ export function sectionKey(sectionName: string): string {
 /** Teaching periods a section actually has, per a set of bell rows (null = unknown).
  *
  * Returns a count ONLY when the bell explicitly excludes this class from some
- * teaching rows — i.e. the class genuinely disperses earlier than others.
+ * teaching rows - i.e. the class genuinely disperses earlier than others.
  * If every teaching row either has no class filter or still includes this class,
  * the class has a full day and we return null so no slots are locked.
  */
@@ -324,7 +324,7 @@ export function teachCountFromRows(secName: string, rows: any[] | undefined): nu
   if (!teachRows.some((r: any) => (r.classes ?? []).includes(key))) return null
   // Only apply early-dispersal logic when some row EXPLICITLY excludes this class.
   // Class-wise breaks that merely shift timing still include every class in each
-  // period row — those must NOT trigger locking.
+  // period row - those must NOT trigger locking.
   const excludedBySomeRow = teachRows.some((r: any) => {
     const cls: string[] = r.classes ?? []
     return cls.length > 0 && !cls.includes(key)
@@ -375,7 +375,7 @@ export function lockEarlyDispersal(
     const tc = countFor(sec.name)
     // Apply early dispersal only for a GENUINE partial day. An implausibly low
     // count (relative to the grid) means the bell isn't really configured for
-    // this section — locking on it would wrongly seal off most of the day and
+    // this section - locking on it would wrongly seal off most of the day and
     // leave everything unplaced. Require the section to teach at least half the
     // grid's periods before we lock the tail.
     const minGenuine = Math.max(4, Math.ceil(classPeriods.length / 2))
@@ -399,7 +399,7 @@ export function lockEarlyDispersal(
  * timetables never collide) plus a periodId → [startMins, endMins] clock map.
  *
  * Derived from the block's ACTUAL bell rows (real assembly length, capped
- * period durations, real break positions) — falls back to a synthetic uniform
+ * period durations, real break positions) - falls back to a synthetic uniform
  * grid only when the block has no generated rows yet.
  */
 export function buildBlockPeriods(shift: any, rows: any[]): { periods: Period[]; clock: Record<string, [number, number]> } {
@@ -425,7 +425,7 @@ export function buildBlockPeriods(shift: any, rows: any[]): { periods: Period[];
       else if (r.type === 'teaching')    push(`p${++pN}`, `Period ${pN}`, r.duration, 'class')
       else if (r.type === 'lunch')       push(`brk${++brkN}`, r.name || 'Lunch', r.duration, 'lunch')
       else if (r.type === 'short-break') push(`brk${++brkN}`, r.name || 'Break', r.duration, 'break')
-      // dispersal intentionally omitted — not a schedulable column
+      // dispersal intentionally omitted - not a schedulable column
     }
     if (pN > 0) return { periods, clock }
     // fall through to synthetic if rows had no usable teaching periods
@@ -533,7 +533,7 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
       ? manualOptionalBlocks
       : dlgsToOptionalBlocks(storeDLGs, classPeriods, workDays)
 
-  // OR/AND combos from Step 4 Tab 2 are an independent source — always
+  // OR/AND combos from Step 4 Tab 2 are an independent source - always
   // merged in, deduped against blocks covering the same sections+subjects.
   const comboBlocks = comboGroupsToOptionalBlocks(p.subjectGroups ?? [], resolvedSubjects, sections, staff)
   // AND Combo Groups from Step 4 Tab 1 (bundle-based splits like PCM vs PCB)

@@ -1,5 +1,5 @@
 /**
- * ConflictResolutionWizard — step-by-step modal that walks through each
+ * ConflictResolutionWizard - step-by-step modal that walks through each
  * hard conflict and offers concrete, one-click resolution options.
  *
  * For each `double-booking` conflict (most common engine output) the wizard:
@@ -9,7 +9,7 @@
  *   4. Presents up to 3 options as clickable cards
  *
  * Non-double-booking conflicts are shown with an explanatory card and a
- * Skip button — they typically require a full re-solve to resolve properly.
+ * Skip button - they typically require a full re-solve to resolve properly.
  *
  * The wizard maintains a local copy of classTT and calls onApplyFixes()
  * with the final updated timetable when the user finishes.
@@ -112,7 +112,7 @@ function resolveDoubleBooking(
     })
   })
 
-  // Score an alternative teacher (simplified — load balance + subject match)
+  // Score an alternative teacher (simplified - load balance + subject match)
   const scoreAlt = (t: Staff, subjectName: string, sectionName: string): number => {
     const subs: string[] = (t as any).subjects ?? []
     const matchesExact  = subs.includes(`${sectionName}::${subjectName}`)
@@ -120,7 +120,7 @@ function resolveDoubleBooking(
     let s = 0
     if (matchesExact)  s += 30
     else if (matchesGlobal) s += 15
-    else s -= 50   // wrong subject — heavily penalised
+    else s -= 50   // wrong subject - heavily penalised
     const load = weeklyLoad[t.name] ?? 0
     s -= load * 2
     const maxWeek = teacherWeeklyCap(t as any)
@@ -135,7 +135,7 @@ function resolveDoubleBooking(
     return s
   }
 
-  // For each clashing section (except the first — first one keeps the teacher),
+  // For each clashing section (except the first - first one keeps the teacher),
   // find alternative teachers
   for (let i = 1; i < Math.min(clashingSections.length, 3); i++) {
     const { secName, subject } = clashingSections[i]
@@ -156,7 +156,7 @@ function resolveDoubleBooking(
         label: `Assign ${t.name} → ${secName}`,
         detail: teachesSubject
           ? `${t.name} teaches ${subject} · ${weeklyLoad[t.name] ?? 0} periods this week`
-          : `${t.name} is free at this slot (no ${subject} match — verify eligibility)`,
+          : `${t.name} is free at this slot (no ${subject} match - verify eligibility)`,
         confidence,
         badge: teachesSubject ? 'Subject match' : 'Available',
         apply: (tt: ClassTimetable): ClassTimetable => {

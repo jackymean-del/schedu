@@ -34,7 +34,7 @@ export interface RenameReport {
   timetableChanged: boolean
   plansChanged: boolean
   recordsChanged: boolean
-  /** Roster rows moved too — teachers' subject lists, and the other schedules'
+  /** Roster rows moved too - teachers' subject lists, and the other schedules'
    *  own staff/subject/room/section lists. */
   rostersChanged: boolean
 }
@@ -53,7 +53,7 @@ const ALLOCATION_SHAPES: Array<[string, RenameKind[]]> = [
  *
  * Renaming only the timetable was worse than not cascading at all: the other
  * schedule ended up with a lesson taught by "Anita S. Sharma" and a roster
- * listing "Anita Sharma", so one person became two — an orphaned lesson nobody
+ * listing "Anita Sharma", so one person became two - an orphaned lesson nobody
  * can be marked absent for, beside a roster row that teaches nothing. That is
  * the exact failure this cascade exists to prevent, reproduced one schedule
  * over.
@@ -76,7 +76,7 @@ function renameRosters(snap: Record<string, any>, kind: RenameKind, from: string
     swap('staff', renameInStringLists(snap.staff, 'subjects', from, to))
   }
   // The allocation grids are keyed by name at every level, and they are the
-  // INPUT to generation — stale keys mean the next solve reads numbers filed
+  // INPUT to generation - stale keys mean the next solve reads numbers filed
   // under a name nothing else uses.
   for (const [field, levels] of ALLOCATION_SHAPES) {
     swap(field, renameInNestedKeys(snap[field], levels, kind, from, to))
@@ -128,7 +128,7 @@ export function applyRename(kind: RenameKind, from: string, to: string): RenameR
   if (openTT !== store.classTT) { store.setClassTT?.(openTT); report.timetableChanged = true }
   if (openSubs !== store.substitutions) { store.setSubstitutions?.(openSubs); report.timetableChanged = true }
   // The open schedule's own roster ROW is rewritten by the grid cell that
-  // committed the rename. Its teachers' subject lists are not — nothing owns
+  // committed the rename. Its teachers' subject lists are not - nothing owns
   // them, so a renamed subject silently lost every teacher qualified to teach
   // it, and the engine (which matches teacher to subject by name) would report
   // the subject as unstaffable on the next generation.

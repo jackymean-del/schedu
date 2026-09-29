@@ -1,5 +1,5 @@
 /**
- * Shared staff & venue directory — the org-wide, cross-schedule roster of real
+ * Shared staff & venue directory - the org-wide, cross-schedule roster of real
  * teachers and rooms. Each schedule's wizard still keeps its own local
  * Staff[]/Room[] arrays (unchanged), but adding an entry now consults this
  * directory first so "same name" becomes a deliberate, known choice instead
@@ -7,7 +7,7 @@
  * via `directoryId`; adding a genuinely new person/room with a name that
  * collides with an existing entry is blocked until the name is made unique.
  *
- * Modeled directly on `store/orgProfile.ts` — Zustand `persist`, single
+ * Modeled directly on `store/orgProfile.ts` - Zustand `persist`, single
  * localStorage key, `ownerId`-scoped so different signed-in users (or a
  * fresh mock-auth session) don't see each other's rosters.
  *
@@ -50,7 +50,7 @@ interface DirectoryState {
   ownerId: string | null
   staff: DirectoryStaff[]
   venues: DirectoryVenue[]
-  /** One-time backfill guard — see bootstrapDirectoryFromSchedules in lib/directoryBootstrap.ts. */
+  /** One-time backfill guard - see bootstrapDirectoryFromSchedules in lib/directoryBootstrap.ts. */
   bootstrapped: boolean
 
   addStaff: (s: Omit<DirectoryStaff, 'id'>) => DirectoryStaff
@@ -104,13 +104,13 @@ export const useDirectoryStore = create<DirectoryState>()(
 
 /**
  * Bulk paths (CSV import, "AI Generate All Resources", "Let me create
- * smartly") can produce a dozen+ rows at once — a per-row link-or-rename
+ * smartly") can produce a dozen+ rows at once - a per-row link-or-rename
  * dialog like the wizard's manual Add row would be unusable there. So bulk
  * generation silently links each row to a matching directory entry (or
  * registers it as new) with no prompt: the deterministic naming patterns
  * these generators use ("Mathematics Teacher 1", "Room 101"...) are exactly
  * as likely to coincidentally repeat across two schedules as they are to
- * genuinely mean "the same auto-slot" — the cross-schedule teacher-clash
+ * genuinely mean "the same auto-slot" - the cross-schedule teacher-clash
  * banner (pages/calendar.tsx) remains the real safety net for a genuine
  * double-booking regardless of whether two rows share a directoryId.
  */

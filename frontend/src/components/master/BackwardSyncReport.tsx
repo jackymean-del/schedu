@@ -1,11 +1,11 @@
 /**
- * BackwardSyncReport — opt-in reconciliation + printable allocation reports.
+ * BackwardSyncReport - opt-in reconciliation + printable allocation reports.
  *
  * Post-generation, the timetable can be hand-edited / re-optimised while the
  * Allocation plan stays as the user set it (an intentional custom load is never
  * silently overwritten). This modal lets the user, ON DEMAND:
  *   1. See the Class and Faculty allocation implied by the CURRENT timetable.
- *   2. "Backward Sync" — push those numbers back into the Allocation plan
+ *   2. "Backward Sync" - push those numbers back into the Allocation plan
  *      (teacherAllocations + subjectAllocations) so the wizard steps match.
  *   3. Print or download the reports in a clean format.
  *
@@ -163,7 +163,7 @@ export function BackwardSyncReport({
         <div style={{ padding: '16px 20px' }}>
           {/* Units + sync banner */}
           <div style={{ background: '#F5F2FF', border: '1px solid #E4E0FF', borderRadius: 10, padding: '10px 13px', fontSize: 11.5, color: '#4B5275', marginBottom: 14 }}>
-            <strong>1 period = {periodMinutes} min.</strong> Hours = periods × {periodMinutes}/60 (e.g. 30 periods = {asHours(30, periodMinutes)}). Safe teaching load ≈ <strong>{teacherCap} periods/wk</strong> for {countryCode} — a teaching-period count, separate from total working hours (which include prep).
+            <strong>1 period = {periodMinutes} min.</strong> Hours = periods × {periodMinutes}/60 (e.g. 30 periods = {asHours(30, periodMinutes)}). Safe teaching load ≈ <strong>{teacherCap} periods/wk</strong> for {countryCode} - a teaching-period count, separate from total working hours (which include prep).
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>

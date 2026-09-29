@@ -1,5 +1,5 @@
 /**
- * Shared shell for the legal/policy pages — a readable single-column prose
+ * Shared shell for the legal/policy pages - a readable single-column prose
  * layout with consistent heading rhythm.
  */
 import type { ReactNode } from 'react'

@@ -5,7 +5,7 @@ that backend is live and reachable, the app falls back to local demo data and
 **every account sees the same content**. This guide gets the backend running so
 each signed-in Clerk user has their own server-stored data.
 
-Recommended host: **Railway** — runs the Postgres database and the Go service on
+Recommended host: **Railway** - runs the Postgres database and the Go service on
 one platform, builds straight from `backend/Dockerfile`, and gives a public URL.
 
 ---
@@ -38,10 +38,10 @@ in `database/migrations/` in order (001 → 006).
    | `DATABASE_URL`     | Reference the Postgres service's `DATABASE_URL`              |
    | `CLERK_SECRET_KEY` | Your Clerk **Secret** key (`sk_test_…` / `sk_live_…`)        |
    | `ALLOWED_ORIGINS`  | `https://schedu.bhusku.com`                                  |
-   | `PORT`             | `8080` (Railway may inject its own — the app honors `PORT`)  |
-   | `ADMIN_CLERK_IDS`  | Optional. Comma-separated Clerk user ids allowed to call the curriculum mutation endpoints. Leave unset and nobody can — they return 403. |
+   | `PORT`             | `8080` (Railway may inject its own - the app honors `PORT`)  |
+   | `ADMIN_CLERK_IDS`  | Optional. Comma-separated Clerk user ids allowed to call the curriculum mutation endpoints. Leave unset and nobody can - they return 403. |
 
-   > The **secret** key is backend-only — never put it in the frontend or Vercel.
+   > The **secret** key is backend-only - never put it in the frontend or Vercel.
    > It must be from the **same Clerk instance** as the frontend's publishable key.
 
 4. Deploy. When it's healthy, copy the service's **public URL**
@@ -73,7 +73,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<backend>/api/v1/timetables
 
 The backend already exposes per-user, Clerk-authenticated endpoints
 (`/api/v1/timetables`, `/me`, `org-config`, curriculum). The remaining work is
-**frontend integration** — switching timetable load/save from localStorage to
+**frontend integration** - switching timetable load/save from localStorage to
 `timetableApi` in `frontend/src/api/client.ts` (the Clerk token is already wired
 in). That lands in a follow-up once this backend URL returns 401 above.
 
@@ -81,7 +81,7 @@ in). That lands in a follow-up once this backend URL returns 401 above.
 
 `docker compose up --build -d` runs Postgres + the API locally (see `Makefile`:
 `make up`, `make migrate`, `make logs`). Set `SKIP_AUTH=true` to bypass Clerk in
-local dev — `docker-compose.yml` already does.
+local dev - `docker-compose.yml` already does.
 
 The bypass has to be asked for by name. If `CLERK_SECRET_KEY` is missing in a
 deployed environment, authenticated routes return **503** and the boot log says

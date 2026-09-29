@@ -1,5 +1,5 @@
 // Package mailer sends transactional email. When SMTP isn't configured
-// (no SMTP_HOST), it logs instead — handy for local/dev where there's no
+// (no SMTP_HOST), it logs instead - handy for local/dev where there's no
 // mail server, and so the flow is fully usable without external services.
 package mailer
 
@@ -22,8 +22,8 @@ func getenv(k, fallback string) string {
 func SendShareCode(to, code string) {
 	host := os.Getenv("SMTP_HOST")
 	if host == "" {
-		// Dev mode — no SMTP. Log the code so it can be read from the API logs.
-		slog.Info("share access code (DEV — SMTP not configured)", "email", to, "code", code)
+		// Dev mode - no SMTP. Log the code so it can be read from the API logs.
+		slog.Info("share access code (DEV - SMTP not configured)", "email", to, "code", code)
 		return
 	}
 

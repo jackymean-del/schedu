@@ -116,10 +116,10 @@ func (h *CurriculumHandler) GetBoards(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load boards")
 	}
 	labels := map[curriculum.Board]string{
-		curriculum.BoardCBSE:      "CBSE — Central Board of Secondary Education",
-		curriculum.BoardICSE:      "ICSE/ISC — Council for Indian School Certificate Examinations",
-		curriculum.BoardIB:        "IB — International Baccalaureate",
-		curriculum.BoardCambridge: "Cambridge — Cambridge Assessment International Education",
+		curriculum.BoardCBSE:      "CBSE - Central Board of Secondary Education",
+		curriculum.BoardICSE:      "ICSE/ISC - Council for Indian School Certificate Examinations",
+		curriculum.BoardIB:        "IB - International Baccalaureate",
+		curriculum.BoardCambridge: "Cambridge - Cambridge Assessment International Education",
 		curriculum.BoardCustom:    "Custom",
 	}
 	type boardInfo struct {
@@ -171,7 +171,7 @@ func (h *CurriculumHandler) ReviewChanges(c fiber.Ctx) error {
 	// The reviewer is who the request was authenticated as, never who the body
 	// says. This used to accept a client-supplied reviewer_id and only fall back
 	// to the session, so the record of who approved a curriculum change was
-	// written by whoever asked for the change — an audit trail that attests to
+	// written by whoever asked for the change - an audit trail that attests to
 	// nothing. Any value sent in the body is discarded.
 	if uid, ok := c.Locals("user_id").(string); ok {
 		req.ReviewerID = uid

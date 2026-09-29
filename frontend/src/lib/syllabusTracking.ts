@@ -1,16 +1,16 @@
 /**
- * Syllabus Tracking — Blueprint v3, Part C.
+ * Syllabus Tracking - Blueprint v3, Part C.
  *
  * Deliberately built as a SHARED SERVICE rather than a screen in the wizard:
- * the same data feeds three different places at once —
- *   • Resources (Part A, Step 2)  — required sessions per subject
- *   • the Step 4 OR-logic gap     — "which subject needs more sessions?"
- *   • Live Mode (Part B)          — live coverage vs plan
+ * the same data feeds three different places at once -
+ *   • Resources (Part A, Step 2)  - required sessions per subject
+ *   • the Step 4 OR-logic gap     - "which subject needs more sessions?"
+ *   • Live Mode (Part B)          - live coverage vs plan
  * so it must not live inside any one of them.
  *
  * Model
  * -----
- * A *plan* is keyed per (subject, section) — a subject can need different hours
+ * A *plan* is keyed per (subject, section) - a subject can need different hours
  * in different sections. Each plan holds the hours the subject needs, plus a
  * CONTENT signal saying how much of the syllabus is actually done: a stated %,
  * a chapter count, or a named chapter checklist. Chapters describe WHAT to
@@ -27,7 +27,7 @@ export interface Chapter {
   id: string
   name: string
   /**
-   * LEGACY. Chapters no longer carry hours — nobody could estimate them
+   * LEGACY. Chapters no longer carry hours - nobody could estimate them
    * honestly, and the subject's total is already known. Kept so existing data
    * keeps weighting correctly (see contentFraction / requiredHours); new
    * chapters are created without it and every chapter then counts equally.
@@ -37,22 +37,22 @@ export interface Chapter {
   coveredAt?: string
   /**
    * 0–100 for a chapter only PARTIALLY taught (Blueprint v6, method ii).
-   * `coveredAt` wins when both are present — a ticked chapter is 100% done.
+   * `coveredAt` wins when both are present - a ticked chapter is 100% done.
    */
   percentCovered?: number
 }
 
 /**
- * How a faculty member records content for THIS subject — Blueprint v6:
- * "Faculty can go with either method — the choice is per faculty/subject, not
+ * How a faculty member records content for THIS subject - Blueprint v6:
+ * "Faculty can go with either method - the choice is per faculty/subject, not
  * fixed system-wide."
  *
- *  'percent' — simply state how much of the syllabus is covered ("75%").
+ *  'percent' - simply state how much of the syllabus is covered ("75%").
  *              Nothing to break down, nothing to tick. The least work possible,
  *              and enough on its own to drive coverage, pace and every alert.
- *  'count'   — enter the TOTAL number of chapters, then how many are covered so
+ *  'count'   - enter the TOTAL number of chapters, then how many are covered so
  *              far. Fast, no chapter names to type.
- *  'named'   — list the chapter names in sequence and tick each off, optionally
+ *  'named'   - list the chapter names in sequence and tick each off, optionally
  *              recording a percentage for one that's only part-taught.
  */
 export type CoverageMethod = 'percent' | 'named' | 'count'
@@ -63,13 +63,13 @@ export const METHOD_LABELS: Record<CoverageMethod, string> = {
   named: 'Chapter checklist',
 }
 export const METHOD_HINTS: Record<CoverageMethod, string> = {
-  percent: 'State how much of the syllabus is covered. Quickest — nothing to list.',
+  percent: 'State how much of the syllabus is covered. Quickest - nothing to list.',
   count: 'Say how many chapters there are, and how many are done.',
   named: 'List chapters and tick them off; part-taught ones can carry a %.',
 }
 
 /**
- * A teaching session that did NOT happen — holiday, school event, faculty
+ * A teaching session that did NOT happen - holiday, school event, faculty
  * absence, strike, whatever. These are hours the plan was counting on, so they
  * directly threaten whether the syllabus can still be finished.
  */
@@ -110,7 +110,7 @@ export interface SyllabusPlan {
   overallPercentCovered?: number
 }
 
-/** Which entry method a plan is really using — explicit choice, else inferred. */
+/** Which entry method a plan is really using - explicit choice, else inferred. */
 export function effectiveMethod(p: SyllabusPlan | undefined): CoverageMethod {
   if (p?.method) return p.method
   if ((p?.chapters?.length ?? 0) > 0) return 'named'
@@ -127,7 +127,7 @@ export function chapterFraction(c: Chapter): number {
 }
 
 /**
- * Fraction of the syllabus CONTENT actually taught, 0–1 — the metric Blueprint
+ * Fraction of the syllabus CONTENT actually taught, 0–1 - the metric Blueprint
  * v6 insists must never be moved by a holiday. Both entry methods reduce to this
  * single number, so every dashboard consumes them transparently.
  */
@@ -145,7 +145,7 @@ export function contentFraction(p: SyllabusPlan | undefined): number {
   if (chapters.length === 0) return 0
   // Chapters are equal-weight unless EVERY one carries legacy hours. Mixing the
   // two would silently weight a new (hour-less) chapter at zero, so it's all or
-  // nothing — and all new data takes the equal-weight path.
+  // nothing - and all new data takes the equal-weight path.
   if (chapters.every(c => (c.hours ?? 0) > 0)) {
     const totalH = chapters.reduce((a, c) => a + (c.hours || 0), 0)
     const doneH = chapters.reduce((a, c) => a + (c.hours || 0) * chapterFraction(c), 0)
@@ -173,7 +173,7 @@ export function planKey(subject: string, section: string): string {
 // ── Pure helpers ───────────────────────────────────────────────────────────
 
 /**
- * Hours the syllabus needs. The subject's own figure is the source of truth —
+ * Hours the syllabus needs. The subject's own figure is the source of truth -
  * chapters say WHAT to cover, not how long it takes. Legacy plans that only ever
  * had per-chapter hours still fall back to their sum, so no existing data reads
  * as zero.
@@ -188,8 +188,8 @@ export function requiredHours(p: SyllabusPlan | undefined): number {
 /** Hours actually delivered: covered chapters + any directly-logged hours. */
 export function coveredHours(p: SyllabusPlan | undefined): number {
   if (!p) return 0
-  // With a content signal, credit is driven by CONTENT — chapters taught (either
-  // method, partials included) — never by hours logged. Blueprint v6 is explicit
+  // With a content signal, credit is driven by CONTENT - chapters taught (either
+  // method, partials included) - never by hours logged. Blueprint v6 is explicit
   // that duration and content are separate metrics; letting logged time inflate
   // coverage is exactly the conflation it warns against.
   if (hasContentSignal(p)) return round1(requiredHours(p) * contentFraction(p))
@@ -209,7 +209,7 @@ export function coveragePct(p: SyllabusPlan | undefined): number {
   return Math.min(100, Math.round((coveredHours(p) / req) * 100))
 }
 
-/** True when the syllabus is fully taught — the signal for "can give up a slot". */
+/** True when the syllabus is fully taught - the signal for "can give up a slot". */
 export function isCovered(p: SyllabusPlan | undefined): boolean {
   return requiredHours(p) > 0 && remainingHours(p) <= 0
 }
@@ -226,12 +226,12 @@ export function lostHours(p: SyllabusPlan | undefined): number {
  * sessions it needed have been eaten by holidays and events. So lost time is
  * part of the verdict, not a footnote.
  *
- *   covered   — syllabus complete, nothing outstanding
- *   critical  — hours still to teach AND sessions were lost (that time has to be
+ *   covered   - syllabus complete, nothing outstanding
+ *   critical  - hours still to teach AND sessions were lost (that time has to be
  *               found again, so the plan will not land without rescheduling)
- *   behind    — under half taught with hours outstanding
- *   on-track  — outstanding hours but progressing, no lost time
- *   untracked — nothing planned yet, so no opinion
+ *   behind    - under half taught with hours outstanding
+ *   on-track  - outstanding hours but progressing, no lost time
+ *   untracked - nothing planned yet, so no opinion
  */
 export type Risk = 'covered' | 'on-track' | 'behind' | 'critical' | 'untracked'
 
@@ -240,7 +240,7 @@ export function riskOf(p: SyllabusPlan | undefined): Risk {
   if (remainingHours(p) <= 0) return 'covered'
   if (lostHours(p) > 0) return 'critical'
   // Nothing recorded at all yet. Now that the requirement is DERIVED from the
-  // timetable, every scheduled subject has one from day one — and calling a
+  // timetable, every scheduled subject has one from day one - and calling a
   // subject "behind" when nobody has said anything about it is a guess, not a
   // finding. Silence until there's something to go on.
   if (!hasContentSignal(p) && (p?.loggedHours ?? 0) <= 0) return 'untracked'
@@ -252,7 +252,7 @@ export const RISK_LABELS: Record<Risk, string> = {
   covered: 'Covered', 'on-track': 'On track', behind: 'Behind',
   critical: 'Needs rescheduling', untracked: 'Not planned',
 }
-/** Sort weight — worst first. */
+/** Sort weight - worst first. */
 const RISK_ORDER: Record<Risk, number> = { critical: 0, behind: 1, 'on-track': 2, covered: 3, untracked: 4 }
 
 /**
@@ -260,7 +260,7 @@ const RISK_ORDER: Record<Risk, number> = { critical: 0, behind: 1, 'on-track': 2
  *
  * Given the subjects in an OR group (for one section), rank them by how badly
  * each still needs teaching time, so the slot goes to the one that "needs more
- * sessions to complete its syllabus" — the exact decision the blueprint flags as
+ * sessions to complete its syllabus" - the exact decision the blueprint flags as
  * unanswerable until Part C exists.
  *
  * Ranked by remaining hours (desc), then by lower coverage %, then by name for
@@ -315,7 +315,7 @@ export function suggestSlotDonor(
  *
  * Deliberately a merge rather than a change to every helper: riskOf,
  * coverageRows, lagging and suggestBorrowSwaps then all account for holidays
- * with no modification, and a deleted holiday simply stops appearing — there is
+ * with no modification, and a deleted holiday simply stops appearing - there is
  * no materialised copy to reconcile.
  *
  * Takes a plain {planKey → hours} map so this module stays free of any holiday
@@ -335,7 +335,7 @@ export function withHolidayImpact(
 /**
  * Fill in each plan's requirement from what the TIMETABLE actually allocates,
  * and surface every scheduled (subject, section) even before anyone has touched
- * it — so the coverage dashboard is complete from the moment a timetable exists
+ * it - so the coverage dashboard is complete from the moment a timetable exists
  * and nobody has to type an hours figure that could disagree with the schedule.
  *
  * An explicit `requiredHours` on the plan always wins: a school that knows its
@@ -381,7 +381,7 @@ export function withLostImpact(
     const loss = impact[key]
     if (!loss || loss.hours <= 0) continue
     const base = out[key]
-    if (!base) continue   // no syllabus plan for that subject/section — nothing to adjust
+    if (!base) continue   // no syllabus plan for that subject/section - nothing to adjust
     out[key] = {
       ...base,
       lostSessions: [
@@ -400,13 +400,13 @@ export function withLostImpact(
 }
 
 /**
- * A "borrow & replace" opportunity — Blueprint v5, Syllabus Cover Dashboard.
+ * A "borrow & replace" opportunity - Blueprint v5, Syllabus Cover Dashboard.
  *
  * Take a slot from a subject that is already ahead/covered and give it to one
  * that is lagging. The blueprint constrains this hard: it is only offered when
  * THE SAME TEACHER teaches both, in the SAME class-section. That keeps the swap
- * logistically free — no teacher to re-map, no room to move, the same students
- * in the room — at the cost of not always finding a match. Anything looser would
+ * logistically free - no teacher to re-map, no room to move, the same students
+ * in the room - at the cost of not always finding a match. Anything looser would
  * be a timetable re-plan pretending to be a one-click fix.
  */
 export interface BorrowSwap {
@@ -443,7 +443,7 @@ export function suggestBorrowSwaps(plans: Record<string, SyllabusPlan>): BorrowS
       // Only borrow from a subject that has genuinely finished its syllabus.
       if (!isCovered(don)) continue
       // How much may move: never more than the lagging subject needs, and never
-      // more than the donor was ever allocated — a 20 h subject cannot lend 30 h.
+      // more than the donor was ever allocated - a 20 h subject cannot lend 30 h.
       // (We can't see how many of the donor's slots remain in the timetable, so
       // its total requirement is the honest upper bound.)
       const hours = round1(Math.min(need, requiredHours(don)))
@@ -471,20 +471,20 @@ export interface CoverageRow {
 }
 
 /**
- * The CLASS a section belongs to — "VI-A" → "VI", "Grade 3-B" → "Grade 3".
+ * The CLASS a section belongs to - "VI-A" → "VI", "Grade 3-B" → "Grade 3".
  * Part C §8 reports coverage "subject-wise, per section, per class", so class is
  * its own reporting dimension: the section name minus its trailing section
  * suffix (a short A–Z / numeric tail, optionally after a stream code).
  */
 export function classOfSection(section: string): string {
   const s = (section ?? '').trim()
-  if (!s) return '—'
+  if (!s) return '-'
   const idx = s.lastIndexOf('-')
   if (idx > 0 && s.length - idx - 1 <= 3) return s.slice(0, idx).trim()
   return s
 }
 
-/** Flatten plans into report rows — the basis for every coverage dashboard. */
+/** Flatten plans into report rows - the basis for every coverage dashboard. */
 export function coverageRows(plans: Record<string, SyllabusPlan>): CoverageRow[] {
   return Object.entries(plans).map(([key, p]) => ({
     key, subject: p.subject, section: p.section, teacher: p.teacher,
@@ -495,7 +495,7 @@ export function coverageRows(plans: Record<string, SyllabusPlan>): CoverageRow[]
 }
 
 /**
- * The rows a human should be told about, worst first — what powers the dashboard
+ * The rows a human should be told about, worst first - what powers the dashboard
  * alert so nobody has to go hunting for which subject/class/teacher is slipping.
  * Only genuinely actionable states qualify (critical / behind); covered,
  * on-track and unplanned rows are deliberately silent.
@@ -511,7 +511,7 @@ export function lagging(plans: Record<string, SyllabusPlan>, limit?: number): Co
   return limit ? out.slice(0, limit) : out
 }
 
-/** Group coverage rows by any dimension — subject-, class-, section- or teacher-wise. */
+/** Group coverage rows by any dimension - subject-, class-, section- or teacher-wise. */
 export function summariseBy(
   rows: CoverageRow[], dim: 'subject' | 'class' | 'section' | 'teacher',
 ): Array<{ label: string; required: number; covered: number; remaining: number; pct: number }> {
@@ -519,7 +519,7 @@ export function summariseBy(
   rows.forEach(r => {
     const label = (dim === 'teacher' ? r.teacher
       : dim === 'class' ? classOfSection(r.section)
-      : r[dim]) || '—'
+      : r[dim]) || '-'
     const cur = m.get(label) ?? { required: 0, covered: 0 }
     cur.required += r.required; cur.covered += r.covered
     m.set(label, cur)
@@ -546,11 +546,11 @@ interface SyllabusState {
   addChapter: (subject: string, section: string, name: string) => void
   updateChapter: (subject: string, section: string, chapterId: string, patch: Partial<Chapter>) => void
   removeChapter: (subject: string, section: string, chapterId: string) => void
-  /** Faculty action — tick a chapter as taught (or untick it). */
+  /** Faculty action - tick a chapter as taught (or untick it). */
   markChapterCovered: (subject: string, section: string, chapterId: string, covered: boolean) => void
   /** Log delivered hours directly, for schools not tracking chapters. */
   logHours: (subject: string, section: string, hours: number) => void
-  /** Choose the entry method for this subject (Blueprint v6 — per subject). */
+  /** Choose the entry method for this subject (Blueprint v6 - per subject). */
   setMethod: (subject: string, section: string, m: CoverageMethod) => void
   /** Chapter-count method: total chapters, and how many are done. */
   setChapterCounts: (subject: string, section: string, total?: number, covered?: number) => void
@@ -560,7 +560,7 @@ interface SyllabusState {
   logLostSession: (subject: string, section: string, s: Omit<LostSession, 'id'>) => void
   removeLostSession: (subject: string, section: string, id: string) => void
   removePlan: (subject: string, section: string) => void
-  /** Swap the whole map — used when a subject or section is renamed and every
+  /** Swap the whole map - used when a subject or section is renamed and every
    *  plan key has to move with it (lib/renameCascade). */
   replacePlans: (plans: Record<string, SyllabusPlan>) => void
   reset: () => void

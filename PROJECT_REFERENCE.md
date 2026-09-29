@@ -1,4 +1,4 @@
-# SmartSched / Schedu — Project Reference
+# SmartSched / Schedu - Project Reference
 
 > **Purpose:** Single source of truth for the project's architecture, data model,
 > timetable subsystem, and the hard-won design rules behind the recent work.
@@ -67,24 +67,24 @@ SmartSched/
 ## 3. Data model & scheduling modes
 
 ### Three scheduling modes (`ProfileType`)
-- **fixed** — Nursery/KG/Primary: students stay put, teachers rotate. Simple.
-- **standard** — Grade VI–X: subject periods, teacher movement, labs.
-- **dynamic** — Grade XI–XII: students move, optional subjects, parallel blocks,
+- **fixed** - Nursery/KG/Primary: students stay put, teachers rotate. Simple.
+- **standard** - Grade VI–X: subject periods, teacher movement, labs.
+- **dynamic** - Grade XI–XII: students move, optional subjects, parallel blocks,
   instructional clusters.
 
 ### Four architecture layers
-1. **Resource Engine** — organizations, academic_sessions, scheduling_profiles,
+1. **Resource Engine** - organizations, academic_sessions, scheduling_profiles,
    classes, subjects, teachers, classrooms, students.
-2. **Academic Engine** — section_subject_strengths, academic_combinations,
+2. **Academic Engine** - section_subject_strengths, academic_combinations,
    period_allocations, subject_rules.
-3. **Dynamic Scheduling Engine** — instructional_clusters, parallel_blocks,
+3. **Dynamic Scheduling Engine** - instructional_clusters, parallel_blocks,
    bell_schedules, time_slots.
-4. **Timetable Output** — session_instances, timetables, versions, audit_logs.
+4. **Timetable Output** - session_instances, timetables, versions, audit_logs.
 
 ### Key design decisions
 - **Section ≠ Instructional Group.** Classes are admin units; scheduling uses
   InstructionalClusters.
-- **`section_subject_strengths` is THE key table** for XI/XII — students per class
+- **`section_subject_strengths` is THE key table** for XI/XII - students per class
   per subject per category.
 - **Parallel blocks** ensure optionals run simultaneously; students split into clusters.
 - **Academic Combination Matrix** is the UX layer: users type expressions like
@@ -107,7 +107,7 @@ SmartSched/
 ### Legacy vs Schedu types
 The Schedu model overhaul (2026-05-15) added Organization, AcademicSession,
 SchoolClass, Teacher, Classroom, etc. **Legacy types** (`Section`, `Staff`,
-`Period`, `Room`) are kept with `@deprecated` markers — the wizard + timetable
+`Period`, `Room`) are kept with `@deprecated` markers - the wizard + timetable
 rendering still use them. Don't force-migrate unless refactoring that area.
 
 ---
@@ -167,9 +167,9 @@ Example (MPSK real school):
 | Function | Purpose |
 |----------|---------|
 | `getSectionClassKey(name)` | "Nursery-A" → "nur", "XI-Com-A" → "xi". Maps a section to its class key. |
-| `buildClassPeriods(section, periods, cwBreaks)` | Builds a **section-specific** period sequence — interleaves only the breaks that apply to that section. (Used by the class-section view.) |
+| `buildClassPeriods(section, periods, cwBreaks)` | Builds a **section-specific** period sequence - interleaves only the breaks that apply to that section. (Used by the class-section view.) |
 | `calcSectionTimes(section, cwBreaks, config, classPeriods)` | Per-section wall-clock **string** times (class-section view). |
-| `sectionScheduleMins(section, classPeriods, cwBreaks, config)` | Per-section wall-clock **minutes** for every period+break — the canonical engine behind the unified model (§6). |
+| `sectionScheduleMins(section, classPeriods, cwBreaks, config)` | Per-section wall-clock **minutes** for every period+break - the canonical engine behind the unified model (§6). |
 | `sectionHasBreak(section, breakId, cwBreaks)` | Does this section have this specific break? |
 
 ### ⚠️ The time-accumulation trap
@@ -183,7 +183,7 @@ staggered break durations **accumulate**, pushing every later period too late.
 **The fix is structural, not a patch:** never build a merged sequence. Compute
 per-section times with `sectionScheduleMins` and assemble distinct columns via
 `buildUnifiedColumns` (§6). Earlier "representative-section override" patches and
-the `buildTeacherPeriods` merged sequence have been **removed** — don't bring them
+the `buildTeacherPeriods` merged sequence have been **removed** - don't bring them
 back.
 
 ---
@@ -197,7 +197,7 @@ refined across several rounds of user feedback.
 ### 6.1 The staggered-break problem
 Different class groups take lunch at **different** points in the day, so a single
 "Period N" happens at **several wall-clock times**. Worked example
-(Demo TT 01 — three tracks):
+(Demo TT 01 - three tracks):
 
 | Track | Lunch | P5 | P6 | P7 | P8 |
 |-------|-------|----|----|----|----|
@@ -206,11 +206,11 @@ Different class groups take lunch at **different** points in the day, so a singl
 | XI–XII (2 cls) | after P6, 1:25–1:35 | 12:05 | 12:45 | 1:35 | 2:15 |
 
 The **class-section timetable** handles this fine per-section
-(`buildClassPeriods` + `calcSectionTimes`) and is left untouched — it was always
+(`buildClassPeriods` + `calcSectionTimes`) and is left untouched - it was always
 correct. The teacher/room/subject views are where it gets hard, because one row
 must merge multiple tracks.
 
-### 6.2 Unified columns — TEACHER views only
+### 6.2 Unified columns - TEACHER views only
 The teacher views (`renderTeacherTT` + `…Transposed`) build a **unified column
 grid**: each distinct **(periodId, start-time)** becomes its own column.
 
@@ -221,7 +221,7 @@ P6@12:55 · P6@1:15 · P7@1:35 · P7@1:55 · P8@2:15 · P8@2:35 · Dispersal`.
 **Helpers (`timetable.tsx`):**
 | Function | Purpose |
 |----------|---------|
-| `sectionScheduleMins(sec, classPeriods, cwBreaks, config)` | Wall-clock **minutes** for every period+break of one section. The canonical correct timing — never accumulate breaks any other way. |
+| `sectionScheduleMins(sec, classPeriods, cwBreaks, config)` | Wall-clock **minutes** for every period+break of one section. The canonical correct timing - never accumulate breaks any other way. |
 | `isFullBreakDef(break, allClassKeys)` | Is a break universal (all groups)? |
 | `buildUnifiedColumns(sectionNames, classPeriods, periods, cwBreaks, config)` | → `{ columns, schedules, repByGroup }`. Columns = distinct (periodId, startMin) teaching slots + full-break columns. Falls back to plain `periods` when no staggering. |
 | `resolveUniCell(section, col, schedules, cwBreaks)` | Per-cell → `teaching` \| `lunch` (overlapping partial break) \| `free`. |
@@ -229,10 +229,10 @@ P6@12:55 · P6@1:15 · P7@1:35 · P7@1:55 · P8@2:15 · P8@2:35 · Dispersal`.
 
 ### 6.3 The header / chip rule (canonical)
 - A teaching column's header **always** shows the **period name** (`Period 5`),
-  never a break name. Period names repeat — expected.
+  never a break name. Period names repeat - expected.
 - A small **chip** appears under the period name **only for SPLIT periods**
   (those that occur at >1 time school-wide). It lists the **teaching classes**
-  that own that time slot — e.g. `P5@12:05 → "VI to XII"`, `P5@12:35 → "I to V"`.
+  that own that time slot - e.g. `P5@12:05 → "VI to XII"`, `P5@12:35 → "I to V"`.
 - **Never** a mixed "Lunch / Period 4" header. One header per slot.
 - Full school-wide breaks (Assembly, Morning Break) get their own break columns.
 
@@ -245,7 +245,7 @@ P6@12:55 · P6@1:15 · P7@1:35 · P7@1:55 · P8@2:15 · P8@2:35 · Dispersal`.
   names** (no section letters, no 🍱 icon).
 - **Free cell**: empty, droppable.
 
-### 6.5 ROOM & SUBJECT views — UNIFIED columns (updated)
+### 6.5 ROOM & SUBJECT views - UNIFIED columns (updated)
 Room/subject views now use the **same unified column model** as the teacher view
 (`unifiedAllCols = buildUnifiedColumns` over ALL sections). This was changed
 because the old simple-column approach used `periodTimes = calcTimes(periods)`,
@@ -259,7 +259,7 @@ col.startMin`). Subject view shows ALL sections teaching the subject in that exa
 slot. Applies to normal + transposed.
 
 > ⚠️ **Key-function parity (critical):** `CalendarView.secKey()` MUST stay
-> identical to `routes/timetable.tsx getSectionClassKey()` — `classwiseBreaks[].
+> identical to `routes/timetable.tsx getSectionClassKey()` - `classwiseBreaks[].
 > classes` arrays are keyed by the latter. A divergence silently drops all
 > partial breaks in the calendar (e.g. `"VI-A"→"via"` never matches `"vi"`),
 > producing non-staggered, wrong break timing. Also: the calendar's `dayEndMin`
@@ -278,7 +278,7 @@ slot. Applies to normal + transposed.
 which **collapses staggered same-id periods** (two `p5` at different times merge,
 one becomes a "conflict"). Consequently `tdata.classes` can be **incomplete**
 (it dropped sections like XI-Com-A). **Never iterate `tdata.classes`** for teacher
-rendering — derive the teacher's sections by scanning `classTT` directly:
+rendering - derive the teacher's sections by scanning `classTT` directly:
 ```ts
 const teacherSecNames = sections.map(s=>s.name).filter(name =>
   config.workDays.some(d => Object.values(classTT[name]?.[d] ?? {})
@@ -289,7 +289,7 @@ The period count (`34/32`) is likewise counted from `classTT`, not the lossy
 
 ### 6.8 Calendar view
 Positions teaching blocks via per-section `buildSecPeriods + calcTimes` (already
-correct). Break blocks gate on `isFullBreak(periodId)` — only full school-wide
+correct). Break blocks gate on `isFullBreak(periodId)` - only full school-wide
 breaks render as solid blocks; partial breaks are skipped so in-session teaching
 blocks fill the time. Full breaks positioned via `repSecTimes()` to dodge the
 accumulation trap.
@@ -301,10 +301,10 @@ accumulation trap.
 Implemented identically across all 8 view combos + Calendar.
 
 ### State (timetable.tsx)
-- `dragItem {section, day, periodId}` — the cell being dragged.
-- `poolDragItem` — a chip dragged from the uncovered/pool panel.
-- `dragOverCell` — current hover target key.
-- `isSameTeacherDrag` / `isSameRoomDrag` — whether the drag spans the same
+- `dragItem {section, day, periodId}` - the cell being dragged.
+- `poolDragItem` - a chip dragged from the uncovered/pool panel.
+- `dragOverCell` - current hover target key.
+- `isSameTeacherDrag` / `isSameRoomDrag` - whether the drag spans the same
   teacher/room (lets all their slots become valid targets).
 
 ### Visual feedback
@@ -323,9 +323,9 @@ Implemented identically across all 8 view combos + Calendar.
 ### Conflict detection
 `checkSwapConflict(section, day, periodId)` (traditional) /
 `getSwapConflict(classTT, …, tgtSection?)` (calendar) checks:
-1. **Class-teacher protection** — cannot move a class-teacher's protected period.
-2. **Teacher double-booking** — teacher already teaching elsewhere at that slot.
-3. **Cross-section displacement** — would the swap evict another section's teacher?
+1. **Class-teacher protection** - cannot move a class-teacher's protected period.
+2. **Teacher double-booking** - teacher already teaching elsewhere at that slot.
+3. **Cross-section displacement** - would the swap evict another section's teacher?
 
 On a conflicting drop → show `ConflictModal` instead of executing the swap.
 **Consistent across every view.**
@@ -334,7 +334,7 @@ On a conflicting drop → show `ConflictModal` instead of executing the swap.
 - Blocks are built per day; **virtual free blocks** (one per truly-free period) are
   added so empty slots are droppable. They carry the entity stamp
   (`teacher: tName` / `room: roomName`) so the DropZone filter only highlights the
-  dragged entity's own row — not other teachers'.
+  dragged entity's own row - not other teachers'.
 - A global `dragend` listener unconditionally clears all drag state (prevents the
   old "frozen UI" bug).
 
@@ -390,7 +390,7 @@ Other keys: `schedu-tt-list` (the list), `schedu-active-tt` (active id).
 
 > Deprecated/no longer used for layout: `buildTeacherPeriods`,
 > `isFullLunchColumn`, `resolveHeaderPeriod` were the earlier merged-sequence
-> approach — superseded by the unified-column model in §6. Don't reintroduce them.
+> approach - superseded by the unified-column model in §6. Don't reintroduce them.
 
 ---
 
@@ -399,8 +399,8 @@ Other keys: `schedu-tt-list` (the list), `schedu-active-tt` (active id).
 The `routes/wizard/` folder has accumulated multiple step iterations. Current/active
 flow uses the `step-*` named files (not the `stepN-*` numbered legacy ones) where a
 v2 exists. Key ones:
-- `step-bell.tsx` — bell schedule + class-wise breaks (timing source of truth).
-- `step-resources-v2.tsx` — Teachers → Classes → Subjects → Rooms panels.
+- `step-bell.tsx` - bell schedule + class-wise breaks (timing source of truth).
+- `step-resources-v2.tsx` - Teachers → Classes → Subjects → Rooms panels.
 - `step-structure`, `step-subjects-timing`, `step-allocation`, `step-combinations`,
   `step-optional-blocks`, `step-section-strengths`, `step-constraints`.
 
@@ -413,20 +413,20 @@ v2 exists. Key ones:
 
 1. **`border-collapse` hides borders** → use `outline` for drag highlights on filled
    cells (see §7).
-2. **Never accumulate staggered breaks via `calcTimes` on a merged sequence** —
+2. **Never accumulate staggered breaks via `calcTimes` on a merged sequence** -
    every period's time inflates. Use `sectionScheduleMins` (per-section, canonical)
    or `buildUnifiedColumns` (see §6).
-3. **Never iterate `tdata.classes` for teacher rendering** — it's lossy/incomplete
+3. **Never iterate `tdata.classes` for teacher rendering** - it's lossy/incomplete
    (collapsed staggered periods). Derive sections from `classTT` (§6.7). This was
    the root cause of the "blank teacher timetable" bug.
-4. **`teacherTT` is derived** — never edit it directly. Edit `classTT` → `commitTT()`.
+4. **`teacherTT` is derived** - never edit it directly. Edit `classTT` → `commitTT()`.
 5. **Header rule is canonical** (§6.3): teaching columns show period names; the
    class-name chip appears only on SPLIT periods and lists TEACHING classes; never
    mixed headers.
 6. **Cell vs chip naming**: teaching cells show the full **class-section** (`I-A`);
    headings/chips/lunch-overlays show **compressed class names** (`I to V`). No
    lunch/break emoji in cells.
-7. **Room & subject views use SIMPLE `classPeriods` columns** — no break columns,
+7. **Room & subject views use SIMPLE `classPeriods` columns** - no break columns,
    no staggered splits. Only teacher views use the unified model.
 8. **Calendar free blocks must carry an entity stamp** or drag highlights leak across
    teachers/rooms.
@@ -436,7 +436,7 @@ v2 exists. Key ones:
     `frontend/`.
 11. **Commit message footer:**
     `Co-Authored-By: Claude <noreply@anthropic.com>` (model name as appropriate).
-12. **Windows line endings:** git will warn `LF will be replaced by CRLF` — harmless.
+12. **Windows line endings:** git will warn `LF will be replaced by CRLF` - harmless.
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * Section auto-distribution — Blueprint v3, Step 1.
+ * Section auto-distribution - Blueprint v3, Step 1.
  *
  * "If a number of sections is provided, the system auto-distributes sections
  *  across classes, allocating from the LOWEST class to the HIGHEST class first,
@@ -23,6 +23,6 @@ export function distributeSections(count: number, total: number): number[] {
   if (total <= 0) return Array(count).fill(0)
   const base = Math.floor(total / count)
   const rem = total - base * count
-  // Lowest `rem` classes get one extra — lowest-first, per the blueprint.
+  // Lowest `rem` classes get one extra - lowest-first, per the blueprint.
   return Array.from({ length: count }, (_, i) => base + (i < rem ? 1 : 0))
 }

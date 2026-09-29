@@ -1,5 +1,5 @@
 /**
- * Urgent pull-outs — take a resource that IS in a session (a teacher, or a
+ * Urgent pull-outs - take a resource that IS in a session (a teacher, or a
  * venue) and reassign it to an urgent one-off task for a single period on a
  * single date, auto-covering the lesson it vacates with a replacement for that
  * occurrence ONLY.
@@ -12,7 +12,7 @@
  * A single record captures both halves of the move:
  *   - the ORIGINAL resource is shown "on urgent task" for that slot, and
  *   - the vacated lesson is COVERED by `replacement` (a free teacher, or an
- *     alternate free room) — reflected across every lens (class/faculty/
+ *     alternate free room) - reflected across every lens (class/faculty/
  *     venue/subject) because the read layer resolves the effective teacher/room
  *     through `coverFor` below.
  */
@@ -25,7 +25,7 @@ export type PullKind = 'teacher' | 'room'
 
 export interface UrgentPullout {
   id: string
-  date: string          // ISO yyyy-mm-dd — one-off
+  date: string          // ISO yyyy-mm-dd - one-off
   sid: string           // owning schedule id (period ids resolve against its bell)
   periodId: string
   section: string       // the vacated lesson's section (the slot being covered)
@@ -38,8 +38,8 @@ export interface UrgentPullout {
 
 /**
  * SCOPE: the school. These used to live under `schedu-urgent-pullout:<uid>`.
- * A pull-out is the most time-critical record in the app — a teacher has left
- * a lesson and somebody else is covering it right now — and it was visible
+ * A pull-out is the most time-critical record in the app - a teacher has left
+ * a lesson and somebody else is covering it right now - and it was visible
  * only to the account that entered it. See lib/schoolScope.
  */
 export const PULLOUT_KEY = 'schedu-urgent-pullout'

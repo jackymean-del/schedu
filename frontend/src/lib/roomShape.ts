@@ -1,13 +1,13 @@
 /**
  * One conversion between a stored room and an editable room row.
  *
- * Two pages edit the same rooms — the wizard's Resources step and Master Data —
+ * Two pages edit the same rooms - the wizard's Resources step and Master Data -
  * and each had its own read/write mapping. They disagreed in two ways that cost
  * real data:
  *
  *  1. TYPE CASING. Resources writes 'Computer Lab'; Master Data wrote
  *     'computer-lab'. Resources compensated on read with a map its own comment
- *     described as handling "legacy" values — but Master Data was still
+ *     described as handling "legacy" values - but Master Data was still
  *     producing them. Master Data itself did not normalise, so a room typed in
  *     Resources came back reading `computer-lab` in its own dropdown, which
  *     matches no option and resets the room to Classroom on the next edit.
@@ -15,7 +15,7 @@
  *  2. DROPPED FIELDS. Master Data rebuilt each stored room from its row, and a
  *     row has no `subjectMappings`, `notes`, `building` or `floor`. Merely
  *     opening the page wrote that reduced object back, so a lab lost the
- *     subjects bound to it — which is what tells the scheduler the lab is the
+ *     subjects bound to it - which is what tells the scheduler the lab is the
  *     right venue for Chemistry.
  *
  * Both pages now go through here. Writes MERGE onto the stored record, so a

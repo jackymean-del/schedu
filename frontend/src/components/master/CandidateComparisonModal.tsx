@@ -1,12 +1,12 @@
 /**
- * CandidateComparisonModal — side-by-side teacher ranking for one slot.
+ * CandidateComparisonModal - side-by-side teacher ranking for one slot.
  *
- * "Who should teach VI-A Maths?" — shows every staff member ranked by
+ * "Who should teach VI-A Maths?" - shows every staff member ranked by
  * the engine scorer, with their top factors, current/projected load, and
  * a one-click Assign button. Lets users override the engine's
  * automatic choice with full visibility into why.
  *
- * Spec: schedU Doc Part 2 — "AI Explanation System" (compare mode).
+ * Spec: schedU Doc Part 2 - "AI Explanation System" (compare mode).
  */
 
 import { useMemo } from 'react'
@@ -103,7 +103,7 @@ export function CandidateComparisonModal({ section, subject, onClose, onAssigned
             </div>
           )}
 
-          {/* Top candidate — highlighted */}
+          {/* Top candidate - highlighted */}
           {top && (
             <CandidateRow cand={top} isTop onAssign={p => handleAssign(top, p)} />
           )}

@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration 005 — Official Curriculum Intelligence Engine
+-- Migration 005 - Official Curriculum Intelligence Engine
 -- Tables: curriculum_sources, curriculum_versions, curriculum_changes,
 --         curriculum_templates, school_curriculum_overrides
 --
@@ -62,7 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_curriculum_versions_board_status
 -- curriculum_changes
 -- Every detected diff (added subject, removed subject, slot change, etc.)
 -- Lives here until an admin approves or rejects it.
--- NEVER auto-applied — status must be set to 'approved' by a human.
+-- NEVER auto-applied - status must be set to 'approved' by a human.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS curriculum_changes (
     id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

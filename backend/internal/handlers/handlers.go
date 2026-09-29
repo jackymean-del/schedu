@@ -37,7 +37,7 @@ func rawOrEmpty(r json.RawMessage) string {
 }
 
 // ListTimetables returns the signed-in user's timetables (newest first).
-// Only metadata (name + config) is returned — the heavy `data` snapshot is
+// Only metadata (name + config) is returned - the heavy `data` snapshot is
 // fetched per-timetable via GetTimetable when a timetable is opened.
 func (h *Handler) ListTimetables(c fiber.Ctx) error {
 	uid := clerkID(c)

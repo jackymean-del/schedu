@@ -1,19 +1,19 @@
 /**
- * Step 3 — Allocation (Period + Teacher + Validation)
+ * Step 3 - Allocation (Period + Teacher + Validation)
  *
  * Two-panel layout:
- *   Left  — tabs + grid (AllocationGrid or TeacherAllocationSummary)
- *   Right — contextual sidebar (syntax guide, capacity engine, AI notes, etc.)
+ *   Left  - tabs + grid (AllocationGrid or TeacherAllocationSummary)
+ *   Right - contextual sidebar (syntax guide, capacity engine, AI notes, etc.)
  *
  * Tabs: Period allocation · Teacher allocation · Validation
  */
 
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
-// xlsx is loaded on demand (export click) — keeps it out of the main bundle
+// xlsx is loaded on demand (export click) - keeps it out of the main bundle
 import { useTimetableStore } from '@/store/timetableStore'
 /**
- * AG Grid is ~21 MB unpacked and dominated the wizard's chunk — every person
+ * AG Grid is ~21 MB unpacked and dominated the wizard's chunk - every person
  * who opened the wizard downloaded it, including the many who never open this
  * one sub-tab. Split out so it arrives when the tab does.
  */
@@ -82,7 +82,7 @@ export function StepAllocation() {
   }, [breaks, config?.periodsPerDay])
 
   const workDays: string[] = config?.workDays?.length ? config.workDays : DEFAULT_WORK_DAYS
-  // store.periods is empty until the first generation — `??` keeps an empty
+  // store.periods is empty until the first generation - `??` keeps an empty
   // array, so fall back on LENGTH to the bell-derived sequence.
   const periodsArr = storePeriods?.length ? storePeriods : derivedPeriods
 
@@ -90,7 +90,7 @@ export function StepAllocation() {
   const cap = useMemo(() => computeCapacity(workDays, periodsArr), [workDays, periodsArr])
   const periodMinutes = config?.periodMinutes ?? 40
 
-  // Step 0's workload norms — the country reference plus any custom override.
+  // Step 0's workload norms - the country reference plus any custom override.
   // Blueprint v6 requires these both to SEED the allocation engine and to be
   // shown here for faculty and students; previously they existed only in
   // Settings and reached nothing.
@@ -160,7 +160,7 @@ export function StepAllocation() {
       const u = sectionTotals[sec.name] ?? 0
       const status = utilisationStatus(u, c)
       if (status === 'over')   hard.push(`${sec.name}: allocated ${u} > capacity ${c}`)
-      if (status === 'light' && c > 0) soft.push(`${sec.name}: only ${u}/${c} periods used — under board minimum`)
+      if (status === 'light' && c > 0) soft.push(`${sec.name}: only ${u}/${c} periods used - under board minimum`)
     })
 
     // Teacher load checks
@@ -177,12 +177,12 @@ export function StepAllocation() {
     // Resource-level: subjects with no teacher assigned in period-allocated cells
     //
     // A teacher is considered "assigned" for a (section, subject) pair when
-    // EITHER of these is true — checking both avoids false positives where the
+    // EITHER of these is true - checking both avoids false positives where the
     // user has designated a teacher in Resources but hasn't yet run HI allocate:
     //
-    //   Signal A — teacherAllocations has an explicit period number > 0
+    //   Signal A - teacherAllocations has an explicit period number > 0
     //              (set via Teacher Allocation tab or AI allocate)
-    //   Signal B — a teacher's subjectMappings in Resources lists this section
+    //   Signal B - a teacher's subjectMappings in Resources lists this section
     //              for this subject (designation without period count yet)
     const missingBySubject: Record<string, string[]> = {}
     ;(sections as Section[]).forEach(sec => {
@@ -211,7 +211,7 @@ export function StepAllocation() {
       const display = classes.length > 4
         ? `${classes.slice(0, 4).join(', ')} +${classes.length - 4} more`
         : classes.join(', ')
-      soft.push(`"${subName}" has no teacher assigned in: ${display} — assign in Resources → Teachers`)
+      soft.push(`"${subName}" has no teacher assigned in: ${display} - assign in Resources → Teachers`)
     })
 
     // Resource-level: lab subjects with no suitable lab room
@@ -221,16 +221,16 @@ export function StepAllocation() {
     //   2. allocation uses +L or nL syntax (labPeriods > 0)
     //
     // Only count subjects that are ACTUALLY ALLOCATED to at least one section in this
-    // timetable — this prevents false positives from subjects that have the requiresLab
+    // timetable - this prevents false positives from subjects that have the requiresLab
     // flag set but are not in use (e.g. an elective added to Resources but never scheduled).
     //
     // Room-type match: case-insensitive, checks both .type (RoomRow / new RoomsPanel) and
     // .roomType (legacy Room type stored with lowercase 'lab').  Handles 'Lab', 'lab',
     // 'Computer Lab', 'Science Lab', etc.
     const labSubjects = (subjects as Subject[]).filter(s => {
-      // Signal 1 — explicit flag
+      // Signal 1 - explicit flag
       const hasFlag = !!(s as any).requiresLab
-      // Signal 2 — any section uses +L / nL allocation syntax for this subject
+      // Signal 2 - any section uses +L / nL allocation syntax for this subject
       const hasLabSyntax = !hasFlag && (sections as Section[]).some(sec => {
         const raw = (subjectAllocations as any)?.[sec.name]?.[s.name]
         return raw ? parseAllocation(raw).labPeriods > 0 : false
@@ -250,7 +250,7 @@ export function StepAllocation() {
       })
       if (!hasLabRoom) {
         const names = labSubjects.slice(0, 3).map(s => s.name).join(', ')
-        soft.push(`${labSubjects.length} subject${labSubjects.length > 1 ? 's require' : ' requires'} a lab room (${names}${labSubjects.length > 3 ? ' +more' : ''}) — add a Lab room in Resources → Rooms`)
+        soft.push(`${labSubjects.length} subject${labSubjects.length > 1 ? 's require' : ' requires'} a lab room (${names}${labSubjects.length > 3 ? ' +more' : ''}) - add a Lab room in Resources → Rooms`)
       }
     }
 
@@ -261,11 +261,11 @@ export function StepAllocation() {
     // the teacher warning above is silently skipped (no raw allocation → outer `if (!raw) return`).
     // This check catches those orphaned sections so the user knows to allocate or run Sync.
     //
-    // Guard: only fire if the subject IS allocated somewhere else in the timetable — this
+    // Guard: only fire if the subject IS allocated somewhere else in the timetable - this
     // prevents false alarms for subjects that are in Resources but not yet scheduled at all.
     const allocationGaps: Record<string, string[]> = {}
     ;(subjects as Subject[]).forEach(s => {
-      // Collect every section this subject is configured for — classConfigs takes
+      // Collect every section this subject is configured for - classConfigs takes
       // priority; fall back to the legacy sections[] array on the subject object.
       const configs = (s as any).classConfigs as any[] | undefined
       const appliedSections: string[] = configs && configs.length > 0
@@ -291,7 +291,7 @@ export function StepAllocation() {
       const display = classes.length > 4
         ? `${classes.slice(0, 4).join(', ')} +${classes.length - 4} more`
         : classes.join(', ')
-      soft.push(`"${subName}" is in Resources for: ${display} — but has no period allocation. Run Sync or fill manually.`)
+      soft.push(`"${subName}" is in Resources for: ${display} - but has no period allocation. Run Sync or fill manually.`)
     })
 
     // Grade-level cross-section consistency check
@@ -338,7 +338,7 @@ export function StepAllocation() {
       const display = classes.length > 4
         ? `${classes.slice(0, 4).join(', ')} +${classes.length - 4} more`
         : classes.join(', ')
-      soft.push(`"${subName}" has periods in other sections of the same grade but none in: ${display} — check Period Allocation or add to Resources → Subjects`)
+      soft.push(`"${subName}" has periods in other sections of the same grade but none in: ${display} - check Period Allocation or add to Resources → Subjects`)
     })
 
     // Resource-level: total period demand vs total teacher capacity
@@ -356,7 +356,7 @@ export function StepAllocation() {
     if (totalTeacherCapacity > 0 && totalPeriodDemand > totalTeacherCapacity) {
       const deficit = totalPeriodDemand - totalTeacherCapacity
       const approx  = Math.ceil(deficit / 30)
-      soft.push(`Period demand (${totalPeriodDemand}p/wk) exceeds total teacher capacity (${totalTeacherCapacity}p/wk) by ${deficit} — consider adding ~${approx} more teacher${approx > 1 ? 's' : ''}`)
+      soft.push(`Period demand (${totalPeriodDemand}p/wk) exceeds total teacher capacity (${totalTeacherCapacity}p/wk) by ${deficit} - consider adding ~${approx} more teacher${approx > 1 ? 's' : ''}`)
     }
 
     return { hardConflicts: hard, softWarnings: soft }
@@ -387,7 +387,7 @@ export function StepAllocation() {
 
   // ── THE PERIOD ALLOCATION ENGINE (master doc "STEP 6") ────────────────────────
   // Weekly periods are DERIVED here, from the board's curriculum norms, the
-  // working days, the period duration and the Step 0 student hours/week — not
+  // working days, the period duration and the Step 0 student hours/week - not
   // read back from numbers typed on the Resources page. That inversion is why
   // changing the bell or the working week used to leave the allocation stale.
   //
@@ -405,7 +405,7 @@ export function StepAllocation() {
     board: (config as any)?.boardType ?? (config as any)?.board,
     capacityFor: capFor,
     // Step 0's figure, per v6: "becomes the seed input to the allocation
-    // engine" — resolved narrowest-first, class over stage over national.
+    // engine" - resolved narrowest-first, class over stage over national.
     studentHoursWeekFor: (section: string) => studentHoursFor(
       classOfSection(section),
       bandForSection(section),
@@ -434,11 +434,11 @@ export function StepAllocation() {
   // ── Derive teacher allocations ─────────────────────────────────────────────────
   // Pass 1a: explicit subjectMappings, strictly capped at teacher's weekly max.
   // Pass 1b: overflow from capped mappings re-assigned to any other qualified teacher.
-  // Pass 2:  remaining pairs — load-balanced, grade-band aware.
-  // Pass 3:  absolute fallback — any remaining pair gets the best-fit teacher even if
+  // Pass 2:  remaining pairs - load-balanced, grade-band aware.
+  // Pass 3:  absolute fallback - any remaining pair gets the best-fit teacher even if
   //          slightly over-max (surfaces as a soft warning, never leaves a blank cell).
   const handleAITeacherAllocate = useCallback((periodAllocs?: Record<string, Record<string, string>>) => {
-    // Grade-band restriction helpers (defined inside callback — no stable-ref issue)
+    // Grade-band restriction helpers (defined inside callback - no stable-ref issue)
     //
     // Grade rank: 0-2 = pre-primary (Nursery/LKG/UKG)
     //             3-4 = lower primary (I-II)
@@ -484,9 +484,9 @@ export function StepAllocation() {
     // Init load counters
     ;(staff as Staff[]).forEach((t: Staff) => { load[t.name] = 0 })
 
-    // PASS 1a — explicit subjectMappings, capped at maxPeriodsPerWeek
+    // PASS 1a - explicit subjectMappings, capped at maxPeriodsPerWeek
     ;(staff as Staff[]).forEach((t: Staff) => {
-      // Fall back to the WORKLOAD NORM, not a literal — a hardcoded 32 silently
+      // Fall back to the WORKLOAD NORM, not a literal - a hardcoded 32 silently
       // overloaded every country whose safe teaching load is lower (GB 22, AU 20).
       const maxPeriods = (t as any).maxPeriodsPerWeek ?? normTeacherMax
       const maps: Array<{ subject: string; classes: string[] }> = ((t as any).subjectMappings ?? [])
@@ -499,7 +499,7 @@ export function StepAllocation() {
           const target = parseAllocation(raw).weeklyTotal || 0
           if (target <= 0) return
           if ((load[t.name] ?? 0) + target > maxPeriods) {
-            // Teacher is at capacity — queue this pair for re-assignment
+            // Teacher is at capacity - queue this pair for re-assignment
             overflow.push({ cls, subject: m.subject, target })
             return
           }
@@ -542,10 +542,10 @@ export function StepAllocation() {
       return true
     }
 
-    // PASS 1b — re-assign overflowed explicit mappings to other available teachers
+    // PASS 1b - re-assign overflowed explicit mappings to other available teachers
     overflow.forEach(({ cls, subject, target }) => assignToAvailable(cls, subject, target))
 
-    // PASS 2 — grade-band-aware assignment for pairs not covered by any explicit mapping
+    // PASS 2 - grade-band-aware assignment for pairs not covered by any explicit mapping
     ;(sections as Section[]).forEach((sec: Section) => {
       ;(subjects as Subject[]).forEach((s: Subject) => {
         if (covered.has(`${sec.name}::${s.name}`)) return
@@ -564,9 +564,9 @@ export function StepAllocation() {
       })
     })
 
-    // PASS 3 — absolute coverage fallback: any still-uncovered pair gets the lightest-loaded
+    // PASS 3 - absolute coverage fallback: any still-uncovered pair gets the lightest-loaded
     // grade-band-appropriate teacher, even if it slightly exceeds their maxPeriodsPerWeek.
-    // This ensures NO cell is left without a teacher name — the resulting overload surfaces
+    // This ensures NO cell is left without a teacher name - the resulting overload surfaces
     // as a soft "over capacity" warning in Validation rather than silently going blank.
     ;(sections as Section[]).forEach((sec: Section) => {
       ;(subjects as Subject[]).forEach((s: Subject) => {
@@ -581,7 +581,7 @@ export function StepAllocation() {
           ? configs.some((c: any) => c.sectionName === sec.name)
           : (sExt.sections ?? []).includes(sec.name)
         if (!isAssigned) return
-        // Sort: band-appropriate first, then by lightest load — ignore max cap this pass
+        // Sort: band-appropriate first, then by lightest load - ignore max cap this pass
         const sorted = [...(staff as Staff[])].sort((a, b) => {
           const aOk = teacherAllowedForSection(a as any, sec.name) ? 0 : 1
           const bOk = teacherAllowedForSection(b as any, sec.name) ? 0 : 1
@@ -624,9 +624,9 @@ export function StepAllocation() {
       store.setSubjectAllocations?.(nextPeriods)
       setKeptEdits(kept)
       if (kept > 0) setTimeout(() => setKeptEdits(0), 6000)
-      handleAITeacherAllocate(nextPeriods)   // passes fresh periods — avoids stale-state race
+      handleAITeacherAllocate(nextPeriods)   // passes fresh periods - avoids stale-state race
     } else {
-      // Resources carry no explicit class↔subject mappings — there is nothing
+      // Resources carry no explicit class↔subject mappings - there is nothing
       // to sync. NEVER overwrite the existing matrix with an empty one (the
       // grid's own capacity-aware auto-fill may have just populated it).
       handleAITeacherAllocate()
@@ -682,7 +682,7 @@ export function StepAllocation() {
       handleSyncFromResources()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // intentionally mount-only — autoRanRef prevents double-fire in StrictMode
+  }, []) // intentionally mount-only - autoRanRef prevents double-fire in StrictMode
 
   // Safety net: any time an over-capacity hard conflict exists, clamp it away.
   useEffect(() => {
@@ -754,7 +754,7 @@ export function StepAllocation() {
     }
   }, [staff, teacherAllocations])
 
-  // ── Toolbar extra for the periods tab — thin spreadsheet ribbon ──────────
+  // ── Toolbar extra for the periods tab - thin spreadsheet ribbon ──────────
   const periodsToolbarExtra = (
     <>
       {/* Sort toggles */}
@@ -767,7 +767,7 @@ export function StepAllocation() {
         ↔ Cols
       </button>
 
-      {/* Mode toggle: Periods | Hours — flat underline tabs */}
+      {/* Mode toggle: Periods | Hours - flat underline tabs */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '1.5px solid #EEECF8' }}>
         {(['periods', 'hours'] as const).map(m => (
           <button key={m} onClick={() => setDisplayMode(m)} style={{
@@ -787,7 +787,7 @@ export function StepAllocation() {
         1p={periodMinutes}m
       </span>
 
-      {/* HI Suggest — invisible intelligence */}
+      {/* HI Suggest - invisible intelligence */}
       <button onClick={handleAIPeriodSuggest} style={{
         display: 'inline-flex', alignItems: 'center', gap: 3,
         padding: '2px 7px', borderRadius: 4,
@@ -850,7 +850,7 @@ export function StepAllocation() {
         {/* ── Left: main content ── */}
         <div style={{ minWidth: 0 }}>
 
-          {/* ── Sub-tabs + Sync button — right edge aligns exactly with the table ── */}
+          {/* ── Sub-tabs + Sync button - right edge aligns exactly with the table ── */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 0, marginBottom: 10,
             borderBottom: '1px solid #EEECF8',
@@ -889,7 +889,7 @@ export function StepAllocation() {
             </div>
           </div>
 
-          {/* ── Persistent conflict banner — real-time alert on all tabs ── */}
+          {/* ── Persistent conflict banner - real-time alert on all tabs ── */}
           {hardConflicts.length > 0 && (
             <div style={{
               display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10,
@@ -921,7 +921,7 @@ export function StepAllocation() {
             </div>
           )}
 
-          {/* Action bar — only shown for teacher + validation tabs */}
+          {/* Action bar - only shown for teacher + validation tabs */}
           {sub !== 'periods' && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const,
@@ -1159,7 +1159,7 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
     { syntax: '5+1', desc: 'Theory + 1 lab period' },
     { syntax: '3(2X)', desc: '3 double periods' },
     { syntax: '2L', desc: 'Lab only periods' },
-    { syntax: '—', desc: 'Not applicable' },
+    { syntax: '-', desc: 'Not applicable' },
   ]
   return (
     <SideCard title="Period Syntax Guide" icon={<BookOpen size={13} />}>
@@ -1187,9 +1187,9 @@ function PeriodSyntaxGuide({ periodMinutes }: { periodMinutes: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Sidebar: Workload norms — Blueprint v6, Step 5
+// Sidebar: Workload norms - Blueprint v6, Step 5
 //
-// "The globally-set workload/hours-per-week (from Step 0 — either the
+// "The globally-set workload/hours-per-week (from Step 0 - either the
 //  country-wise auto-populated default, or the admin's custom override) is shown
 //  for both faculty and students."
 //
@@ -1207,7 +1207,7 @@ function WorkloadNormPanel({
   sections: Section[]
   onEdit: () => void
 }) {
-  // Only the bands this school actually has — a primary school shouldn't be
+  // Only the bands this school actually has - a primary school shouldn't be
   // shown senior-secondary norms it will never use.
   const bands = useMemo(() => {
     const seen = new Set<string>()
@@ -1260,13 +1260,13 @@ function WorkloadNormPanel({
           <strong style={{ fontFamily: "'DM Mono', monospace", color: '#13111E' }}>{teacher.hours} h</strong>
         ) : (
           <span style={{ fontSize: 10.5, color: '#B45309' }}>
-            {teacher ? 'includes prep — set a custom cap' : 'not in the reference set'}
+            {teacher ? 'includes prep - set a custom cap' : 'not in the reference set'}
           </span>
         )}
       </div>
       {/* Edited here, not in Settings. This figure seeds the allocation on this
-          same screen, so sending someone away to change it — and back again to
-          see what it did — was the wrong shape for the task. */}
+          same screen, so sending someone away to change it - and back again to
+          see what it did - was the wrong shape for the task. */}
       <button
         onClick={onEdit}
         style={{
@@ -1432,7 +1432,7 @@ function AIAllocationNotesPanel({
       return load > 0 && load < max * 0.4
     })
     if (light.length > 0 && light.length <= 3)
-      out.push({ kind: 'info', text: `${light.map(t => t.name).join(' & ')} are light — available for extras or substitution pool.` })
+      out.push({ kind: 'info', text: `${light.map(t => t.name).join(' & ')} are light - available for extras or substitution pool.` })
 
     // Unassigned
     const unassigned = staff.filter(t => {
@@ -1444,7 +1444,7 @@ function AIAllocationNotesPanel({
       return load === 0
     })
     if (unassigned.length > 0)
-      out.push({ kind: 'warn', text: `${unassigned.length} teacher${unassigned.length > 1 ? 's' : ''} unassigned — pending subject mapping.` })
+      out.push({ kind: 'warn', text: `${unassigned.length} teacher${unassigned.length > 1 ? 's' : ''} unassigned - pending subject mapping.` })
 
     if (out.length === 0 && staff.length > 0)
       out.push({ kind: 'ok', text: 'All teachers balanced. No allocation conflicts detected.' })
@@ -1467,10 +1467,10 @@ function AIAllocationNotesPanel({
 
 function ActiveConstraintsPanel() {
   const constraints = [
-    'Max load enforced per type — specialist 35p, class teacher 35p, activity 30p / 20h',
-    'Vertical continuity — same teacher follows class across years',
-    'HRT first — class teacher assigned to own class before others',
-    'No double booking — teacher can\'t appear in two classes at the same period',
+    'Max load enforced per type - specialist 35p, class teacher 35p, activity 30p / 20h',
+    'Vertical continuity - same teacher follows class across years',
+    'HRT first - class teacher assigned to own class before others',
+    'No double booking - teacher can\'t appear in two classes at the same period',
   ]
   return (
     <SideCard title="Active constraints" icon={<ShieldCheck size={13} color="#0A8136" />}>
@@ -1510,7 +1510,7 @@ function AllocationSummaryPanel({
           <SumRow label="Unassigned"         value={teacherStats.unassigned}     color={teacherStats.unassigned > 0 ? '#B8B4D4' : undefined} />
         </tbody>
       </table>
-      {/* SumRow renders a <tr>, so it needs a table around it — these two used
+      {/* SumRow renders a <tr>, so it needs a table around it - these two used
           to sit in a bare <div>, which is invalid DOM and what React was
           warning about on every render of this panel. */}
       <div style={{ marginTop: 8, borderTop: '1px solid #F0EDFF', paddingTop: 8 }}>

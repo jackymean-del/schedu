@@ -1,5 +1,5 @@
 /**
- * Shared Print/PDF preview — used by every "print" action across schedU so the
+ * Shared Print/PDF preview - used by every "print" action across schedU so the
  * output is standardized: institution logo + name + address + document title on
  * top, the schedU watermark + print date-time in the footer, a paper-saving
  * toggle, and a big Print button. Paper size + orientation are chosen in the
@@ -119,7 +119,7 @@ function PrintPreviewBody({ title, session, subtitle, items, onClose }: {
   }, [])
 
   const doPrint = () => {
-    // Margin only — the printer dialog owns paper size + orientation.
+    // Margin only - the printer dialog owns paper size + orientation.
     let ps = document.getElementById('schedu-print-page') as HTMLStyleElement | null
     if (!ps) { ps = document.createElement('style'); ps.id = 'schedu-print-page'; document.head.appendChild(ps) }
     ps.textContent = `@page { margin: 10mm; }`

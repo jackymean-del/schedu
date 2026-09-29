@@ -1,7 +1,7 @@
 /**
  * Weekday names, in one place.
  *
- * This list was declared six times across lib/ and pages/ — identical every
+ * This list was declared six times across lib/ and pages/ - identical every
  * time, which is exactly how it stays until it isn't. Every bug fixed in this
  * codebase lately has been the same shape: two derivations of one fact that
  * eventually disagree. A day-name list that drifts would silently mis-key the
@@ -32,7 +32,7 @@ export const DEFAULT_WORK_DAYS: string[] =
   ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
 
 /**
- * Timetable day keys vary in the wild — 'MONDAY', 'Mon', 'monday' — because
+ * Timetable day keys vary in the wild - 'MONDAY', 'Mon', 'monday' - because
  * they have been written by several generations of the wizard and by pasted
  * spreadsheets. Compare on the first three letters, case-insensitively.
  */
@@ -53,7 +53,7 @@ export const dayNameOf = (d: Date) => DAY_NAMES[d.getDay()]
  *
  * Never `toISOString().slice(0, 10)`: that converts to UTC first, so the date
  * is wrong for part of every day in every timezone that is not UTC. India is
- * UTC+5:30, so from midnight until 05:29 local it reports YESTERDAY — a
+ * UTC+5:30, so from midnight until 05:29 local it reports YESTERDAY - a
  * principal declaring an unexpected holiday at 6am would have filed it against
  * the previous day and left today's lessons running. West of Greenwich the
  * error runs the other way, late in the evening.

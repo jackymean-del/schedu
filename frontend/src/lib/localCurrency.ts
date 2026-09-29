@@ -1,6 +1,6 @@
 /**
  * Pricing currency rule (simple, deliberate):
- *   • India   → shown in INR (₹) — the real charge (Razorpay bills INR).
+ *   • India   → shown in INR (₹) - the real charge (Razorpay bills INR).
  *   • Everyone else → shown in USD ($), ROUNDED to a whole dollar, using the
  *     LIVE INR→USD rate. No local-currency conversion, no "≈", and no
  *     equivalent-in-rupees number.
@@ -18,7 +18,7 @@ export const FALLBACK_INR_USD = 0.012
  * signal is enough.
  */
 export function isIndia(): boolean {
-  // Timezone is the strongest geographic signal — an Indian expat abroad (whose
+  // Timezone is the strongest geographic signal - an Indian expat abroad (whose
   // browser may still list en-IN) should see USD, so we do NOT scan secondary
   // languages; only the primary locale region + the timezone decide.
   try {

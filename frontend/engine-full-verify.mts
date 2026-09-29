@@ -5,14 +5,14 @@
  * 8×6 grid, full allocation matrix + day-offs + blocked availability) and
  * machine-checks every hard invariant on the solver output:
  *
- *   INV1  teacher-clash   — no teacher in two sections at the same (day,period)
- *   INV2  frequency       — placed(sec,subject) === allocation target, 100%
- *   INV3  eligibility     — assigned teacher actually teaches that subject
- *   INV4  mirror          — teacherTT is consistent with classTT
- *   INV5  day-off         — no lessons on a section's off day
- *   INV6  availability    — 'blocked' teacher slots are never used
- *   INV7  spread          — no subject crammed >ceil(target/days)+1 on one day
- *   INV8  overload        — teacher weekly load ≤ maxPeriodsPerWeek (report)
+ *   INV1  teacher-clash   - no teacher in two sections at the same (day,period)
+ *   INV2  frequency       - placed(sec,subject) === allocation target, 100%
+ *   INV3  eligibility     - assigned teacher actually teaches that subject
+ *   INV4  mirror          - teacherTT is consistent with classTT
+ *   INV5  day-off         - no lessons on a section's off day
+ *   INV6  availability    - 'blocked' teacher slots are never used
+ *   INV7  spread          - no subject crammed >ceil(target/days)+1 on one day
+ *   INV8  overload        - teacher weekly load ≤ maxPeriodsPerWeek (report)
  *   PERF  solve time for the 30-section school (and a 2× stress size)
  *
  * Run: npx tsx engine-full-verify.mts
@@ -95,8 +95,8 @@ function buildSchool(sectionsPerGrade: number) {
 
 // ── Invariant checks ───────────────────────────────────────────────────────
 let failures = 0
-const pass = (label: string, extra = '') => console.log(`✓ ${label}${extra ? ' — ' + extra : ''}`)
-const fail = (label: string, extra = '') => { failures++; console.log(`✗ ${label}${extra ? ' — ' + extra : ''}`) }
+const pass = (label: string, extra = '') => console.log(`✓ ${label}${extra ? ' - ' + extra : ''}`)
+const fail = (label: string, extra = '') => { failures++; console.log(`✗ ${label}${extra ? ' - ' + extra : ''}`) }
 const check = (ok: boolean, label: string, extra = '') => (ok ? pass(label, extra) : fail(label, extra))
 
 function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) => boolean; offDay?: string; blockedTeacher?: string; blockedDay?: string }) {
@@ -104,7 +104,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
   const classTT = out.classTT as Record<string, Record<string, Record<string, Any>>>
   const teacherOf = new Map(staff.map((s: Any) => [s.name, s]))
 
-  // INV1 — teacher clash
+  // INV1 - teacher clash
   let clashes = 0
   for (const day of WORK_DAYS) {
     for (const pid of CLASS_PERIOD_IDS) {
@@ -113,7 +113,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
         const cell = classTT[sec.name]?.[day]?.[pid]
         if (!cell) continue
         // A pooled optional block legitimately shares its teachers across its
-        // member sections in the same slot — same blockId = same lesson.
+        // member sections in the same slot - same blockId = same lesson.
         const teachers: string[] = cell.options?.length
           ? cell.options.map((o: Any) => o.teacher).filter(Boolean)
           : cell.teacher ? [cell.teacher] : []
@@ -128,7 +128,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
   }
   check(clashes === 0, 'INV1 no teacher double-booking', clashes ? `${clashes} clashes` : 'clean')
 
-  // INV2 — frequency: placed === target for every (section, subject)
+  // INV2 - frequency: placed === target for every (section, subject)
   let exact = 0, short = 0, over = 0, totalPairs = 0, missing = 0
   for (const sec of sections) {
     for (const [sub, targetStr] of Object.entries(subjectAllocations[sec.name])) {
@@ -150,7 +150,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
   check(exact === totalPairs, `INV2 frequency exact ${exact}/${totalPairs} (${pct}%)`,
     exact === totalPairs ? 'all targets met' : `${short} short (${missing} periods missing), ${over} over`)
 
-  // INV3 — eligibility
+  // INV3 - eligibility
   let wrongSubject = 0
   for (const sec of sections) {
     for (const day of WORK_DAYS) {
@@ -164,7 +164,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
   }
   check(wrongSubject === 0, 'INV3 teacher-subject eligibility', wrongSubject ? `${wrongSubject} mismatches` : 'every lesson taught by a specialist')
 
-  // INV4 — teacherTT mirrors classTT (shape: teacherTT[t].schedule[day][pid].sectionName)
+  // INV4 - teacherTT mirrors classTT (shape: teacherTT[t].schedule[day][pid].sectionName)
   let mirrorBad = 0
   for (const sec of sections) {
     for (const day of WORK_DAYS) {
@@ -178,7 +178,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
   }
   check(mirrorBad === 0, 'INV4 teacherTT mirrors classTT', mirrorBad ? `${mirrorBad} missing/incorrect` : 'consistent')
 
-  // INV5 — day-off honored
+  // INV5 - day-off honored
   if (opts.offDay && opts.offDaySections) {
     let offViol = 0
     for (const sec of sections) {
@@ -189,7 +189,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
     check(offViol === 0, `INV5 day-off honored (${opts.offDay})`, offViol ? `${offViol} lessons on off day` : 'no lessons placed')
   }
 
-  // INV6 — blocked availability honored
+  // INV6 - blocked availability honored
   if (opts.blockedTeacher && opts.blockedDay) {
     let availViol = 0
     for (const sec of sections) {
@@ -203,7 +203,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
       availViol ? `${availViol} placements on blocked day` : 'never scheduled')
   }
 
-  // INV7 — daily spread: subject ≤ ceil(target/days)+1 per day
+  // INV7 - daily spread: subject ≤ ceil(target/days)+1 per day
   let crammed = 0
   for (const sec of sections) {
     for (const [sub, targetStr] of Object.entries(subjectAllocations[sec.name])) {
@@ -216,7 +216,7 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
   }
   check(crammed === 0, 'INV7 daily spread (≤ceil(target/6)+1 per day)', crammed ? `${crammed} crammed days` : 'well spread')
 
-  // INV8 — weekly overload (soft in engine; report)
+  // INV8 - weekly overload (soft in engine; report)
   const load: Record<string, number> = {}
   for (const sec of sections) for (const day of WORK_DAYS) for (const pid of CLASS_PERIOD_IDS) {
     const cell = classTT[sec.name]?.[day]?.[pid]
@@ -264,8 +264,8 @@ const out1b = solveTimetable({
 } as Any)
 check(JSON.stringify(out1.classTT) === JSON.stringify(out1b.classTT), 'DET deterministic output', 'same input ⇒ same timetable')
 
-// ── Run 2: stress 2× (60 sections) — perf scaling ──────────────────────────
-console.log('\n════ Run 2: stress — 4 sections/grade (60 sections) ════')
+// ── Run 2: stress 2× (60 sections) - perf scaling ──────────────────────────
+console.log('\n════ Run 2: stress - 4 sections/grade (60 sections) ════')
 const big = buildSchool(4)
 console.log(`sections=${big.sections.length} staff=${big.staff.length}`)
 const t2 = performance.now()
@@ -288,7 +288,7 @@ for (const sec of miniSections) {
   miniAlloc[sec.name]['Science'] = '2s=2p' // two 2-period lab blocks weekly (4 periods)
 }
 // Bell-true adjacency: p1→p2, p3→p4, p5→p6, p6→p7, p7→p8 are contiguous
-// (p2→p3 straddles Break, p4→p5 straddles Lunch — NOT contiguous).
+// (p2→p3 straddles Break, p4→p5 straddles Lunch - NOT contiguous).
 const adjacency = Object.fromEntries(miniSections.map((s: Any) => [s.name, ['p1', 'p3', 'p5', 'p6', 'p7']]))
 const out3 = solveTimetable({
   sections: miniSections, staff: mini.staff, subjects: mini.subjects,
@@ -312,13 +312,13 @@ for (const sec of miniSections) {
   }
 }
 check(doubleSeen > 0 && doubleBad === 0, 'INV9 double periods never straddle a break',
-  `${doubleSeen} doubles seen, ${doubleBad} straddling${doubleSeen === 0 ? ' (VACUOUS — no doubles placed!)' : ''}`)
+  `${doubleSeen} doubles seen, ${doubleBad} straddling${doubleSeen === 0 ? ' (VACUOUS - no doubles placed!)' : ''}`)
 
 // ── INV10: two classes are never sent to the same room at once ─────────────
 //
 // The solver copies each section's HOME room onto its lessons and never asks
-// whether that room is free, so a school with fewer rooms than classes — one
-// lab, one computer suite — gets them booked together silently. Allocating
+// whether that room is free, so a school with fewer rooms than classes - one
+// lab, one computer suite - gets them booked together silently. Allocating
 // rooms properly is still ahead of us; DETECTING the clash is not, and this
 // pins both halves: that a normal school raises nothing, and that a shared
 // room raises exactly what it should.
@@ -378,7 +378,7 @@ console.log(`\n════ Run 4: rooms ════`)
 
   // And a school that never had a clash must never be moved out of its own
   // rooms. (Comparing whole timetables with and without a `rooms` list would
-  // prove nothing here — that list also feeds the learning-group splitter, so
+  // prove nothing here - that list also feeds the learning-group splitter, so
   // it changes other things for reasons that have nothing to do with venues.)
   const normal = buildSchool(2)
   const normalOut: Any = solveTimetable({
@@ -392,7 +392,7 @@ console.log(`\n════ Run 4: rooms ════`)
       for (const pid of CLASS_PERIOD_IDS) {
         const cell: Any = normalOut.classTT[sec.name]?.[day]?.[pid]
         if (!cell?.subject || !cell.room || cell.room === sec.room) continue
-        // Optional blocks pool several sections into one venue on purpose —
+        // Optional blocks pool several sections into one venue on purpose -
         // that is the block's room, not a section being displaced.
         if (cell.optionalBlockId) continue
         moved++
@@ -410,7 +410,7 @@ console.log(`\n════ Run 4: rooms ════`)
 // An OR/AND cell runs parallel subjects in one slot and carries a teacher PER
 // SUBJECT in groupAssignments; the cell-level `teacher` is documented as a copy
 // of the first. deriveTeacherAllocations, deriveSubjectAllocations and
-// rebuildTeacherTT all walk the whole list — conflict detection did not, in
+// rebuildTeacherTT all walk the whole list - conflict detection did not, in
 // BOTH of the places it is implemented. So the teacher taking the second group
 // could be down for another class at the same moment and nothing said so, and
 // the more groups a school runs the more of its staff went unchecked.
@@ -447,7 +447,7 @@ console.log(`
 // ── INV13: a class too big for its room ────────────────────────────────────
 //
 // 'capacity-exceeded' was declared in the Conflict union, labelled in the
-// resolution wizard, and never produced — the third type in that state. The
+// resolution wizard, and never produced - the third type in that state. The
 // numbers were always there: a section carries its strength, a room its
 // capacity. Now that the solver picks rooms, the pairing is worth checking.
 console.log(`
@@ -469,7 +469,7 @@ console.log(`
     'INV13a the class of 45 in a room for 30 is reported',
     over.length ? over[0].message : 'nothing reported')
 
-  // Once per pairing, not once per period — forty duplicates would bury every
+  // Once per pairing, not once per period - forty duplicates would bury every
   // other conflict in the list.
   check(over.length === new Set(over.map((c: Any) => c.message)).size && over.length <= 2,
     'INV13b reported once per class-and-room, not once per lesson',
@@ -489,7 +489,7 @@ console.log(`
 //
 // Both of these are about refusing to lie. Under-resourced schools are the
 // normal case, not the edge case, and the failure that matters is not "some
-// lessons are unplaced" — it is a timetable that looks complete because the
+// lessons are unplaced" - it is a timetable that looks complete because the
 // solver quietly broke a promise to fill it.
 console.log(`
 ════ Run 5: impossible inputs ════`)
@@ -513,7 +513,7 @@ console.log(`
     }
   }
 
-  // 180 periods of demand against three teachers capped at 25 — 75 legal
+  // 180 periods of demand against three teachers capped at 25 - 75 legal
   // periods in total. The cap must hold and the rest must go unplaced.
   const tight = tinySchool(true)
   const tightOut: Any = solveTimetable(tight as Any)
@@ -551,7 +551,7 @@ console.log(`
 
 // ── INV15: the repair must not blow up on a school that needs it ───────────
 //
-// Pass 3 repairs shortfalls, so it has most to do on a school with no slack —
+// Pass 3 repairs shortfalls, so it has most to do on a school with no slack -
 // which is precisely the under-resourced school it exists to help. Its inner
 // loop recomputed the day's teaching counts from scratch, once per candidate
 // teacher per candidate slot: measured at 27 SECONDS for forty sections at
@@ -559,7 +559,7 @@ console.log(`
 // counts are kept current instead, like teacherBusy always was.
 //
 // A time-based check is a blunt instrument and machines differ, so the ceiling
-// here is deliberately loose — it is there to catch a return to quadratic
+// here is deliberately loose - it is there to catch a return to quadratic
 // behaviour, not to police milliseconds.
 console.log(`
 ════ Run 8: the repair under saturation ════`)
@@ -589,12 +589,12 @@ console.log(`
 //
 // Pass 1 gives the class teacher Period 1. It used to give them Period 1 on
 // EVERY working day with no reference to the subject's weekly quota, so a class
-// teacher of Hindi in a school that wants one Hindi period a week got six — and
+// teacher of Hindi in a school that wants one Hindi period a week got six - and
 // on a full timetable the subjects those slots displaced were never taught at
 // all. A class asked for Science once a week and got none.
 //
 // Nothing above caught it because every section in this file is built with
-// classTeacher: '' — the flagship fixture never exercised Pass 1 at all. Found
+// classTeacher: '' - the flagship fixture never exercised Pass 1 at all. Found
 // by engine-stress-verify, pinned here.
 {
   const WD = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
@@ -608,7 +608,7 @@ console.log(`
   ]
   const subjects: Any[] = ['Hindi', 'Mathematics', 'Science', 'English']
     .map((n, i) => ({ id: `s${i}`, name: n, periodsPerWeek: 5 }))
-  // 20 slots, and Hindi — the class teacher's subject — is wanted just twice.
+  // 20 slots, and Hindi - the class teacher's subject - is wanted just twice.
   const alloc = { 'VI-A': { Hindi: '2', Mathematics: '6', Science: '6', English: '6' } }
 
   const out: Any = solveTimetable({
@@ -630,7 +630,7 @@ console.log(`
     'and the subject it used to displace is still taught',
     `Science=${count.Science ?? 0} of 6 wanted`)
 
-  // The class teacher should still OWN Period 1 on the days they teach — the
+  // The class teacher should still OWN Period 1 on the days they teach - the
   // fix bounds the quota, it does not abandon the pastoral slot.
   const p1Hindi = WD.filter(d => out.classTT['VI-A']?.[d]?.p1?.teacher === 'CT').length
   check(p1Hindi === 2, 'and still takes Period 1 on the days they do teach', `${p1Hindi} of 2`)

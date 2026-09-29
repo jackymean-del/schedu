@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * "Seven things only schedU does" — every card opens a small INTERACTIVE
+ * "Seven things only schedU does" - every card opens a small INTERACTIVE
  * demo of that exact mechanic (not a screenshot, not a video). Each demo
  * mirrors the real product behavior it claims: cross-timetable clash
  * detection, grade-naming adaptation + directory auto-link, staggered
@@ -12,12 +12,12 @@ import { useEffect, useState } from "react";
  */
 
 const FEATURES = [
-  { icon: "🔀", key: "clash", title: "Cross-timetable clash detection", desc: "The same faculty member double-booked across two entirely separate timetables — caught instantly, not just within one schedule." },
-  { icon: "🔗", key: "naming", title: "Directory auto-link, any naming convention", desc: "Name your levels “KG1”, “Grade 1”, “Year 7”, or “Class-I” — schedU adapts and groups them. Type a faculty or room name that already exists and it links automatically: one record, reused everywhere." },
-  { icon: "🍱", key: "breaks", title: "Per-grade staggered breaks", desc: "Nursery breaks after P3, Class VI after P5, Class XI after P6 — every grade's break lands at its own real time, automatically." },
+  { icon: "🔀", key: "clash", title: "Cross-timetable clash detection", desc: "The same faculty member double-booked across two entirely separate timetables - caught instantly, not just within one schedule." },
+  { icon: "🔗", key: "naming", title: "Directory auto-link, any naming convention", desc: "Name your levels “KG1”, “Grade 1”, “Year 7”, or “Class-I” - schedU adapts and groups them. Type a faculty or room name that already exists and it links automatically: one record, reused everywhere." },
+  { icon: "🍱", key: "breaks", title: "Per-grade staggered breaks", desc: "Nursery breaks after P3, Class VI after P5, Class XI after P6 - every grade's break lands at its own real time, automatically." },
   { icon: "🔁", key: "transpose", title: "Transpose any view instantly", desc: "Flip Class, Faculty, Venue, or Subject views between periods-as-columns and days-as-columns with one click." },
-  { icon: "🧩", key: "andor", title: "True AND / OR combination engine", desc: "AND runs subjects in genuine parallel across sections, streams, and blocks. OR competes for a single slot based on real period need — never a fake simultaneous split." },
-  { icon: "🛟", key: "sub", title: "Live mode with substitutions & fair duty assignments", desc: "A board that follows the clock on every view. Drag ahead to any upcoming period, mark a faculty member absent, and get ranked cover scored on real workload — assign in one click, with a fairness note on every pick." },
+  { icon: "🧩", key: "andor", title: "True AND / OR combination engine", desc: "AND runs subjects in genuine parallel across sections, streams, and blocks. OR competes for a single slot based on real period need - never a fake simultaneous split." },
+  { icon: "🛟", key: "sub", title: "Live mode with substitutions & fair duty assignments", desc: "A board that follows the clock on every view. Drag ahead to any upcoming period, mark a faculty member absent, and get ranked cover scored on real workload - assign in one click, with a fairness note on every pick." },
 ];
 
 export function UniqueFeatures() {
@@ -61,7 +61,7 @@ export function UniqueFeatures() {
               {open === "andor" && <DemoAndOr />}
               {open === "sub" && <DemoSub />}
             </div>
-            <div className="uf-modal-foot">Illustrative data — the mechanic is the real one.</div>
+            <div className="uf-modal-foot">Illustrative data - the mechanic is the real one.</div>
           </div>
         </div>
       )}
@@ -85,7 +85,7 @@ function DemoClash() {
               {["P1", "P2", "P3"].map((p, pi) => (
                 <div key={p} className={`uf-cell ${booked && pi === 1 ? "uf-cell-clash" : ""}`}>
                   <b>{p}</b>
-                  {pi === 1 ? <span>{booked ? "J. Abraham ⚠" : i === 0 ? "J. Abraham" : "— free —"}</span> : <span>{["M. Esther", "", "D. Samuel"][pi]}</span>}
+                  {pi === 1 ? <span>{booked ? "J. Abraham ⚠" : i === 0 ? "J. Abraham" : "- free -"}</span> : <span>{["M. Esther", "", "D. Samuel"][pi]}</span>}
                 </div>
               ))}
             </div>
@@ -93,7 +93,7 @@ function DemoClash() {
         ))}
       </div>
       <button className="uf-btn" onClick={() => setBooked((b) => !b)}>{booked ? "Undo" : "Book J. Abraham in VI-X TT · P2"}</button>
-      {booked && <div className="uf-alert">⚠ Cross-timetable clash — J. Abraham is already teaching in <b>I-V TT</b> at P2. Caught the moment you typed it, across two separate schedules.</div>}
+      {booked && <div className="uf-alert">⚠ Cross-timetable clash - J. Abraham is already teaching in <b>I-V TT</b> at P2. Caught the moment you typed it, across two separate schedules.</div>}
     </div>
   );
 }
@@ -105,7 +105,7 @@ function parseLevel(v: string): string | null {
   if (/^(kg|pp|nur)/.test(s)) return "Pre-Primary group";
   if (/^(grade|class|std|year|form)[\s-]*([1-5])$/.test(s) || /^[iv]{1,3}$/.test(s)) return "Primary group";
   if (/^(grade|class|std|year|form)[\s-]*([6-9]|1[0-2])$/.test(s) || /^(vi|vii|viii|ix|x|xi|xii)$/.test(s)) return "Secondary group";
-  return "Custom level — kept exactly as typed";
+  return "Custom level - kept exactly as typed";
 }
 function DemoNaming() {
   const [level, setLevel] = useState("");
@@ -114,12 +114,12 @@ function DemoNaming() {
   const linked = "j. abraham".startsWith(fac.trim().toLowerCase()) && fac.trim().length >= 3;
   return (
     <div>
-      <p className="uf-p">Type a level in <b>your</b> convention — “KG1”, “Grade 1”, “Year 7”, “Class-I”, anything:</p>
+      <p className="uf-p">Type a level in <b>your</b> convention - “KG1”, “Grade 1”, “Year 7”, “Class-I”, anything:</p>
       <input className="uf-input" placeholder="e.g. KG1 or Year 7" value={level} onChange={(e) => setLevel(e.target.value)} />
-      {parsed && <div className="uf-ok">✓ Understood — grouped under <b>{parsed}</b>, spacing tidied, sections auto-built.</div>}
+      {parsed && <div className="uf-ok">✓ Understood - grouped under <b>{parsed}</b>, spacing tidied, sections auto-built.</div>}
       <p className="uf-p" style={{ marginTop: 14 }}>Now start typing a faculty name that already exists (try “J. A…”):</p>
       <input className="uf-input" placeholder="e.g. J. Abraham" value={fac} onChange={(e) => setFac(e.target.value)} />
-      {linked && <div className="uf-ok">🔗 Linked to the existing directory record <b>J. Abraham</b> — one person, reused across every schedule. No duplicates, ever.</div>}
+      {linked && <div className="uf-ok">🔗 Linked to the existing directory record <b>J. Abraham</b> - one person, reused across every schedule. No duplicates, ever.</div>}
     </div>
   );
 }
@@ -145,7 +145,7 @@ function DemoBreaks() {
           </div>
         ))}
       </div>
-      <p className="uf-p" style={{ marginTop: 10 }}>{smart ? "Each age band eats at its own time — the canteen serves one group at a time, and the generator plans every period around it automatically." : "One shared slot — now flip to Smart and watch each grade get its own lunch, automatically."}</p>
+      <p className="uf-p" style={{ marginTop: 10 }}>{smart ? "Each age band eats at its own time - the canteen serves one group at a time, and the generator plans every period around it automatically." : "One shared slot - now flip to Smart and watch each grade get its own lunch, automatically."}</p>
     </div>
   );
 }
@@ -170,7 +170,7 @@ function DemoTranspose() {
           </div>
         ))}
       </div>
-      <p className="uf-p" style={{ marginTop: 10 }}>{flipped ? "Periods down the side, days across the top." : "Days down the side, periods across the top."} One click, any view — Class, Faculty, Venue, or Subject.</p>
+      <p className="uf-p" style={{ marginTop: 10 }}>{flipped ? "Periods down the side, days across the top." : "Days down the side, periods across the top."} One click, any view - Class, Faculty, Venue, or Subject.</p>
     </div>
   );
 }
@@ -182,23 +182,23 @@ function DemoAndOr() {
   return (
     <div>
       <div className="uf-seg">
-        <button className={mode === "and" ? "is-on" : ""} onClick={() => setMode("and")}>AND — parallel</button>
-        <button className={mode === "or" ? "is-on" : ""} onClick={() => setMode("or")}>OR — one at a time</button>
+        <button className={mode === "and" ? "is-on" : ""} onClick={() => setMode("and")}>AND - parallel</button>
+        <button className={mode === "or" ? "is-on" : ""} onClick={() => setMode("or")}>OR - one at a time</button>
       </div>
       {mode === "and" ? (
         <div>
           <div className="uf-lane" style={{ background: "#EDE9FF" }}>Physics · J. Abraham · Lab-1 <i>Cross-section</i></div>
           <div className="uf-lane" style={{ background: "#DBEAFE" }}>Chemistry · M. Esther · Lab-2 <i>Cross-stream</i></div>
           <div className="uf-lane" style={{ background: "#DCFCE7" }}>Economics · D. Samuel · R-12 <i>Cross-block</i></div>
-          <p className="uf-p">All three run in the <b>same slot</b>, across sections, streams, and blocks — genuine parallel, not a visual trick.</p>
+          <p className="uf-p">All three run in the <b>same slot</b>, across sections, streams, and blocks - genuine parallel, not a visual trick.</p>
         </div>
       ) : (
         <div>
           <div className="uf-lane" style={{ background: week % 2 === 0 ? "#EDE9FF" : "#DBEAFE", borderLeft: `3px solid ${week % 2 === 0 ? "#7C6FE0" : "#3B82F6"}` }}>
-            <b>{week % 2 === 0 ? "Physics" : "Chemistry"}</b> holds the slot — {week % 2 === 0 ? "needs 2 more periods this week" : "Physics is caught up, Chemistry takes it"}
+            <b>{week % 2 === 0 ? "Physics" : "Chemistry"}</b> holds the slot - {week % 2 === 0 ? "needs 2 more periods this week" : "Physics is caught up, Chemistry takes it"}
           </div>
           <button className="uf-btn" onClick={() => setWeek((w) => w + 1)}>Advance a week →</button>
-          <p className="uf-p">One slot, one subject at a time — whichever genuinely needs it more. Never both at once.</p>
+          <p className="uf-p">One slot, one subject at a time - whichever genuinely needs it more. Never both at once.</p>
         </div>
       )}
     </div>
@@ -219,13 +219,13 @@ function DemoSub() {
       {step === 0 && <button className="uf-btn" onClick={() => setStep(1)}>⚑ Mark R. Naomi absent for P4</button>}
       {step === 1 && (
         <div className="uf-subpanel">
-          <b>Ranked cover — scored on real workload:</b>
-          <button className="uf-cand is-top" onClick={() => setStep(2)}>① T. Moses · free at P4 · 1 duty today · light week ✓ — <u>assign</u></button>
+          <b>Ranked cover - scored on real workload:</b>
+          <button className="uf-cand is-top" onClick={() => setStep(2)}>① T. Moses · free at P4 · 1 duty today · light week ✓ - <u>assign</u></button>
           <div className="uf-cand">② E. Ruth · free at P4 · 4 today</div>
         </div>
       )}
-      {step === 2 && <div className="uf-ok">✓ Assigned. Fairness note: this is T. Moses&rsquo;s <b>first extra duty this week</b> — the lightest-loaded eligible pick. <button className="uf-reset" onClick={() => setStep(0)}>reset</button></div>}
-      {step === 0 && <p className="uf-p">You plan cover <b>ahead of time</b> — mark the absence for an upcoming period and schedU ranks who can take it, fairly.</p>}
+      {step === 2 && <div className="uf-ok">✓ Assigned. Fairness note: this is T. Moses&rsquo;s <b>first extra duty this week</b> - the lightest-loaded eligible pick. <button className="uf-reset" onClick={() => setStep(0)}>reset</button></div>}
+      {step === 0 && <p className="uf-p">You plan cover <b>ahead of time</b> - mark the absence for an upcoming period and schedU ranks who can take it, fairly.</p>}
     </div>
   );
 }

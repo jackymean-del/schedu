@@ -30,7 +30,7 @@ export function ClerkAuthSync() {
   // Mirror the Clerk user into the app store.
   useEffect(() => {
     if (!isLoaded) return
-    // Auth is now resolved for this page load — let protected pages render
+    // Auth is now resolved for this page load - let protected pages render
     // (or redirect) instead of showing the loader indefinitely.
     useAuthStore.setState({ authReady: true })
     if (!isSignedIn || !user) {
@@ -75,7 +75,7 @@ export function ClerkAuthSync() {
             user: s.user ? { ...s.user, plan: (d.plan as AuthUser['plan']) ?? s.user.plan, role: (d.role as AuthUser['role']) ?? s.user.role } : s.user,
           }))
         })
-        .catch(() => { /* backend optional/offline — keep Clerk-derived values */ })
+        .catch(() => { /* backend optional/offline - keep Clerk-derived values */ })
     })
   }, [isLoaded, isSignedIn, user, getToken])
 

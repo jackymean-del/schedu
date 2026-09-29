@@ -1,4 +1,4 @@
-# Scene 1 — Dashboard → "New schedule"
+# Scene 1 - Dashboard → "New schedule"
 
 **Caption:** "Start here."
 **Duration:** 2600ms
@@ -22,7 +22,7 @@ CTA ~1549, Pulse ~1567, "Your schedules" ~1587, `CreateTimetableModal` ~418).
 └────────────────────────────────────────────────────────────┘
 ```
 
-Faithful details: "New schedule" button (NOT "New Timetable" — real label,
+Faithful details: "New schedule" button (NOT "New Timetable" - real label,
 dashboard.tsx:1561) uses `linear-gradient(135deg,#7C6FE0,#5D4FCF)`, white
 text 14px/700, radius 10, `+` icon. Greeting is time-of-day dynamic in the
 real app; mockup hardcodes "Good morning".
@@ -33,10 +33,10 @@ real app; mockup hardcodes "Good morning".
 |---|---|
 | 0–500 | cursor fades in bottom-left, idles |
 | 500–1100 | glides to the "+ New schedule" button (top-right) |
-| 1200 | **click** — ring pulse; button plays a 120ms press-scale |
+| 1200 | **click** - ring pulse; button plays a 120ms press-scale |
 | 1350–2600 | **outcome:** the `CreateTimetableModal` slides up over a dim
   overlay: header "Create new schedule" + sub "AI will generate all defaults
-  — you only refine." — establishing where scene 2's board pick happens |
+  - you only refine." - establishing where scene 2's board pick happens |
 
 ## Click outcome (mandatory)
 
@@ -50,6 +50,6 @@ Dashboard with the modal already open, no cursor.
 ## Fidelity notes
 
 - Pulse strip is a simplification of `DashboardPulse` (a status line + action
-  chip) — same position, same one-line-status idea. OK.
+  chip) - same position, same one-line-status idea. OK.
 - Schedule cards simplified to name+status chip; real cards also show
   counts/menu icons. Acceptable at miniature scale.

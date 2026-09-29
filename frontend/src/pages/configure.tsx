@@ -1,5 +1,5 @@
 /**
- * Configure — redirects to Settings (org profile lives there).
+ * Configure - redirects to Settings (org profile lives there).
  */
 import { useEffect } from 'react'
 

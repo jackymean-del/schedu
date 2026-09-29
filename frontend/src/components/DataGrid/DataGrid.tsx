@@ -1,5 +1,5 @@
 /**
- * DataGrid — schedU's Unified Data Experience System.
+ * DataGrid - schedU's Unified Data Experience System.
  *
  * "If a user understands one table, they understand the whole platform."
  *
@@ -29,7 +29,7 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react'
 import { safeSheetName } from '@/lib/sheetNames'
-// xlsx is loaded on demand (export/import click) — keeps it out of the main bundle
+// xlsx is loaded on demand (export/import click) - keeps it out of the main bundle
 import {
   Plus, Upload, Download, ClipboardPaste, Search, Trash2, Copy, X, ArrowUpDown, Sparkles, ChevronDown,
   Undo2, Redo2, Filter, FileSpreadsheet, ArrowDownToLine, FileText,
@@ -82,15 +82,15 @@ export interface DataGridProps<T> {
    * to delete straight away.
    *
    * Exists because a roster row can be depended on by a generated timetable
-   * that this grid does not own — see lib/resourceUsage for why the right
+   * that this grid does not own - see lib/resourceUsage for why the right
    * answer is to state the consequence rather than either cascade or ignore it.
    */
   confirmDelete?: (rows: T[]) => string | null
 
-  /** Per-row Scope button — rect is the button's bounding rect for popover anchoring. */
+  /** Per-row Scope button - rect is the button's bounding rect for popover anchoring. */
   onScope?: (row: T, rect?: DOMRect) => void
 
-  /** Bulk-scope button in toolbar — sets scope for ALL rows at once. */
+  /** Bulk-scope button in toolbar - sets scope for ALL rows at once. */
   onBulkScope?: (rect?: DOMRect) => void
 
   /**
@@ -100,7 +100,7 @@ export interface DataGridProps<T> {
    */
   stickyHeaderTop?: number
 
-  /** Custom AI suggestions hook — clicked from toolbar. */
+  /** Custom AI suggestions hook - clicked from toolbar. */
   onAISuggestions?: () => void
 
   /** Toolbar visibility flags. All default to true except scope. */
@@ -141,7 +141,7 @@ const TOK = {
   containerBg: '#FFFFFF',
   containerBorder: '#E2E2E7',
   radius: 10,
-  // Grid — compact 32 px rows (spreadsheet-native density)
+  // Grid - compact 32 px rows (spreadsheet-native density)
   headerBg: '#F5F5F6',
   rowNumBg: '#F5F5F6',
   headerHeight: 32,
@@ -159,14 +159,14 @@ const TOK = {
   accent: '#685DBC',
   accentBg: '#EDE9FF',
   accentSoft: '#F5F2FF',
-  // Cell selection — Excel blue
+  // Cell selection - Excel blue
   selectedBg: '#E8F0FE',
   selectedBorder: '#1867C0',
   rangeBg: '#E8F0FE',
 }
 
 // ─────────────────────────────────────────────────────────────
-// Smart-fill v2 — string-series detection helpers
+// Smart-fill v2 - string-series detection helpers
 // Pure functions, declared at module level so they aren't recreated
 // on every render.
 // ─────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ const DAY_CYCLES: string[][] = [
   ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
   ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
   ['Mo','Tu','We','Th','Fr','Sa','Su'],
-  // Work-week only variants — checked after full-week so 5-day input
+  // Work-week only variants - checked after full-week so 5-day input
   // gets the shorter cycle when all values fit within Mon-Fri
   ['Monday','Tuesday','Wednesday','Thursday','Friday'],
   ['Mon','Tue','Wed','Thu','Fri'],
@@ -281,24 +281,24 @@ export function DataGrid<T>({
   const [pendingDelete, setPendingDelete] = useState<{ keys: Set<string>; message: string } | null>(null)
   const [selectionEnd, setSelectionEnd] = useState<{ r: number; c: number } | null>(null)
   const [editing, setEditing] = useState<{ r: number; c: number } | null>(null)
-  // v3: drag-fill state — source cell + current drag target
+  // v3: drag-fill state - source cell + current drag target
   const [fillFrom, setFillFrom] = useState<{ r: number; c: number } | null>(null)
   const [fillTo, setFillTo] = useState<{ r: number; c: number } | null>(null)
-  // v3.1: smart-fill — captures the source range (start..end) when drag begins
+  // v3.1: smart-fill - captures the source range (start..end) when drag begins
   const [fillSourceRange, setFillSourceRange] = useState<
     { startR: number; startC: number; endR: number; endC: number } | null
   >(null)
   // v3.2: cursor position for drag-fill preview tooltip
   const [fillCursor, setFillCursor] = useState<{ x: number; y: number } | null>(null)
-  // context-menu (right-click row) — rowTop/rowBottom anchor to the row's rect, not cursor
+  // context-menu (right-click row) - rowTop/rowBottom anchor to the row's rect, not cursor
   const [ctxMenu, setCtxMenu] = useState<{ x: number; rowTop: number; rowBottom: number; ri: number } | null>(null)
 
-  // Row hover — set by row-number cell OR actions cell; highlights the entire row
+  // Row hover - set by row-number cell OR actions cell; highlights the entire row
   const [hoveredRow, setHoveredRow] = useState<number | null>(null)
-  // Individual data-cell hover — shows subtle tint on the hovered cell
+  // Individual data-cell hover - shows subtle tint on the hovered cell
   const [hoveredCell, setHoveredCell] = useState<{ r: number; c: number } | null>(null)
   const [insertMenuRow, setInsertMenuRow] = useState<number | null>(null)
-  // Per-button hover — key: `${ri}-plus` | `${ri}-copy` | `${ri}-delete`
+  // Per-button hover - key: `${ri}-plus` | `${ri}-copy` | `${ri}-delete`
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null)
 
   // Width of the always-present row-actions gutter column
@@ -309,11 +309,11 @@ export function DataGrid<T>({
   const [pasteText, setPasteText] = useState('')
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulkValue, setBulkValue] = useState('')
-  // v2: column filters — per-column filter spec
+  // v2: column filters - per-column filter spec
   type FilterSpec = { text?: string; min?: number; max?: number; selected?: string[] }
   const [filters, setFilters] = useState<Record<string, FilterSpec>>({})
   const [filterPopover, setFilterPopover] = useState<string | null>(null)
-  // Column sort — key of the column being sorted, and direction
+  // Column sort - key of the column being sorted, and direction
   const [sortCol, setSortCol] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -322,7 +322,7 @@ export function DataGrid<T>({
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Callback ref — fires synchronously when the input/select node is
+  // Callback ref - fires synchronously when the input/select node is
   // inserted into the DOM (before useLayoutEffect, before any setTimeout).
   // This is the ONLY reliable way to focus in React 18 concurrent mode.
   const setEditInputNode = useCallback((node: HTMLInputElement | HTMLSelectElement | null) => {
@@ -335,7 +335,7 @@ export function DataGrid<T>({
     }
   }, [])
 
-  // Refs that mirror state — always up-to-date even inside stale closures /
+  // Refs that mirror state - always up-to-date even inside stale closures /
   // React 18 concurrent batching. Used for reliable single-click edit detection.
   const selectionRef = useRef<{ r: number; c: number } | null>(null)
   const editingRef   = useRef<{ r: number; c: number } | null>(null)
@@ -579,9 +579,9 @@ export function DataGrid<T>({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // applyPaste and applyFillDown are declared BELOW this effect, so they
-    // cannot be listed. They close over nothing this list is missing —
+    // cannot be listed. They close over nothing this list is missing -
     // rows, filteredRows, columns, originalIndex, getCell, setCell, onChange
-    // and newRow are all here — so the handler this captures is never working
+    // and newRow are all here - so the handler this captures is never working
     // from data older than the listener itself. undo/redo keep their history
     // in refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -697,7 +697,7 @@ export function DataGrid<T>({
     setBulkValue('')
   }, [selection, selectionEnd, rows, columns, originalIndex, setCell, onChange])
 
-  // ── v3: Drag-fill — copy source cell value across a rectangle ──
+  // ── v3: Drag-fill - copy source cell value across a rectangle ──
   const applyDragFill = useCallback((
     from: { r: number; c: number },
     to: { r: number; c: number },
@@ -725,7 +725,7 @@ export function DataGrid<T>({
     const isHorizontalRange = srcHeight === 1 && srcWidth > 1
 
     // Compute fill direction: down if to.r > from.r, right if to.c > from.c.
-    // The fill rectangle EXTENDS from the source — the target overlaps the
+    // The fill rectangle EXTENDS from the source - the target overlaps the
     // source on one edge, so we need to skip those source cells.
     const next = rows.slice()
 
@@ -750,7 +750,7 @@ export function DataGrid<T>({
       return vals
     }
 
-    // Detect arithmetic series — constant step between consecutive values
+    // Detect arithmetic series - constant step between consecutive values
     const detectArithmetic = (vals: number[]) => {
       if (vals.length < 2) return null
       const step = vals[1] - vals[0]
@@ -765,7 +765,7 @@ export function DataGrid<T>({
       const origR = originalIndex(r)
       if (origR < 0) continue
       for (let c = c0; c <= c1; c++) {
-        // Skip source cells — the user's pattern stays intact
+        // Skip source cells - the user's pattern stays intact
         if (r >= srcR0 && r <= srcR1 && c >= srcC0 && c <= srcC1) continue
         const col = columns[c]
         if (col.readonly || col.type === 'computed') continue
@@ -1011,7 +1011,7 @@ export function DataGrid<T>({
     onChange([...rows, ...dup])
   }
 
-  /** Direct delete/dup helpers — don't depend on `selection` state (avoids stale closures). */
+  /** Direct delete/dup helpers - don't depend on `selection` state (avoids stale closures). */
   const deleteRowByIndex = useCallback((filteredRi: number) => {
     const origR = originalIndex(filteredRi)
     if (origR < 0) return
@@ -1052,7 +1052,7 @@ export function DataGrid<T>({
   }, [newRow, rows, originalIndex, onChange])
 
 
-  // ── v3.2: fill preview — compute cell count + mode during drag ──
+  // ── v3.2: fill preview - compute cell count + mode during drag ──
   const fillPreview = useMemo(() => {
     if (!fillFrom || !fillTo) return null
     const r0 = Math.min(fillFrom.r, fillTo.r), r1 = Math.max(fillFrom.r, fillTo.r)
@@ -1123,7 +1123,7 @@ export function DataGrid<T>({
     return { count, mode }
   }, [fillFrom, fillTo, fillSourceRange, filteredRows, columns, getCell])
 
-  // ── Auto column widths — computed from header label + content ──
+  // ── Auto column widths - computed from header label + content ──
   const ROW_NUM_W = 46  // px for the left row-number gutter
 
   const computedColWidths = useMemo(() => {
@@ -1265,7 +1265,7 @@ export function DataGrid<T>({
   })
 
   // ── Main render ─────────────────────────────────────────
-  // (The transposed view builds its own columns and rows inline below — the
+  // (The transposed view builds its own columns and rows inline below - the
   // two consts that used to sit here were left over from an earlier version
   // and nothing read them.)
 
@@ -1302,7 +1302,7 @@ export function DataGrid<T>({
       />
       {/* Deleting a roster row can orphan lessons in a generated timetable this
           grid does not own. State the number and the consequence rather than
-          asking "are you sure?" — a bare confirmation teaches people to click
+          asking "are you sure?" - a bare confirmation teaches people to click
           through, and the count is the whole reason to hesitate. */}
       {pendingDelete && (
         <div style={{
@@ -1463,7 +1463,7 @@ export function DataGrid<T>({
                   setCtxMenu({ x: e.clientX, rowTop: rect.top, rowBottom: rect.bottom, ri })
                 }}>
 
-                {/* Row number — hover highlights row, click selects entire row */}
+                {/* Row number - hover highlights row, click selects entire row */}
                 <td
                   onMouseEnter={() => setHoveredRow(ri)}
                   onMouseLeave={() => setHoveredRow(null)}
@@ -1522,7 +1522,7 @@ export function DataGrid<T>({
                         // This fires onBlur → onCommit synchronously, inside the same
                         // React 18 batch as the setState calls below, so setEditing(null)
                         // from the old cell's onBlur is batched with setEditing({r,c}) here
-                        // and the last write wins — no race, no focus-stealing.
+                        // and the last write wins - no race, no focus-stealing.
                         editInputRef.current?.blur()
 
                         if (e.shiftKey && selectionRef.current) {
@@ -1534,7 +1534,7 @@ export function DataGrid<T>({
 
                         if (!col.readonly && col.type !== 'computed' && col.type !== 'toggle') {
                           // Editable cell: setEditInputNode callback ref will focus the
-                          // input the moment React mounts it — no containerRef.focus() needed.
+                          // input the moment React mounts it - no containerRef.focus() needed.
                           setEditing({ r: ri, c: ci })
                         } else {
                           // Non-editable cell: hand keyboard focus to the container so
@@ -1612,7 +1612,7 @@ export function DataGrid<T>({
                                 padding: '0 8px', lineHeight: `${rowH}px`,
                                 fontFamily: col.type === 'number' ? "'DM Mono', monospace" : 'inherit',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-                                // Transparent to pointer events — all clicks fall through to the <td>
+                                // Transparent to pointer events - all clicks fall through to the <td>
                                 // so text content never intercepts onMouseDown on any browser.
                                 pointerEvents: 'none' as const,
                               }}>
@@ -1747,12 +1747,12 @@ export function DataGrid<T>({
               </tr>
             )}
 
-            {/* ── Transposed rows: one row per FIELD (skip col[0] — it's already the header) ── */}
+            {/* ── Transposed rows: one row per FIELD (skip col[0] - it's already the header) ── */}
             {transposed && columns.slice(1).map((srcCol, i) => {
               const fieldIdx = i + 1  // offset to keep selection coords aligned with original column indexes
               return (
               <tr key={srcCol.key}>
-                {/* Field label — sticky left */}
+                {/* Field label - sticky left */}
                 <td style={{
                   ...tdBase, fontWeight: 600, color: TOK.textMid,
                   background: TOK.rowNumBg,
@@ -1818,7 +1818,7 @@ export function DataGrid<T>({
       {/* Paste modal */}
       {pasteOpen && <PasteModal text={pasteText} setText={setPasteText} onCancel={() => { setPasteOpen(false); setPasteText('') }} onApply={() => { applyPaste(pasteText, selection ?? { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} onApplyFromStart={() => { applyPaste(pasteText, { r: 0, c: 0 }); setPasteOpen(false); setPasteText('') }} />}
 
-      {/* v3.2: drag-fill preview tooltip — floats near cursor during drag */}
+      {/* v3.2: drag-fill preview tooltip - floats near cursor during drag */}
       {fillCursor && fillPreview && (
         <div
           style={{
@@ -1955,7 +1955,7 @@ const btnGhost: React.CSSProperties = {
   padding: '4px 9px', borderRadius: 6, border: `1px solid ${TOK.containerBorder}`,
   background: '#fff', color: TOK.textMid, fontSize: 11, fontWeight: 600, cursor: 'pointer',
 }
-// Row-level action icon buttons — 4 variants: rest / hover × normal / danger
+// Row-level action icon buttons - 4 variants: rest / hover × normal / danger
 const rowActBtn: React.CSSProperties = {
   width: 28, height: 28, padding: 0, border: 'none',
   borderRadius: 6, background: 'transparent', color: '#C4C4CF',
@@ -2003,7 +2003,7 @@ interface ToolbarProps {
   onDuplicateRows?: () => void
   onBulkScope?: (rect?: DOMRect) => void
   selectionInfo?: string
-  // v2 — undo/redo + filters
+  // v2 - undo/redo + filters
   canUndo?: boolean
   canRedo?: boolean
   onUndo?: () => void
@@ -2038,7 +2038,7 @@ function Toolbar({
           </div>
         </div>
       )}
-      {/* ── Main toolbar row — always a single line (no wrapping) ── */}
+      {/* ── Main toolbar row - always a single line (no wrapping) ── */}
       <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 4, alignItems: 'center' }}>
 
         {/* Injected leading controls (e.g. period/hours toggle + AI fill) */}
@@ -2051,7 +2051,7 @@ function Toolbar({
           </button>
         )}
 
-        {/* Global scope setter — sets scope for ALL rows at once */}
+        {/* Global scope setter - sets scope for ALL rows at once */}
         {onBulkScope && (
           <button
             onClick={e => onBulkScope((e.currentTarget as HTMLElement).getBoundingClientRect())}
@@ -2162,12 +2162,12 @@ function Toolbar({
           <button
             onClick={onDirectPaste}
             style={btnGhost}
-            title="Paste from clipboard (Ctrl+V) — pastes at selected cell">
+            title="Paste from clipboard (Ctrl+V) - pastes at selected cell">
             <ClipboardPaste size={12} /> Paste
           </button>
         )}
 
-        {/* Delete selected rows — only show when rows are actually selected (row hover has its own delete) */}
+        {/* Delete selected rows - only show when rows are actually selected (row hover has its own delete) */}
         {onDeleteRows && tb.bulkActions && (
           <button
             onClick={onDeleteRows}
@@ -2190,7 +2190,7 @@ function Toolbar({
 
         <div style={{ flex: 1, minWidth: 0 }} />
 
-        {/* Search — always rightmost, always visible */}
+        {/* Search - always rightmost, always visible */}
         {tb.search && (
           <div style={{ position: 'relative' as const, flexShrink: 0, width: 180 }}>
             <Search size={11} style={{ position: 'absolute' as const, left: 8, top: '50%', transform: 'translateY(-50%)', color: searchFocused ? TOK.accent : TOK.textDim, transition: 'color 0.15s' }} />
@@ -2222,7 +2222,7 @@ function Toolbar({
         )}
       </div>
 
-      {/* Selection action row removed — Delete is now in the main toolbar row */}
+      {/* Selection action row removed - Delete is now in the main toolbar row */}
     </div>
   )
 }
@@ -2354,7 +2354,7 @@ function renderToggle(value: any, onToggle: () => void) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '0 8px' }}>
       <button
         onClick={e => { e.stopPropagation(); onToggle() }}
-        title={on ? 'On — click to toggle' : 'Off — click to toggle'}
+        title={on ? 'On - click to toggle' : 'Off - click to toggle'}
         style={{
           width: 34, height: 18, borderRadius: 9,
           background: on ? TOK.accent : '#D1D5DB',
@@ -2378,7 +2378,7 @@ function renderToggle(value: any, onToggle: () => void) {
 }
 
 function renderBadge<T>(value: any, row: T, col: DataGridColumn<T>) {
-  if (value == null || value === '') return <div style={{ padding: TOK.cellPad, color: TOK.textDim }}>—</div>
+  if (value == null || value === '') return <div style={{ padding: TOK.cellPad, color: TOK.textDim }}>-</div>
   const colors = col.badgeColor?.(value, row) ?? { bg: TOK.accentBg, fg: TOK.accent, border: TOK.containerBorder }
   return (
     <div style={{ padding: '6px 12px' }}>

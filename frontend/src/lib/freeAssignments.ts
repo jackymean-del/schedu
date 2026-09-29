@@ -1,5 +1,5 @@
 /**
- * Free-slot assignments — give an idle resource a job for a specific period
+ * Free-slot assignments - give an idle resource a job for a specific period
  * on a specific date: a free teacher gets exam invigilation, an empty hall
  * hosts a club, a class with no lesson gets supervised self-study.
  *
@@ -9,14 +9,14 @@
  * and as dashed TASK blocks on the Day grid for that entity's row.
  *
  * `sid` tags which active schedule's period grid `periodId` resolves against
- * — with multiple active schedules, the same periodId (e.g. "p1") can mean a
+ * - with multiple active schedules, the same periodId (e.g. "p1") can mean a
  * different time on a different bell, so periodId alone is ambiguous.
  * Records created before this field existed have no `sid`; `assignmentAt`
  * treats a missing `sid` on either side as a wildcard so old single-schedule
  * assignments keep matching exactly as before.
  *
  * SCOPE: the school. These used to live under `schedu-free-tasks:<uid>`, so an
- * invigilation rota entered by the principal was invisible to everyone else —
+ * invigilation rota entered by the principal was invisible to everyone else -
  * including the Live board and the corridor display, which exist precisely to
  * tell a passer-by who is where. See lib/schoolScope.
  */
@@ -56,7 +56,7 @@ export const useFreeAssignments = create<FreeAssignmentState>()(
   ),
 )
 
-/** What makes two assignment records the same job — the slot and the resource,
+/** What makes two assignment records the same job - the slot and the resource,
  *  not the random id two administrators would each have generated. */
 export const assignmentIdentity = (a: FreeAssignment) =>
   `${a.date}|${a.sid ?? ''}|${a.periodId}|${a.kind}|${a.entity}`
@@ -80,7 +80,7 @@ export function assignmentAt(
     && (sid === undefined || a.sid === undefined || a.sid === sid))
 }
 
-/** Quick-pick task titles per resource kind — free text always allowed. */
+/** Quick-pick task titles per resource kind - free text always allowed. */
 export const TASK_PRESETS: Record<AssignKind, string[]> = {
   teacher: ['Substitution cover', 'Exam invigilation', 'Library duty', 'Admin support', 'Lesson planning', 'Student counselling'],
   room:    ['Extra class', 'Club activity', 'Exam hall', 'Event setup', 'Maintenance', 'Parent meeting'],

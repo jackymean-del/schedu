@@ -1,12 +1,12 @@
 /**
- * Syllabus — Blueprint v3, Part C (faculty capture).
+ * Syllabus - Blueprint v3, Part C (faculty capture).
  *
  * Part C §1 · §6 · §7:
  *   - enter the hours a subject needs to cover its syllabus,
  *   - tick a chapter off after the session that taught it,
  *   - see coverage (required / covered / remaining) update live.
  *
- * This is a thin view over lib/syllabusTracking — all the maths lives in that
+ * This is a thin view over lib/syllabusTracking - all the maths lives in that
  * shared service, because the same numbers also answer the Step 4 OR question
  * and drive Live Mode.
  */
@@ -41,7 +41,7 @@ const DIMS: Array<{ k: Dim; label: string }> = [
 
 const ACCENT = '#685DBC'
 
-/** Sentinel for the term picker's "whole schedule" option — an empty value would
+/** Sentinel for the term picker's "whole schedule" option - an empty value would
  *  be indistinguishable from "nothing chosen yet", which means the default. */
 const WHOLE_RUN = '__whole__'
 
@@ -65,11 +65,11 @@ export function SyllabusPage() {
 
   // Holidays, cover that didn't carry the syllabus forward, absences nobody
   // covered, and the hours the timetable allocates are all composed in one
-  // shared place so this page and the dashboard alert can never disagree — and
+  // shared place so this page and the dashboard alert can never disagree - and
   // it spans every ACTIVE schedule, not just whichever one is open.
   // Which academic term the figures below are measured over. "Whole schedule"
   // (null) is always available and stays the default for a school that has
-  // declared no terms — see lib/academicTerms.
+  // declared no terms - see lib/academicTerms.
   const terms = useAcademicTerms(s => s.terms)
   const todayISO = useMemo(() => {
     const d = new Date()
@@ -99,7 +99,7 @@ export function SyllabusPage() {
   const [chName, setChName] = useState('')
 
   // A signed-in faculty member sees only their own teaching. Matched by name
-  // against the timetable (see matchStaffName) — the only link that exists
+  // against the timetable (see matchStaffName) - the only link that exists
   // between an account and a slot today.
   const user = useAuthStore(s => s.user)
   const isFaculty = (user?.role ?? 'admin') === 'teacher'
@@ -138,7 +138,7 @@ export function SyllabusPage() {
   const req = requiredHours(plan), cov = coveredHours(plan)
   const rem = remainingHours(plan), pct = coveragePct(plan)
   // Hours already run and hours still scheduled, straight from the published
-  // schedule — never typed, and deliberately not the same thing as coverage.
+  // schedule - never typed, and deliberately not the same thing as coverage.
   const spent = elapsed[key] ?? 0
   const left = future[key] ?? 0
   const method = effectiveMethod(plan)
@@ -148,7 +148,7 @@ export function SyllabusPage() {
   const bonus = useMemo(() => bonusSessions(subRecords), [subRecords])
   // Syllabus data is global and outlives any one schedule, so plans recorded for
   // a class-section the school has since dropped are still stored. Reporting
-  // them would put classes in the filters that no longer exist anywhere — so
+  // them would put classes in the filters that no longer exist anywhere - so
   // they're set aside rather than listed, and counted so nothing vanishes
   // silently.
   const allRows = useMemo(() => coverageRows(effectivePlans), [effectivePlans])
@@ -160,10 +160,10 @@ export function SyllabusPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
-      <PageHeader icon="📗" title="Syllabus" description="Track what each subject needs to cover — and what's actually been taught." />
+      <PageHeader icon="📗" title="Syllabus" description="Track what each subject needs to cover - and what's actually been taught." />
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Same always-on alert as the dashboard — silent when nothing is slipping. */}
+        {/* Same always-on alert as the dashboard - silent when nothing is slipping. */}
         <SyllabusAlert />
 
         {/* Term lens. Absent entirely until a school declares terms, so nobody
@@ -196,13 +196,13 @@ export function SyllabusPage() {
         {!canPick && tab === 'capture' && (
           <Card title="No subjects yet">
             <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
-              Add classes and subjects in the wizard (or Master Data) first — then come back to record how many hours each subject needs.
+              Add classes and subjects in the wizard (or Master Data) first - then come back to record how many hours each subject needs.
               {rows.length > 0 && <> Coverage already recorded is still visible on the <strong>Coverage dashboard</strong> tab.</>}
             </p>
           </Card>
         )}
 
-        {/* Tabs — faculty capture vs admin coverage (Part C §8).
+        {/* Tabs - faculty capture vs admin coverage (Part C §8).
             Coverage stays reachable even when the *current* schedule has no
             subjects loaded, since syllabus data is global and outlives one cycle. */}
         {(canPick || rows.length > 0) && (
@@ -240,7 +240,7 @@ export function SyllabusPage() {
 
         {canPick && tab === 'capture' && (
           <>
-            {/* Picker — three cascading dropdowns. Start from whichever you
+            {/* Picker - three cascading dropdowns. Start from whichever you
                 know: a faculty member, a class, or a subject. Each one narrows
                 the other two to combinations the timetable actually has. */}
             <Card
@@ -248,8 +248,8 @@ export function SyllabusPage() {
               subtitle={isFaculty
                 ? 'Only the classes and subjects you teach. Pick one and record how much of its syllabus is covered.'
                 : activeCount > 1
-                  ? `Everything across your ${activeCount} active schedules. Narrow by faculty, class-section or subject — each choice filters the others.`
-                  : 'Narrow by faculty, class-section or subject — each choice filters the others to what the timetable actually assigns.'}
+                  ? `Everything across your ${activeCount} active schedules. Narrow by faculty, class-section or subject - each choice filters the others.`
+                  : 'Narrow by faculty, class-section or subject - each choice filters the others to what the timetable actually assigns.'}
             >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <Field label="Faculty">
@@ -268,7 +268,7 @@ export function SyllabusPage() {
                   <select value={section} onChange={e => setSection(e.target.value)} style={inputStyle}>
                     {opts.sections.map(s => (
                       <option key={s} value={s}>
-                        {s}{activeCount > 1 && entities.scheduleOf[s] ? ` — ${entities.scheduleOf[s]}` : ''}
+                        {s}{activeCount > 1 && entities.scheduleOf[s] ? ` - ${entities.scheduleOf[s]}` : ''}
                       </option>
                     ))}
                   </select>
@@ -283,7 +283,7 @@ export function SyllabusPage() {
               {/* Who teaches it is read off the timetable, not asked for. */}
               <div style={{ fontSize: 11.5, color: '#6D6A8A', marginTop: 2 }}>
                 {teachersHere.length > 0
-                  ? <>Taught by <strong style={{ color: '#4B5275' }}>{teachersHere.join(', ')}</strong> — from the schedule, so faculty-wise reports need no extra input.</>
+                  ? <>Taught by <strong style={{ color: '#4B5275' }}>{teachersHere.join(', ')}</strong> - from the schedule, so faculty-wise reports need no extra input.</>
                   : 'No faculty is assigned to this slot in the timetable.'}
               </div>
 
@@ -299,12 +299,12 @@ export function SyllabusPage() {
             </Card>
 
             {/* Coverage */}
-            <Card title={`${subject} · ${section}`} subtitle="Live coverage — updates the moment a chapter is ticked.">
+            <Card title={`${subject} · ${section}`} subtitle="Live coverage - updates the moment a chapter is ticked.">
               <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* THREE time figures from the schedule, then coverage from the
                     faculty. The old row showed "Remaining" as allocated minus
                     covered, which made it identical to Allocated whenever
-                    nothing was recorded — two of four numbers saying the same
+                    nothing was recorded - two of four numbers saying the same
                     thing. Time left is its own measurement, and the syllabus
                     figure is stated as coverage, so no two can coincide.
                     Left is derived, not subtracted: allocated is the term as
@@ -326,8 +326,8 @@ export function SyllabusPage() {
               </div>
 
               {/* Why the remaining figure isn't shrinking. Every one of these is
-                  derived — a declared holiday, a cover that didn't carry the
-                  syllabus, an absence nobody stood in for — so this is the first
+                  derived - a declared holiday, a cover that didn't carry the
+                  syllabus, an absence nobody stood in for - so this is the first
                   place a teacher can see where their time actually went. */}
               {lostHours(effectivePlans[key]) > 0 && (
                 <div style={{
@@ -337,7 +337,7 @@ export function SyllabusPage() {
                 }}>
                   <strong>{lostHours(effectivePlans[key])} h of teaching time lost</strong>
                   <span style={{ color: '#B45309' }}>
-                    — {(effectivePlans[key]?.lostSessions ?? [])
+                    - {(effectivePlans[key]?.lostSessions ?? [])
                       .filter(s => s.hours > 0)
                       .map(s => `${s.note || LOST_REASON_LABELS[s.reason]} (${s.hours} h)`)
                       .join(' · ')}. That time has to be found again.
@@ -345,7 +345,7 @@ export function SyllabusPage() {
                 </div>
               )}
 
-              {/* The denominator. DERIVED from the timetable — the schedule
+              {/* The denominator. DERIVED from the timetable - the schedule
                   already says how many hours this subject gets, so nobody
                   types it and it can never disagree with the schedule. The
                   override exists for the school whose syllabus genuinely needs
@@ -359,7 +359,7 @@ export function SyllabusPage() {
                 onOverride={h => setRequiredHours(subject, section, h)}
               />
 
-              {/* Blueprint v6 — how this faculty wants to record content, per subject */}
+              {/* Blueprint v6 - how this faculty wants to record content, per subject */}
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5275', marginBottom: 6 }}>
                   How do you want to record coverage?
@@ -392,7 +392,7 @@ export function SyllabusPage() {
                       style={inputStyle} />
                   </Field>
                   <div style={{ fontSize: 11.5, color: '#777391', paddingBottom: 10 }}>
-                    Just state the figure — no chapters to list, nothing to tick. This alone drives coverage, pace and the alerts.
+                    Just state the figure - no chapters to list, nothing to tick. This alone drives coverage, pace and the alerts.
                   </div>
                 </div>
               )}
@@ -413,21 +413,21 @@ export function SyllabusPage() {
                       style={inputStyle} />
                   </Field>
                   <div style={{ fontSize: 11.5, color: '#777391', paddingBottom: 10 }}>
-                    No chapter names needed. Update the covered count whenever you like — weekly is plenty.
+                    No chapter names needed. Update the covered count whenever you like - weekly is plenty.
                   </div>
                 </div>
               )}
             </Card>
 
-            {/* Chapters — only for the checklist method, so the other two stay
+            {/* Chapters - only for the checklist method, so the other two stay
                 as light as they promise to be. */}
             {method === 'named' && (
             <Card
               title="Chapters"
-              subtitle="List the chapters and tick each one off after the session that taught it. Only part-done? Give it a %. No hours to estimate — every chapter counts equally towards the subject's total."
+              subtitle="List the chapters and tick each one off after the session that taught it. Only part-done? Give it a %. No hours to estimate - every chapter counts equally towards the subject's total."
             >
               {(plan?.chapters ?? []).length === 0 && (
-                <p style={{ fontSize: 12.5, color: '#777391', margin: 0 }}>No chapters yet — add the first one below.</p>
+                <p style={{ fontSize: 12.5, color: '#777391', margin: 0 }}>No chapters yet - add the first one below.</p>
               )}
               {/* Column headers so the bare numbers in each row can't be misread */}
               {(plan?.chapters ?? []).length > 0 && (
@@ -468,7 +468,7 @@ export function SyllabusPage() {
                       placeholder={`Chapter ${i + 1}`}
                       style={{ ...inputStyle, padding: '6px 9px', textDecoration: c.coveredAt ? 'line-through' : 'none', color: c.coveredAt ? '#6b6786' : '#13111E' }}
                     />
-                    {/* v6 — a chapter only part-taught can carry its own % */}
+                    {/* v6 - a chapter only part-taught can carry its own % */}
                     <input
                       type="number" min={0} max={100} step="5"
                       value={c.coveredAt ? 100 : (c.percentCovered ?? '')}
@@ -483,7 +483,7 @@ export function SyllabusPage() {
                         color: c.coveredAt ? '#067647' : '#13111E',
                       }}
                       title={c.coveredAt
-                        ? 'Ticked — counts as 100% covered'
+                        ? 'Ticked - counts as 100% covered'
                         : `${c.percentCovered ?? 0}% of this chapter covered. Part-taught? Enter a percentage.`}
                       aria-label="Percent of this chapter covered"
                     />
@@ -510,7 +510,7 @@ export function SyllabusPage() {
             </Card>
             )}
 
-            {/* Pace — content covered vs time actually spent. Resolved against
+            {/* Pace - content covered vs time actually spent. Resolved against
                 the schedule that OWNS this section, so a school running two
                 timetables with different bells gets each one's real figures. */}
             <PaceCard
@@ -542,7 +542,7 @@ export function SyllabusPage() {
               }}>
                 <strong style={{ color: '#4B41C4' }}>{holidays.length} school holiday{holidays.length > 1 ? 's' : ''} declared</strong>
                 <span style={{ color: '#6D6A8A' }}>
-                  — already deducted from the hours available for every subject.
+                  - already deducted from the hours available for every subject.
                 </span>
                 <div style={{ flex: 1 }} />
                 <a href="/settings" style={{ fontSize: 11.5, fontWeight: 700, color: ACCENT, textDecoration: 'none' }}>
@@ -551,7 +551,7 @@ export function SyllabusPage() {
               </div>
             )}
 
-            {/* Lost sessions — one-off events / absences for THIS subject */}
+            {/* Lost sessions - one-off events / absences for THIS subject */}
             <LostSessionsCard
               subject={subject} section={section} plan={plan}
               onAdd={(s) => logLostSession(subject, section, s)}
@@ -575,7 +575,7 @@ export function SyllabusPage() {
                         <tr key={r.key} style={{ cursor: 'pointer' }} onClick={() => { setSubject(r.subject); setSection(r.section) }}>
                           <td style={cellS}>{r.subject}</td>
                           <td style={cellS}>{r.section}</td>
-                          <td style={{ ...cellS, color: '#6D6A8A' }}>{r.teacher ?? '—'}</td>
+                          <td style={{ ...cellS, color: '#6D6A8A' }}>{r.teacher ?? '-'}</td>
                           <td style={{ ...cellS, textAlign: 'right' }}>{r.required} h</td>
                           <td style={{ ...cellS, textAlign: 'right', color: '#067647' }}>{r.covered} h</td>
                           <td style={{ ...cellS, textAlign: 'right', color: r.remaining > 0 ? '#B45309' : '#067647', fontWeight: 700 }}>{r.remaining} h</td>
@@ -599,7 +599,7 @@ export function SyllabusPage() {
 }
 
 /**
- * The (subject × section) rows that belong to one group of the current lens —
+ * The (subject × section) rows that belong to one group of the current lens -
  * i.e. what you see when a group is expanded. Grouping must mirror summariseBy's
  * so a group's detail rows always add up to its header figure.
  *
@@ -612,7 +612,7 @@ function detailRowsFor(
   const labelOf = (r: (typeof rows)[number]) =>
     (dim === 'teacher' ? r.teacher
       : dim === 'class' ? classOfSection(r.section)
-      : r[dim]) || '—'
+      : r[dim]) || '-'
   const mine = rows.filter(r => labelOf(r) === label)
   // Rank subjects by how far behind they are, then list each subject's sections.
   const worstBySubject = new Map<string, number>()
@@ -631,7 +631,7 @@ function detailRowsFor(
  * work for the user AND a second source of truth that could drift from the
  * timetable. The schedule already knows: periods per week × the term × the bell.
  * So state it, and keep a quiet override for the one case the derivation can't
- * know — a syllabus that genuinely needs more hours than it was allocated.
+ * know - a syllabus that genuinely needs more hours than it was allocated.
  */
 function AllocatedHours({ allocated, override, scheduleName, hasSchedule, onOverride }: {
   allocated: number
@@ -646,7 +646,7 @@ function AllocatedHours({ allocated, override, scheduleName, hasSchedule, onOver
 
   if (!hasSchedule) return (
     <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>
-      No timetable is active for this class yet — generate or publish one and the hours it
+      No timetable is active for this class yet - generate or publish one and the hours it
       allocates appear here automatically.
     </div>
   )
@@ -672,7 +672,7 @@ function AllocatedHours({ allocated, override, scheduleName, hasSchedule, onOver
           <strong style={{ fontSize: 15, color: '#13111E', fontFamily: "'DM Mono', monospace" }}>{allocated} h</strong>
           <span style={{ fontSize: 11.5, color: '#777391' }}>
             {overridden
-              ? 'set by hand — not what the timetable allocates'
+              ? 'set by hand - not what the timetable allocates'
               : `counted from the schedule${scheduleName ? ` · ${scheduleName}` : ''}`}
           </span>
           <button onClick={() => setEditing(true)} style={{ ...btnSoft, padding: '4px 10px', fontSize: 11.5 }}>
@@ -690,7 +690,7 @@ function AllocatedHours({ allocated, override, scheduleName, hasSchedule, onOver
 }
 
 /**
- * What substitutes did with this subject's periods — Blueprint v6.
+ * What substitutes did with this subject's periods - Blueprint v6.
  *
  * The admin records the intent when arranging cover (Calendar → Arrange cover);
  * this is where the teacher who was AWAY sees the claim and confirms it. That
@@ -720,7 +720,7 @@ function SubstituteCoverageCard({
   return (
     <Card
       title="Covered by a substitute"
-      subtitle="Periods someone else took for you. Nothing here changes a figure until you say what happened — and if you'd rather just tick chapters and ignore it, that works too."
+      subtitle="Periods someone else took for you. Nothing here changes a figure until you say what happened - and if you'd rather just tick chapters and ignore it, that works too."
     >
       {bonus && bonus.hours > 0 && (
         <div style={{
@@ -730,7 +730,7 @@ function SubstituteCoverageCard({
         }}>
           <strong>+{bonus.hours} h taught free</strong>
           <span style={{ color: '#3F7D5C' }}>
-            — a substitute taught {subject} in {bonus.from.join(', ')}'s period{bonus.dates.length > 1 ? 's' : ''}.
+            - a substitute taught {subject} in {bonus.from.join(', ')}'s period{bonus.dates.length > 1 ? 's' : ''}.
             Tick off whatever it covered: the syllabus advances without spending any of this subject's own hours.
           </span>
         </div>
@@ -755,18 +755,18 @@ function SubstituteCoverageCard({
               <strong style={{ color: '#13111E' }}>{r.substitute}</strong>
               <span style={{ color: tone.fg, fontWeight: 700 }}>
                 {INTENT_LABELS[r.intent]}
-                {r.intent === 'other-subject' && r.taughtSubject ? ` — ${r.taughtSubject}` : ''}
+                {r.intent === 'other-subject' && r.taughtSubject ? ` - ${r.taughtSubject}` : ''}
               </span>
               <span style={{ color: '#6D6A8A' }}>
                 {undecided
-                  ? `· ${r.hours} h — nothing assumed either way`
+                  ? `· ${r.hours} h - nothing assumed either way`
                   : r.intent === 'continue'
                     ? '· counted as taught'
                     : `· ${r.hours} h did not advance this syllabus`}
               </span>
               <div style={{ flex: 1 }} />
               {/* Three plain answers, or leave it alone. Whatever is chosen can
-                  be changed later — none of it is a commitment. */}
+                  be changed later - none of it is a commitment. */}
               {undecided ? (
                 <>
                   <button onClick={() => { onSetIntent(r.id, 'continue'); onConfirm(r.id, true) }}
@@ -818,7 +818,7 @@ function SubstituteCoverageCard({
 }
 
 /**
- * Pace — how fast the syllabus is actually being covered, versus the class time
+ * Pace - how fast the syllabus is actually being covered, versus the class time
  * being consumed. Both numbers come from data we already have (chapters the
  * faculty tick; periods the timetable schedules), so this adds no new task.
  */
@@ -827,7 +827,7 @@ function PaceCard({
 }: {
   plan: SyllabusPlan | undefined
   classTT: any; periodMinutes: number; holidays: any[]
-  /** Periods that ran but went to another subject — not this one's time. */
+  /** Periods that ran but went to another subject - not this one's time. */
   hoursNotSpent?: number
   termStart?: string; termEnd?: string
 }) {
@@ -843,7 +843,7 @@ function PaceCard({
     <Card title="Pace" subtitle="How fast the syllabus is actually being covered.">
       <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: 0 }}>
         Add <strong>chapters</strong> above to unlock this. Bulk hours tell us how long a subject was taught,
-        but not how much of the syllabus that time actually covered — chapters are what separate the two,
+        but not how much of the syllabus that time actually covered - chapters are what separate the two,
         and ticking them off is the only input needed.
       </p>
     </Card>
@@ -855,7 +855,7 @@ function PaceCard({
 
   return (
     <Card
-      title="Pace — will this syllabus finish?"
+      title="Pace - will this syllabus finish?"
       subtitle="Compares syllabus actually covered against class time actually used. Both are already known: chapters you tick, and periods the timetable ran."
     >
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -863,7 +863,7 @@ function PaceCard({
         <Stat label="Class time used" value={`${timeSpent} h`} color="#6D6A8A" />
         <Stat label="Pace" value={`${pace}×`} color={pace >= 0.85 ? '#067647' : '#B45309'} />
         <div style={{ fontSize: 11.5, color: '#6D6A8A', maxWidth: 210 }}>
-          <strong style={{ color: pace >= 0.85 ? '#067647' : '#B45309' }}>{paceLabel}</strong> —
+          <strong style={{ color: pace >= 0.85 ? '#067647' : '#B45309' }}>{paceLabel}</strong> -
           {pace < 1
             ? ` ${contentCovered} h of syllabus took ${timeSpent} h of class.`
             : ` ${contentCovered} h of syllabus in only ${timeSpent} h of class.`}
@@ -876,7 +876,7 @@ function PaceCard({
         border: `1px solid ${willFinish ? '#BBF7D0' : '#FDE68A'}`,
       }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, color: tone, marginBottom: 3 }}>
-          {willFinish ? '✓ On track to finish the syllabus' : `⚠ Will not finish — about ${shortfallHours} h short`}
+          {willFinish ? '✓ On track to finish the syllabus' : `⚠ Will not finish - about ${shortfallHours} h short`}
         </div>
         <div style={{ fontSize: 11.5, color: '#4B5275' }}>
           {contentRemaining} h of syllabus left. At this pace that needs <strong>{projectedHoursNeeded} h</strong> of class time,
@@ -889,10 +889,10 @@ function PaceCard({
 }
 
 /**
- * Borrow & replace — Blueprint v5, Syllabus Cover Dashboard.
+ * Borrow & replace - Blueprint v5, Syllabus Cover Dashboard.
  *
  * Offers to move a slot from a finished subject to one that's behind, but ONLY
- * where the same teacher takes both in the same class-section — so the swap
+ * where the same teacher takes both in the same class-section - so the swap
  * needs no teacher re-mapping and no room change. Applying it logs the hours
  * against both plans (the lagging subject gains time, the donor gives it up),
  * which is what makes the coverage figures move.
@@ -972,7 +972,7 @@ function BorrowReplaceCard({ onPick }: { onPick: (subject: string, section: stri
 }
 
 /**
- * Lost sessions — holidays, school events, faculty absence, anything that ate a
+ * Lost sessions - holidays, school events, faculty absence, anything that ate a
  * class. These hours were counted on by the plan, so recording them is what
  * turns "75% covered, looks fine" into "this can't land without rescheduling".
  */
@@ -1001,7 +1001,7 @@ function LostSessionsCard({
   return (
     <Card
       title="Lost classes"
-      subtitle="Record any session that didn't happen — holiday, school event, faculty absence. Lost time counts against the plan, so the coverage view stops looking healthier than reality."
+      subtitle="Record any session that didn't happen - holiday, school event, faculty absence. Lost time counts against the plan, so the coverage view stops looking healthier than reality."
     >
       {lost > 0 && (
         <div style={{
@@ -1015,8 +1015,8 @@ function LostSessionsCard({
           </strong>
           <span style={{ fontSize: 11.5, color: '#6D6A8A' }}>
             {risk === 'critical'
-              ? '— these hours have to be found again, or the syllabus won’t finish.'
-              : '— already accounted for; nothing outstanding.'}
+              ? '- these hours have to be found again, or the syllabus won’t finish.'
+              : '- already accounted for; nothing outstanding.'}
           </span>
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: '2px 9px', background: risk === 'critical' ? '#FDE68A' : '#EDE9FF', color: risk === 'critical' ? '#92400E' : '#4B41C4' }}>
@@ -1041,7 +1041,7 @@ function LostSessionsCard({
         </div>
       )}
 
-      {/* 130+140+80+110 of fixed columns plus gaps needs ~500px — on a phone
+      {/* 130+140+80+110 of fixed columns plus gaps needs ~500px - on a phone
           the last fields fell off the right edge. Stacks instead. */}
       <div style={{
         display: 'grid', gap: 8, alignItems: 'end',
@@ -1073,7 +1073,7 @@ function LostSessionsCard({
 }
 
 /**
- * Admin coverage dashboard — Part C §3 · §8.
+ * Admin coverage dashboard - Part C §3 · §8.
  * "Dashboard shows remaining hours" and "admin can track syllabus coverage
  * status: subject-wise, per section, per class, teacher-wise."
  * All figures come from the shared service's summariseBy/coverageRows.
@@ -1087,7 +1087,7 @@ function CoverageDashboard({
 }) {
   // Narrow to a particular class, section, subject and/or faculty. Filters
   // compose, and everything below (totals, breakdown, behind-schedule) reflects
-  // them — so "class VI, Maths only" is a first-class view, not a manual scan.
+  // them - so "class VI, Maths only" is a first-class view, not a manual scan.
   const [fClass, setFClass] = useState('')
   const [fSection, setFSection] = useState('')
   const [fSubject, setFSubject] = useState('')
@@ -1097,10 +1097,10 @@ function CoverageDashboard({
     (skip === 'class'   || !fClass   || classOfSection(r.section) === fClass) &&
     (skip === 'section' || !fSection || r.section === fSection) &&
     (skip === 'subject' || !fSubject || r.subject === fSubject) &&
-    (skip === 'teacher' || !fTeacher || (r.teacher || '—') === fTeacher)
+    (skip === 'teacher' || !fTeacher || (r.teacher || '-') === fTeacher)
 
   // `match` closes over the four filters and is rebuilt every render, so the
-  // memos below list what it actually READS instead of listing `match` — which
+  // memos below list what it actually READS instead of listing `match` - which
   // would recompute all five on every keystroke anywhere on the page. The
   // omissions are the point: classOpts must NOT react to fClass, or choosing a
   // class would shrink the class dropdown to that one class.
@@ -1111,12 +1111,12 @@ function CoverageDashboard({
   // choice never leads to an empty view.
   const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b))
   // Classes and sections list in SCHOOL order (Nursery, I, II … X), not
-  // alphabetical — where "X" lands before "II" and nobody finds their class.
+  // alphabetical - where "X" lands before "II" and nobody finds their class.
   const uniqClasses = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort(compareSection)
   const classOpts   = useMemo(() => uniqClasses(allRows.filter(r => match(r, 'class')).map(r => classOfSection(r.section))), [allRows, fSection, fSubject, fTeacher])
   const sectionOpts = useMemo(() => uniqClasses(allRows.filter(r => match(r, 'section')).map(r => r.section)), [allRows, fClass, fSubject, fTeacher])
   const subjectOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'subject')).map(r => r.subject)), [allRows, fClass, fSection, fTeacher])
-  const teacherOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'teacher')).map(r => r.teacher || '—')), [allRows, fClass, fSection, fSubject])
+  const teacherOpts = useMemo(() => uniq(allRows.filter(r => match(r, 'teacher')).map(r => r.teacher || '-')), [allRows, fClass, fSection, fSubject])
   /* eslint-enable react-hooks/exhaustive-deps */
   const anyFilter = !!(fClass || fSection || fSubject || fTeacher)
   const clearAll = () => { setFClass(''); setFSection(''); setFSubject(''); setFTeacher('') }
@@ -1139,13 +1139,13 @@ function CoverageDashboard({
   if (allRows.length === 0) return (
     <Card title="Nothing tracked yet">
       <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
-        Record a subject's required hours or chapters on the <strong>Track syllabus</strong> tab — coverage appears here as faculty tick chapters off.
+        Record a subject's required hours or chapters on the <strong>Track syllabus</strong> tab - coverage appears here as faculty tick chapters off.
       </p>
     </Card>
   )
 
   const filterBar = (
-    <Card title="Filter" subtitle="Narrow to a class, section, subject or faculty — everything below follows.">
+    <Card title="Filter" subtitle="Narrow to a class, section, subject or faculty - everything below follows.">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr)) auto', gap: 10, alignItems: 'end' }}>
         <Field label="Class">
           <select value={fClass} onChange={e => setFClass(e.target.value)} style={inputStyle}>
@@ -1210,7 +1210,7 @@ function CoverageDashboard({
         </div>
       </Card>
 
-      <Card title="Breakdown" subtitle="Most hours remaining first — switch the lens to see where the gap really sits.">
+      <Card title="Breakdown" subtitle="Most hours remaining first - switch the lens to see where the gap really sits.">
         <div style={{ display: 'inline-flex', gap: 5, flexWrap: 'wrap' }}>
           {DIMS.map(d => (
             <button key={d.k} onClick={() => setDim(d.k)}
@@ -1238,7 +1238,7 @@ function CoverageDashboard({
             const showSection = dim !== 'section'
             return (
               <div key={g.label} style={{ border: '1px solid #ECE9FB', borderRadius: 10, overflow: 'hidden' }}>
-                {/* Group header — the rolled-up figure */}
+                {/* Group header - the rolled-up figure */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 160px', gap: 10, alignItems: 'center', padding: '8px 12px', background: '#F8F7FF', borderBottom: '1px solid #ECE9FB' }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: '#13111E' }}>{g.label}</span>
                   <div style={{ height: 10, background: '#EDE9FF', borderRadius: 5, overflow: 'hidden' }}>
@@ -1248,7 +1248,7 @@ function CoverageDashboard({
                     {g.covered}/{g.required} h · <strong style={{ color: g.remaining > 0 ? '#B45309' : '#067647' }}>{g.remaining} h left</strong>
                   </span>
                 </div>
-                {/* Detail rows — a six-column table cannot shrink below its
+                {/* Detail rows - a six-column table cannot shrink below its
                     content, so on a phone it scrolls inside its own box rather
                     than pushing the page wider than the screen. */}
                 <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
@@ -1296,11 +1296,11 @@ function CoverageDashboard({
         </div>
       </Card>
 
-      {/* v5 — borrow & replace, constrained to one teacher's own slots */}
+      {/* v5 - borrow & replace, constrained to one teacher's own slots */}
       <BorrowReplaceCard onPick={onPick} />
 
       {atRisk.length > 0 && (
-        <Card title={`Behind schedule (${atRisk.length})`} subtitle="Under half taught with hours still outstanding — click one to open its chapters.">
+        <Card title={`Behind schedule (${atRisk.length})`} subtitle="Under half taught with hours still outstanding - click one to open its chapters.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {atRisk.map(r => (
               <div key={r.key} onClick={() => onPick(r.subject, r.section)}

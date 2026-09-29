@@ -3,15 +3,15 @@
 import { useInView } from "./useInView";
 
 /**
- * 03 · AND/OR combination engine — corrected mechanics.
+ * 03 · AND/OR combination engine - corrected mechanics.
  *
  *  - AND = true parallel scheduling: multiple subjects, multiple teachers,
  *          multiple venues, multiple class-sections, ALL at the same time
- *          slot — and it can cross section, class, stream, block, even a
+ *          slot - and it can cross section, class, stream, block, even a
  *          separate timetable entirely. Depicted as several lanes lit
  *          simultaneously, tagged with which boundary they cross.
  *  - OR  = competitive single-slot allocation: of the OR-listed subjects,
- *          only ONE actually occupies the slot at a time — decided by
+ *          only ONE actually occupies the slot at a time - decided by
  *          which currently needs more period-coverage to finish its
  *          syllabus. Never both at once. Depicted as one card that swaps
  *          which subject holds the slot, with the reason shown.
@@ -25,7 +25,7 @@ const AND_LANES = [
 
 const OR_STATES = [
   { subject: "Physics", reason: "Needs 2 more periods this week", fill: "#EDE9FF", stroke: "#7C6FE0" },
-  { subject: "Chemistry", reason: "Took the slot instead — Physics is caught up", fill: "#DBEAFE", stroke: "#3B82F6" },
+  { subject: "Chemistry", reason: "Took the slot instead - Physics is caught up", fill: "#DBEAFE", stroke: "#3B82F6" },
 ];
 
 export function AndOrEngine() {
@@ -47,7 +47,7 @@ export function AndOrEngine() {
               </div>
             ))}
           </div>
-          <p className="ao-explain">All at the same time slot — same period, different sections, streams, even blocks.</p>
+          <p className="ao-explain">All at the same time slot - same period, different sections, streams, even blocks.</p>
         </div>
 
         <div className="ao-divider" />
@@ -64,10 +64,10 @@ export function AndOrEngine() {
               </div>
             ))}
           </div>
-          <p className="ao-explain">One slot, one subject at a time — whichever needs it more. Never both.</p>
+          <p className="ao-explain">One slot, one subject at a time - whichever needs it more. Never both.</p>
         </div>
       </div>
-      <div className="ao-caption">Illustrative demo — parallel scheduling (AND) vs. one-at-a-time allocation (OR)</div>
+      <div className="ao-caption">Illustrative demo - parallel scheduling (AND) vs. one-at-a-time allocation (OR)</div>
 
       <style>{`
         .ao-wrap { width: 100%; max-width: 760px; font-family: 'Plus Jakarta Sans', sans-serif; }

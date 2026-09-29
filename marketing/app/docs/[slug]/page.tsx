@@ -6,7 +6,7 @@ import { appHref } from '@/lib/appUrl'
 import { DOC_ARTICLES, getDoc, type DocBlock } from '@/content/docs'
 import { SITE_URL } from '@/lib/structuredData'
 
-// Static export needs every param known at build time — no on-demand slugs.
+// Static export needs every param known at build time - no on-demand slugs.
 export const dynamicParams = false
 
 export function generateStaticParams() {

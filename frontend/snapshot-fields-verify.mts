@@ -4,7 +4,7 @@
  *
  * Saving a schedule rebuilds its snapshot from TT_SNAPSHOT_FIELDS and
  * overwrites the whole key. Loading one calls loadActiveTimetableIntoStore,
- * which no-ops as soon as `classTT` is non-empty — and `classTT` comes back on
+ * which no-ops as soon as `classTT` is non-empty - and `classTT` comes back on
  * its own from the store's generic persist. So on a plain page reload the
  * snapshot is never read, and any field that lives ONLY in the snapshot comes
  * back at its initial value.
@@ -28,14 +28,14 @@ import { readFileSync } from 'node:fs'
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
 /**
  * Fields that are OUTPUTS of the solver, recomputed from classTT wherever they
  * are shown, and so deliberately absent from persist. Adding a name here is a
- * claim that nothing trusts the stored copy — check before you do.
+ * claim that nothing trusts the stored copy - check before you do.
  */
 const DERIVED_NOT_PERSISTED = ['conflicts', 'suggestions']
 
@@ -62,7 +62,7 @@ console.log(`registry ${registry.length} · dashboard ${dashboard.length} · par
 ok(registry.length > 10, 'the snapshot list was found and is not empty', `${registry.length} fields`)
 ok(partialize.length > 10, 'the partialize list was found and is not empty', `${partialize.length} fields`)
 
-// 1 & 2 — the two snapshot lists must be identical, in both directions.
+// 1 & 2 - the two snapshot lists must be identical, in both directions.
 const onlyRegistry = registry.filter(f => !dashboard.includes(f))
 const onlyDashboard = dashboard.filter(f => !registry.includes(f))
 ok(onlyRegistry.length === 0,
@@ -72,13 +72,13 @@ ok(onlyDashboard.length === 0,
   'and nothing is in the dashboard mirror that ttRegistry does not save',
   onlyDashboard.length ? `missing from ttRegistry: ${onlyDashboard.join(', ')}` : 'in step')
 
-// 3 — anything saved per schedule must also survive a reload, or be derived.
+// 3 - anything saved per schedule must also survive a reload, or be derived.
 const notPersisted = [...new Set([...registry, ...dashboard])]
   .filter(f => !partialize.includes(f) && !DERIVED_NOT_PERSISTED.includes(f))
 ok(notPersisted.length === 0,
   'every snapshot field survives a reload, or is declared derived',
   notPersisted.length
-    ? `lost on reload: ${notPersisted.join(', ')} — add to partialize, or to DERIVED_NOT_PERSISTED if nothing trusts the stored copy`
+    ? `lost on reload: ${notPersisted.join(', ')} - add to partialize, or to DERIVED_NOT_PERSISTED if nothing trusts the stored copy`
     : `${DERIVED_NOT_PERSISTED.length} declared derived: ${DERIVED_NOT_PERSISTED.join(', ')}`)
 
 // The derived ones are only safe while nothing reads them as truth. The
@@ -91,7 +91,7 @@ const stripComments = (src: string) =>
 
 // Checked across every screen that shows one, not just the dashboard. The same
 // field was being read from the store on the TIMETABLE page too, where it drove
-// a green "✓ No conflicts" pill and the publish dialog's warning — so a reload
+// a green "✓ No conflicts" pill and the publish dialog's warning - so a reload
 // reported a broken schedule as clean at the exact moment someone was about to
 // publish it to a school.
 const SCREENS = [
@@ -108,7 +108,7 @@ for (const f of DERIVED_NOT_PERSISTED) {
   })
   ok(guilty.length === 0, `no screen reads store.${f} as truth`,
     guilty.length
-      ? `${guilty.map(g => g.split('/').pop()).join(', ')} — empty after every reload`
+      ? `${guilty.map(g => g.split('/').pop()).join(', ')} - empty after every reload`
       : `recomputed on all ${SCREENS.length} screens that show it`)
 }
 

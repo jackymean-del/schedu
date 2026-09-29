@@ -1,5 +1,5 @@
 /**
- * WHO MAY DO WHAT — the policy table, with no dependencies.
+ * WHO MAY DO WHAT - the policy table, with no dependencies.
  *
  * Deliberately separate from lib/permissions: that file resolves the *current*
  * person by reading the auth and roster stores, which drags in browser-only
@@ -33,7 +33,7 @@ export type Action =
   | 'period.markMissed'
   /** Confirm, on return, that a substitute really did move the syllabus. */
   | 'coverage.confirm'
-  /** Record syllabus progress — chapters, percentages, hours. */
+  /** Record syllabus progress - chapters, percentages, hours. */
   | 'syllabus.record'
 
 const TEACHER_ACTIONS: Action[] = [

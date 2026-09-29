@@ -1,5 +1,5 @@
 /**
- * Fix Suggester — schedU Doc Part 2 ("AI suggests fixes, not just
+ * Fix Suggester - schedU Doc Part 2 ("AI suggests fixes, not just
  * detects problems"). Given a penalty from the solver output, produce
  * one or more concrete remedies the user can apply with one click.
  *
@@ -27,7 +27,7 @@ export interface FixSuggestion {
   diff?: string[]
   /** When provided, calling apply() mutates the store via the actions param. */
   apply?: () => void
-  /** Structured changes — drives the conflict-aware Fix preview engine
+  /** Structured changes - drives the conflict-aware Fix preview engine
    *  so it can simulate the fix and tell the user what score deltas to
    *  expect. Each entry is one (teacher, section, subject) cell write. */
   changes?: FixChange[]
@@ -184,7 +184,7 @@ export function suggestFixes(penalty: Penalty, ctx: FixContext): FixSuggestion[]
 
   // ── workload-imbalance ──
   else if (c === 'workload-imbalance') {
-    // Aggregate fix — move one period from most-loaded → least-loaded same-subject teacher.
+    // Aggregate fix - move one period from most-loaded → least-loaded same-subject teacher.
     const loads = ctx.staff.map(t => ({
       name: t.name, load: weeklyLoad(t.name, ctx.teacherAllocations),
     })).sort((a, b) => b.load - a.load)
@@ -278,7 +278,7 @@ export function suggestFixes(penalty: Penalty, ctx: FixContext): FixSuggestion[]
   return fixes
 }
 
-/** Greedy global rebalance — peels one period at a time from the
+/** Greedy global rebalance - peels one period at a time from the
  *  most-loaded teacher to the least-loaded subject-matched teacher,
  *  stopping when stddev plateaus or 20 iterations cap. */
 function runGlobalRebalance(ctx: FixContext) {

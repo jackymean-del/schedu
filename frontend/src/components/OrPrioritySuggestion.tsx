@@ -1,9 +1,9 @@
 /**
- * OR-slot priority — Blueprint Step 4 + Part C.
+ * OR-slot priority - Blueprint Step 4 + Part C.
  *
  * The blueprint calls this "the one real blocker in this pipeline": when several
  * subjects share an OR slot, the slot should go to whichever "needs more sessions
- * to complete its syllabus" — but schedU had no syllabus data, so the choice was
+ * to complete its syllabus" - but schedU had no syllabus data, so the choice was
  * left entirely manual.
  *
  * Part C closes that gap. This panel reads the syllabus service and, per OR group
@@ -11,7 +11,7 @@
  * design: it explains the recommendation and leaves the decision with the user,
  * because a school may have reasons the data can't see.
  *
- * Silent when there is no syllabus data — an empty recommendation is worse than
+ * Silent when there is no syllabus data - an empty recommendation is worse than
  * none, and the blueprint is explicit that the manual path stays valid.
  */
 import { useMemo } from 'react'
@@ -70,7 +70,7 @@ export function OrPrioritySuggestion({
         <div style={{ fontSize: 13, fontWeight: 800, color: '#13111E' }}>Which subject needs the slot?</div>
       </div>
       <p style={{ fontSize: 11.5, color: '#6D6A8A', margin: '0 0 10px' }}>
-        Based on live syllabus coverage — the subject furthest from finishing is listed first.
+        Based on live syllabus coverage - the subject furthest from finishing is listed first.
         This is a recommendation, not a rule: you still choose what runs.
       </p>
 
@@ -108,7 +108,7 @@ export function OrPrioritySuggestion({
                         </span>
                       </>
                     ) : (
-                      <span style={{ color: '#777391', fontStyle: 'italic' }}>no syllabus recorded — not ranked</span>
+                      <span style={{ color: '#777391', fontStyle: 'italic' }}>no syllabus recorded - not ranked</span>
                     )}
                   </div>
                 ))}

@@ -1,5 +1,5 @@
 /**
- * TeacherAllocationSummary — Clean teacher overview with Assignments column.
+ * TeacherAllocationSummary - Clean teacher overview with Assignments column.
  *
  * Columns: Teacher (name, type chip) | Weekly Load (bar) | Assignments (subject → classes)
  *
@@ -114,7 +114,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
     else { setSortField(field); setSortDir('asc') }
   }
 
-  // The Step 0 workload norm — country default or the admin's custom override —
+  // The Step 0 workload norm - country default or the admin's custom override -
   // is the DEFAULT cap for a teacher with no per-person figure set. Blueprint v6:
   // this is the only place the cap is edited; Resources shows it read-only.
   const country = schoolCountry(config?.countryCode)
@@ -127,7 +127,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
     [normMax, workingDays],
   )
 
-  // Periods or hours — the same caps, stated the way this school talks about
+  // Periods or hours - the same caps, stated the way this school talks about
   // them. Blueprint v6 Step 0 allows either; forcing one means somebody does
   // the conversion by hand, which is where the mistakes come from.
   const [unit, setUnit] = useState<WorkloadUnit>('periods')
@@ -141,7 +141,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
     setStaff?.(staff.map((t: Staff) => {
       if (t.name !== name) return t
       if (span === 'week') {
-        // Storing the norm itself is the same as no override — keep tracking it.
+        // Storing the norm itself is the same as no override - keep tracking it.
         const next = clear || caps!.perWeek === normCaps.perWeek ? undefined : caps!.perWeek
         return { ...t, maxPeriodsPerWeek: (next ?? normCaps.perWeek) as any }
       }
@@ -165,7 +165,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
     const assignments = assignmentsForTeacher(t.name, teacherAllocations)
     const type = inferType(t, assignments.length)
     const status = statusBadge(load, max)
-    // `overridden` drives the "custom" chip and the reset affordance — a school
+    // `overridden` drives the "custom" chip and the reset affordance - a school
     // must be able to see at a glance which caps are its own and which are the
     // national norm, and get back to the norm without remembering the number.
     return { t, load, max, caps, assignments, type, status, overridden: caps.weekOverridden || caps.dayOverridden }
@@ -251,7 +251,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
             </div>
             {overloaded.map((r: any) => (
               <div key={r.t.name} style={{ fontSize: 11, color: '#78350F', marginBottom: 2 }}>
-                <strong>{r.t.name}</strong> — {r.load}p assigned vs {r.max}p max.{' '}
+                <strong>{r.t.name}</strong> - {r.load}p assigned vs {r.max}p max.{' '}
                 <span style={{ color: '#D97706' }}>
                   Consider splitting {r.assignments[0]?.subject} with another teacher.
                 </span>
@@ -342,7 +342,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
         />
       )}
 
-      {/* School-wide default, edited here rather than in Settings — every cap on
+      {/* School-wide default, edited here rather than in Settings - every cap on
           this table falls back to it, so it belongs next to them. */}
       {normOpen && (
         <WorkloadNormModal
@@ -362,7 +362,7 @@ export function TeacherAllocationSummary({ displayMode = 'periods', periodMinute
 // Deliberately a separate strip rather than a tooltip on each row: "what does
 // this school consider a full teaching week, and where did that number come
 // from?" is one question with one answer, and repeating it 22 times would bury
-// it. It also names the SOURCE — country reference vs the admin's own figure —
+// it. It also names the SOURCE - country reference vs the admin's own figure -
 // because an unverified default that looks authoritative is worse than one
 // that admits what it is.
 
@@ -391,7 +391,7 @@ function NormDefaultsBar({
       fontSize: 11, color: '#4B5275',
     }}>
       <span style={{ fontWeight: 800, color: '#13111E' }}>Default faculty workload</span>
-      {/* Both spans, because the blueprint lets a school think in either — and
+      {/* Both spans, because the blueprint lets a school think in either - and
           seeing the pair makes the ×/÷ working-days relationship obvious. */}
       <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 800, color: '#4B41C4' }}>
         {normCaps.perWeek}p / week
@@ -430,11 +430,11 @@ function NormDefaultsBar({
           prep-inclusive figure (India) must not be read as a teaching cap. */}
       {!custom && ref && !ref.usable && (
         <span style={{ color: '#B45309' }}>
-          — published figure includes prep time, so this uses the safe teaching norm
+          - published figure includes prep time, so this uses the safe teaching norm
         </span>
       )}
       {!custom && ref?.usable && ref.confidence !== 'verified' && (
-        <span style={{ color: '#B45309' }}>— {ref.confidence} tier, worth confirming</span>
+        <span style={{ color: '#B45309' }}>- {ref.confidence} tier, worth confirming</span>
       )}
       <div style={{ flex: 1 }} />
       {overriddenCount > 0 && (
@@ -605,13 +605,13 @@ function TeacherRow({
         {assignments.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#B8B4D4', fontSize: 11 }}>
             <Sparkles size={11} />
-            <span>No assignments yet — use HI allocate to fill</span>
+            <span>No assignments yet - use HI allocate to fill</span>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5 }}>
             {assignments.map(({ subject, sections, totalPeriods }) => (
               <div key={subject} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-                {/* Subject name — clickable */}
+                {/* Subject name - clickable */}
                 <button
                   onClick={() => onEditSubject(subject)}
                   style={{

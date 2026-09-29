@@ -1,14 +1,14 @@
-# SmartSched — GitHub Sync Setup Guide
+# SmartSched - GitHub Sync Setup Guide
 
 ## The Problem (and why it happens)
-Claude's sandbox resets between sessions — the project folder disappears.
+Claude's sandbox resets between sessions - the project folder disappears.
 The sandbox also has no GitHub credentials, so it can't push directly.
 
 ## The Permanent Solution (one-time setup, ~10 minutes)
 
 ### STEP 1: Install Git on your computer
 - **Windows**: Download from https://git-scm.com/download/windows
-- **Mac**: Run `git --version` in Terminal — it auto-prompts to install
+- **Mac**: Run `git --version` in Terminal - it auto-prompts to install
 - **Already have it?** Skip to Step 2
 
 ### STEP 2: Create a GitHub Personal Access Token
@@ -17,7 +17,7 @@ The sandbox also has no GitHub credentials, so it can't push directly.
 3. Expiration: `No expiration` (or 1 year)
 4. Scopes: tick `repo` (full control)
 5. Click **Generate token**
-6. COPY the token — it starts with `ghp_...` — you only see it once!
+6. COPY the token - it starts with `ghp_...` - you only see it once!
 
 ### STEP 3: One-time push from your computer
 1. Download `smart-sched-git.bundle` from this Claude chat
@@ -44,7 +44,7 @@ When asked:
 
 ---
 
-## After setup — how future sessions work
+## After setup - how future sessions work
 
 Every time Claude makes changes:
 1. Claude updates the files and creates a new `.bundle`
@@ -68,7 +68,7 @@ git push origin main
 ## Even better: Store token so you never type it again
 
 ```bash
-# Run once — saves token permanently
+# Run once - saves token permanently
 git config --global credential.helper store
 git push  # enter credentials once, never again
 ```
@@ -93,9 +93,9 @@ Every future `git push` auto-deploys the frontend. No extra steps.
 
 ## GitHub Secrets for CI/CD
 In your GitHub repo → Settings → Secrets → Actions, add:
-- `VERCEL_TOKEN` — from https://vercel.com/account/tokens
-- `VERCEL_ORG_ID` — from Vercel project settings
-- `VERCEL_PROJECT_ID` — from Vercel project settings
+- `VERCEL_TOKEN` - from https://vercel.com/account/tokens
+- `VERCEL_ORG_ID` - from Vercel project settings
+- `VERCEL_PROJECT_ID` - from Vercel project settings
 
 Once set, the GitHub Action in `.github/workflows/ci.yml` handles
 everything automatically on every push.

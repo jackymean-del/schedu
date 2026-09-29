@@ -1,12 +1,12 @@
 /**
- * fixPreview — simulate a FixSuggestion against the current state and
+ * fixPreview - simulate a FixSuggestion against the current state and
  * report the projected impact BEFORE the user commits.
  *
  * Pure function. Deep-clones the teacherAllocations matrix, applies the
  * fix's structured changes, recomputes the fairness + overload metrics
  * the engine uses, and returns a side-by-side comparison.
  *
- * Spec: Doc Part 2 — "AI suggests fixes, not just detects" + the
+ * Spec: Doc Part 2 - "AI suggests fixes, not just detects" + the
  * "if applied, will it cause another penalty?" conflict-aware extension.
  */
 
@@ -103,7 +103,7 @@ export function previewFix(fix: FixSuggestion, ctx: PreviewContext): FixPreview 
     if ((afterLoads.get(t.name) ?? 0)  > max) afterOverloads.push(t.name)
   })
 
-  // Load deltas — only teachers whose load actually changed
+  // Load deltas - only teachers whose load actually changed
   const loadDeltas: FixPreview['loadDeltas'] = []
   ctx.staff.forEach(t => {
     const b = beforeLoads.get(t.name) ?? 0
@@ -114,7 +114,7 @@ export function previewFix(fix: FixSuggestion, ctx: PreviewContext): FixPreview 
     }
   })
 
-  // Score delta heuristic — matches engine penalty weights:
+  // Score delta heuristic - matches engine penalty weights:
   //   workload-imbalance:    stddev * 4 (capped 50)
   //   teacher-overload:      (load - max) * 5  per overloaded teacher
   const before_imbalance = Math.min(50, Math.round(beforeStddev * 4))

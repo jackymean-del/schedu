@@ -1,10 +1,10 @@
 /**
- * Full-screen branded loading state — the Fader U mark-native loader. Used while
+ * Full-screen branded loading state - the Fader U mark-native loader. Used while
  * auth is resolving (sign-in, protected-page loads, OAuth callback) so users
  * never see a flash of the login form or an empty page.
  *
  * The gold knob riding the right stem IS the loader (same motion vocabulary as
- * the marketing hero animation) — see design/brand/README.md §5.
+ * the marketing hero animation) - see design/brand/README.md §5.
  */
 export function BrandedLoader({ label = 'Loading…' }: { label?: string }) {
   return (

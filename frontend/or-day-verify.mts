@@ -3,7 +3,7 @@
  * Run: npx tsx or-day-verify.mts
  *
  * or-choice-verify proves the RESOLVER is right. This proves the resolver is
- * CONNECTED — which for a long time it was not: resolveOrChoice, the store
+ * CONNECTED - which for a long time it was not: resolveOrChoice, the store
  * field, the server table and the teacher's page all existed and nothing in
  * the app ever called them, so a decision changed nothing anybody could see.
  *
@@ -29,7 +29,7 @@ import { join } from 'node:path'
 type Any = any
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -89,7 +89,7 @@ console.log('\n── undecided, and what it refuses to assume ──')
   // teacher on a guess is how a class ends up with nobody in front of it.
   const unknown = summary(orCell, {}, {})
   ok(needsCover(unknown).join() === 'Devi/Chemistry',
-    'untracked syllabus releases nobody — the slot still holds everyone')
+    'untracked syllabus releases nobody - the slot still holds everyone')
 }
 
 console.log('\n── AND is not a choice, and must never be treated as one ──')
@@ -216,7 +216,7 @@ console.log('\n── the corridor board names what is actually running ──')
 
   // The bug that matters most on this surface. cell.teacher mirrors the FIRST
   // group only, so a board reading it stayed silent when the teacher of a
-  // later group was absent — on the one screen whose whole job is to shout
+  // later group was absent - on the one screen whose whole job is to shout
   // about a class with nobody in front of it.
   const laterGroupOut = row({}, ['Devi'])
   ok(laterGroupOut.uncovered === true,
@@ -247,7 +247,7 @@ console.log('\n── a period the choice went against was never lost ──')
 {
   // Reports price an absence in periods lost. An OR period that ran the OTHER
   // subject was never this teacher's to lose, so counting it inflates what the
-  // absence cost — the figure a school takes to a staffing conversation.
+  // absence cost - the figure a school takes to a staffing conversation.
   const src = (orDecisions: Any): Any => ({
     sections, periods, classTT: { [SEC]: { TUESDAY: { p1: orCell } } },
     substitutions: {}, config, orDecisions,
@@ -331,7 +331,7 @@ console.log('\n── a shared link shows every teacher in the cell ──')
 console.log('\n── an absence in a later group still costs its own subject ──')
 {
   // This figure feeds syllabus coverage, and coverage decides which subject an
-  // UNDECIDED OR period runs — so over-reporting it hands the period to the
+  // UNDECIDED OR period runs - so over-reporting it hands the period to the
   // wrong subject.
   const classTT: Any = { [SEC]: { TUESDAY: { p1: orCell } } }
   const lost = (who: string) => uncoveredAbsenceLoss(
@@ -356,7 +356,7 @@ console.log('\n── an absence in a later group still costs its own subject �
 console.log('\n── nobody keeps a private copy of "who teaches this" ──')
 {
   // The guard that matters. Every check above passes forever while the same
-  // bug is reintroduced one file away as a local helper — which is exactly how
+  // bug is reintroduced one file away as a local helper - which is exactly how
   // it happened. This fails on the NEXT private copy, not the last one.
   const files: string[] = []
   const walk = (dir: string) => {

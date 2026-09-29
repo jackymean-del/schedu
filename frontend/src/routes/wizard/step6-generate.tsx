@@ -40,7 +40,7 @@ const STEPS = [
 ]
 
 // The solve completes synchronously before this progress ceremony even
-// starts (see startGenerate below) — so instead of a fabricated animation
+// starts (see startGenerate below) - so instead of a fabricated animation
 // with no relation to the user's actual data, we flatten the just-computed
 // classTT into real "class → subject · teacher" lines and reveal a few per
 // tick alongside the ring. Same cadence, but genuinely shows the schedule
@@ -88,13 +88,13 @@ export function Step6Generate() {
   // Whether to show the "already generated" banner (user came back after closing)
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
   // Real assignments from the just-computed schedule, revealed a few at a
-  // time while the progress ring animates — see flattenAssignments above.
+  // time while the progress ring animates - see flattenAssignments above.
   const [liveFeed, setLiveFeed] = useState<string[]>([])
 
   // Detect existing timetable in the store (persisted across sessions)
   const hasExistingTT = Object.keys(store.classTT ?? {}).length > 0
 
-  // Timetable identity — pre-filled with sensible defaults
+  // Timetable identity - pre-filled with sensible defaults
   const [ttName, setTtName]         = useState(config.timetableName       || `${config.schoolName || "School"} Timetable`)
   const [ttStart, setTtStart]       = useState(config.timetableStartDate  || defaultStartDate())
   const [ttEnd, setTtEnd]           = useState(config.timetableEndDate    || defaultEndDate())
@@ -113,7 +113,7 @@ export function Step6Generate() {
     { icon: Clock,         label:"Periods/day",value: config.periodsPerDay ?? 8 },
   ]
 
-  // ── Pre-flight summary — what WILL be generated, judged before clicking ──
+  // ── Pre-flight summary - what WILL be generated, judged before clicking ──
   // All derived from the ground-truth bell schedules + the allocation matrix,
   // so the user can sanity-check day shape, workload and capacity in one look.
   const preflight = useMemo(() => {
@@ -124,7 +124,7 @@ export function Step6Generate() {
     const toMin = (s: string) => { const [h, m] = (s || '08:00').split(':').map(Number); return h * 60 + m }
     const fmt = (m: number) => `${(Math.floor(m / 60) % 12) || 12}:${String(m % 60).padStart(2, '0')} ${Math.floor(m / 60) >= 12 ? 'PM' : 'AM'}`
 
-    // Bucket sections by (periods/day, end time) — one line per distinct day shape
+    // Bucket sections by (periods/day, end time) - one line per distinct day shape
     type Bucket = { count: number; endMin: number; secs: string[] }
     const buckets = new Map<string, Bucket>()
     const overCap: string[] = []
@@ -196,7 +196,7 @@ export function Step6Generate() {
 
     // ── National-norms brain: staffing requirement + bell compliance ──────
     // Human-Intelligence check built from published policy (RTE/NCTE, STPCD,
-    // US state hours, AU face-to-face caps — see lib/educationNorms.ts).
+    // US state hours, AU face-to-face caps - see lib/educationNorms.ts).
     const country = (config as any).countryCode || 'IN'
     const board = (config as any).board || (config as any).boardName
     const staffing = totalWeekly > 0
@@ -222,7 +222,7 @@ export function Step6Generate() {
     setLiveFeed([])
 
     // ── Plain-data snapshot for the pipeline. The solve runs in a Web
-    //    Worker so the page never freezes — the ring animates and every tab
+    //    Worker so the page never freezes - the ring animates and every tab
     //    stays responsive during generation. Falls back to inline compute if
     //    workers are unavailable.
     const payload: GenerationPayload = {
@@ -251,7 +251,7 @@ export function Step6Generate() {
         else reject(new Error(e.data.error || 'generation failed'))
       }
       worker.onerror = (ev) => { worker.terminate(); reject(new Error(ev.message || 'worker error')) }
-      // Structured clone rejects functions/proxies — snapshot to plain JSON first.
+      // Structured clone rejects functions/proxies - snapshot to plain JSON first.
       worker.postMessage(JSON.parse(JSON.stringify(payload)))
     })
 
@@ -261,7 +261,7 @@ export function Step6Generate() {
         try {
           res = await runInWorker()
         } catch {
-          // Worker unavailable (very old browser / dev quirk) — solve inline.
+          // Worker unavailable (very old browser / dev quirk) - solve inline.
           // The UI freezes for the duration, but generation still completes.
           res = runGenerationPipeline(JSON.parse(JSON.stringify(payload)))
         }
@@ -283,7 +283,7 @@ export function Step6Generate() {
         setConfig({ blockMeta: res.blockMeta } as any)
         setSuggestions([])
       } else {
-        setConfig({ blockMeta: undefined } as any)   // single schedule — clear any stale block metadata
+        setConfig({ blockMeta: undefined } as any)   // single schedule - clear any stale block metadata
         setPeriods(res.periods)
         setClassTT(res.classTT)
         setTeacherTT(res.teacherTT)
@@ -305,13 +305,13 @@ export function Step6Generate() {
       pollRef.current = setInterval(() => {
         if (step >= STEPS.length) {
           clearInterval(pollRef.current!)
-          setTimetableStatus('draft')   // saved as draft — user must publish
+          setTimetableStatus('draft')   // saved as draft - user must publish
           const conflicts = res.conflicts.length
           setJob(j => j ? {
             ...j, status: 'completed', progress: 100,
             currentStep: conflicts > 0
-              ? `Done — ${conflicts} conflict(s) found, review in timetable`
-              : `Done in ${solveMs}ms — zero conflicts ✅`,
+              ? `Done - ${conflicts} conflict(s) found, review in timetable`
+              : `Done in ${solveMs}ms - zero conflicts ✅`,
           } : j)
           return
         }
@@ -362,14 +362,14 @@ export function Step6Generate() {
            "Something went wrong"}
         </h2>
         {!job && !hasExistingTT && (
-          <p style={{ fontSize:13, color:"#6D6A8A", margin:0 }}>Review the briefing, name your {T.schedule.toLowerCase()}, and press the button — the solver does the rest.</p>
+          <p style={{ fontSize:13, color:"#6D6A8A", margin:0 }}>Review the briefing, name your {T.schedule.toLowerCase()}, and press the button - the solver does the rest.</p>
         )}
         {job?.status === "running" && (
           <p style={{ fontSize:12, color:"#6D6A8A", margin:0, fontFamily:"'DM Mono',monospace" }}>{elapsed}s</p>
         )}
       </div>
 
-      {/* ── Journey strip — where you are in the schedule's lifecycle, so the
+      {/* ── Journey strip - where you are in the schedule's lifecycle, so the
            next move is always guessable without leaving the page ── */}
       {(() => {
         const published = store.timetableStatus === 'published'
@@ -480,7 +480,7 @@ export function Step6Generate() {
         </div>
       )}
 
-      {/* ── Live feed — real assignments from the just-built schedule,
+      {/* ── Live feed - real assignments from the just-built schedule,
            revealed a few at a time in step with the progress ring. Not
            fabricated: these are literally output.classTT entries. ── */}
       {job?.status === "running" && liveFeed.length > 0 && (
@@ -490,7 +490,7 @@ export function Step6Generate() {
           boxShadow:"0 16px 44px rgba(19,17,30,0.28)",
         }}>
           <div style={{ fontSize:9.5, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"#685DBC", marginBottom:8 }}>
-            ● Solver — placing real lessons
+            ● Solver - placing real lessons
           </div>
           <div style={{ display:"flex", flexDirection:"column" as const, gap:5 }}>
             {liveFeed.map((line, i) => (
@@ -506,7 +506,7 @@ export function Step6Generate() {
         </div>
       )}
 
-      {/* ── Launch console — briefing on the left, identity + launch on the
+      {/* ── Launch console - briefing on the left, identity + launch on the
            right. One glance answers: what will be generated, is it healthy,
            and what happens when I press the button. ── */}
       {!job && (
@@ -518,7 +518,7 @@ export function Step6Generate() {
           {/* LEFT · Briefing */}
           <div style={{ background:"#fff", borderRadius:16, border:`1.5px solid ${P_B}`, padding:"20px 22px", display:"flex", flexDirection:"column" as const, gap:14 }}>
             <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#6D6A8A" }}>
-              Briefing — what the solver will work with
+              Briefing - what the solver will work with
             </div>
 
             {/* Stat tiles */}
@@ -572,7 +572,7 @@ export function Step6Generate() {
                     <span>⚠</span>
                     <span>
                       <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
-                      ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) —
+                      ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) -
                       extra lessons will be dropped. Trim in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
                     </span>
                   </div>
@@ -581,12 +581,12 @@ export function Step6Generate() {
                     <span>ℹ</span>
                     <span>
                       {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
-                      ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) — they'll come out empty.
+                      ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) - they'll come out empty.
                     </span>
                   </div>
                 ) : (
                   <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, fontWeight:600, color:"#15803D", background:"#F0FDF4", border:"1px solid #BBF7D0", borderRadius:10, padding:"9px 12px" }}>
-                    <span>✓</span><span>Every class fits its weekly capacity — ready to generate.</span>
+                    <span>✓</span><span>Every class fits its weekly capacity - ready to generate.</span>
                   </div>
                 )}
 
@@ -694,7 +694,7 @@ export function Step6Generate() {
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
                 <div style={{ fontSize:10.5, color:"#6D6A8A", display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ fontSize:13 }}>💡</span>
-                  Saved as a <strong>Draft</strong> — review, then publish.
+                  Saved as a <strong>Draft</strong> - review, then publish.
                 </div>
                 {showRegenConfirm
                   ? <button className="g6-ghost" onClick={() => setShowRegenConfirm(false)}
@@ -738,16 +738,16 @@ export function Step6Generate() {
         </div>
       )}
 
-      {/* ── CTA buttons (post-run states only — pre-run launch lives in the
+      {/* ── CTA buttons (post-run states only - pre-run launch lives in the
            right console panel) ── */}
       <div style={{ display:"flex", gap:10, flexWrap:"wrap" as const, justifyContent:"center", animation:"fade-up 0.4s ease 0.35s both" }}>
         {job?.status === "completed" && (
           <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:14, width:"100%" }}>
-            {/* What's next — the three real paths from a fresh draft, so the
+            {/* What's next - the three real paths from a fresh draft, so the
                 next move never needs guessing */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:10, width:"100%", maxWidth:640 }}>
               {[
-                { icon:"✏️", title:`Review & fine-tune`, desc:"Open the draft — drag any lesson to move it, clashes checked live.", href:"/timetable", primary:true },
+                { icon:"✏️", title:`Review & fine-tune`, desc:"Open the draft - drag any lesson to move it, clashes checked live.", href:"/timetable", primary:true },
                 { icon:"📤", title:"Publish & export", desc:"Share links, Excel, or print-ready PDFs when the draft looks right.", href:"/timetable" },
                 { icon:"📡", title:"Watch it live", desc:"The Calendar's Live board follows the clock from day one.", href:"/calendar" },
               ].map(c => (
@@ -777,7 +777,7 @@ export function Step6Generate() {
               style={{ padding:"13px 22px", borderRadius:10, border:"none", background:"#dc2626", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
               Try Again
             </button>
-            {/* Most generation failures trace back to allocation gaps — offer
+            {/* Most generation failures trace back to allocation gaps - offer
                 the fix path directly instead of a dead end */}
             <button onClick={() => setStep(4)}
               style={{ padding:"13px 20px", borderRadius:10, border:"1px solid #E8E4FF", background:"#fff", fontSize:13, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>

@@ -54,7 +54,7 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 	)
 	if err != nil {
 		slog.Error("contact: insert failed", "err", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "could not save your message — please email us directly")
+		return fiber.NewError(fiber.StatusInternalServerError, "could not save your message - please email us directly")
 	}
 
 	slog.Info("contact: message received", "email", email, "source", source)

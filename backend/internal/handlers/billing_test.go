@@ -18,7 +18,7 @@ func TestPlanForEvent(t *testing.T) {
 		"subscription.expired":   "free",
 		"subscription.halted":    "free",
 		"subscription.paused":    "free",
-		// No plan change — status only.
+		// No plan change - status only.
 		"subscription.pending": "",
 		"subscription.updated": "",
 		"payment.captured":     "",
@@ -82,7 +82,7 @@ func TestWebhookFixtureParsesAndMapsToPro(t *testing.T) {
 		t.Errorf("current_end = %d", sub.CurrentEnd)
 	}
 	if sub.Notes.ClerkID != "user_abc123" {
-		t.Errorf("notes.clerk_id = %q — webhook could not map back to a user", sub.Notes.ClerkID)
+		t.Errorf("notes.clerk_id = %q - webhook could not map back to a user", sub.Notes.ClerkID)
 	}
 	if got := planForEvent(evt.Event); got != "pro" {
 		t.Errorf("charged event should grant Pro, got %q", got)

@@ -151,7 +151,7 @@ func (s *Service) applyOne(
 			GradeGroup string `json:"grade_group"`
 		}
 		if err := json.Unmarshal(oldVal, &oldTpl); err != nil {
-			// old_value might just be the integer — update by subject name across board
+			// old_value might just be the integer - update by subject name across board
 			_, err = tx.Exec(ctx, `
 				UPDATE curriculum_templates
 				SET slots_per_week = $2, updated_at = NOW()
@@ -181,7 +181,7 @@ func (s *Service) applyOne(
 
 	default:
 		// For other change types, log and skip without error.
-		slog.Warn("updater: unhandled change type — skipping", "type", ct)
+		slog.Warn("updater: unhandled change type - skipping", "type", ct)
 		return tx.Commit(ctx)
 	}
 

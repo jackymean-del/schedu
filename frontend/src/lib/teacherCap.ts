@@ -5,14 +5,14 @@
  * `?? 32` in the allocation passes, `?? 30` in Resources, `36` in orgData's own
  * country table, and `MAX_SLOTS - 2` in the seeder. India's safe load happens to
  * be 30, so the figures looked plausible there and were 20–100% over everywhere
- * else — a UK teacher capped at 40 against a 22-period norm.
+ * else - a UK teacher capped at 40 against a 22-period norm.
  *
  * A literal is only ever right for the one country whose norm happens to match
  * it. So the fallback is the NORM, resolved from the school's country and its
  * own custom override.
  *
  * Two flavours deliberately:
- *   • schoolTeacherCap() reads the stores — for UI and report code.
+ *   • schoolTeacherCap() reads the stores - for UI and report code.
  *   • the scheduling engine takes the number as an INPUT instead, so it stays a
  *     pure function that can be tested deterministically and moved to a worker
  *     without dragging localStorage-backed stores in behind it.
@@ -41,7 +41,7 @@ export function schoolTeacherCap(): number {
 }
 
 /**
- * The cap in force for one teacher — their own figure when set, else the school
+ * The cap in force for one teacher - their own figure when set, else the school
  * default. Every consumer that used to write `?? 40` should call this.
  */
 export function teacherWeeklyCap(staff: { maxPeriodsPerWeek?: number } | undefined | null): number {

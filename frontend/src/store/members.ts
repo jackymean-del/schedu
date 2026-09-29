@@ -3,13 +3,13 @@
  *
  * Until now the Users page could only pretend: "invite" validated an email,
  * pushed it into component state and rendered a chip. Nothing persisted and no
- * role was ever assigned — so the permissions model (lib/permissions) had
+ * role was ever assigned - so the permissions model (lib/permissions) had
  * nothing to read, and every account behaved as an administrator. A faculty
  * member could declare a school-wide holiday.
  *
  * WHERE THE TRUTH LIVES. This started as a client-side roster with nothing
- * behind it, and said so. The API now has member management, so — exactly as
- * that note promised — this store is its CACHE and the server's answer wins.
+ * behind it, and said so. The API now has member management, so - exactly as
+ * that note promised - this store is its CACHE and the server's answer wins.
  * lib/memberSync pulls the roster in and pushes every change out.
  *
  * It still works offline, and a role here still only decides what the app
@@ -41,7 +41,7 @@ export interface Member {
 export const ROLE_ORDER: Role[] = ['admin', 'teacher', 'viewer']
 export const ROLE_HINTS: Record<Role, string> = {
   admin: 'Everything: holidays, absences, cover, events and all settings.',
-  teacher: 'Their own syllabus — record coverage, log a missed period, confirm a substitute.',
+  teacher: 'Their own syllabus - record coverage, log a missed period, confirm a substitute.',
   viewer: 'Read-only. Can see schedules but change nothing.',
 }
 

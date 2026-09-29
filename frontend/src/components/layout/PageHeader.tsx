@@ -43,7 +43,7 @@ export function PageHeader({
         minHeight: 48, display: 'flex', alignItems: 'center',
         padding: '8px 16px', gap: 10, flexWrap: 'wrap',
       }}>
-        {/* Decorative — the page's name is in the heading beside it, so a
+        {/* Decorative - the page's name is in the heading beside it, so a
             screen reader announcing the emoji would just add noise. */}
         {icon && <span aria-hidden="true" style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>}
 
@@ -55,7 +55,7 @@ export function PageHeader({
           </h1>
           {description && (
             <span style={{ fontSize: 12, color: '#6B7079', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              — {description}
+              - {description}
             </span>
           )}
         </div>

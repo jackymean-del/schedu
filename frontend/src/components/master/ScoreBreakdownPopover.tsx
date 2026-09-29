@@ -1,10 +1,10 @@
 /**
- * ScoreBreakdownPopover — clickable Score pill that reveals per-
+ * ScoreBreakdownPopover - clickable Score pill that reveals per-
  * constraint contributions to the total score.
  *
  * v2: two-tab view inside the popover:
- *   NOW   — the existing bar chart of current penalty contributions
- *   TREND — per-constraint mini-sparklines showing how each constraint's
+ *   NOW   - the existing bar chart of current penalty contributions
+ *   TREND - per-constraint mini-sparklines showing how each constraint's
  *           penalty evolved across the score history
  *
  * The TREND tab requires `history` prop (ScorePoint[] with `breakdown`
@@ -26,7 +26,7 @@ interface Props {
   penalties: PenaltyEntry[]
   liveScore: number
   originalScore: number
-  /** Score history with per-point breakdowns — enables the TREND tab. */
+  /** Score history with per-point breakdowns - enables the TREND tab. */
   history?: ScorePoint[]
 }
 
@@ -64,7 +64,7 @@ function ConstraintSparkline({
   height?: number
 }) {
   if (values.length < 2) {
-    // Single point — flat line
+    // Single point - flat line
     const mid = height / 2
     return (
       <svg width={width} height={height} style={{ display: 'block' }}>
@@ -98,10 +98,10 @@ function ConstraintSparkline({
     <svg width={width} height={height} style={{ display: 'block' }}>
       <path d={path} fill="none" stroke={color} strokeWidth="1.5"
         strokeLinecap="round" strokeLinejoin="round" />
-      {/* First dot — open */}
+      {/* First dot - open */}
       <circle cx={xFor(0)} cy={yFor(first)} r={2}
         fill="#fff" stroke={color} strokeWidth="1.5" />
-      {/* Last dot — filled */}
+      {/* Last dot - filled */}
       <circle cx={xFor(values.length - 1)} cy={yFor(last)} r={2.5}
         fill={color} stroke={color} strokeWidth="1" />
     </svg>
@@ -243,7 +243,7 @@ export function ScoreBreakdownPopover({ penalties, liveScore, originalScore, his
               {tab === 'now' && (
                 breakdown.length === 0 ? (
                   <div style={{ padding: '20px 0', textAlign: 'center' as const, color: '#15803D', fontSize: 12, fontWeight: 600 }}>
-                    ✓ No penalties — clean state
+                    ✓ No penalties - clean state
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>

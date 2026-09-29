@@ -1,11 +1,11 @@
 /**
- * Subject colour engine — one colour per subject, identical everywhere it
+ * Subject colour engine - one colour per subject, identical everywhere it
  * appears (Live, Day grid, Month, the schedule view). Colour encodes SUBJECT
  * only; teachers and venues are identified by their name/text, not colour, to
  * avoid rainbow noise.
  *
  * Grayscale / black-and-white: the accents spread across the hue wheel, but do
- * NOT reliably survive printing in mono — measured, the closest pair differs by
+ * NOT reliably survive printing in mono - measured, the closest pair differs by
  * 0.0003 in relative luminance, which is invisible. A solid-fill palette cannot
  * give 20 separable greys, so the subject name (or short code) is always shown
  * as text: that is the guaranteed B&W-legible identifier, and colour is only
@@ -33,7 +33,7 @@ export interface SubjectColor { accent: string; bg: string }
  *  so dark accent text stays readable on it and it prints near-white in mono. */
 export function subjectColor(name: string): SubjectColor {
   // Normalised, so one subject is one colour however it was typed. Without
-  // this "English" and "english " were different colours — in an app that
+  // this "English" and "english " were different colours - in an app that
   // deliberately allows names to vary in exactly that way.
   const accent = ACCENTS[hash((name ?? '').trim().toLowerCase() || 'x') % ACCENTS.length]
   return { accent, bg: accent + '1A' }

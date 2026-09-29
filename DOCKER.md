@@ -1,7 +1,7 @@
 # Running SmartSched with Docker
 
-The whole stack — React frontend, Go API, PostgreSQL, and the Python curriculum
-services — runs from one `docker compose` command. This is the easiest way to
+The whole stack - React frontend, Go API, PostgreSQL, and the Python curriculum
+services - runs from one `docker compose` command. This is the easiest way to
 run the app locally end-to-end (including the contact form and timetable
 sharing, which need the database).
 
@@ -76,7 +76,7 @@ migrations (e.g. `003_contact_messages`, `004_shared_timetables`) without
 wiping data:
 
 ```powershell
-# Windows (PowerShell) — db service must be running
+# Windows (PowerShell) - db service must be running
 ./scripts/db-migrate.ps1
 ```
 

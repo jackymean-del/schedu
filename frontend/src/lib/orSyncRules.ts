@@ -2,7 +2,7 @@
  * THE RULES for merging server OR decisions into this browser's cache.
  *
  * Split from orSync.ts, which does the fetching, so these can be exercised
- * without a network, a store, or an app environment — the merge rule is the
+ * without a network, a store, or an app environment - the merge rule is the
  * part that is subtle, and it should not need Clerk booted to test.
  */
 import type { OrDecision } from './orChoice'
@@ -23,7 +23,7 @@ export function dateOfKey(key: string): string {
  * different things depending on where you look:
  *
  *   inside [from, to]   the server was asked and answered in full, so a key it
- *                       did not mention has been CLEARED — somebody handed the
+ *                       did not mention has been CLEARED - somebody handed the
  *                       period back and the cache must forget it, or the app
  *                       goes on showing a decision that no longer exists
  *

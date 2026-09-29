@@ -1,5 +1,5 @@
 /**
- * Syllabus alert — the "you don't have to go looking" surface.
+ * Syllabus alert - the "you don't have to go looking" surface.
  *
  * Renders NOTHING when every tracked syllabus is fine, so it never becomes
  * wallpaper. When something is slipping it names exactly what: subject, class-
@@ -13,7 +13,7 @@ import { AlertTriangle, ChevronRight } from 'lucide-react'
 
 export function SyllabusAlert({ limit = 4, compact = false }: { limit?: number; compact?: boolean }) {
   // Holidays, uncarried cover and uncovered absences all count against coverage
-  // here, via the same composition the Syllabus page uses — the one surface
+  // here, via the same composition the Syllabus page uses - the one surface
   // meant to save people from hunting must never be the rosier one.
   const { plans } = useEffectiveCoverage()
   const rows = useMemo(() => lagging(plans), [plans])

@@ -1,5 +1,5 @@
 /**
- * Allocation Syntax Parser — schedU Doc Part 1.
+ * Allocation Syntax Parser - schedU Doc Part 1.
  *
  * Compact, Excel-cell-friendly syntax for declaring per-class period
  * allocations. Examples:

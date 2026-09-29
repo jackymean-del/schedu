@@ -1,5 +1,5 @@
 /**
- * Help & Support — FAQ, quick links and a way to reach the team.
+ * Help & Support - FAQ, quick links and a way to reach the team.
  */
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -7,7 +7,7 @@ import { ChevronDown, Mail, BookOpen, PlayCircle } from 'lucide-react'
 
 const FAQ = [
   { q: 'How do I create my first timetable?', a: 'Click "+ New timetable" on the dashboard, give it a name and class range, then follow the wizard: add resources, set timings, allocate periods, and generate.' },
-  { q: 'Can I use my own class naming?', a: 'Yes. Type any convention — "Class I", "Grade 1", "Form 1", "Year 7". schedU adapts to your naming and groups levels automatically.' },
+  { q: 'Can I use my own class naming?', a: 'Yes. Type any convention - "Class I", "Grade 1", "Form 1", "Year 7". schedU adapts to your naming and groups levels automatically.' },
   { q: 'Is my data private to my account?', a: 'Yes. Every signed-in user has their own organization and timetables, stored securely on the server.' },
   { q: 'How do I change my organization details?', a: 'Open Settings → Organization to edit your name, type and planning period anytime.' },
 ]

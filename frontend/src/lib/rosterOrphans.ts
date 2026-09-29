@@ -2,7 +2,7 @@
  * NAMES THE TIMETABLE STILL USES THAT THE ROSTER NO LONGER HAS.
  *
  * Deleting a roster row deliberately does NOT rewrite the generated timetable
- * — cascading would punch holes in a schedule the school has already handed
+ * - cascading would punch holes in a schedule the school has already handed
  * out (see resourceUsage.ts for why that trade is made). The grid warns first,
  * naming exactly what the deletion will orphan, and the user decides.
  *
@@ -13,7 +13,7 @@
  *   · her lessons still carry her name in the timetable, on the Live board and
  *     on the corridor display, so those classes look staffed;
  *   · she cannot be marked absent, because the absence picker lists the roster
- *     — so those lessons can never be covered;
+ *     - so those lessons can never be covered;
  *   · workload and coverage reports count periods against somebody who left.
  *
  * Nothing errors, and nothing on any screen says the timetable and the roster
@@ -21,8 +21,8 @@
  * then lives in for a term. This finds those names whenever anyone looks, so
  * the disagreement stays visible until it is resolved.
  *
- * It reports; it does not repair. The fix is a human decision — reassign the
- * lessons, or regenerate — and both belong to the school, not to a background
+ * It reports; it does not repair. The fix is a human decision - reassign the
+ * lessons, or regenerate - and both belong to the school, not to a background
  * routine that rewrites a published schedule.
  */
 
@@ -40,10 +40,10 @@ export interface Orphan {
 /** Matched the way every other name comparison in the app matches: trimmed and
  *  case-insensitively. Without this, re-typing "anita sharma" into the roster
  *  would leave "Anita Sharma" looking orphaned when the school has clearly
- *  fixed it — a false alarm is how a warning gets ignored. */
+ *  fixed it - a false alarm is how a warning gets ignored. */
 const key = (s: string | undefined) => (s ?? '').trim().toLowerCase()
 
-/** Subjects a cell carries — an OR/AND slot can hold several at once. */
+/** Subjects a cell carries - an OR/AND slot can hold several at once. */
 function cellSubjects(cell: any): string[] {
   if (!cell) return []
   return cell.groupAssignments?.length
@@ -51,7 +51,7 @@ function cellSubjects(cell: any): string[] {
     : (cell.subject ? [cell.subject] : [])
 }
 
-/** Teachers a cell carries — likewise, one per parallel group. */
+/** Teachers a cell carries - likewise, one per parallel group. */
 function cellTeachers(cell: any): string[] {
   if (!cell) return []
   const fromGroups = cell.groupAssignments?.length
@@ -125,7 +125,7 @@ const COST: Record<OrphanKind, string> = {
   teacher: 'the timetable still shows the name, and nobody can be marked absent or given cover',
   subject: 'syllabus tracking has no chapters or hours for it, so coverage cannot be recorded',
   room: 'clash detection cannot see it, so two classes can be sent to the same place',
-  section: 'the class holds a schedule nothing else knows about — it is missing from reports and the board',
+  section: 'the class holds a schedule nothing else knows about - it is missing from reports and the board',
 }
 
 const NOUN: Record<OrphanKind, [string, string]> = {

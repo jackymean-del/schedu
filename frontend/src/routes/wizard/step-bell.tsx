@@ -1,29 +1,29 @@
 /**
- * Step 1 — Shift & Bell Timing  (v6)
+ * Step 1 - Shift & Bell Timing  (v6)
  *
  * v6 changes:
  *  1. CLASS-WISE BREAKS PANEL (new primary feature)
- *     — "Class-wise breaks" button above the Bell Timing Grid opens a
+ *     - "Class-wise breaks" button above the Bell Timing Grid opens a
  *       dedicated panel where user sets each break's name, start time, and
  *       duration independently for Pre-Primary / Primary / Middle / Senior.
- *     — "Generate bell timing" rebuilds the full rows array:
+ *     - "Generate bell timing" rebuilds the full rows array:
  *         • Each group gets its own per-group event sequence
  *           (Assembly → periods ↔ breaks at specified times → Dispersal)
  *         • Identical events (same type+name+start+duration) across groups
  *           are merged into one row with combined class selections.
  *         • Events that differ (e.g. Period 4 for I–XII at 12:05 vs Nur–UKG
  *           at 12:35) become separate rows with the correct class subsets.
- *     — Live Bell Timeline automatically shows per-group tabs whenever
+ *     - Live Bell Timeline automatically shows per-group tabs whenever
  *       partial-class rows exist (hasPartialBreaks), using filtered start
  *       times so each group sees its own correct schedule.
  *
  *  2. SPLIT-PERIODS BUG FIXES (inline gap row)
- *     — Period name now correctly uses the count of teaching rows BEFORE the
+ *     - Period name now correctly uses the count of teaching rows BEFORE the
  *       break, not the total count.
- *     — Class assignment:
+ *     - Class assignment:
  *         Period A → classes NOT in break (they have class during break time)
  *         Period B → classes IN break  (they start class after break ends)
- *     — Ordering: Period A first, Period B second → filtered timelines then
+ *     - Ordering: Period A first, Period B second → filtered timelines then
  *       compute the correct concurrent/sequential start times automatically.
  *
  *  3. END TIME: formatted display (12H/24H) with inline ✎ edit (v5, kept)
@@ -130,7 +130,7 @@ function predictNext(lastLabel: string, lastGroup: string) {
   return { label: 'New Class', short: 'New', group: lastGroup }
 }
 
-// Colour palette for custom groups — [ink, paper]
+// Colour palette for custom groups - [ink, paper]
 
 // Map a grade short-name to the bell-step group name
 function gradeToGroup(g: string): string {
@@ -169,7 +169,7 @@ function classesFromGradeRange(from: string, to: string): typeof CLASSES {
 /**
  * Normalise a class list loaded from saved state or built from sections:
  *  1. Replace any entry whose label matches a canonical CLASSES entry (case-insensitive)
- *     with the canonical entry — fixes legacy keys like 'nursery' → 'nur'.
+ *     with the canonical entry - fixes legacy keys like 'nursery' → 'nur'.
  *  2. Sort by canonical CLASSES order (Nursery → LKG → UKG → Class I …).
  *     Unknown / custom classes appear at the end in their original relative order.
  */
@@ -178,7 +178,7 @@ function canonicalizeClasses(classes: typeof CLASSES): typeof CLASSES {
     // Direct key match (already canonical)
     const byKey = CLASSES.find(cc => cc.key === c.key)
     if (byKey) return byKey
-    // Label match — catches 'nursery' key that should map to canonical {key:'nur',…}
+    // Label match - catches 'nursery' key that should map to canonical {key:'nur',…}
     const byLabel = CLASSES.find(cc => cc.label.toLowerCase() === c.label.toLowerCase())
     return byLabel ?? c
   })
@@ -223,7 +223,7 @@ const SCHOOL_HOUR_STANDARDS = {
     lunchDur: 30,
     color: '#685DBC', bg: '#F5F3FF', border: '#C4B5FD',
     source: 'NEP 2020 Foundational Stage · WHO',
-    note: 'Play-based learning. Short attention spans — sessions of 20–30 min with frequent activity breaks.',
+    note: 'Play-based learning. Short attention spans - sessions of 20–30 min with frequent activity breaks.',
   },
   'Primary': {
     label: 'Primary (Class I–V)', emoji: '📚', ages: '6–11 yrs',
@@ -325,7 +325,7 @@ const AGE_DAYOFF_SUGGESTIONS: DaySuggestion[] = [
     id:        'pre-primary-sat',
     emoji:     '🧸',
     title:     'Nursery · LKG · UKG need Saturday off',
-    detail:    'Children aged 3–5 have very short attention spans, tire quickly, and require significantly more rest than older students. A 6-day school week is developmentally inappropriate for pre-primary ages — it leads to burnout, anxiety, and disrupted sleep patterns. Most state boards and the NEP 2020 explicitly recommend a 5-day week for the under-5 age group.',
+    detail:    'Children aged 3–5 have very short attention spans, tire quickly, and require significantly more rest than older students. A 6-day school week is developmentally inappropriate for pre-primary ages - it leads to burnout, anxiety, and disrupted sleep patterns. Most state boards and the NEP 2020 explicitly recommend a 5-day week for the under-5 age group.',
     day:       'Sat',
     classKeys: ['nur', 'lkg', 'ukg'],
     group:     'Pre-Primary',
@@ -349,12 +349,12 @@ const AGE_DAYOFF_SUGGESTIONS: DaySuggestion[] = [
   },
 ]
 
-// ── Shift (Advanced mode — multiple shifts) ───────────────────
+// ── Shift (Advanced mode - multiple shifts) ───────────────────
 interface ShiftConfig {
   id:            string
   name:          string
   startTime:     string   // HH:MM
-  endTime?:      string   // HH:MM — per-shift end (block-wise); falls back to schoolEndTime
+  endTime?:      string   // HH:MM - per-shift end (block-wise); falls back to schoolEndTime
   periodDur:     number   // max period duration (minutes)
   periodDurMin?: number   // min period duration (minutes); AI won't go below this
   maxPeriods:    number
@@ -553,7 +553,7 @@ function autoGenerateBellRows(
   const rows: BellRow[] = [mkAssembly()]
   for (let i = 1; i <= maxPeriods; i++) {
     rows.push(mkPeriod(i, actualDur))
-    // Guard: if sbAfter === lunchAfter (e.g. maxPeriods=4), skip the short break —
+    // Guard: if sbAfter === lunchAfter (e.g. maxPeriods=4), skip the short break -
     // inserting both at the same position would create two consecutive break rows
     // which confuses buildPeriodSequence and produces a double-lunch in the display.
     if (i === sbAfter  && hasShortBreak && i !== lunchAfter) rows.push({ id: makeId(), name: 'Short Break', type: 'short-break', duration: sbDur,   classes: [...allKeys] })
@@ -604,10 +604,10 @@ function approxLunchTime(
 /**
  * Generates a full bell config in two modes:
  *
- * 'single'  — one shared lunch for all classes (wraps autoGenerateBellRows).
+ * 'single'  - one shared lunch for all classes (wraps autoGenerateBellRows).
  *             Returns cwRows = [] so handleNext uses the simple break path.
  *
- * 'smart'   — staggered lunch: each class GROUP gets lunch at a different
+ * 'smart'   - staggered lunch: each class GROUP gets lunch at a different
  *             period slot so they don't hit the canteen simultaneously.
  *             Uses buildBellRowsFromCw → returns populated cwRows so the
  *             classwise timing path is taken in handleNext.
@@ -623,11 +623,11 @@ export function groupAgeRank(g: string): number {
  * Build a youngest-first staggered-lunch ladder. `orderedGroups` must be
  * pre-sorted youngest → oldest. Each group eats strictly AFTER the younger
  * one when the window allows; when slots run out, later groups share the
- * latest slot — a younger group is NEVER placed after an older one.
+ * latest slot - a younger group is NEVER placed after an older one.
  *
  * This replaced a two-track scheme (Pre-Primary floored independently, the
  * rest even-spread from sbAfterP+1) where the floor could push Pre-Primary
- * to or past Primary — the exact "I–V eats before Nursery/LKG" inversion.
+ * to or past Primary - the exact "I–V eats before Nursery/LKG" inversion.
  */
 export function lunchLadder(orderedGroups: string[], floorP: number, maxLunchP: number): Record<string, number> {
   const out: Record<string, number> = {}
@@ -681,15 +681,15 @@ export function smartGenerateBellConfig(
   const cwRows: CwBreakRow[] = []
 
   // When a morning break is already configured, it serves as the mid-morning
-  // short break — use its position as the reference slot so we don't end up
+  // short break - use its position as the reference slot so we don't end up
   // with two separate short-type breaks in the generated schedule.
   const effectiveSbAfterP = morningBreak ? morningBreakPos : sbAfterP
 
   // Determine if Pre-Primary is eating at (or before) the short-break slot.
-  // If so, they eat lunch while everyone else takes their short break — skip
+  // If so, they eat lunch while everyone else takes their short break - skip
   // them from that break. This must apply to the Morning Break row too:
   // including them there put their lunch IMMEDIATELY after the morning break
-  // (two consecutive breaks, zero teaching between) — a schedule no school
+  // (two consecutive breaks, zero teaching between) - a schedule no school
   // would run.
   const prePrimaryKeys = activeClasses.filter(c => c.group === 'Pre-Primary').map(c => c.key)
   // Fallback youngest-first ladder for any group WITHOUT an explicit slot
@@ -703,10 +703,10 @@ export function smartGenerateBellConfig(
   const ppLunchAP      = lunchAfterPeriod['Pre-Primary'] ?? genLadder['Pre-Primary'] ?? genFloorP
   // "Eats early" = PP's lunch is their one morning pause (they skip the
   // shared break). This holds when their slot is at the break slot OR just
-  // one period past it — the clock floor above typically lands it there.
+  // one period past it - the clock floor above typically lands it there.
   const ppEatsEarly    = lunchMode !== 'single' && prePrimaryKeys.length > 0 && ppLunchAP <= effectiveSbAfterP + 1
 
-  // Optional morning break — placed earliest (before the shared short break).
+  // Optional morning break - placed earliest (before the shared short break).
   // Groups whose lunch replaces this pause are excluded (see above).
   if (morningBreak) {
     const mbClasses = ppEatsEarly ? allKeys.filter(k => !prePrimaryKeys.includes(k)) : [...allKeys]
@@ -721,7 +721,7 @@ export function smartGenerateBellConfig(
   }
 
   // Only add a separate mid-morning Short Break when morning break is NOT already
-  // configured — otherwise the morning break already fills this role.
+  // configured - otherwise the morning break already fills this role.
   if (!morningBreak) {
     const sbClasses = ppEatsEarly ? allKeys.filter(k => !prePrimaryKeys.includes(k)) : [...allKeys]
     if (sbClasses.length > 0) {
@@ -739,7 +739,7 @@ export function smartGenerateBellConfig(
       classes: [...allKeys], afterPeriod: effectiveSbAfterP + 1, duration: lunchDur,
     })
   } else {
-    // Smart staggered lunch — each age group eats at a different period.
+    // Smart staggered lunch - each age group eats at a different period.
     // Pre-Primary (when eating early): lunch is AT the short-break slot (no guard needed).
     // All other groups: lunch must come AFTER the shared short break.
     for (const g of activeGroups) {
@@ -785,7 +785,7 @@ export function smartGenerateBellConfig(
   // during any group's lunch, the non-eating classes sit in a single aligned period
   // (Regular keeps the full length; Match-Lunch/Custom shorten it). Age-appropriate
   // pacing comes from per-group max-periods (younger groups disperse earlier) and from
-  // organising ages into separate blocks — each block is its own unit with its own
+  // organising ages into separate blocks - each block is its own unit with its own
   // uniform length, so a Pre-Primary block can run short periods while a Senior block
   // runs longer ones.
   const perGroupPeriodDur: Record<string, number> = {}
@@ -795,7 +795,7 @@ export function smartGenerateBellConfig(
   // NORMAL (non-dayboarding): each group fits its OWN age-appropriate school hours,
   //   so Pre-Primary (4h) / Primary (6h) disperse noticeably earlier than seniors.
   // DAY-BOARDING: meals (morning snack, lunch, afternoon snack) are served on campus,
-  //   so the day is kept NEARLY uniform — every group runs within ~1 hour of the
+  //   so the day is kept NEARLY uniform - every group runs within ~1 hour of the
   //   longest (senior-most) day, i.e. juniors leave only slightly earlier rather than
   //   going home at 12–1pm. Groups with the same standard hours get the same day length.
   const DAYBOARD_MAX_TRIM_H = 1   // juniors may finish at most ~1h before the senior-most day
@@ -817,7 +817,7 @@ export function smartGenerateBellConfig(
 
   // ── Age-monotonic dispersal enforcement ───────────────────────────────────
   // Concurrent (shortened) periods count toward a group's period quota, so each
-  // group's wall-clock end time is EMERGENT — a group whose period starts happen
+  // group's wall-clock end time is EMERGENT - a group whose period starts happen
   // to align with many other groups' lunch slots finishes its quota early. That
   // can invert the age order (e.g. Middle dispersing before Pre-Primary).
   // Guarantee: a younger group never disperses AFTER an older one. We build,
@@ -852,7 +852,7 @@ export function smartGenerateBellConfig(
 
   let rows = build()
 
-  // Pass 1 — trim younger groups that outlast older ones (applies in BOTH modes)
+  // Pass 1 - trim younger groups that outlast older ones (applies in BOTH modes)
   for (let guard = 0; guard < 16; guard++) {
     const ends = groupEnds(rows)
     let fixed = false
@@ -870,7 +870,7 @@ export function smartGenerateBellConfig(
     rows = build()
   }
 
-  // Pass 2 — day-boarding: lift juniors ending too far before the senior-most
+  // Pass 2 - day-boarding: lift juniors ending too far before the senior-most
   // group (beyond the trim window) while the age order keeps holding.
   if (dayboarding && orderedGroups.length > 1) {
     const trimWin = DAYBOARD_MAX_TRIM_H * 60
@@ -952,14 +952,14 @@ function buildBellRowsFromCw(
   const breakAbsMap = new Map<string, number>(cwBrks.map(b => [b.id, breakAbsStart(b)]))
 
   // ── Build a single class's event sequence ─────────────────────────────────
-  // afterPeriod-based breaks are placed by PERIOD COUNT — a break fires right after
+  // afterPeriod-based breaks are placed by PERIOD COUNT - a break fires right after
   // the class's Nth teaching period, regardless of how concurrency shortened earlier
   // periods. This keeps every group's bells aligned: during one group's lunch, all the
   // others run a single concurrent period that starts and ends with that lunch.
   // customStartTime / afterBreakId breaks stay time-based (used by the manual panel).
   //
   // `lunchStarts` (snapped clock times) drives concurrent-period detection. Pass null to
-  // disable concurrency — used by the discovery pass that learns where lunches land.
+  // disable concurrency - used by the discovery pass that learns where lunches land.
   const buildEvs = (clsKey: string, lunchStarts: Set<number> | null): Ev[] => {
     const evs: Ev[] = []
     let cur = startMins
@@ -1001,7 +1001,7 @@ function buildBellRowsFromCw(
     flushCount(0); flushTime()
 
     for (let pNum = 1; pNum <= clsMaxP; pNum++) {
-      // Concurrent when another group's lunch starts exactly now — this class can't be
+      // Concurrent when another group's lunch starts exactly now - this class can't be
       // eating now, since its own lunch is flushed as a break before the period begins.
       const effDur = (
         lunchStarts &&
@@ -1090,7 +1090,7 @@ function buildBellRowsFromCw(
             }
           }
         }
-        // No adjacent teaching — just drop the fragment
+        // No adjacent teaching - just drop the fragment
         if (!merged) { cls.evs.splice(i, 1); changed = true }
         break // restart scan after any mutation
       }
@@ -1210,7 +1210,7 @@ interface SavedBell {
  * Simplified UX: instead of typing a clock time, the user picks
  * "After which period does this break happen?" from a dropdown.
  * The panel derives and shows the calculated clock time as a hint.
- * Users think in periods, not minutes — no arithmetic needed.
+ * Users think in periods, not minutes - no arithmetic needed.
  */
 function ClasswiseBreaksPanel({
   cwRows, setCwRows, use12h, startTime, periodDur, maxPeriods,
@@ -1270,7 +1270,7 @@ function ClasswiseBreaksPanel({
 
   /** Short label for a set of class keys (handles composite stream keys). */
   const clsLabel = (keys: string[]) => {
-    if (!keys.length) return '—'
+    if (!keys.length) return '-'
     const shorts = keys.map(k => resolveShort(k, classEntries))
     return shorts.length <= 3 ? shorts.join(', ') : `${shorts.length} classes`
   }
@@ -1297,7 +1297,7 @@ function ClasswiseBreaksPanel({
       id:          makeId(),
       name:        'Break',
       type:        'short-break',
-      classes:     [],   // start empty — user picks which classes this break applies to
+      classes:     [],   // start empty - user picks which classes this break applies to
       afterPeriod: defaultAfter,
       duration:    10,
     }])
@@ -1325,7 +1325,7 @@ function ClasswiseBreaksPanel({
             <Sparkles size={13} color="#685DBC" /> Class-wise Breaks
           </div>
           <p style={{ fontSize: 12, color: '#69707E', margin: 0, lineHeight: 1.5 }}>
-            Choose <strong>which classes</strong> have a break and set its <strong>break timing</strong> —
+            Choose <strong>which classes</strong> have a break and set its <strong>break timing</strong> -
             pick a period, chain it after another break, or enter a custom time.
             Click <strong>Generate bell timing</strong> when ready.
           </p>
@@ -1632,7 +1632,7 @@ function ClassPicker({
   const activeSelected = allClassKeys.filter(keySelected)
   const isAll  = allClassKeys.length > 0 && allClassKeys.every(keySelected)
   const isNone = activeSelected.length === 0
-  const label  = isAll ? 'All' : isNone ? '—'
+  const label  = isAll ? 'All' : isNone ? '-'
     : activeSelected.length <= 3
       ? activeSelected.map(k => resolveShort(k, classEntries)).join(', ')
       : `${activeSelected.length} classes`
@@ -1694,7 +1694,7 @@ function ClassPicker({
             if (gc.length === 0) return null
             const groupStreams = streamDefs?.filter(s => s.group === gm.group) ?? []
 
-            // Effective group keys — composite stream keys take precedence over simple keys
+            // Effective group keys - composite stream keys take precedence over simple keys
             const gk = allClassKeys.filter(k =>
               gc.some(c => k === c.key || k.startsWith(`${c.key}${STREAM_SEP}`))
             )
@@ -1721,7 +1721,7 @@ function ClassPicker({
                   <span style={{ fontSize: 10, color: '#6B7079', marginLeft: 'auto' }}>{gm.desc}</span>
                 </div>
 
-                {/* Per-class rows — expanded into per-stream sub-checkboxes when composite keys exist */}
+                {/* Per-class rows - expanded into per-stream sub-checkboxes when composite keys exist */}
                 {gc.map(cls => {
                   const compositeKeys = allClassKeys.filter(k => k.startsWith(`${cls.key}${STREAM_SEP}`))
 
@@ -1790,7 +1790,7 @@ function ClassPicker({
 const PICK_ROW: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', cursor: 'pointer' }
 
 // ══════════════════════════════════════════════════════════════
-//  GapRow — always-visible strip between bell rows
+//  GapRow - always-visible strip between bell rows
 // ══════════════════════════════════════════════════════════════
 function GapRow({
   afterIndex, rows, onInsertBreak, onInsertPeriod, onInsertSplit, onInsertStaggered,
@@ -1912,7 +1912,7 @@ function GapRow({
 }
 
 // ══════════════════════════════════════════════════════════════
-//  LiveBellTimeline — single timeline panel for one class group
+//  LiveBellTimeline - single timeline panel for one class group
 // ══════════════════════════════════════════════════════════════
 function LiveBellTimeline({
   title, color, data, use12h,
@@ -1933,7 +1933,7 @@ function LiveBellTimeline({
       {data.map(({ row, start }, idx) => {
         const tm  = TYPE_META[row.type]
         const end = addMins(start, row.duration)
-        const grp = row.classes.length === 0 ? '—'
+        const grp = row.classes.length === 0 ? '-'
           : row.classes.length <= 4 ? row.classes.map(k => resolveShort(k)).join(', ')
           : `${row.classes.length} classes`
         return (
@@ -1962,11 +1962,11 @@ function LiveBellTimeline({
 // ══════════════════════════════════════════════════════════════
 export function StepBell() {
   const { config, setConfig, setStep, setBreaks, sections: storeSections, rooms: storeRooms } = useTimetableStore()
-  // Scoped to this timetable — computed once on mount so saves never bleed into another TT
+  // Scoped to this timetable - computed once on mount so saves never bleed into another TT
   const bellKey = useRef(getBellKey()).current
   const [_saved] = useState<SavedBell | null>(loadSaved)
 
-  // Custom class list — initialized from saved state OR from the grade range set in the modal.
+  // Custom class list - initialized from saved state OR from the grade range set in the modal.
   // Always run through canonicalizeClasses so stale keys ('nursery' → 'nur') are migrated
   // and Nursery is always sorted first within the Pre-Primary group.
   const [customClasses, setCustomClasses] = useState<typeof CLASSES>(() => {
@@ -1980,7 +1980,7 @@ export function StepBell() {
   const [showManageClasses, setShowManageClasses] = useState(false)
   const [manageTab, setManageTab] = useState<'groups' | 'streams' | 'classes'>('classes')
 
-  // Custom group definitions — initialized from saved state or defaults.
+  // Custom group definitions - initialized from saved state or defaults.
   // Any canonical groups missing from saved data (e.g. newly-added 'Senior Secondary')
   // are merged in so the UI always reflects the current CLASS_GROUPS definition.
   const [customGroups, setCustomGroups] = useState<typeof CLASS_GROUPS>(() => {
@@ -2095,7 +2095,7 @@ export function StepBell() {
   }, [customClasses, activeClassKeys, customStreams, classStreamMap])
 
 
-  // Groups that have at least one class assigned — used in pickers, timelines, capacity
+  // Groups that have at least one class assigned - used in pickers, timelines, capacity
   const activeClassGroups = useMemo(() =>
     customGroups
       .map(g => ({
@@ -2178,7 +2178,7 @@ export function StepBell() {
   // Treat existing rows as "customized" when no explicit flag is saved (old data safety).
   // This prevents auto-gen from overwriting a manually-edited schedule loaded from localStorage.
   const [bellCustomized,   setBellCustomized]   = useState<boolean>(() => _saved?.bellCustomized ?? (_saved?.rows?.length ? true : false))
-  // Class/group filter for the bell grid view — 'all' | group name
+  // Class/group filter for the bell grid view - 'all' | group name
   const [bellViewFilter,   setBellViewFilter]   = useState<'all' | string>('all')
   // Concurrent period: duration of a period for classes NOT eating during a staggered lunch
   const [concurrentMode, setConcurrentMode] = useState<'regular' | 'match-lunch' | 'custom'>(() => _saved?.concurrentPeriodMode ?? 'regular')
@@ -2191,7 +2191,7 @@ export function StepBell() {
   const [morningBreak,    setMorningBreak]    = useState<boolean>(() => _saved?.morningBreak    ?? false)
   const [morningBreakPos, setMorningBreakPos] = useState<number>( () => _saved?.morningBreakPos ?? 1)   // 0 = assembly, 1 = P1, 2 = P2 …
   const [morningBreakDur, setMorningBreakDur] = useState<number>( () => _saved?.morningBreakDur ?? 15)
-  // "+ Add another break" inline picker — transient UI only, not persisted.
+  // "+ Add another break" inline picker - transient UI only, not persisted.
   // Inserts a real break ROW directly into the grid (via insertBreak), so it
   // shows up in the main schedule table with its own duration/delete controls.
   const [addingBreak,  setAddingBreak]  = useState(false)
@@ -2223,7 +2223,7 @@ export function StepBell() {
     const dur = _saved?.periodDur ?? (config.defaultSessionDuration ?? 40)
     const cnt = _saved?.maxPeriods ?? (config.periodsPerDay ?? 8)
     // First run: generate a REALISTIC default day (short break + lunch fitted
-    // between periods) — bare back-to-back periods with no lunch is never a
+    // between periods) - bare back-to-back periods with no lunch is never a
     // sensible school day. autoGenerateBellRows falls back to buildRows itself
     // if the start/end window is degenerate.
     const st  = _saved?.startTime ?? config.startTime ?? '08:00'
@@ -2248,7 +2248,7 @@ export function StepBell() {
   const [dayOffRules,    setDayOffRules]    = useState<DayOffRule[]>(() => {
     // If previously saved (even as []), respect the user's choice exactly.
     if (_saved !== null && _saved.dayOffRules !== undefined) return _saved.dayOffRules
-    // Fresh load — auto-apply Saturday off for all Pre-Primary classes present in this school.
+    // Fresh load - auto-apply Saturday off for all Pre-Primary classes present in this school.
     // Pre-Primary children (under 5) should never have a 6-day week; this mirrors NEP 2020.
     const from = (config as any).fromGrade as string | undefined
     const to   = (config as any).toGrade   as string | undefined
@@ -2269,7 +2269,7 @@ export function StepBell() {
     }
     return []
   })
-  // Not persisted — suggestions re-appear on fresh load so the user always sees
+  // Not persisted - suggestions re-appear on fresh load so the user always sees
   // the recommendation until they either apply or dismiss it manually.
   const [dismissedDaySugs, setDismissedDaySugs] = useState<string[]>([])
 
@@ -2410,7 +2410,7 @@ export function StepBell() {
     const sbEnd  = asmEnd + sbAfterP * effPeriodDur + sbDurUsed  // clock when the break ends
 
     // The youngest group eats first, but "first" must still be a sane LUNCH
-    // time — floor it so ≥ ~80 teaching minutes pass before the earliest
+    // time - floor it so ≥ ~80 teaching minutes pass before the earliest
     // lunch (≈ 2 × 40-min periods; scales with the real period length).
     const floorP = Math.max(sbAfterP, Math.ceil(80 / Math.max(1, effPeriodDur)))
 
@@ -2419,7 +2419,7 @@ export function StepBell() {
     const minsAfterSb  = LATEST_LUNCH - sbEnd
     const maxLunchP    = Math.min(maxPeriods, sbAfterP + Math.max(1, Math.floor(minsAfterSb / effPeriodDur)))
 
-    // One monotonic youngest-first ladder across ALL active groups — replaces
+    // One monotonic youngest-first ladder across ALL active groups - replaces
     // the old independent Pre-Primary vs later-groups tracks that could invert.
     const orderedGroups = [...new Set(activeClassGroups.map(g => g.group))]
       .sort((a, b) => groupAgeRank(a) - groupAgeRank(b))
@@ -2511,7 +2511,7 @@ export function StepBell() {
 
   useEffect(() => {
     if (!autoBellMode) return
-    // Skip auto-gen if user has manually customized the schedule — they
+    // Skip auto-gen if user has manually customized the schedule - they
     // must click "Regenerate" to get a fresh auto-generated schedule.
     if (bellCustomized) return
     runAutoGen({ resetCustomized: false })
@@ -2576,7 +2576,7 @@ export function StepBell() {
       : base
   }, [activeShift, startTime, varyByDay, activeDayTab, dayStartTimes])
 
-  /** Effective period duration — active shift (advanced) or global, with per-day override. */
+  /** Effective period duration - active shift (advanced) or global, with per-day override. */
   const activePeriodDur = useMemo(() => {
     const base = activeShift ? activeShift.periodDur : periodDur
     return varyByDay && activeDayTab && dayPeriodDurs[activeDayTab]
@@ -2584,7 +2584,7 @@ export function StepBell() {
       : base
   }, [activeShift, periodDur, varyByDay, activeDayTab, dayPeriodDurs])
 
-  /** Effective max periods — active shift (advanced) or global. */
+  /** Effective max periods - active shift (advanced) or global. */
   const activeMaxPeriods = useMemo(() =>
     activeShift ? activeShift.maxPeriods : maxPeriods,
     [activeShift, maxPeriods],
@@ -2676,7 +2676,7 @@ export function StepBell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayKeysStr, varyByDay])
 
-  // ── "Attending today" — which class groups are present on this day ──
+  // ── "Attending today" - which class groups are present on this day ──
   const todayAttendance = useMemo(() => {
     if (!varyByDay || !activeDayTab) return null
     return CLASS_GROUPS.map(gm => {
@@ -2711,7 +2711,7 @@ export function StepBell() {
    *
    * Problem with the naive master-clock (computeStarts): when a break applies
    * to only some classes (e.g. Lunch for Nur-UKG), the master clock still
-   * advances by the break duration for ALL subsequent rows — so Period 4 for
+   * advances by the break duration for ALL subsequent rows - so Period 4 for
    * I-XII would wrongly show 11:45 instead of 11:15, and the end time
    * accumulates every split row's duration even for concurrent events.
    *
@@ -2731,7 +2731,7 @@ export function StepBell() {
     // non-PP P3 @11:45).  A simple "cascade duration from previous row" approach
     // produces wrong times for every row that follows a concurrent pair: the
     // duration of the PREVIOUS row (70 min of non-PP P3) gets added to 11:45 to
-    // give 12:55 for PP P3, when the real start is 12:15 — cascading all
+    // give 12:55 for PP P3, when the real start is 12:15 - cascading all
     // subsequent rows by ~40 min and snowballing to 10 PM dispersals.
     //
     // Correct approach: for each row, use computeStartsFiltered with a
@@ -2765,7 +2765,7 @@ export function StepBell() {
     }
     // Keep rows whose classes include at least one key from the filtered group.
     // Assembly has all class keys so it's naturally included.
-    // Dispersal rows belong to specific groups — only show the matching group's dispersal.
+    // Dispersal rows belong to specific groups - only show the matching group's dispersal.
     const filtered = displayRows.filter(row =>
       row.classes.length === 0 ||
       row.classes.some(k => filterKeys.includes(k))
@@ -2794,7 +2794,7 @@ export function StepBell() {
   // ── Timeline data: per-group filtered if partial breaks exist ─
   //
   // IMPORTANT: use rowStartTimes (concurrent-aware) instead of startTimes (naive
-  // sequential).  The bell table already uses rowStartTimes — the timeline must
+  // sequential).  The bell table already uses rowStartTimes - the timeline must
   // read from the same source so both panels stay in sync.
   // computeStartsFiltered() was the old approach; it doesn't handle concurrent
   // rows (e.g. Pre-Primary lunch running at the same clock slot as the Short Break)
@@ -2815,7 +2815,7 @@ export function StepBell() {
     })
   }, [activeClassGroups, activeClasses, displayRows, rowStartTimes, activeStartTime])
 
-  // Master timeline (all rows, no filter) — also uses rowStartTimes for accuracy
+  // Master timeline (all rows, no filter) - also uses rowStartTimes for accuracy
   const masterTimelineData = useMemo(() =>
     displayRows.map((row, i) => ({ row, start: rowStartTimes[i] ?? activeStartTime })),
     [displayRows, rowStartTimes, activeStartTime],
@@ -2852,7 +2852,7 @@ export function StepBell() {
         }])
       }
     } else {
-      // Panel already has rows — sanitise stale class keys every time it opens
+      // Panel already has rows - sanitise stale class keys every time it opens
       setCwRows(prev => prev.map(r => ({
         ...r,
         classes: r.classes.filter(k => cwClassKeys.includes(k) || activeClassKeys.includes(k)),
@@ -2936,7 +2936,7 @@ export function StepBell() {
 
   const handlePeriodDurChange = (d: number) => {
     const v = Math.max(10, d)
-    // Only update the DEFAULT — rows that still match the old default are also nudged,
+    // Only update the DEFAULT - rows that still match the old default are also nudged,
     // but rows the user individually edited (≠ old default) are preserved.
     const oldDur = activePeriodDur
     if (varyByDay && activeDayTab) {
@@ -2966,7 +2966,7 @@ export function StepBell() {
 
   // ── Live schedule advisories ──────────────────────────────────────────────
   // Non-blocking, professional guidance that reacts to ANY change (including manual
-  // grid edits): flags out-of-boundary conditions — over-long school day (8h cap),
+  // grid edits): flags out-of-boundary conditions - over-long school day (8h cap),
   // per-group day length vs age-appropriate hours, and periods that are too long/short
   // for an age group or outside the configured P.Min/P.Max. Each item may offer a
   // one-click fix. Empty list ⇒ everything is within healthy bounds.
@@ -3001,19 +3001,19 @@ export function StepBell() {
         out.push({
           id: `grp-long-${gm.group}`, severity: 'warn', emoji: std.emoji,
           title: `${std.label} day is long`,
-          detail: `${hrs.toFixed(1)} h — above the recommended ${std.maxHours} h max for ${std.ages}. Long days are tiring for this age.`,
+          detail: `${hrs.toFixed(1)} h - above the recommended ${std.maxHours} h max for ${std.ages}. Long days are tiring for this age.`,
           fix: { label: `End at ${fmt12(std.suggestedEnd, use12h)}`, run: () => handleEndTimeEdit(std.suggestedEnd) },
         })
       } else if (hrs < std.minHours - 0.01) {
         out.push({
           id: `grp-short-${gm.group}`, severity: 'info', emoji: std.emoji,
           title: `${std.label} day is short`,
-          detail: `${hrs.toFixed(1)} h — below the recommended ${std.minHours} h min for instructional time.`,
+          detail: `${hrs.toFixed(1)} h - below the recommended ${std.minHours} h min for instructional time.`,
         })
       }
       // 2b) The user's GLOBAL custom weekly cap for this age group
       //     (Settings → Workload limits). Enforced here so children's hours are
-      //     constrained at the source — the bell schedule — not just flagged
+      //     constrained at the source - the bell schedule - not just flagged
       //     after generation.
       const band = GROUP_TO_BAND[gm.group as SchoolGroupKey]
       const capH = band ? studentMaxHoursWeek[band] : undefined
@@ -3028,7 +3028,7 @@ export function StepBell() {
           // Trimming only the end time bottoms out at the minimum period length.
           const days = Math.max(1, workDays.length)
           const avgDur = teaching.length ? teachMins / teaching.length : (periodDurMin || 40)
-          // Target shape that would satisfy the cap — stated as guidance rather
+          // Target shape that would satisfy the cap - stated as guidance rather
           // than a one-click fix: no single lever gets there reliably (cutting
           // periods preserves the end time, so the rest just stretch; trimming
           // the end time bottoms out at the minimum period length), so the user
@@ -3039,7 +3039,7 @@ export function StepBell() {
           out.push({
             id: `grp-weekcap-${gm.group}`, severity: 'warn', emoji: '📵',
             title: `${std.label} exceeds your weekly limit`,
-            detail: `${weeklyH.toFixed(1)} h/week of teaching — above your custom ${capH} h limit for this age group (currently ${days} days × ${teaching.length} periods × ${Math.round(avgDur)} min). To fit, aim for about ${targetMinsPerDay} min of teaching per day — e.g. ${allowedPerDay} period${allowedPerDay > 1 ? 's' : ''}/day at ${Math.round(avgDur)} min, or keep the periods and shorten them.`,
+            detail: `${weeklyH.toFixed(1)} h/week of teaching - above your custom ${capH} h limit for this age group (currently ${days} days × ${teaching.length} periods × ${Math.round(avgDur)} min). To fit, aim for about ${targetMinsPerDay} min of teaching per day - e.g. ${allowedPerDay} period${allowedPerDay > 1 ? 's' : ''}/day at ${Math.round(avgDur)} min, or keep the periods and shorten them.`,
           })
         }
       }
@@ -3049,7 +3049,7 @@ export function StepBell() {
         out.push({
           id: `grp-perlong-${gm.group}`, severity: 'warn', emoji: '⏳',
           title: `${std.label} periods may be too long`,
-          detail: `${longPeriods.length} period${longPeriods.length > 1 ? 's' : ''} exceed ${std.periodDurRange[1]} min — long attention spans are hard for ${std.ages}.`,
+          detail: `${longPeriods.length} period${longPeriods.length > 1 ? 's' : ''} exceed ${std.periodDurRange[1]} min - long attention spans are hard for ${std.ages}.`,
         })
       }
     }
@@ -3077,7 +3077,7 @@ export function StepBell() {
 
   const handleMaxPeriodsChange = (n: number) => {
     const v = Math.max(1, Math.min(16, n))
-    // The user is now manually pinning Max/day — period durations adapt to it
+    // The user is now manually pinning Max/day - period durations adapt to it
     // (instead of Max/day adapting to period duration) until they hit "Auto" again.
     setMaxPeriodsAuto(false)
     if (isAdvanced) {
@@ -3087,8 +3087,8 @@ export function StepBell() {
     }
     // Preserve the day's current end time: capture it before the row count
     // changes, then re-absorb any resulting surplus/deficit by adjusting
-    // periods from the LAST one backward — the same mechanism already used
-    // for direct end-time edits — instead of silently shifting the end time.
+    // periods from the LAST one backward - the same mechanism already used
+    // for direct end-time edits - instead of silently shifting the end time.
     const targetEndMins = toMins(endTime)
     const minDur = Math.max(5, periodDurMin)
     setDisplayRows(prev => {
@@ -3160,7 +3160,7 @@ export function StepBell() {
       const willLose = shifts.length > 1 || varyByDay
       if (willLose) {
         setConfirmDialog({
-          msg: 'Switching to Standard mode will consolidate to a single bell schedule. Multiple shifts and per-day bell variations will be removed — your first shift\'s settings and all cycle/rhythm settings are kept. Continue?',
+          msg: 'Switching to Standard mode will consolidate to a single bell schedule. Multiple shifts and per-day bell variations will be removed - your first shift\'s settings and all cycle/rhythm settings are kept. Continue?',
           onConfirm: () => {
             const main = shifts[0]
             if (main) {
@@ -3286,7 +3286,7 @@ export function StepBell() {
     setDisplayRows(prev => prev.filter(x => x.id !== id))
   }
 
-  // Inline time editing state — tracks which row + field is being edited
+  // Inline time editing state - tracks which row + field is being edited
   const [editingTime, setEditingTime] = useState<{ rowId: string; field: 'start' | 'end' } | null>(null)
 
   // Per-type minimum durations enforced during inline time edits
@@ -3299,7 +3299,7 @@ export function StepBell() {
    *
    * Strategy:
    *  • newMins ≤ prevStart  → user wants concurrent scheduling (same start as
-   *    the previous row).  Don't touch the previous row's duration — concurrent
+   *    the previous row).  Don't touch the previous row's duration - concurrent
    *    display is driven by the class-assignment partial-break rule.
    *  • prevStart < newMins  → shrink/stretch the previous row's duration so that
    *    prev.end == newMins.  Respects a per-type minimum (Dispersal/Assembly ≥ 10 min).
@@ -3319,7 +3319,7 @@ export function StepBell() {
       const prevStart = toMins(starts[i - 1])   // prev row's displayed start
 
       if (newMins <= prevStart) {
-        // ≤ prev start → concurrent request — leave prev duration unchanged.
+        // ≤ prev start → concurrent request - leave prev duration unchanged.
         // Set Dispersal/break classes to partial to activate the concurrent rule.
         setEditingTime(null)
         return
@@ -3335,7 +3335,7 @@ export function StepBell() {
   }
 
   /**
-   * Commit a new end time for a row — adjusts that row's duration.
+   * Commit a new end time for a row - adjusts that row's duration.
    * Respects the per-type minimum duration.
    */
   const commitEndTime = (rowId: string, newVal: string, start: string, rowType: RowType) => {
@@ -3362,9 +3362,9 @@ export function StepBell() {
    * Staggered break: given an existing partial break at `afterIndex` (e.g. Lunch for XII),
    * inserts three more rows to complete the full staggered pattern:
    *   [existing] Lunch XII  (30 min)
-   *   [new +1]   Period N   (XI only)   — XI teaches while XII is on lunch
-   *   [new +2]   Lunch XI   (30 min)    — XI's lunch, XII continues
-   *   [new +3]   Period N   (XII only)  — XII teaches while XI is on lunch
+   *   [new +1]   Period N   (XI only)   - XI teaches while XII is on lunch
+   *   [new +2]   Lunch XI   (30 min)    - XI's lunch, XII continues
+   *   [new +3]   Period N   (XII only)  - XII teaches while XI is on lunch
    * After row +3 both groups are back in sync.
    */
   const insertStaggeredBreak = (afterIndex: number) => {
@@ -3659,7 +3659,7 @@ export function StepBell() {
                 <span style={{ fontSize: 15, fontWeight: 800, color: '#1F2937' }}>Set up your bell timing</span>
               </div>
               <div style={{ fontSize: 12, color: '#69707E', marginBottom: 14, lineHeight: 1.6 }}>
-                Pick how you'd like to start — you can fine-tune everything afterwards.
+                Pick how you'd like to start - you can fine-tune everything afterwards.
               </div>
 
               {/* AI block analysis */}
@@ -3667,19 +3667,19 @@ export function StepBell() {
                 <span style={{ fontSize: 14 }}>🧠</span>
                 <div style={{ fontSize: 11.5, color: '#4B5563', lineHeight: 1.6 }}>
                   {distinctBlocks.length === 0
-                    ? <>No room blocks set yet — I'll treat all classes as one location. <span style={{ color: '#6B7079' }}>Add blocks in Resources → Rooms to plan by building.</span></>
+                    ? <>No room blocks set yet - I'll treat all classes as one location. <span style={{ color: '#6B7079' }}>Add blocks in Resources → Rooms to plan by building.</span></>
                     : distinctBlocks.length === 1
-                      ? <>All classes are in <strong style={{ color: '#6358C4' }}>{distinctBlocks[0]}</strong> — a single shared schedule fits best.</>
+                      ? <>All classes are in <strong style={{ color: '#6358C4' }}>{distinctBlocks[0]}</strong> - a single shared schedule fits best.</>
                       : <>Detected <strong style={{ color: '#6358C4' }}>{distinctBlocks.length} blocks</strong>: {distinctBlocks.join(', ')}. You can give each its own timing.</>}
                 </div>
               </div>
 
-              {/* Area question — only when more than one block exists */}
+              {/* Area question - only when more than one block exists */}
               {distinctBlocks.length > 1 && (
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#69707E', marginBottom: 6 }}>How should blocks be timed?</div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {([['one', 'One schedule for all', 'Same bells across every block'], ['per-block', 'Different timing per block', 'One shift per block — set each separately']] as const).map(([val, label, desc]) => {
+                    {([['one', 'One schedule for all', 'Same bells across every block'], ['per-block', 'Different timing per block', 'One shift per block - set each separately']] as const).map(([val, label, desc]) => {
                       const active = areaMode === val
                       return (
                         <button key={val} onClick={() => setAreaMode(val)} style={{
@@ -3722,7 +3722,7 @@ export function StepBell() {
           )}
 
           {/* Everything below is deferred until the user has actually picked a setup
-              path — showing the full manual editor + rhythm/shift cards up front (even
+              path - showing the full manual editor + rhythm/shift cards up front (even
               before "Build it for me" / "I'll configure manually" is chosen) was the
               main source of the step's high cognitive load. */}
           {setupChoice !== 'choose' && <>
@@ -3840,13 +3840,13 @@ export function StepBell() {
                       </div>
                     )}
                   </div>
-                  {/* Fixed duration — only for custom cycles ≥ 3 weeks */}
+                  {/* Fixed duration - only for custom cycles ≥ 3 weeks */}
                   {!useDayNames && cycleWeeks >= 3 && (
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer', userSelect: 'none' }}>
                       <input type="checkbox" checked={fixedDuration} onChange={e => setFixedDuration(e.target.checked)}
                         style={{ accentColor: '#685DBC', width: 14, height: 14 }} />
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Fixed duration (non-repeating)</span>
-                      <span style={{ fontSize: 11, color: '#6B7079' }}>— runs once with a set start and end date</span>
+                      <span style={{ fontSize: 11, color: '#6B7079' }}>- runs once with a set start and end date</span>
                     </label>
                   )}
                   {fixedDuration && !useDayNames && cycleWeeks >= 3 && (
@@ -3855,12 +3855,12 @@ export function StepBell() {
                     </div>
                   )}
 
-                  {/* Per-week working days — each week can differ */}
+                  {/* Per-week working days - each week can differ */}
                   {!useDayNames && cycleWeeks > 1 && (
                     <div style={{ marginTop: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Days per week</span>
-                        <span style={{ fontSize: 11, color: '#6B7079' }}>— each week can have different working days</span>
+                        <span style={{ fontSize: 11, color: '#6B7079' }}>- each week can have different working days</span>
                       </div>
                       {Array.from({ length: cycleWeeks }, (_, i) => {
                         const w = i + 1
@@ -3982,7 +3982,7 @@ export function StepBell() {
                     onChange={e => setStartTime(e.target.value)} style={{ width: '100%' }} />
                   <div style={FH}>{fmt12(startTime, use12h)}</div>
                 </div>
-                {/* End — formatted display with inline edit */}
+                {/* End - formatted display with inline edit */}
                 {(() => {
                   // When Smart Timing is on but no schedule exists yet, show the
                   // generation-target time (schoolEndTime) so the user can set it.
@@ -4013,16 +4013,16 @@ export function StepBell() {
                     )}
                     {toMins(endTime) - toMins(startTime) > 8 * 60
                       ? <div style={{ ...FH, color: '#DC2626', fontWeight: 700, cursor: 'pointer' }}
-                          title="School day exceeds 8 hours — click to trim to 8 h"
+                          title="School day exceeds 8 hours - click to trim to 8 h"
                           onClick={() => handleEndTimeEdit(toHHMM(toMins(startTime) + 8 * 60))}>
-                          ⚠ &gt;8h — tap to fix
+                          ⚠ &gt;8h - tap to fix
                         </div>
                       : <div style={FH}>{autoBellMode && noRows ? 'generation target' : 'adjusts last period'}</div>
                     }
                   </div>
                   )
                 })()}
-                {/* Period duration — Range (P.Min–P.Max) or Fixed (single value) */}
+                {/* Period duration - Range (P.Min–P.Max) or Fixed (single value) */}
                 {periodDurationMode === 'fixed' ? (
                   <div style={{ flex: '0 0 90px' }}>
                     <div style={FL}>Duration (min)</div>
@@ -4116,10 +4116,10 @@ export function StepBell() {
                           const statusBdr   = ok ? '#6EE7B7' : tooLong ? '#FECACA' : '#FDE68A'
                           const statusIcon  = ok ? '✓' : tooLong ? '↑' : '↓'
                           const statusMsg   = ok
-                            ? `${totalHrs.toFixed(1)} hrs — within range`
+                            ? `${totalHrs.toFixed(1)} hrs - within range`
                             : tooLong
-                              ? `${totalHrs.toFixed(1)} hrs — too long (max ${s.maxHours} hrs)`
-                              : `${totalHrs.toFixed(1)} hrs — too short (min ${s.minHours} hrs)`
+                              ? `${totalHrs.toFixed(1)} hrs - too long (max ${s.maxHours} hrs)`
+                              : `${totalHrs.toFixed(1)} hrs - too short (min ${s.minHours} hrs)`
                           return (
                             <div key={gk} style={{ display: 'flex', alignItems: 'center', gap: 8,
                               background: statusBg, border: `1px solid ${statusBdr}`,
@@ -4162,7 +4162,7 @@ export function StepBell() {
                 )
               })()}
 
-              {/* ── Working days — only shown in single-week cycle ── */}
+              {/* ── Working days - only shown in single-week cycle ── */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 {cycleWeeks === 1 && !useDayNames && (
                   <>
@@ -4284,7 +4284,7 @@ export function StepBell() {
 
                         <span style={{ fontSize: 11, color: '#6B7079', flexShrink: 0 }}>off for</span>
 
-                        {/* Class picker — reuse existing component */}
+                        {/* Class picker - reuse existing component */}
                         <ClassPicker
                           classes={rule.classes}
                           onChange={cls => setDayOffRules(prev => prev.map(r => r.id === rule.id ? { ...r, classes: cls } : r))}
@@ -4343,7 +4343,7 @@ export function StepBell() {
             {activeShift && (
             <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
 
-              {/* Card header — shift tabs */}
+              {/* Card header - shift tabs */}
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center', padding: '8px 14px', background: '#FAFAFA', borderBottom: '1px solid #F3F4F6' }}>
                 {shifts.map(s => {
                   const active = s.id === activeShiftId
@@ -4381,7 +4381,7 @@ export function StepBell() {
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
                 }}>+</button>
-                {/* Active shift name — inline editable in header */}
+                {/* Active shift name - inline editable in header */}
                 <input value={activeShift.name}
                   onChange={e => updateActiveShift({ name: e.target.value })}
                   placeholder="Shift name"
@@ -4392,10 +4392,10 @@ export function StepBell() {
                   }} />
               </div>
 
-              {/* Card body — active shift config */}
+              {/* Card body - active shift config */}
               <div style={{ padding: '14px 16px' }}>
 
-              {/* Timing row — all 6 fields on one line */}
+              {/* Timing row - all 6 fields on one line */}
               <div style={{ display: 'flex', flexWrap: 'nowrap' as const, alignItems: 'flex-start', gap: 10, marginBottom: 16 }}>
                 {/* Start */}
                 <div style={{ flex: '0 0 108px' }}>
@@ -4529,7 +4529,7 @@ export function StepBell() {
                   })}
                   {activeShift.classes.length === 0 && (
                     <span style={{ fontSize: 11, color: '#FCA5A5', fontStyle: 'italic' }}>
-                      No classes assigned — add at least one group
+                      No classes assigned - add at least one group
                     </span>
                   )}
                 </div>
@@ -4716,7 +4716,7 @@ export function StepBell() {
                 </button>
               </div>
 
-              {/* ── Body — only when enabled ── */}
+              {/* ── Body - only when enabled ── */}
               {autoBellMode && (
                 <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
@@ -4727,7 +4727,7 @@ export function StepBell() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 2 }}>Institution type</div>
                         <div style={{ fontSize: 10, color: '#6B7079', lineHeight: 1.6 }}>
-                          Day-boarding serves snacks &amp; lunch on campus, so all classes stay nearly the full day — juniors leave only slightly earlier. Regular schools disperse younger classes noticeably earlier.
+                          Day-boarding serves snacks &amp; lunch on campus, so all classes stay nearly the full day - juniors leave only slightly earlier. Regular schools disperse younger classes noticeably earlier.
                         </div>
                       </div>
                     </div>
@@ -4746,7 +4746,7 @@ export function StepBell() {
                       })}
                     </div>
 
-                    {/* Live dispersal ladder — shows each group's real end time, youngest first */}
+                    {/* Live dispersal ladder - shows each group's real end time, youngest first */}
                     {dispersalLadder.length > 1 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#8B7FE8', textTransform: 'uppercase' }}>
@@ -4796,7 +4796,7 @@ export function StepBell() {
                           )}
                         </div>
                         <div style={{ fontSize: 10, color: '#6B7079', lineHeight: 1.6 }}>
-                          An extra short pause anywhere in the day — for a snack, stretch, or settling-in time. Place it near the start or the end of the day, wherever it's needed.
+                          An extra short pause anywhere in the day - for a snack, stretch, or settling-in time. Place it near the start or the end of the day, wherever it's needed.
                         </div>
                       </div>
                     </div>
@@ -4838,7 +4838,7 @@ export function StepBell() {
                       </button>
                     </div>
 
-                    {/* Sub-picker: exactly after which point? — shown when break is enabled.
+                    {/* Sub-picker: exactly after which point? - shown when break is enabled.
                         Covers the whole day (Assembly through after the last period, i.e.
                         right before Dispersal) so the same break can sit at the start, the
                         end, or anywhere in between. */}
@@ -4880,7 +4880,7 @@ export function StepBell() {
                       )
                     })()}
 
-                    {/* Duration stepper — only when break is enabled */}
+                    {/* Duration stepper - only when break is enabled */}
                     {morningBreak && (
                       <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 11, color: '#92400E', fontWeight: 600 }}>Duration</span>
@@ -4919,7 +4919,7 @@ export function StepBell() {
                       </div>
                     )}
 
-                    {/* + Add another break — inserts an independent break row directly
+                    {/* + Add another break - inserts an independent break row directly
                         into the schedule grid (own duration/delete controls there),
                         so multiple breaks (e.g. one near the start, one near the end)
                         can coexist instead of just the single break above. */}
@@ -4932,7 +4932,7 @@ export function StepBell() {
                       ) : (
                         <div style={{ background: '#fff', border: '1px solid #FDE68A', borderRadius: 8, padding: 10 }}>
                           <div style={{ fontSize: 10, fontWeight: 700, color: '#B45309', letterSpacing: 0.3, textTransform: 'uppercase' as const, marginBottom: 6 }}>
-                            New break — place after…
+                            New break - place after…
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5, marginBottom: 10 }}>
                             {[
@@ -5042,7 +5042,7 @@ export function StepBell() {
                       borderRadius: 9, padding: '12px 14px',
                     }}>
                       <div style={{ fontSize: 11, color: '#69707E', marginBottom: 10, lineHeight: 1.5 }}>
-                        <strong style={{ color: '#6358C4' }}>How it works:</strong> Each age group gets lunch at a different period. Younger children eat earlier (they get hungry sooner), older classes eat later — the canteen serves one group at a time, no rush.
+                        <strong style={{ color: '#6358C4' }}>How it works:</strong> Each age group gets lunch at a different period. Younger children eat earlier (they get hungry sooner), older classes eat later - the canteen serves one group at a time, no rush.
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {(() => {
@@ -5085,7 +5085,7 @@ export function StepBell() {
                             ? effConcurrentDur : undefined
                           const concPeriodAt  = (!isPrePrimary && ppEatsEarly && concurrentMode !== 'regular')
                             ? sbAP + 1 : undefined
-                          // When morning break is on it IS the short break — no separate +15 to add.
+                          // When morning break is on it IS the short break - no separate +15 to add.
                           // Use effPeriodDur (8h-capped) so the time here matches actual bell timing.
                           const approx = approxLunchTime(startTime, effPeriodDur, ap, maxPeriods, use12h,
                             replacesShortBreak, concPeriodDur, concPeriodAt,
@@ -5160,7 +5160,7 @@ export function StepBell() {
                       <div style={{ display: 'flex', gap: 7 }}>
                         {([
                           { val: 'regular',    label: 'Regular',       sub: '', desc: 'Normal period, unaffected' },
-                          { val: 'match-lunch',label: 'Match lunch',   sub: '', desc: 'Period equals lunch duration — bells align cleanly' },
+                          { val: 'match-lunch',label: 'Match lunch',   sub: '', desc: 'Period equals lunch duration - bells align cleanly' },
                           { val: 'custom',     label: 'Custom',        sub: '', desc: 'Set your own duration' },
                         ] as const).map(opt => {
                           const active = concurrentMode === opt.val
@@ -5226,14 +5226,14 @@ export function StepBell() {
                           </div>
                           <div style={{ fontSize: 10, color: '#065F46', display: 'flex', gap: 5, alignItems: 'flex-start', lineHeight: 1.5 }}>
                             <span style={{ flexShrink: 0 }}>✓</span>
-                            <span>Bell boundaries align perfectly — when Pre-Primary's lunch ends, it rings for the next group to start lunch. Concurrent period matches this duration.</span>
+                            <span>Bell boundaries align perfectly - when Pre-Primary's lunch ends, it rings for the next group to start lunch. Concurrent period matches this duration.</span>
                           </div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Auto-generate hint — shows once settings have produced a schedule */}
+                  {/* Auto-generate hint - shows once settings have produced a schedule */}
                   {smartGenDone && (
                     <div style={{ fontSize: 11, color: '#69707E', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ color: '#0A8136', fontWeight: 700 }}>✓</span>
@@ -5246,14 +5246,14 @@ export function StepBell() {
               {/* Collapsed state hint */}
               {!autoBellMode && (
                 <div style={{ padding: '10px 16px', fontSize: 11, color: '#6B7079' }}>
-                  Enable to auto-generate an optimised bell schedule based on your school hours — with optional smart staggered lunches per age group.
+                  Enable to auto-generate an optimised bell schedule based on your school hours - with optional smart staggered lunches per age group.
                 </div>
               )}
             </div>
           </div>
 
           {/* ─── BELL TIMING GRID ─── */}
-          {/* Grid is always editable — Smart Timing populates it but never locks it. */}
+          {/* Grid is always editable - Smart Timing populates it but never locks it. */}
           <div>
             {/* In Advanced mode: shift selector mini-tabs above the grid */}
             {isAdvanced && shifts.length > 1 && (
@@ -5278,9 +5278,9 @@ export function StepBell() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Clock size={13} color="#685DBC" />
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
-                  Bell Timing{isAdvanced && activeShift ? ` — ${activeShift.name}` : ''}
+                  Bell Timing{isAdvanced && activeShift ? ` - ${activeShift.name}` : ''}
                 </span>
-                {/* Customized / Auto-Generated badge — only in Smart Timing mode */}
+                {/* Customized / Auto-Generated badge - only in Smart Timing mode */}
                 {autoBellMode && displayRows.length > 0 && (
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0,
@@ -5293,7 +5293,7 @@ export function StepBell() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Regenerate button — Smart Timing mode only */}
+                {/* Regenerate button - Smart Timing mode only */}
                 {autoBellMode && (
                   <button
                     title="Regenerate bell schedule now (applies current P.Max, Max/day, and all settings)"
@@ -5358,7 +5358,7 @@ export function StepBell() {
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#B45309', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 20, padding: '1px 8px' }}>
                     {scheduleAdvisories.length} suggestion{scheduleAdvisories.length > 1 ? 's' : ''}
                   </span>
-                  <span style={{ fontSize: 10, color: '#B9A88A', marginLeft: 'auto' }}>Guidance only — nothing is blocked</span>
+                  <span style={{ fontSize: 10, color: '#B9A88A', marginLeft: 'auto' }}>Guidance only - nothing is blocked</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {scheduleAdvisories.map(a => {
@@ -5494,7 +5494,7 @@ export function StepBell() {
                           const isCustom  = !!dayRows[k]
                           nodes.push(
                             <button key={k} onClick={() => isWorking && setActiveDayTab(k)}
-                              title={isWorking ? `Week ${w} · ${d}${isCustom ? ' — custom schedule' : ''}` : 'Not a working day this week'}
+                              title={isWorking ? `Week ${w} · ${d}${isCustom ? ' - custom schedule' : ''}` : 'Not a working day this week'}
                               style={{
                                 padding: '5px 0', borderRadius: 7, fontSize: 11, fontWeight: isActive ? 700 : 500,
                                 background: isActive ? '#685DBC' : isWorking ? (isCustom ? '#EDE9FF' : '#fff') : 'transparent',
@@ -5504,7 +5504,7 @@ export function StepBell() {
                                 fontFamily: 'inherit', transition: 'all .12s', textAlign: 'center',
                                 position: 'relative', lineHeight: 1,
                               }}>
-                              {isWorking ? d.slice(0, 2) : '—'}
+                              {isWorking ? d.slice(0, 2) : '-'}
                               {isCustom && isWorking && !isActive && (
                                 <div style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#685DBC' }} />
                               )}
@@ -5520,7 +5520,7 @@ export function StepBell() {
                           {activeDayTab.replace(/^w(\d+)-(.+)$/, 'Week $1 · $2')}
                         </span>
                         <span style={{ fontWeight: 400, color: '#6B7079', marginLeft: 6 }}>
-                          {dayRows[activeDayTab] ? '(custom)' : '(using default — edit to customise)'}
+                          {dayRows[activeDayTab] ? '(custom)' : '(using default - edit to customise)'}
                         </span>
                       </div>
                     )}
@@ -5657,7 +5657,7 @@ export function StepBell() {
 
                 <div style={{ width: 1, height: 20, background: '#DDD6FE', flexShrink: 0 }} />
 
-                {/* Period duration — default for new rows; individual rows keep their own durations */}
+                {/* Period duration - default for new rows; individual rows keep their own durations */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span style={{ fontSize: 11, color: '#6B7079' }}>Default period</span>
                   <NumInput className="b-dur" value={activePeriodDur} min={10} max={240}
@@ -5698,7 +5698,7 @@ export function StepBell() {
                 {['Bell', 'Start', 'End', 'Min ✎', 'Type',
                   bellViewFilter === 'all' ? 'Classes' : `${bellViewFilter} only`,
                   ''].map((h, i) => (
-                  <div key={i} title={i === 3 ? 'Each row\'s duration is independently editable — click the value to change it' : undefined}
+                  <div key={i} title={i === 3 ? 'Each row\'s duration is independently editable - click the value to change it' : undefined}
                     style={{
                       fontSize: 11, fontWeight: 600, cursor: i === 3 ? 'help' : undefined,
                       color: i === 3 ? '#685DBC' : (i === 5 && bellViewFilter !== 'all') ? '#685DBC' : '#69707E',
@@ -5708,7 +5708,7 @@ export function StepBell() {
                 ))}
               </div>
 
-              {/* ── Attending today bar — shown when Vary by day is active ── */}
+              {/* ── Attending today bar - shown when Vary by day is active ── */}
               {todayAttendance && (
                 <div style={{
                   padding: '8px 14px', borderBottom: '1px solid #F0EDFF',
@@ -5743,7 +5743,7 @@ export function StepBell() {
               <div>
                 {viewRows.map((row, i) => {
                   const tm      = TYPE_META[row.type]
-                  const start   = viewStartTimes[i] ?? '—'
+                  const start   = viewStartTimes[i] ?? '-'
                   const end     = addMins(start, row.duration)
                   const isBreak = row.type === 'short-break' || row.type === 'lunch'
                   const isEdge  = row.type === 'assembly' || row.type === 'dispersal'
@@ -5764,7 +5764,7 @@ export function StepBell() {
                           onChange={e => updateRow(row.id, { name: e.target.value })}
                           style={{ fontWeight: isBreak ? 700 : undefined }}
                         />
-                        {/* ── Start time — click to edit ── */}
+                        {/* ── Start time - click to edit ── */}
                         {editingTime?.rowId === row.id && editingTime.field === 'start' ? (
                           <input type="time" defaultValue={start} autoFocus
                             onBlur={e  => commitStartTime(row.id, e.target.value, rowStartTimes)}
@@ -5795,7 +5795,7 @@ export function StepBell() {
                           </div>
                         )}
 
-                        {/* ── End time — click to edit ── */}
+                        {/* ── End time - click to edit ── */}
                         {editingTime?.rowId === row.id && editingTime.field === 'end' ? (
                           <input type="time" defaultValue={end} autoFocus
                             onBlur={e  => commitEndTime(row.id, e.target.value, start, row.type)}
@@ -5862,7 +5862,7 @@ export function StepBell() {
                           </button>
                         )}
                       </div>
-                      {/* GapRow only in "All" view — filtered view is read-only to avoid index mismatch */}
+                      {/* GapRow only in "All" view - filtered view is read-only to avoid index mismatch */}
                       {bellViewFilter === 'all' && i < viewRows.length - 1 && (
                         <GapRow afterIndex={i} rows={displayRows}
                           onInsertBreak={insertBreak}
@@ -5911,7 +5911,7 @@ export function StepBell() {
           past the bottom. 52px top-bar + 38px sub-bar + 86px step-bar + 20px
           page padding-top + 16px top offset = ~212px removed from 100vh.
           overflowY: auto lets the panel scroll independently of the left side.
-          Hidden until setupChoice is picked — nothing to preview before then,
+          Hidden until setupChoice is picked - nothing to preview before then,
           and showing it early was part of the step's initial cognitive overload.
         */}
         {setupChoice !== 'choose' && <div style={{
@@ -5942,7 +5942,7 @@ export function StepBell() {
                 const tm  = TYPE_META[row.type]
                 const end = addMins(start, row.duration)
                 const grp = activeClassKeys.every(k => row.classes.includes(k)) ? 'All'
-                  : row.classes.length === 0 ? '—'
+                  : row.classes.length === 0 ? '-'
                   : row.classes.length <= 4 ? row.classes.map(k => activeClasses.find(c => c.key === k)?.short ?? k).join(', ')
                   : `${row.classes.length} classes`
                 return (

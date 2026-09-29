@@ -1,5 +1,5 @@
 /**
- * Master Data — consolidated CRUD for all reference entities.
+ * Master Data - consolidated CRUD for all reference entities.
  *
  * Post-setup landing page where users can live-edit:
  *   - Classes (Sections)
@@ -62,8 +62,8 @@ export function MasterDataPage() {
 
   // Rooms are DERIVED from the store, not mirrored in local state.
   //
-  // The mirror was seeded once, at first render — before the effect below
-  // hydrates this timetable's saved resources — and never re-derived. So the
+  // The mirror was seeded once, at first render - before the effect below
+  // hydrates this timetable's saved resources - and never re-derived. So the
   // Venues tab could show the previously-open timetable's rooms while every
   // other tab showed the active one's, and the first edit wrote those stale
   // rooms back over the real ones. Deriving each render removes both.
@@ -71,7 +71,7 @@ export function MasterDataPage() {
     () => (storedRooms ?? []).map(roomRowFrom) as RoomRow[],
     [storedRooms],
   )
-  // Writes merge onto the stored record — see lib/roomShape. A room's subject
+  // Writes merge onto the stored record - see lib/roomShape. A room's subject
   // mappings and notes are not shown on this page, and must survive editing it.
   const setRooms = (next: RoomRow[]) => setStoredRooms?.(storedRoomsFrom(next, storedRooms ?? []))
 
@@ -103,7 +103,7 @@ export function MasterDataPage() {
 
   const skipFirstSave = useRef(false)
   useEffect(() => {
-    // Skip the initial render (post-hydration) — only persist real edits.
+    // Skip the initial render (post-hydration) - only persist real edits.
     if (!skipFirstSave.current) { skipFirstSave.current = true; return }
     const t = setTimeout(() => saveActiveTimetableSnapshot(), 600)
     return () => clearTimeout(t)
@@ -112,7 +112,7 @@ export function MasterDataPage() {
   const directoryStaff = useDirectoryStore(s => s.staff)
   const directoryVenues = useDirectoryStore(s => s.venues)
 
-  // Auth gate — below every hook. Signing out flips `user` to null, and a gate
+  // Auth gate - below every hook. Signing out flips `user` to null, and a gate
   // above the hooks would drop two of them on that render: the same crash we
   // shipped on sign-in.
   if (!user) { window.location.href = '/login'; return null }
@@ -194,7 +194,7 @@ export function MasterDataPage() {
           })}
         </div>
 
-        {/* Inline guide — content varies per tab */}
+        {/* Inline guide - content varies per tab */}
         {tab === 'classes' && (
           <StepGuide title="Classes & Sections" tips={[
             'Each row is one section (e.g., Class I-A). Add as many sections as your school has.',
@@ -206,14 +206,14 @@ export function MasterDataPage() {
         {tab === 'subjects' && (
           <StepGuide title="Subjects" tips={[
             'Periods/Week sets how many times per week this subject runs for each assigned section.',
-            'Short Name is displayed in the timetable grid — keep it 2–4 characters (e.g., MATH, ENG).',
+            'Short Name is displayed in the timetable grid - keep it 2–4 characters (e.g., MATH, ENG).',
             'Category groups subjects for reporting and HI balancing (Core, Activity, Language…).',
             'Use the Scope button to restrict a subject to specific days or time slots.',
           ]} />
         )}
         {tab === 'teachers' && (
           <StepGuide title="Teachers" tips={[
-            'The Subjects column lists which subjects this teacher can teach — comma-separated.',
+            'The Subjects column lists which subjects this teacher can teach - comma-separated.',
             'Max Periods/Week is the safe workload cap. The engine will never assign more than this.',
             'Use the Scope button to mark a teacher\'s unavailable slots (e.g., part-time schedules).',
             'If a subject has no available teacher within the cap, you\'ll see a staffing alert in the wizard.',
@@ -221,15 +221,15 @@ export function MasterDataPage() {
         )}
         {tab === 'rooms' && (
           <StepGuide title="Venues" tips={[
-            'Any teaching place — classroom, lab, hall, playground or sports ground. Lab-type venues are auto-matched to lab subjects by the engine.',
+            'Any teaching place - classroom, lab, hall, playground or sports ground. Lab-type venues are auto-matched to lab subjects by the engine.',
             'Capacity helps the engine avoid over-assigning a venue beyond what it can hold.',
             'Use the Scope button to restrict a venue to certain days or periods (e.g., a shared hall or ground).',
-            'You don\'t need a venue per section — one venue can be shared across multiple classes.',
+            'You don\'t need a venue per section - one venue can be shared across multiple classes.',
           ]} />
         )}
         {tab === 'strengths' && (
           <StepGuide title="Section Strengths" tips={[
-            'Enter student counts per subject per section — only needed when subjects are optional or streamed.',
+            'Enter student counts per subject per section - only needed when subjects are optional or streamed.',
             'Leave at 0 for subjects that are mandatory for all students in that section.',
             'Non-zero values let the engine detect elective groups and size teacher pools accurately.',
             'The Total column is auto-summed but can be overridden if your section size differs.',
@@ -240,7 +240,7 @@ export function MasterDataPage() {
             'This is the shared roster every schedule checks when you add a teacher or venue by name.',
             'Renaming an entry here renames it in every active schedule that uses it.',
             '"Merge into…" is for two entries that turn out to be the same real person or room.',
-            'Removing an entry only removes it from this shared list — it does not delete rows already in a schedule.',
+            'Removing an entry only removes it from this shared list - it does not delete rows already in a schedule.',
           ]} />
         )}
 
@@ -257,7 +257,7 @@ export function MasterDataPage() {
       {/* Scope modal */}
       {scopeTarget && (
         <ScopeMatrixModal
-          entityName={scopeTarget.entity.name ?? scopeTarget.entity.actualName ?? '—'}
+          entityName={scopeTarget.entity.name ?? scopeTarget.entity.actualName ?? '-'}
           entityKind={scopeTarget.kind.replace('Bulk', '')}
           scope={scopeTarget.entity.scope}
           workDays={workDays}

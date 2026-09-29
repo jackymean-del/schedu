@@ -15,7 +15,7 @@ import { migrateLegacyNaming } from "@/lib/terms"
 import { migrateLegacySubstitutions } from "@/lib/substitutionKeys"
 
 // These were all stored per signed-in account and are all facts about the
-// SCHOOL — see lib/schoolScope. Fold any such records into the school-wide
+// SCHOOL - see lib/schoolScope. Fold any such records into the school-wide
 // stores once, before anything reads them.
 migrateLegacyLeaves()
 migrateLegacyEvents()
@@ -30,7 +30,7 @@ migrateLegacyNaming()
   if (moved) console.info(`schedU: moved ${moved} weekday-keyed substitution(s) onto dates`)
 }
 
-// Must mirror pages/wizard.tsx STEP_META — Groups & Combos precedes Mapping
+// Must mirror pages/wizard.tsx STEP_META - Groups & Combos precedes Mapping
 // (Blueprint v6: Mapping depends on the parallel-subject rules).
 
 export function RootLayout() {
@@ -40,7 +40,7 @@ export function RootLayout() {
   // Record whoever signs in on the school roster, so an administrator can see
   // them and set a role. Done here rather than in each of the auth store's
   // sign-in paths because this also catches Clerk sessions restored on load.
-  // The first person through the door becomes the administrator — see
+  // The first person through the door becomes the administrator - see
   // store/members.ensureMember.
   const authedUser = useAuthStore(s => s.user)
   const ensureMember = useMembers(s => s.ensureMember)

@@ -1,5 +1,5 @@
 /**
- * SCHOOL EVENTS — exams, sports weeks, trips, assemblies, meetings.
+ * SCHOOL EVENTS - exams, sports weeks, trips, assemblies, meetings.
  *
  * Events already existed on the Calendar, but they were decoration: a coloured
  * chip on a day, stored under the account that typed it, affecting nothing. A
@@ -14,7 +14,7 @@
  *    whoever entered it.
  *
  * 2. CONSEQUENCE. An event may declare that it SUSPENDS TEACHING, and one that
- *    does removes its periods from the time available to cover the syllabus —
+ *    does removes its periods from the time available to cover the syllabus -
  *    through exactly the same derivation holidays use (lib/holidays), rather
  *    than a second code path that could drift from it. The difference from a
  *    holiday is only what it means to a person: the school is open and staff
@@ -35,7 +35,7 @@ export interface SchoolEvent {
   id: string
   title: string
   description?: string
-  /** One of EVENT_TYPES in the Calendar — 'exam', 'activity', 'meeting'… */
+  /** One of EVENT_TYPES in the Calendar - 'exam', 'activity', 'meeting'… */
   type: string
   /** First day, ISO YYYY-MM-DD. */
   date: string
@@ -83,7 +83,7 @@ export const useSchoolEvents = create<EventState>()(
 
 const day = (s: string | undefined) => (s ?? '').slice(0, 10)
 
-/** Calendar arithmetic, never UTC — see the note in syllabusPace about IST. */
+/** Calendar arithmetic, never UTC - see the note in syllabusPace about IST. */
 function nextDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00`)
   d.setDate(d.getDate() + 1)
@@ -94,7 +94,7 @@ function nextDay(iso: string): string {
  * Every date an event covers, inclusive of both ends.
  *
  * Capped at one year. A mistyped end date ('2206' for '2026') would otherwise
- * expand to sixty-five thousand entries and hang the page — better to return a
+ * expand to sixty-five thousand entries and hang the page - better to return a
  * year and let the school see an obviously wrong range than to freeze.
  */
 export function eventDates(e: SchoolEvent): string[] {
@@ -128,7 +128,7 @@ export function teachingSuspendedOn(events: SchoolEvent[], isoDate: string, sect
 
 /**
  * Suspending events, expressed as the holiday records the coverage math
- * already understands — one per date, carrying the event's own section scope.
+ * already understands - one per date, carrying the event's own section scope.
  *
  * Reusing lib/holidays rather than writing a second derivation is the whole
  * point: a lost period is a lost period, and two implementations of "which
@@ -161,7 +161,7 @@ export const legacyEventKeys = (storage: Storage) => legacyKeysFor(EVENTS_KEY, s
 export const eventIdentity = (e: SchoolEvent) =>
   `${(e.title ?? '').trim().toLowerCase()}|${day(e.date)}|${day(e.endDate)}`
 
-/** Anything recorded before events had consequences kept none — adopting it as
+/** Anything recorded before events had consequences kept none - adopting it as
  *  suspending would silently rewrite a school's hours. */
 const adoptEvent = (e: SchoolEvent): SchoolEvent => ({ ...e, suspendsTeaching: e.suspendsTeaching ?? false })
 

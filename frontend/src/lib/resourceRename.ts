@@ -1,14 +1,14 @@
 /**
  * RENAMING A RESOURCE THAT A TIMETABLE ALREADY NAMES.
  *
- * Generated cells store NAMES, not ids — `{ subject, teacher, room }` — and so
+ * Generated cells store NAMES, not ids - `{ subject, teacher, room }` - and so
  * do substitutions, leave, cover, duties and every syllabus plan key. Renaming
  * a teacher in Master Data changed her roster row and nothing else, so she
  * quietly became two people: the roster said "Anita Rao" and the timetable
  * still said "Anita".
  *
  * That is the same phantom as deleting somebody who is timetabled, arrived at
- * by a far more ordinary action — fixing a typo, adding a surname, correcting
+ * by a far more ordinary action - fixing a typo, adding a surname, correcting
  * a venue's label. And it is worse in one way, because nothing looks wrong:
  * the roster is right, the timetable is populated, and only the links between
  * them are broken. Leave recorded against the new name never matches the old
@@ -16,7 +16,7 @@
  * her workload splits across two people who are the same person.
  *
  * Unlike a delete, a rename has an unambiguous correct answer: it is still her
- * lesson, so every reference should follow. That is what this does — with the
+ * lesson, so every reference should follow. That is what this does - with the
  * transforms kept pure so each one can be tested, and a thin applier that
  * walks every active schedule and every school-scoped store.
  */
@@ -25,7 +25,7 @@ export type RenameKind = 'teacher' | 'subject' | 'room' | 'section'
 
 const clean = (s: string | undefined) => (s ?? '').trim()
 
-/** Nothing to do for a no-op or a blank name — renaming TO empty would erase
+/** Nothing to do for a no-op or a blank name - renaming TO empty would erase
  *  the link rather than move it. */
 export function renameIsValid(from: string, to: string): boolean {
   const a = clean(from), b = clean(to)
@@ -128,7 +128,7 @@ export function renameInSubstitutions(
 
 /**
  * Syllabus plans are keyed `subject||section` AND carry those names as fields,
- * so a subject or section rename orphans every plan for it — a term's recorded
+ * so a subject or section rename orphans every plan for it - a term's recorded
  * chapter coverage would simply stop being found.
  *
  * A rename onto a key that already exists keeps the EXISTING plan: it has its
@@ -147,7 +147,7 @@ export function renameInPlans<T extends { subject?: string; section?: string }>(
 
   // Keys that will still be occupied after the rename, because their plan is
   // not moving. Computed up front from the ORIGINAL map so the outcome does
-  // not depend on key order — the incumbent must win whichever is seen first.
+  // not depend on key order - the incumbent must win whichever is seen first.
   const staying = new Set(Object.keys(plans).filter(k => !moves(plans[k])))
 
   let changed = false
@@ -189,7 +189,7 @@ export function renameInRecords<T extends Record<string, any>>(
   return changed ? out : list
 }
 
-/** Rename inside a string-array field — e.g. a holiday's or event's `sections`. */
+/** Rename inside a string-array field - e.g. a holiday's or event's `sections`. */
 export function renameInStringLists<T extends Record<string, any>>(
   list: T[] | undefined, field: keyof T, fromRaw: string, toRaw: string,
 ): T[] | undefined {
@@ -210,9 +210,9 @@ export function renameInStringLists<T extends Record<string, any>>(
 /**
  * Rename the KEYS of a nested map whose levels are named entities.
  *
- * The allocation structures are keyed by name at every level — teacher →
+ * The allocation structures are keyed by name at every level - teacher →
  * section → subject for teacherAllocations, section → subject for
- * subjectAllocations — so a rename that moved the timetable and not these left
+ * subjectAllocations - so a rename that moved the timetable and not these left
  * the school's allocation grid pointing at names nothing else uses. They are
  * the input to generation, so the next solve reads the stale numbers.
  *
@@ -233,7 +233,7 @@ function renameKeysAtLevel(node: Record<string, any>, from: string, to: string):
   for (const k of keys) {
     if (clean(k) !== from) { out[k] = node[k]; continue }
     // Already taken by a row that is not moving, or by an earlier source key
-    // that also cleaned to `from` — leave this one where it is rather than
+    // that also cleaned to `from` - leave this one where it is rather than
     // overwrite somebody's real numbers.
     if (occupied.has(to) || claimed) { out[k] = node[k]; continue }
     out[to] = node[k]
@@ -278,7 +278,7 @@ export function renameInNestedKeys(
  * sectionStrengths is the live case: each row is one class-section, and its
  * `subjectStrengths` is keyed by subject name ({ English: 40, PE: 20 }). Those
  * counts decide how many students take each subject, which drives room
- * capacity and grouping — filed under a subject name nothing else uses, they
+ * capacity and grouping - filed under a subject name nothing else uses, they
  * quietly stop being consulted.
  */
 export function renameInRecordMaps<T extends Record<string, any>>(

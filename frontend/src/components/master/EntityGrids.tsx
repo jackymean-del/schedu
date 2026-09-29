@@ -1,5 +1,5 @@
 /**
- * EntityGrids — shared DataGrid wrappers for the four core entities.
+ * EntityGrids - shared DataGrid wrappers for the four core entities.
  *
  * Used by:
  *   - Wizard's Resources step (initial setup)
@@ -31,7 +31,7 @@ function extractGradeFromSection(name: string): string {
   const suffix = trimmed.slice(idx + 1).trim()
   // Only treat it as a section suffix if it's 1-2 chars (e.g. A, B, 1, 2A)
   if (suffix.length === 0 || suffix.length > 2) return ''
-  // Everything before the last "-suffix" — may still contain stream token (e.g. "XI-Sci")
+  // Everything before the last "-suffix" - may still contain stream token (e.g. "XI-Sci")
   const middle = trimmed.slice(0, idx).trim()
   // If the middle part also ends in a stream token, strip it to get just the grade
   const streamTokens = /-(sci|com|arts?|hum|gen|pcm|pcb|mpc|mec|cec|biz|law|med)$/i
@@ -160,7 +160,7 @@ const SUBJECT_ABBR: Record<string, string> = {
 /**
  * Returns a standardised short form for a subject name.
  * 1. Exact lookup in SUBJECT_ABBR (case-insensitive).
- * 2. Partial match — if user types "Pol Sc" it matches "political science" prefix — skipped
+ * 2. Partial match - if user types "Pol Sc" it matches "political science" prefix - skipped
  *    for now; exact is safer.
  * 3. Fallback: ≤5 char word → as-is uppercase; single long word → first 4 chars;
  *    multi-word → first letter of each word (e.g. "Life Skills" → "LS").
@@ -195,7 +195,7 @@ export interface RoomRow {
   floor: string
   scope?: ScopeMatrix
   /** Links this schedule's row to a shared cross-schedule roster entry
-   *  (store/directoryStore.ts). Optional — old records simply lack it. */
+   *  (store/directoryStore.ts). Optional - old records simply lack it. */
   directoryId?: string
 }
 
@@ -210,7 +210,7 @@ export function makeId() {
 /**
  * Warn before deleting a row a generated timetable still depends on.
  *
- * Reads the OPEN schedule's timetable — which for Master Data is the active
+ * Reads the OPEN schedule's timetable - which for Master Data is the active
  * one, since the page hydrates it on mount. A resource used only by a
  * different active schedule is therefore not counted; that is a known limit,
  * not a claim of completeness.
@@ -226,7 +226,7 @@ export function makeId() {
  * Generated cells store names, not ids, so without this a renamed teacher
  * becomes two people: the roster says the new name and the timetable still
  * says the old one. See lib/renameCascade for the full list of places a name
- * appears — it is longer than it looks.
+ * appears - it is longer than it looks.
  *
  * Called from the name column's setValue, which is the commit point (blur /
  * Enter / Tab), not a per-keystroke handler.
@@ -240,7 +240,7 @@ function useRenameCascade(kind: RenameKind) {
 /**
  * Says so when two rows share a name.
  *
- * Not a blocker — see lib/nameConflicts for why a school may genuinely have two
+ * Not a blocker - see lib/nameConflicts for why a school may genuinely have two
  * "Anita Sharma" and has to be the one to disambiguate them.
  */
 function NameConflictBanner<T>({ rows, nameOf, kind }: {
@@ -262,7 +262,7 @@ function NameConflictBanner<T>({ rows, nameOf, kind }: {
 
 /**
  * The other half of the delete warning. That one is shown once, as the row goes;
- * this one stays up for as long as the timetable and the roster disagree —
+ * this one stays up for as long as the timetable and the roster disagree -
  * which, for a teacher who left in March, is the rest of the year.
  */
 function OrphanBanner<T>({ rows, nameOf, kind }: {
@@ -294,7 +294,7 @@ function useDeleteWarning(kind: ResourceKind, nameOf: (row: any) => string) {
       const warning = deleteWarning(kind, name, usageOf(classTT, kind, name))
       if (warning) {
         return going.length > 1
-          ? `${warning} (${going.length} rows selected — this check reports the first one still in use.)`
+          ? `${warning} (${going.length} rows selected - this check reports the first one still in use.)`
           : warning
       }
     }
@@ -422,7 +422,7 @@ export function SubjectsGrid({
     <DataGrid<Subject>
       confirmDelete={confirmDelete}
       title="Subjects"
-      description="Core, optional, lab — toggle as needed. The engine uses these flags to plan."
+      description="Core, optional, lab - toggle as needed. The engine uses these flags to plan."
       icon={<BookOpen size={16} />}
       columns={columns}
       rows={subjects}
@@ -445,7 +445,7 @@ export function SubjectsGrid({
 
 // ── Shared cross-schedule directory auto-link confirmation ──────────────────
 // Master Data's DataGrid text cell only commits on blur/Enter/Tab (not per
-// keystroke, unlike a live-typing input) — see DataGrid.tsx's text editor —
+// keystroke, unlike a live-typing input) - see DataGrid.tsx's text editor -
 // so by the time a name commit reaches here it's final, and matches the
 // wizard's Add row: an exact match to the shared directory links immediately
 // (role/subjects or type/capacity filled in from the directory entry), no
@@ -461,9 +461,9 @@ function DirectoryLinkedBanner({ name, onUnlink, onDismiss }: {
       fontSize: 11.5, color: '#166534',
     }}>
       <span style={{ flex: 1 }}>
-        ✓ Linked <strong>{name}</strong> to your cross-schedule directory — details filled in from there.
+        ✓ Linked <strong>{name}</strong> to your cross-schedule directory - details filled in from there.
       </span>
-      <button onClick={onUnlink} title="Not the same person/venue — unlink this row"
+      <button onClick={onUnlink} title="Not the same person/venue - unlink this row"
         style={{ background: 'none', border: '1.5px solid #86EFAC', color: '#166534', borderRadius: 5, padding: '3px 9px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
         Not the same? Unlink
       </button>
@@ -480,7 +480,7 @@ function DirectoryLinkedBanner({ name, onUnlink, onDismiss }: {
  *  the directory with partial names) before registering a row with a real
  *  name and no directoryId as a brand-new directory entry.
  *
- *  Deliberately only creates NEW entries — it never links a row to an
+ *  Deliberately only creates NEW entries - it never links a row to an
  *  EXISTING match. That's the name column's own setValue's job (see
  *  TeachersGrid/RoomsGrid), which runs at commit time. If this debounce also
  *  linked existing matches, "Unlink" (DirectoryLinkedBanner) would be undone
@@ -544,7 +544,7 @@ export function TeachersGrid({
     {
       key: 'name', label: 'Teacher', type: 'text', sticky: true, width: 180, placeholder: 'e.g. John Smith',
       // Commits on blur/Enter/Tab (DataGrid's text cell), not per keystroke, so
-      // an exact match here is already a finished edit — auto-link immediately
+      // an exact match here is already a finished edit - auto-link immediately
       // like the wizard's Add row, rather than requiring a separate click.
       setValue: (row, v) => {
         const trimmed = String(v).trim()
@@ -661,7 +661,7 @@ export function RoomsGrid({
       <DataGrid<RoomRow>
         confirmDelete={confirmDelete}
         title="Venues"
-        description="Any teaching place — classrooms, labs, halls, playgrounds, grounds. Scope a venue to time-window its availability."
+        description="Any teaching place - classrooms, labs, halls, playgrounds, grounds. Scope a venue to time-window its availability."
         icon={<Building2 size={16} />}
         columns={columns}
         rows={rooms}

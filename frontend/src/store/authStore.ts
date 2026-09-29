@@ -7,7 +7,7 @@ export interface AuthUser {
   name: string
   email: string
   schoolName?: string
-  /** Institution mailing address — printed in document headers when set. */
+  /** Institution mailing address - printed in document headers when set. */
   address?: string
   role: 'admin' | 'teacher' | 'viewer'
   /** Subscription tier. Absent / 'free' shows the schedU print watermark. */
@@ -96,7 +96,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'schedu-auth',
-      // authReady is per-page-load runtime state — never persist it, or a stale
+      // authReady is per-page-load runtime state - never persist it, or a stale
       // `true` would skip the loader and reintroduce the login-form flash.
       partialize: (s) => ({ user: s.user, token: s.token, isAuthenticated: s.isAuthenticated }),
     }

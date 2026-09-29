@@ -1,5 +1,5 @@
 /**
- * Settings — organization profile + account. This is the permanent home for
+ * Settings - organization profile + account. This is the permanent home for
  * editing the organization details first captured by the onboarding guide.
  */
 import { useState, useMemo } from 'react'
@@ -71,13 +71,13 @@ export function SettingsPage() {
         {/* Institution naming */}
         <NamingCard onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
 
-        {/* School holidays — admin-only (Blueprint v6): declaring one removes
+        {/* School holidays - admin-only (Blueprint v6): declaring one removes
             teaching time from every subject in the school. */}
         {canManageHolidays && (
           <HolidayManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
         )}
 
-        {/* Academic terms — same admin authority as holidays: both decide the
+        {/* Academic terms - same admin authority as holidays: both decide the
             calendar every subject's hours are measured against. */}
         {canManageHolidays && (
           <TermManager onSaved={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }} />
@@ -88,8 +88,8 @@ export function SettingsPage() {
 
         {/* Account */}
         <Card title="Account" subtitle="Your personal sign-in and profile.">
-          <Row label="Name" value={user?.name ?? '—'} />
-          <Row label="Email" value={user?.email ?? '—'} />
+          <Row label="Name" value={user?.name ?? '-'} />
+          <Row label="Email" value={user?.email ?? '-'} />
           <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
             <button onClick={() => openUserProfile()} style={btnSecondary}>Edit profile & password</button>
             <button onClick={() => { logout(); window.location.href = '/login' }} style={{ ...btnSecondary, color: '#dc2626', borderColor: '#FCA5A5' }}>Sign out</button>
@@ -101,10 +101,10 @@ export function SettingsPage() {
 }
 
 // ── Institution naming ─────────────────────────────────────────
-// Every institution names things differently — Class vs Grade vs Batch,
+// Every institution names things differently - Class vs Grade vs Batch,
 // Teacher vs Faculty vs Trainer. Pick a suggestion or type your own word;
 // labels update everywhere instantly, even on already-generated timetables
-// (they're display words only — the underlying data never changes).
+// (they're display words only - the underlying data never changes).
 const TERM_ROWS: { key: TermKey; label: string; hint: string }[] = [
   { key: 'class',   label: 'A group of learners',   hint: 'Class · Grade · Section · Batch · Cohort…' },
   { key: 'teacher', label: 'A person who teaches',  hint: 'Teacher · Faculty · Instructor · Trainer…' },
@@ -132,7 +132,7 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
   }
 
   return (
-    <Card title="Institution naming" subtitle="Call things what your institution calls them — the words update across the whole app, even on generated timetables.">
+    <Card title="Institution naming" subtitle="Call things what your institution calls them - the words update across the whole app, even on generated timetables.">
       {TERM_ROWS.map(row => (
         <div key={row.key} style={{
           display: 'grid', gap: 12, alignItems: 'center',
@@ -172,7 +172,7 @@ function NamingCard({ onSaved }: { onSaved: () => void }) {
 }
 
 // ── Workload limits ─────────────────────────────────────────────
-// Global override for the max weekly hours the planner schedules — for all
+// Global override for the max weekly hours the planner schedules - for all
 // teachers and for children per grade band. Blank = use the national norm.
 const BAND_ORDER: GradeBand[] = ['prePrimary', 'lowerPrimary', 'upperPrimary', 'secondary', 'seniorSecondary']
 
@@ -203,7 +203,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   }
 
 
-  // Blueprint v5 — country-wise allocation automation. The school's own country
+  // Blueprint v5 - country-wise allocation automation. The school's own country
   // seeds the defaults; where the published figure is net teaching time we use
   // it, and where it isn't (India publishes total working hours incl. prep) we
   // keep the teaching norm and nudge for a custom value instead.
@@ -217,8 +217,8 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
 
   const nudgeText =
     nudge.reason === 'uncovered' ? `We don’t hold verified figures for this country, so the OECD average is shown. Enter your own values below.`
-    : nudge.reason === 'basis'   ? `${ref?.name}'s published teacher figure (~${ref?.teacherHoursYear.primary} h/yr) is TOTAL working time including preparation, not classroom teaching — so it isn’t used as a teaching cap. Enter your own if your school sets one.`
-    : nudge.reason === 'approximate' ? `These figures follow established OECD patterns for ${ref?.name} but weren’t individually re-verified — treat them as indicative and override if you know better.`
+    : nudge.reason === 'basis'   ? `${ref?.name}'s published teacher figure (~${ref?.teacherHoursYear.primary} h/yr) is TOTAL working time including preparation, not classroom teaching - so it isn’t used as a teaching cap. Enter your own if your school sets one.`
+    : nudge.reason === 'approximate' ? `These figures follow established OECD patterns for ${ref?.name} but weren’t individually re-verified - treat them as indicative and override if you know better.`
     : null
 
   return (
@@ -226,23 +226,23 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
       title="Workload limits"
       subtitle={`What the planner uses when it allocates. Anything you don’t set follows your country’s reference value. 1 period = ${periodMinutes} min · ${daysPerWeek}-day week.`}
     >
-      {/* Country picker — captured once for the school (Blueprint v5) */}
+      {/* Country picker - captured once for the school (Blueprint v5) */}
       <Field label="Education system / country">
         <select value={country} onChange={e => pickCountry(e.target.value)} style={inputStyle}>
           {countryOptions().map(o => (
             <option key={o.code} value={o.code}>
-              {o.name}{o.code === 'OECD' ? '' : ` — ${o.confidence === 'verified' ? 'Verified' : 'Approximate'}`}
+              {o.name}{o.code === 'OECD' ? '' : ` - ${o.confidence === 'verified' ? 'Verified' : 'Approximate'}`}
             </option>
           ))}
         </select>
         <div style={{ fontSize: 11, color: '#777391', marginTop: 4 }}>
           {autoDetected
-            ? `Detected from your device’s timezone — confirm or change it. Nothing is sent anywhere to work this out.`
+            ? `Detected from your device’s timezone - confirm or change it. Nothing is sent anywhere to work this out.`
             : `Taken from your sign-up details. Change it here if your school follows a different system.`}
         </div>
       </Field>
 
-      {/* Country reference — what this school's own system actually says */}
+      {/* Country reference - what this school's own system actually says */}
       {ref && (
         <div style={{
           background: nudge.prompt ? '#FFFBEB' : '#F0FDF4',
@@ -269,7 +269,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
       {/* ── Table 1 · National norm (read-only) ─────────────────── */}
       <div>
         <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4', marginBottom: 6 }}>
-          National norm — {ref?.name ?? country}
+          National norm - {ref?.name ?? country}
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
@@ -291,10 +291,10 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
                     <td style={{ ...td, textAlign: 'left' }}>{BAND_LABELS[band]}</td>
                     <td style={td}>{sHrs}</td>
                     <td style={{ ...td, color: t?.usable ? '#13111E' : '#777391' }}>
-                      {t ? t.hours : '—'}
+                      {t ? t.hours : '-'}
                     </td>
                     <td style={{ ...td, textAlign: 'left', fontSize: 11, color: '#6D6A8A' }}>
-                      {t?.usable ? 'Net teaching time' : 'Total incl. prep — not a teaching cap'}
+                      {t?.usable ? 'Net teaching time' : 'Total incl. prep - not a teaching cap'}
                     </td>
                   </tr>
                 )
@@ -304,7 +304,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
         </div>
         <p style={{ fontSize: 11, color: '#777391', margin: '6px 0 0' }}>
           Term-time averages (annual hours ÷ {ref?.weeksPerYear ?? 38} teaching weeks). Source: {ref?.sourceNote ?? 'OECD Education at a Glance'}.
-          {' '}These are the policy defaults — the planner uses them unless you set a custom norm below.
+          {' '}These are the policy defaults - the planner uses them unless you set a custom norm below.
         </p>
       </div>
 
@@ -313,12 +313,12 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
       {/* ── Table 2 · What this school actually uses (READ-ONLY) ──
           Editing lives in ONE place: the workload modal, reached from here and
           from the Mapping step. Two editors for the same stored values meant two
-          UIs that could drift apart in what they offered — this one only did
+          UIs that could drift apart in what they offered - this one only did
           stages and a global teacher cap, while the modal also does per-class
           and per-subject. Same data, one editor, several doors. */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4' }}>In effect — your school</div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4B41C4' }}>In effect - your school</div>
           <span style={{ fontSize: 11, color: '#6D6A8A' }}>A custom value always wins over the national figure.</span>
         </div>
         <div style={{ overflowX: 'auto' }}>
@@ -349,7 +349,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
                 )
               })}
               <tr>
-                <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>All teachers — teaching h/wk</td>
+                <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>All teachers - teaching h/wk</td>
                 <td style={{ ...td, fontWeight: teacherMaxHoursWeek != null ? 700 : 400, color: teacherMaxHoursWeek != null ? '#4B41C4' : '#13111E' }}>
                   {teacherMaxHoursWeek ?? teacherDefault}
                 </td>

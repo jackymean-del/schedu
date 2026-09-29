@@ -37,7 +37,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
         </div>
       </a>
 
-      {/* Wizard step pill — center */}
+      {/* Wizard step pill - center */}
       <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
         {isWizard && step && totalSteps && (
           <div style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 14px', background:'#F5F2FF', borderRadius:20, border:'1px solid #E8E4FF' }}>
@@ -57,7 +57,7 @@ export function Topbar({ step, totalSteps, stepLabel }: TopbarProps) {
         )}
       </div>
 
-      {/* Right — auth-aware */}
+      {/* Right - auth-aware */}
       <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
         {isAuthenticated && user ? (
           <>

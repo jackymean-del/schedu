@@ -1,4 +1,4 @@
-// Bell generator regression tests — run with `npx tsx bell-verify.mts`.
+// Bell generator regression tests - run with `npx tsx bell-verify.mts`.
 // 1) No consecutive breaks (morning break + early PP lunch must not stack).
 // 2) Default Pre-Primary lunch has a clock floor (no 9:50 AM "lunch").
 import { smartGenerateBellConfig } from './src/routes/wizard/step-bell'
@@ -30,7 +30,7 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
   )
   for (const key of ['LKG', 'I', 'VI']) {
     const ok = noAdjacentBreaks(rows, key)
-    console.log(`case1 ${key}: ${ok ? 'PASS' : 'FAIL — consecutive breaks'}`)
+    console.log(`case1 ${key}: ${ok ? 'PASS' : 'FAIL - consecutive breaks'}`)
     if (!ok) fails++
   }
   console.log('case1 LKG:', forClass(rows, 'LKG').map(r => r.name).join(' → '))
@@ -60,7 +60,7 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
 
 
 
-// ── Case 3: age ordering — younger groups eat lunch strictly no later than
+// ── Case 3: age ordering - younger groups eat lunch strictly no later than
 // older ones (Pre-Primary ≤ Primary ≤ Middle ≤ Senior ≤ Senior Secondary),
 // via lunchLadder + the generator's own placement. Regression for the
 // "I–V eats before Nursery/LKG" inversion.
@@ -103,7 +103,7 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
 //
 // A day that holds an assembly, a lunch or a dispersal is longer than its
 // teaching periods add up to, so summing `duration` from config.startTime puts
-// every period after one of those rows early — measured at an hour by the
+// every period after one of those rows early - measured at an hour by the
 // third period of an ordinary morning.
 //
 // That is not a cosmetic label. lib/activeSchedules decides whether two
@@ -128,19 +128,19 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
     const src = stripComments(rf(file, 'utf8'))
     const readsStart = /startTime\s*\?\?\s*["'][0-9]{2}:[0-9]{2}["']/.test(src)
     const addsDurations = /\+=\s*\(?\s*p\.duration|\+=\s*p\.duration|duration\s*\?\?\s*45/.test(src)
-    // The rule is not "never add durations up" — that IS the fallback for a
+    // The rule is not "never add durations up" - that IS the fallback for a
     // schedule with no bell, and bellTimes does it too. The rule is that the
     // bell must be consulted FIRST. A file that never mentions it, and adds
     // durations up from the start time, is computing a clock that drifts.
     // (routes/timetable.tsx keeps its own bell-first resolver with a naive
-    // fallback, so it passes here — that duplication is worth collapsing into
+    // fallback, so it passes here - that duplication is worth collapsing into
     // lib/bellTimes one day, but it is not the drift this guards against.)
     const consultsBell = /bellTimes|bellSchedules|bellScheduleForSection|schedulePeriodTimes|sectionPeriodTimes/.test(src)
     if (readsStart && addsDurations && !consultsBell) offenders.push(norm.split('src/')[1] ?? norm)
   }
   const ok = offenders.length === 0
   console.log(`${ok ? '✓' : '✗'} period → clock goes through lib/bellTimes everywhere${
-    ok ? '' : ` — re-summed privately in: ${offenders.join(', ')}`}`)
+    ok ? '' : ` - re-summed privately in: ${offenders.join(', ')}`}`)
   if (!ok) fails++
 }
 

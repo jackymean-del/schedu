@@ -1,5 +1,5 @@
 /**
- * Block / Building Distance Matrix editor — Blueprint v3, Step 2 (Resources).
+ * Block / Building Distance Matrix editor - Blueprint v3, Step 2 (Resources).
  *
  * The admin records how far apart the school's blocks/buildings are, on their own
  * relative scale (lower = closer). Only each unordered pair is entered once; the
@@ -44,7 +44,7 @@ export function BlockDistanceMatrix({ venueBuildings }: { venueBuildings: string
         )}
       </div>
       <p style={{ fontSize: 11.5, color: '#6D6A8A', margin: '0 0 10px' }}>
-        Only needed if your school spans multiple blocks. Use your own relative scale — <strong>lower = closer</strong>
+        Only needed if your school spans multiple blocks. Use your own relative scale - <strong>lower = closer</strong>
         {' '}(e.g. A–B 1, A–C 2). schedU prefers nearer blocks when a parallel session spans buildings, so students walk less.
       </p>
 
@@ -84,7 +84,7 @@ export function BlockDistanceMatrix({ venueBuildings }: { venueBuildings: string
         </div>
       ) : (
         <>
-          {/* Pair inputs — each unordered pair once */}
+          {/* Pair inputs - each unordered pair once */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, marginBottom: 12 }}>
             {pairs.map(([a, b]) => {
               const k = pairKey(a, b)
@@ -93,7 +93,7 @@ export function BlockDistanceMatrix({ venueBuildings }: { venueBuildings: string
                 <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                   <span style={{ color: '#4B5275', fontWeight: 600, whiteSpace: 'nowrap' }}>{a} – {b}</span>
                   <input
-                    type="number" min={0} step="0.5" value={v ?? ''} placeholder="—"
+                    type="number" min={0} step="0.5" value={v ?? ''} placeholder="-"
                     onChange={e => setDistance(a, b, e.target.value === '' ? undefined : Number(e.target.value))}
                     style={{
                       width: 56, padding: '4px 7px', borderRadius: 6, fontSize: 12, fontFamily: 'inherit',
@@ -124,7 +124,7 @@ export function BlockDistanceMatrix({ venueBuildings }: { venueBuildings: string
                       const v = same ? 0 : distances[pairKey(r, c)]
                       return (
                         <td key={c} style={{ ...cell(false), color: same ? '#C9C3EC' : v == null ? '#B45309' : '#13111E' }}>
-                          {same ? '—' : (v ?? '·')}
+                          {same ? '-' : (v ?? '·')}
                         </td>
                       )
                     })}

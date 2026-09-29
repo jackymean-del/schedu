@@ -4,7 +4,7 @@ import { BRAND, PRODUCTS, BUSINESS, SCHEDU_URL } from '@/lib/site'
 
 const VALUES = [
   { title: 'Craft over clutter', body: 'Every screen earns its place. We remove before we add, so the tool gets out of the way of the work.' },
-  { title: 'Built for the real day', body: 'Software modelled on how people actually work — messy timetables, last-minute changes, real constraints.' },
+  { title: 'Built for the real day', body: 'Software modelled on how people actually work - messy timetables, last-minute changes, real constraints.' },
   { title: 'Honest by default', body: 'Clear pricing, no dark patterns, and features that do what they say. If it isn’t ready, we say so.' },
 ]
 
@@ -87,7 +87,7 @@ export default function Home() {
               </a>
             ))}
             <div className="rounded-[16px] border border-dashed border-[#E0D9F5] bg-white/50 px-7 py-6 text-[13.5px] text-[#9A95BC]">
-              More products in the works — <a href="/contact" className="font-semibold text-[#7C6FE0] no-underline">say hello</a> if you want to hear first.
+              More products in the works - <a href="/contact" className="font-semibold text-[#7C6FE0] no-underline">say hello</a> if you want to hear first.
             </div>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function Home() {
           <h2 className="text-[clamp(24px,3.5vw,34px)] font-bold tracking-[-0.6px] text-[#13111E]">Simple, honest pricing</h2>
           <p className="mt-3 max-w-[640px] text-[14.5px] leading-[1.75] text-[#4B5275]">
             Our products are free to start. schedU offers an optional <strong>Pro</strong> plan billed securely in INR via Razorpay
-            (UPI, cards &amp; netbanking) — <strong>₹{BUSINESS.proMonthlyINR}/month</strong> or <strong>₹{BUSINESS.proYearlyINR.toLocaleString('en-IN')}/year</strong>.
+            (UPI, cards &amp; netbanking) - <strong>₹{BUSINESS.proMonthlyINR}/month</strong> or <strong>₹{BUSINESS.proYearlyINR.toLocaleString('en-IN')}/year</strong>.
             Cancel anytime; access continues to the end of the billing period.
           </p>
           <a href={`${SCHEDU_URL}/pricing`} className="mt-6 inline-block no-underline">
@@ -117,7 +117,7 @@ export default function Home() {
           Working on something we should build?
         </h2>
         <p className="mx-auto mt-3 max-w-[440px] text-[14.5px] leading-[1.7] text-[#C4C0E8]">
-          Partnerships, feedback, or just curious — we read every message.
+          Partnerships, feedback, or just curious - we read every message.
         </p>
         <Link href="/contact" className="no-underline">
           <button className="mt-7 rounded-[10px] bg-white px-6 py-[13px] text-[14px] font-bold text-[#13111E]">

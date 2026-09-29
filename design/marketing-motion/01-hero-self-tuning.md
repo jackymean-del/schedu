@@ -1,7 +1,7 @@
-# 01 · Hero — "Self-tuning" loop
+# 01 · Hero - "Self-tuning" loop
 
-**Mechanic demonstrated:** the Tuner Console — schedU's signature
-constraint-tuning interaction — visibly re-flowing a schedule until it
+**Mechanic demonstrated:** the Tuner Console - schedU's signature
+constraint-tuning interaction - visibly re-flowing a schedule until it
 reaches zero conflicts. This is the product's thesis in one loop:
 *you don't build the timetable, you tune it.*
 
@@ -27,7 +27,7 @@ reaches zero conflicts. This is the product's thesis in one loop:
   gold knob r=4.5-equivalent. The hero literally contains three copies of
   the logo's right stem.
 - Grid cells: 30 rounded rects (via `<use>`), tinted with the app's subject
-  accent tints at 20% — recognizably the product's timetable, abstracted.
+  accent tints at 20% - recognizably the product's timetable, abstracted.
 
 ## Storyboard (loop ≈ 11s)
 
@@ -35,12 +35,12 @@ reaches zero conflicts. This is the product's thesis in one loop:
 |---|---|---|
 | 0.0–1.2s | **Rest state.** Grid shown with 2 red-outlined conflict cells; a small red "2" badge. Faders idle. | Establishes the problem without text. |
 | 1.2–2.0s | **Fader 1 self-nudges.** Knob glides up ~30% (base easing). | `transform: translateY` on knob + dashoffset fill, identical to loader. |
-| 2.0–3.4s | **Grid responds, wave 1.** Four cells swap: each fades to 0 opacity (150ms), translates to its new slot (350ms), fades back. One red cell turns neutral; badge ticks 2 → 1. | Cell swaps stagger 120ms apart — reads as ripple, not teleport. |
+| 2.0–3.4s | **Grid responds, wave 1.** Four cells swap: each fades to 0 opacity (150ms), translates to its new slot (350ms), fades back. One red cell turns neutral; badge ticks 2 → 1. | Cell swaps stagger 120ms apart - reads as ripple, not teleport. |
 | 3.4–4.2s | Fader 2 nudges down slightly. | Variation: a tune isn't monotonic. |
 | 4.2–5.6s | **Wave 2.** Three more cells reflow; the last red cell resolves; badge 1 → 0. | |
-| 5.6–6.4s | **Stamp.** "0 conflicts" pill scales in at grid corner with the settle easing (one gentle overshoot), gold check dot. | The only gold besides knobs — payoff moment. |
+| 5.6–6.4s | **Stamp.** "0 conflicts" pill scales in at grid corner with the settle easing (one gentle overshoot), gold check dot. | The only gold besides knobs - payoff moment. |
 | 6.4–9.4s | **Hold.** Everything still; stamp gently pulses opacity 1 → .85 → 1 once. | Let the conclusion breathe (3s). |
-| 9.4–11s | **Reset.** Whole right panel cross-fades (600ms) back to the rest state; faders drift home. | Cross-fade, never rewind — rewinding reads as failure. |
+| 9.4–11s | **Reset.** Whole right panel cross-fades (600ms) back to the rest state; faders drift home. | Cross-fade, never rewind - rewinding reads as failure. |
 
 ## SVG structure sketch
 

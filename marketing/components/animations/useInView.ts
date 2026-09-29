@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Shared lazy-render gate for the marketing animations — an animation only
+ * Shared lazy-render gate for the marketing animations - an animation only
  * plays once its wrapper scrolls into view, and pauses again once it scrolls
  * out (animation-play-state), so below-the-fold loops never burn cycles.
  */

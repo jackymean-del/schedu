@@ -40,7 +40,7 @@ export function ContactForm() {
         <div className="text-3xl leading-none">✅</div>
         <h2 className="text-lg font-bold text-[#13111E]">Message sent</h2>
         <p className="text-sm leading-[1.7] text-[#4B5275]">
-          Thanks{name ? `, ${name}` : ''} — we&rsquo;ve received your message and will reply to{' '}
+          Thanks{name ? `, ${name}` : ''} - we&rsquo;ve received your message and will reply to{' '}
           <span className="font-semibold text-[#13111E]">{email}</span> soon.
         </p>
       </div>

@@ -21,7 +21,7 @@ export function useExport() {
     const wb   = XLSX.utils.book_new()
     // One workbook, so one register of names. These already stripped
     // forbidden characters but never de-duplicated, so two sections called
-    // I-A — which this app allows — threw and produced no file.
+    // I-A - which this app allows - threw and produced no file.
     const usedSheets = new Set<string>()
     const days = config.workDays
     const classPeriods = periods.filter(p => p.type === "class")

@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * LiveDemo — a REAL interactive Live board on the marketing page.
+ * LiveDemo - a REAL interactive Live board on the marketing page.
  *
- * The clock is the visitor's GENUINE local time, to the second — never a
+ * The clock is the visitor's GENUINE local time, to the second - never a
  * simulated one. To keep the board alive for every visitor (a head of
  * school browsing at 11 PM must still see a class in session), the
  * ILLUSTRATIVE school day is anchored around that real time: the timeline
@@ -14,12 +14,12 @@ import { useEffect, useRef, useState } from "react";
  * illustrative, and the board is always in session.
  *
  * Mechanics mirror the product (calendar.tsx MomentScrubber/LiveBoard):
- * drag the scrubber, sort free faculty by load, and — only when scrubbed
- * AHEAD of now — mark someone absent and assign a fairness-ranked cover.
+ * drag the scrubber, sort free faculty by load, and - only when scrubbed
+ * AHEAD of now - mark someone absent and assign a fairness-ranked cover.
  */
 
 const SPAN_BACK = 105;   // minutes of the day already behind "now"
-const SPAN_AHEAD = 285;  // minutes still ahead — room to plan into
+const SPAN_AHEAD = 285;  // minutes still ahead - room to plan into
 const DAY_MIN = SPAN_BACK + SPAN_AHEAD; // 6h30m school day
 
 type Card = { n: string; s: string; t: string; fg: string; bg: string };
@@ -31,7 +31,7 @@ const TINTS = {
 } as const;
 
 /** The day's plan in minutes-from-day-start. "now" is at SPAN_BACK (105),
- *  which sits inside P2 — so the board is always mid-lesson at now. */
+ *  which sits inside P2 - so the board is always mid-lesson at now. */
 type Period = { id: string; name: string; s: number; e: number; brk?: boolean; cards: Card[]; free: [string, number][] };
 const PLAN: Period[] = [
   { id: "asm", name: "Assembly", s: 0, e: 15, brk: true, cards: [], free: [] },
@@ -134,10 +134,10 @@ export function LiveDemo() {
       <div className="ld-card">
         <div className="ld-head">
           <div className="ld-clockrow">
-            <b className="ld-clock">{valueDate ? fmtSec(valueDate) : "—:—:—"}</b>
+            <b className="ld-clock">{valueDate ? fmtSec(valueDate) : "-:-:-"}</b>
             <span className="ld-status">
               {period.brk
-                ? `${period.name} — no classes in session`
+                ? `${period.name} - no classes in session`
                 : <>{period.name} · <b className="ld-left">{Math.max(1, period.e - value)} min left</b></>}
             </span>
           </div>
@@ -159,7 +159,7 @@ export function LiveDemo() {
                 style={{ left: pos(p.s), width: pos(p.e - p.s), background: p.brk ? "#F7D9A0" : "#B9AFF0" }} />
             ))}
             {hourMarks.map((h) => <i key={h.at} className="ld-hr" style={{ left: pos(h.at) }} />)}
-            <i className="ld-nowtick" style={{ left: pos(SPAN_BACK) }} title="Now — your local time" />
+            <i className="ld-nowtick" style={{ left: pos(SPAN_BACK) }} title="Now - your local time" />
             <span className="ld-handle" style={{ left: pos(value) }}><i className="ld-hline" /><i className="ld-knob" /></span>
           </div>
           <div className="ld-hourrow">
@@ -168,7 +168,7 @@ export function LiveDemo() {
           <div className="ld-legend">
             <span><i style={{ background: "#B9AFF0" }} />Teaching</span>
             <span><i style={{ background: "#F7D9A0" }} />Break / free</span>
-            <span><i className="ld-legend-now" />Now — your local time</span>
+            <span><i className="ld-legend-now" />Now - your local time</span>
             <span className="ld-hint">← drag ahead to plan cover</span>
           </div>
         </div>
@@ -184,11 +184,11 @@ export function LiveDemo() {
             <input className="ld-search" type="search" placeholder="🔎 search faculty, class, or subject…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search faculty, class, or subject" />
           </div>
           {!isFuture && !absent && (
-            <div className="ld-plan-hint">Planning cover? Drag the timeline <b>ahead of the red &ldquo;now&rdquo; tick</b> — you mark an absence for an upcoming period, not one that&rsquo;s already running.</div>
+            <div className="ld-plan-hint">Planning cover? Drag the timeline <b>ahead of the red &ldquo;now&rdquo; tick</b> - you mark an absence for an upcoming period, not one that&rsquo;s already running.</div>
           )}
 
           {period.brk ? (
-            <div className="ld-idle">☕ {period.name} — no classes in session right now.</div>
+            <div className="ld-idle">☕ {period.name} - no classes in session right now.</div>
           ) : (
             <div className="ld-grid">
               {visibleCards.map((c) => (
@@ -218,10 +218,10 @@ export function LiveDemo() {
 
           {absent && !covered && (
             <div className="ld-subpanel">
-              <b>{absent} marked absent for {period.name} ({valueDate ? fmt(valueDate) : ""}).</b> Ranked cover — scored on real workload:
+              <b>{absent} marked absent for {period.name} ({valueDate ? fmt(valueDate) : ""}).</b> Ranked cover - scored on real workload:
               <div className="ld-cands">
                 <button className="ld-cand ld-cand-top" onClick={() => setCovered(true)}>
-                  ① {SUB_PICK} · free this period · {free.find(([n]) => n === SUB_PICK)?.[1] ?? 1} today · lightest eligible ✓ — <u>assign</u>
+                  ① {SUB_PICK} · free this period · {free.find(([n]) => n === SUB_PICK)?.[1] ?? 1} today · lightest eligible ✓ - <u>assign</u>
                 </button>
                 {free.filter(([n]) => n !== SUB_PICK).slice(0, 1).map(([n, l]) => (
                   <span key={n} className="ld-cand">② {n} · free · {l} today</span>
@@ -231,7 +231,7 @@ export function LiveDemo() {
             </div>
           )}
           {absent && covered && (
-            <div className="ld-covered-note">✓ {SUB_PICK} is covering — fairness-checked (lightest load of everyone free this period). <button className="ld-reset" onClick={() => { setAbsent(null); setCovered(false); }}>reset demo</button></div>
+            <div className="ld-covered-note">✓ {SUB_PICK} is covering - fairness-checked (lightest load of everyone free this period). <button className="ld-reset" onClick={() => { setAbsent(null); setCovered(false); }}>reset demo</button></div>
           )}
 
           {!period.brk && (
@@ -253,7 +253,7 @@ export function LiveDemo() {
           )}
         </div>
       </div>
-      <p className="ld-caption">The clock and the &ldquo;now&rdquo; tick are your genuine local time. The schedule around them is an illustrative day for Eden&rsquo;s Academy — the drag, sort, and substitution mechanics are the real ones.</p>
+      <p className="ld-caption">The clock and the &ldquo;now&rdquo; tick are your genuine local time. The schedule around them is an illustrative day for Eden&rsquo;s Academy - the drag, sort, and substitution mechanics are the real ones.</p>
 
       <style>{`
         .ld-wrap { width: 100%; max-width: 880px; margin: 0 auto; font-family: 'Plus Jakarta Sans', sans-serif; }

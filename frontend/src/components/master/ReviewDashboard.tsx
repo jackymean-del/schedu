@@ -1,13 +1,13 @@
 /**
- * ReviewDashboard — Doc 2 Step 5.
+ * ReviewDashboard - Doc 2 Step 5.
  *
  * Visual summary of the generated timetable for the user to inspect
  * before publishing. Five sections per spec:
- *   A. Academic Summary    — class / teacher / subject counts
- *   B. Capacity Summary    — per-band allocated vs capacity
- *   C. Teacher Load Chart  — per-teacher weekly load + fairness stddev
- *   D. Room Utilization    — % occupied per room
- *   E. Conflicts & Warnings — hard + soft from solver output
+ *   A. Academic Summary    - class / teacher / subject counts
+ *   B. Capacity Summary    - per-band allocated vs capacity
+ *   C. Teacher Load Chart  - per-teacher weekly load + fairness stddev
+ *   D. Room Utilization    - % occupied per room
+ *   E. Conflicts & Warnings - hard + soft from solver output
  *
  * Consumes the SolverOutput plus raw store data. Pure display component.
  */
@@ -97,7 +97,7 @@ export function ReviewDashboard({
     }))
   }, [classTT, sections])
 
-  // ── Re-optimise teachers state — declared before teacherLoads/loadStats memos ──
+  // ── Re-optimise teachers state - declared before teacherLoads/loadStats memos ──
   const [reoptimizing, setReoptimizing] = useState(false)
   const [reoptimizeResult, setReoptimizeResult] = useState<{
     reassignedCount: number; stddevBefore: number; stddevAfter: number
@@ -165,7 +165,7 @@ export function ReviewDashboard({
 
   // ── Issue categorisation ──
   const hardConflicts = conflicts.length
-  // Live workload penalties — recompute from current store state so the
+  // Live workload penalties - recompute from current store state so the
   // Conflicts card stays fresh after Apply Fix / Auto-fix safe actions
   // without requiring a full solver re-run.
   const liveStore = useTimetableStore() as any
@@ -238,7 +238,7 @@ export function ReviewDashboard({
         teacherAvailability: liveStore.teacherAvailability ?? {},
       })
       const stddevBefore = loadStats.stddev
-      // PERSIST the improved assignment — previously only the load bars were
+      // PERSIST the improved assignment - previously only the load bars were
       // updated, so the chart claimed reassignments the timetable never got.
       // reassignedCount === 0 means the engine kept the incumbent (it only
       // accepts genuinely better results now); nothing to write in that case.
@@ -247,7 +247,7 @@ export function ReviewDashboard({
         liveStore.setTeacherTT?.(buildTeacherTT(result.classTT, staff, workDays))
         // Keep the dashboard's own view (solverOutput.classTT) in sync so a
         // second re-optimise / swap starts from the optimised timetable.
-        // NOTE: the allocation matrix is NOT auto-updated — the user reconciles
+        // NOTE: the allocation matrix is NOT auto-updated - the user reconciles
         // it deliberately via "Backward Sync" (see the /timetable editor), so an
         // intentional custom load is never silently overwritten.
         onApplyConflictFixes?.(result.classTT)
@@ -272,12 +272,12 @@ export function ReviewDashboard({
   // Persist a post-generation timetable edit (manual swap / conflict fix) to the
   // store, keeping the teacher timetable AND the allocation matrix in sync
   // (BACKWARD SYNC) so the Timetable and Allocation views both reflect the edit
-  // — and a future re-generate starts from the edited reality, not the stale plan.
+  // - and a future re-generate starts from the edited reality, not the stale plan.
   const persistTimetableEdit = (updated: ClassTimetable) => {
     const s = useTimetableStore.getState() as any
     s.setClassTT?.(updated)
     s.setTeacherTT?.(buildTeacherTT(updated, staff, workDays))
-    // Allocation is NOT auto-synced — the user reconciles it on demand via
+    // Allocation is NOT auto-synced - the user reconciles it on demand via
     // "Backward Sync" so a deliberate custom allocation isn't silently replaced.
     onApplyConflictFixes?.(updated)
   }
@@ -297,7 +297,7 @@ export function ReviewDashboard({
   // ── Teacher Availability Editor state ──
   const [availOpen, setAvailOpen] = useState(false)
 
-  // ── Auto-fix safe — applies every green-delta fix in one pass ──
+  // ── Auto-fix safe - applies every green-delta fix in one pass ──
   const [autoFixResult, setAutoFixResult] = useState<{ applied: number; skipped: number; delta: number } | null>(null)
   const handleAutoFix = () => {
     let applied = 0, skipped = 0, totalDelta = 0
@@ -503,7 +503,7 @@ export function ReviewDashboard({
             marginBottom: 10, fontSize: 11,
           }}>
             <span style={{ fontWeight: 700, color: reoptimizeResult.reassignedCount > 0 ? '#15803D' : '#92400E' }}>
-              {reoptimizeResult.reassignedCount > 0 ? '✓ Improved' : '↔ Already optimal — kept as-is'}
+              {reoptimizeResult.reassignedCount > 0 ? '✓ Improved' : '↔ Already optimal - kept as-is'}
             </span>
             {reoptimizeResult.reassignedCount > 0 ? (
               <>
@@ -516,7 +516,7 @@ export function ReviewDashboard({
               </>
             ) : (
               <span style={{ color: '#4B5275' }}>
-                No reassignment beats the current balance (stddev {reoptimizeResult.stddevBefore.toFixed(2)}) — your schedule was left untouched.
+                No reassignment beats the current balance (stddev {reoptimizeResult.stddevBefore.toFixed(2)}) - your schedule was left untouched.
               </span>
             )}
             <button
@@ -663,7 +663,7 @@ export function ReviewDashboard({
           }}>
             <CheckCircle2 size={14} color="#15803D" />
             <span style={{ fontSize: 12, color: '#15803D', fontWeight: 600 }}>
-              No conflicts or warnings — clean timetable.
+              No conflicts or warnings - clean timetable.
             </span>
           </div>
         ) : (
@@ -693,9 +693,9 @@ export function ReviewDashboard({
       {/* ─── G. Unplaced Slots (Why-this-was-blocked) ─── */}
       {blockedSlots.length > 0 && (() => {
         // Split into three categories:
-        // • "free" — quota-met / all-subjects-exhausted slots (expected empty periods, not errors)
-        // • "dispersal" — the class's day is simply over (expected structure, not errors)
-        // • "hard" — scope-locked, no-teacher, etc. (genuine placement failures)
+        // • "free" - quota-met / all-subjects-exhausted slots (expected empty periods, not errors)
+        // • "dispersal" - the class's day is simply over (expected structure, not errors)
+        // • "hard" - scope-locked, no-teacher, etc. (genuine placement failures)
         const freeCategories = new Set(['subject-quota-met', 'all-subjects-exhausted'])
         const expectedCategories = new Set([...freeCategories, 'after-dispersal'])
         const freeSlots = blockedSlots.filter(s =>
@@ -728,10 +728,10 @@ export function ReviewDashboard({
               )}
               <span style={{ fontSize: 11, color: '#4B5275' }}>
                 {hardSlots.length > 0
-                  ? 'Some slots couldn\'t be filled — see details below.'
+                  ? 'Some slots couldn\'t be filled - see details below.'
                   : dispersalSlots.length > 0
-                  ? 'No genuine gaps — junior classes simply end their day earlier; those slots don\'t exist for them.'
-                  : 'All subjects met their weekly quota — remaining slots are free/activity periods.'
+                  ? 'No genuine gaps - junior classes simply end their day earlier; those slots don\'t exist for them.'
+                  : 'All subjects met their weekly quota - remaining slots are free/activity periods.'
                 }
               </span>
             </div>
@@ -750,7 +750,7 @@ export function ReviewDashboard({
               </div>
             )}
 
-            {/* Day-already-over slots — collapsed summary, never a wall of rows */}
+            {/* Day-already-over slots - collapsed summary, never a wall of rows */}
             {dispersalSlots.length > 0 && (() => {
               const bySection = new Map<string, number>()
               dispersalSlots.forEach(s => bySection.set(s.section, (bySection.get(s.section) ?? 0) + 1))
@@ -758,13 +758,13 @@ export function ReviewDashboard({
               const label = names.length <= 5 ? names.join(', ') : `${names.slice(0, 4).join(', ')} +${names.length - 4} more`
               return (
                 <div style={{ padding: '8px 12px', borderRadius: 8, background: '#F8F9FA', border: '1px solid #E5E7EB', fontSize: 11, color: '#69707E', marginBottom: freeSlots.length > 0 ? 8 : 0 }}>
-                  🕒 <strong>{label}</strong> finish their day earlier than the longest grid — the {dispersalSlots.length} slot{dispersalSlots.length !== 1 ? 's' : ''} after
+                  🕒 <strong>{label}</strong> finish their day earlier than the longest grid - the {dispersalSlots.length} slot{dispersalSlots.length !== 1 ? 's' : ''} after
                   their dispersal simply don&rsquo;t exist for them. Nothing to fix; extend their bell in <em>Shift &amp; timing</em> only if they should stay longer.
                 </div>
               )
             })()}
 
-            {/* Free periods — collapsed summary, not a list of rows */}
+            {/* Free periods - collapsed summary, not a list of rows */}
             {freeSlots.length > 0 && (
               <div style={{ padding: '8px 12px', borderRadius: 8, background: '#F8F9FA', border: '1px solid #E5E7EB', fontSize: 11, color: '#69707E' }}>
                 💡 <strong>{freeSlots.length} period{freeSlots.length !== 1 ? 's' : ''}</strong> are unscheduled because all subjects reached their weekly target.
@@ -1039,7 +1039,7 @@ function IssueRow({ severity, label, desc, weight }: {
       // The issues list is a capped column flexbox. `overflow: hidden` above
       // (rounded corners) also drops this row's automatic minimum height, so
       // without flexShrink the rows are squeezed to fit the cap instead of the
-      // list scrolling — and an expanded row's fixes are clipped away.
+      // list scrolling - and an expanded row's fixes are clipped away.
       flexShrink: 0,
     }}>
       <div style={{
@@ -1087,7 +1087,7 @@ function IssueRow({ severity, label, desc, weight }: {
           </div>
           {!hasApplyableFix && (
             <div style={{ fontSize: 10, color: '#6D6A8A', fontStyle: 'italic' as const, marginTop: 6 }}>
-              No auto-fix available — guidance only.
+              No auto-fix available - guidance only.
             </div>
           )}
         </div>

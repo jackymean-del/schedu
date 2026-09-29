@@ -1,5 +1,5 @@
 // Package validator implements the admin review workflow for pending curriculum
-// changes. No change is ever applied automatically — a human must approve.
+// changes. No change is ever applied automatically - a human must approve.
 //
 // Review lifecycle:
 //   pending → reviewing → approved | rejected

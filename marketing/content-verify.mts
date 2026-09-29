@@ -4,7 +4,7 @@
  *
  * This exists because the title said one thing and the page said another for
  * months without anybody noticing. Google described the product as "schedU uses
- * AI to auto-generate conflict-free timetables" — not from a stale title, but
+ * AI to auto-generate conflict-free timetables" - not from a stale title, but
  * because the features page really did say "let the AI build a complete,
  * balanced timetable" and the home page's own hero animation really did show a
  * button labelled "AI Suggest". A crawler quoted the page accurately; the page
@@ -17,9 +17,13 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
+/** U+2014, by code point, so this file can check for the character without
+ *  containing one itself. */
+const EM_DASH = String.fromCharCode(8212)
+
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -57,7 +61,7 @@ console.log('── no AI wording in copy a reader or a crawler will see ──'
     'not black-box AI',
     '(not black-box AI)',
     'Does schedU use AI to build timetables?',
-    'AI timetable generator alternative',
+    'timetable scheduling without AI',
     'AI overviews',
   ]
 
@@ -77,6 +81,24 @@ console.log('── no AI wording in copy a reader or a crawler will see ──'
     offenders.length ? '\n    ' + offenders.join('\n    ') : 'none')
 }
 
+console.log('\n── no em dashes ──')
+{
+  // An em dash is one of the strongest tells that a passage was machine-written,
+  // which is a poor look on a site whose whole argument is that a person wrote
+  // the rules. Hyphens throughout, by request.
+  const offenders: string[] = []
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8')
+    for (const [i, line] of src.split('\n').entries()) {
+      if (line.includes(EM_DASH)) {
+        offenders.push(`${relative('.', f)}:${i + 1}  ${line.trim().slice(0, 80)}`)
+      }
+    }
+  }
+  ok(offenders.length === 0, 'no em dash anywhere in the marketing source',
+    offenders.length ? '\n    ' + offenders.slice(0, 8).join('\n    ') : 'none')
+}
+
 console.log('\n── the positioning leads, and survives the result ──')
 {
   const home = readFileSync(join('app', 'page.tsx'), 'utf8')
@@ -86,7 +108,7 @@ console.log('\n── the positioning leads, and survives the result ──')
     'the home title names Human Intelligence', title)
 
   // Google shows roughly 600px, about 60 characters. A longer title is not an
-  // error, but the part past the cut is never read — and the whole point of
+  // error, but the part past the cut is never read - and the whole point of
   // this title is the half that used to be cut.
   ok(title.length <= 60, `and fits in a result (${title.length} chars, budget 60)`, title)
 

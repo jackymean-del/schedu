@@ -1,5 +1,5 @@
 /**
- * DashboardPulse — schedU's own dashboard hero. Instead of a wall of stat
+ * DashboardPulse - schedU's own dashboard hero. Instead of a wall of stat
  * cards the reader has to parse (Classes / Teachers / Conflicts…), the Pulse
  * states the school's operational status in one plain sentence and surfaces
  * only the single action that matters right now. Hard facts live as a quiet
@@ -28,7 +28,7 @@ interface Props {
   classes: number
   teachers: number
   venues: number
-  liveNow?: string        // "Period 3 · 18 in session" — deep-links to Live
+  liveNow?: string        // "Period 3 · 18 in session" - deep-links to Live
   onNewSchedule: () => void
 }
 
@@ -57,8 +57,8 @@ export function DashboardPulse(p: Props) {
     : p.onLeave > 0 ? 'covered'
     : 'clear'
 
-  // Attention copy adapts to which problems exist — coverage, room clashes,
-  // or both — so the one headline always names the real issue.
+  // Attention copy adapts to which problems exist - coverage, room clashes,
+  // or both - so the one headline always names the real issue.
   const attentionCopy = (): { head: string; sub: string } => {
     if (hasCover && hasRoom) {
       return {
@@ -67,16 +67,16 @@ export function DashboardPulse(p: Props) {
       }
     }
     if (hasCover) {
-      return { head: `${p.uncovered} period${s(p.uncovered)} need cover`, sub: `${p.onLeave} teacher${s(p.onLeave)} out today — arrange a substitute.` }
+      return { head: `${p.uncovered} period${s(p.uncovered)} need cover`, sub: `${p.onLeave} teacher${s(p.onLeave)} out today - arrange a substitute.` }
     }
     return {
       head: `${p.roomClashes} venue clash${s(p.roomClashes)} today`,
-      sub: p.roomClashText ?? 'Two classes are booked into the same venue — reassign one.',
+      sub: p.roomClashText ?? 'Two classes are booked into the same venue - reassign one.',
     }
   }
 
   const copyMap: Record<PulseState, { head: string; sub: string }> = {
-    setup:     { head: 'Build your first schedule', sub: 'Add classes, teachers and subjects — schedU generates the rest.' },
+    setup:     { head: 'Build your first schedule', sub: 'Add classes, teachers and subjects - schedU generates the rest.' },
     rest:      { head: 'No classes today', sub: 'Enjoy the day off.' },
     attention: attentionCopy(),
     covered:   { head: 'All absences covered', sub: `${p.onLeave} out today · ${p.covered} substitution${s(p.covered)} arranged.` },
@@ -107,7 +107,7 @@ export function DashboardPulse(p: Props) {
       `}</style>
 
       <div style={{ background: tone.wash, border: '1px solid #ECE9FB', borderRadius: 16, padding: '18px 20px' }}>
-        {/* Row 1 — the human status */}
+        {/* Row 1 - the human status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           {/* live orb */}
           <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0 }}>
@@ -133,7 +133,7 @@ export function DashboardPulse(p: Props) {
           )}
         </div>
 
-        {/* Row 2 — quiet facts, deliberately understated */}
+        {/* Row 2 - quiet facts, deliberately understated */}
         {p.hasSchedule && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(19,17,30,0.06)' }}>
             <Fact value={p.classes} label={noun(terms.class, p.classes)} />

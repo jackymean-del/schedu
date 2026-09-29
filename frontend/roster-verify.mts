@@ -1,5 +1,5 @@
 /**
- * The roster rules — who the app thinks somebody is.
+ * The roster rules - who the app thinks somebody is.
  * Run: npx tsx roster-verify.mts
  *
  * This list decides whether a teacher may claim a period from their own phone,
@@ -14,7 +14,7 @@ import {
 type Any = any
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -25,7 +25,7 @@ console.log('── an unrecognised role must never become power ──')
   ok(safeRole('ADMIN') === 'admin', 'case does not change who somebody is')
   ok(safeRole('  viewer ') === 'viewer', 'nor does stray whitespace')
 
-  // The direction that matters. A row from a newer server, a typo, a null —
+  // The direction that matters. A row from a newer server, a typo, a null -
   // none of them should quietly hand out the keys.
   ok(safeRole('superuser') === 'viewer', 'an unknown role falls back to the LEAST access')
   ok(safeRole(undefined) === 'viewer', 'and so does a missing one')

@@ -1,5 +1,5 @@
 /**
- * TeacherAllocationModal — per-section split editor for one
+ * TeacherAllocationModal - per-section split editor for one
  * (teacher, subject) cell.
  *
  * Shows every section where the subject is offered, with columns:
@@ -68,7 +68,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
 
   const [rows, setRows] = useState<Row[]>(() => buildRows())
   const [compareSection, setCompareSection] = useState<string | null>(null)
-  // Reset rows if (teacher, subject) changes — and ONLY then. buildRows closes
+  // Reset rows if (teacher, subject) changes - and ONLY then. buildRows closes
   // over the live allocations, so depending on it would rebuild the rows
   // whenever anything else edited them, discarding the unsaved changes this
   // modal is in the middle of tracking.
@@ -83,7 +83,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
     })
   }, [rows, teacher, subject, teacherAllocations])
 
-  // Group rows by grade — preserves insertion order of first occurrence
+  // Group rows by grade - preserves insertion order of first occurrence
   const gradeGroups = useMemo(() => {
     const map = new Map<string, Row[]>()
     for (const r of rows) {
@@ -254,12 +254,12 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                       {/* Grade target total */}
                       <td style={{ padding: '6px', textAlign: 'center', fontFamily: "'DM Mono', monospace",
                         fontSize: 11, color: '#4B5275', fontWeight: 700 }}>
-                        {gradeTarget || '—'}
+                        {gradeTarget || '-'}
                       </td>
                       {/* Grade others total */}
                       <td style={{ padding: '6px', textAlign: 'center', fontFamily: "'DM Mono', monospace",
                         fontSize: 11, color: '#6D6A8A' }}>
-                        {gradeOthers || '—'}
+                        {gradeOthers || '-'}
                       </td>
                       {/* Grade batch input */}
                       <td style={{ padding: '4px 6px', textAlign: 'center' }}>
@@ -344,10 +344,10 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
                           </span>
                         </td>
                         <td style={{ padding: '8px 6px', textAlign: 'center', fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>
-                          {r.target || '—'}
+                          {r.target || '-'}
                         </td>
                         <td style={{ padding: '8px 6px', textAlign: 'center', fontFamily: "'DM Mono', monospace", color: '#6D6A8A' }}>
-                          {r.otherTeachers || '—'}
+                          {r.otherTeachers || '-'}
                         </td>
                         <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                           <input
@@ -428,7 +428,7 @@ export function TeacherAllocationModal({ teacher, subject, onClose }: Props) {
 
       </div>
 
-      {/* Compare candidates modal — opens on Trophy button click */}
+      {/* Compare candidates modal - opens on Trophy button click */}
       {compareSection && (() => {
         const sec = sections.find((s: Section) => s.name === compareSection)
         if (!sec || !subjMeta) return null

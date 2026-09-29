@@ -1,5 +1,5 @@
 /**
- * Adaptive grade / class-name parser — the SINGLE source of truth for turning
+ * Adaptive grade / class-name parser - the SINGLE source of truth for turning
  * whatever a user types into a comparable numeric level, so class ranges work
  * regardless of naming convention. (Previously three separate copies diverged,
  * which caused "entered I–V but generated up to X".)

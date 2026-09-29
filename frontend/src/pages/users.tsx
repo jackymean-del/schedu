@@ -1,9 +1,9 @@
 /**
- * Users — who belongs to this school, and what each of them may do.
+ * Users - who belongs to this school, and what each of them may do.
  *
  * This page used to be a mock: "invite" validated an email, pushed it into
  * component state and drew an "Invited" chip. Nothing persisted, and no role was
- * ever assigned — which meant the permissions model had nothing to read and
+ * ever assigned - which meant the permissions model had nothing to read and
  * every account behaved as an administrator. A faculty member could declare a
  * school-wide holiday.
  *
@@ -82,7 +82,7 @@ export function UsersPage() {
         }}>
           <Info size={14} color={ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>
-            Roles decide what the app offers each person — who can declare holidays, mark absences and
+            Roles decide what the app offers each person - who can declare holidays, mark absences and
             arrange cover, versus who only records their own syllabus. This roster is kept on the server,
             and it is <strong>what decides whether a teacher may claim a period</strong> from their own
             phone, so adding somebody here is what actually gives them access.
@@ -129,7 +129,7 @@ export function UsersPage() {
             <span>
               {unknown.map(m => `“${m.staffName}”`).join(', ')} {unknown.length === 1 ? 'is' : 'are'} not
               a name on your staff list, so it will match no lessons. A typo here fails exactly like a
-              blank one — silently.
+              blank one - silently.
             </span>
           </div>
         )}
@@ -201,12 +201,12 @@ export function UsersPage() {
                 {canManage ? (
                   <select
                     value={m.role}
-                    /* Names WHOSE role this is — a row of identical "Role"
+                    /* Names WHOSE role this is - a row of identical "Role"
                        selects tells a screen-reader user nothing. */
                     aria-label={`Role for ${m.name || m.email}`}
                     disabled={lastAdmin}
                     title={lastAdmin
-                      ? 'This is the only administrator. Promote somebody else first — otherwise nobody could manage the school.'
+                      ? 'This is the only administrator. Promote somebody else first - otherwise nobody could manage the school.'
                       : ROLE_HINTS[m.role]}
                     onChange={e => setMemberRole(m.id, m.email, e.target.value as Role, m.staffName)
                       .then(landed => setOffline(!landed))}
@@ -244,7 +244,7 @@ export function UsersPage() {
           {members.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 11, borderTop: '1px solid #F3F1FB', fontSize: 11.5, color: '#777391', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
               <ShieldCheck size={13} color="#777391" style={{ flexShrink: 0, marginTop: 1 }} />
-              <span>{ROLE_ORDER.map(r => `${ROLE_LABELS[r]} — ${ROLE_HINTS[r]}`).join('  ·  ')}</span>
+              <span>{ROLE_ORDER.map(r => `${ROLE_LABELS[r]} - ${ROLE_HINTS[r]}`).join('  ·  ')}</span>
             </div>
           )}
         </section>

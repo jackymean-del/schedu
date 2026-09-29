@@ -2,7 +2,7 @@
  * Cross-schedule maintenance for the shared staff/venue directory
  * (store/directoryStore.ts). Renaming or merging a directory entry from the
  * Directory management view needs to cascade into every active schedule's
- * own roster — otherwise the directory and what schedules actually display
+ * own roster - otherwise the directory and what schedules actually display
  * would immediately drift apart again. Reuses the same read/write pattern as
  * `lib/activeSchedules.ts`'s `patchBundleSubstitutions`: the OPEN schedule
  * goes through the live Zustand store (so unsaved wizard/Master-Data edits
@@ -27,7 +27,7 @@ function patchOtherSnapshot(uid: string, id: string, field: 'staff' | 'rooms', m
   try { const raw = localStorage.getItem(key); if (raw) snap = JSON.parse(raw) } catch { /* ignore */ }
   const rows: any[] = snap[field] ?? []
   const next = mutate(rows)
-  if (next === rows) return // no matching row in this schedule — skip the write
+  if (next === rows) return // no matching row in this schedule - skip the write
   snap[field] = next
   try { localStorage.setItem(key, JSON.stringify(snap)) } catch { /* quota */ }
 }
@@ -56,7 +56,7 @@ function cascade(field: 'staff' | 'rooms', mutate: (rows: any[]) => any[]): void
  * The name a linked row currently carries, from whichever schedule has one.
  *
  * Needed because generated timetables reference resources by NAME, and the
- * directory only knows the id — so a rename cannot reach the cells without
+ * directory only knows the id - so a rename cannot reach the cells without
  * first asking what the old name was.
  */
 function currentLinkedName(directoryId: string, kind: DirectoryKind): string | undefined {
@@ -77,7 +77,7 @@ function currentLinkedName(directoryId: string, kind: DirectoryKind): string | u
  *  `useDirectoryStore.renameStaff/renameVenue` to update the entry itself.
  *
  *  Also cascades into the generated timetables, substitutions, leave, cover
- *  and syllabus plans — renaming the roster alone left every lesson naming
+ *  and syllabus plans - renaming the roster alone left every lesson naming
  *  the old person (see lib/renameCascade). */
 export function renameLinkedEntries(directoryId: string, newName: string, kind: DirectoryKind): void {
   const oldName = currentLinkedName(directoryId, kind)
@@ -107,7 +107,7 @@ export function mergeLinkedEntries(keepId: string, keepName: string, mergeId: st
 }
 
 /** How many active schedules currently have a row linked to `directoryId`,
- *  with their names — for a small "used in: X, Y" hint in the directory UI. */
+ *  with their names - for a small "used in: X, Y" hint in the directory UI. */
 export function usageOf(directoryId: string, kind: DirectoryKind): string[] {
   const uid = useAuthStore.getState().user?.id ?? ''
   const field = fieldFor(kind)

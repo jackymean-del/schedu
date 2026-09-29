@@ -9,17 +9,17 @@ const FEATURES = [
   {
     icon: '🧠',
     title: 'Auto-schedule you can question',
-    desc: 'Give schedU your teachers, subjects and sections, and it builds a complete, balanced timetable in seconds — by applying the rules a timetable in-charge applies, not by guessing. Every placement has a reason you can read, and regenerating gives the same answer twice.',
+    desc: 'Give schedU your teachers, subjects and sections, and it builds a complete, balanced timetable in seconds - by applying the rules a timetable in-charge applies, not by guessing. Every placement has a reason you can read, and regenerating gives the same answer twice.',
   },
   {
     icon: '⚠️',
     title: 'Real-time conflict detection',
-    desc: 'Every change is validated the moment you make it — teacher clashes, room double-bookings, and over-allocated periods are flagged live, so a finished timetable is always conflict-free.',
+    desc: 'Every change is validated the moment you make it - teacher clashes, room double-bookings, and over-allocated periods are flagged live, so a finished timetable is always conflict-free.',
   },
   {
     icon: '🔀',
     title: 'Elective OR / AND groups',
-    desc: 'OR slots run one subject at a time (e.g. Physics or Chemistry, as the day’s syllabus needs); AND groups pool same-subject students across sections into one cross-class group — all scheduled clash-free.',
+    desc: 'OR slots run one subject at a time (e.g. Physics or Chemistry, as the day’s syllabus needs); AND groups pool same-subject students across sections into one cross-class group - all scheduled clash-free.',
   },
   {
     icon: '🎓',
@@ -34,7 +34,7 @@ const FEATURES = [
   {
     icon: '📤',
     title: 'Publishing & sharing',
-    desc: 'Publish polished timetables, share them as a public or email-restricted link, or export to print-ready PDF and Excel — for staff, students, and parents.',
+    desc: 'Publish polished timetables, share them as a public or email-restricted link, or export to print-ready PDF and Excel - for staff, students, and parents.',
   },
 ]
 
@@ -44,8 +44,8 @@ const cardHover =
 export const metadata: Metadata = {
   // A one-word title renders as "Features · schedU" and matches nothing
   // anybody searches for. The page's own subject belongs here.
-  title: 'Timetable Features — Conflicts, Electives & Substitutions',
-  description: 'Explore every schedU feature — Human-Intelligence auto-scheduling, real-time conflict detection, elective OR/AND groups, multi-stream support, room planning, and PDF/Excel export.',
+  title: 'Timetable Features - Conflicts, Electives & Substitutions',
+  description: 'Explore every schedU feature - Human-Intelligence auto-scheduling, real-time conflict detection, elective OR/AND groups, multi-stream support, room planning, and PDF/Excel export.',
   alternates: { canonical: '/features' },
 }
 
@@ -60,21 +60,21 @@ export default function FeaturesPage() {
           <span className="italic text-[#7C6FE0]">schedule with confidence.</span>
         </h1>
         <p className="max-w-[560px] text-base leading-[1.8] text-[#4B5275]">
-          schedU applies the real constraints institutions live by — teacher availability,
-          workload limits, rooms, electives — as explicit rules rather than a model&rsquo;s
+          schedU applies the real constraints institutions live by - teacher availability,
+          workload limits, rooms, electives - as explicit rules rather than a model&rsquo;s
           guess, so the timetable you publish is conflict-free and every choice in it can
           be explained.
         </p>
       </section>
 
-      {/* One schedule, every view — plus the generation pipeline */}
+      {/* One schedule, every view - plus the generation pipeline */}
       <section className="flex flex-col items-center border-t border-[#F0EDFF] bg-[#F8F7FF] px-6 py-16 text-center">
         <p className="mb-[14px] text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B87AD]">From input to zero conflicts</p>
         <h2 className="mb-4 max-w-[600px] text-[clamp(24px,4vw,34px)] font-normal leading-[1.2] tracking-[-0.5px] text-[#13111E]">
           One schedule, <span className="italic text-[#7C6FE0]">every way you need to see it.</span>
         </h2>
         <p className="mb-9 max-w-[560px] text-sm leading-[1.8] text-[#4B5275]">
-          Class, Teacher, Room, Subject, Calendar, and print-ready Traditional — all six views read the
+          Class, Teacher, Room, Subject, Calendar, and print-ready Traditional - all six views read the
           same underlying schedule, so a change in one is a change in all of them. Generated in seconds,
           always conflict-free.
         </p>
@@ -104,8 +104,8 @@ export default function FeaturesPage() {
         </h2>
         <p className="mb-9 max-w-[540px] text-sm leading-[1.8] text-[#4B5275]">
           <code className="rounded bg-[#F1F5F9] px-1.5 py-0.5 text-[13px] text-[#13111E]">Physics AND Chemistry</code> runs both subjects in
-          parallel — different groups attend their own teacher and venue at the same slot.{' '}
-          <code className="rounded bg-[#F1F5F9] px-1.5 py-0.5 text-[13px] text-[#13111E]">PE OR Painting</code> is a choice — each student
+          parallel - different groups attend their own teacher and venue at the same slot.{' '}
+          <code className="rounded bg-[#F1F5F9] px-1.5 py-0.5 text-[13px] text-[#13111E]">PE OR Painting</code> is a choice - each student
           picks one option, each with its own teacher and venue (or stays in homeroom). schedU resolves either
           expression into clash-free instructional clusters, pooling students across sections automatically.
         </p>
@@ -121,7 +121,7 @@ export default function FeaturesPage() {
           One schedule, <span className="italic text-[#7C6FE0]">every building.</span>
         </h2>
         <p className="mb-9 max-w-[520px] text-sm leading-[1.8] text-[#4B5275]">
-          Labs, halls, and shared spaces across every block — schedU places each period
+          Labs, halls, and shared spaces across every block - schedU places each period
           where it fits, honouring room type and capacity automatically.
         </p>
         <div className="w-full max-w-[560px] rounded-2xl border border-[#E8E4FF] bg-white p-6">
@@ -134,7 +134,7 @@ export default function FeaturesPage() {
         <h2 className="mb-6 text-[28px] font-normal text-[#13111E]">See it on your own data</h2>
         <a href={appHref('/login')} className="no-underline">
           <button className="rounded-[9px] bg-[#7C6FE0] px-8 py-[13px] text-sm font-bold text-white shadow-[0_4px_18px_rgba(124,111,224,0.38)]">
-            Start free — no credit card
+            Start free - no credit card
           </button>
         </a>
       </section>

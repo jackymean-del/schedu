@@ -1,4 +1,4 @@
-# Claude Code Instructions — Elective Grouping & Subjects Panel Enhancements
+# Claude Code Instructions - Elective Grouping & Subjects Panel Enhancements
 
 > **Scope:** `frontend/src/` only (no backend changes required for these features).  
 > **Key files:** `types/index.ts`, `components/resources/SubjectsPanel.tsx`,
@@ -15,13 +15,13 @@ Three connected features:
 2. **AI Auto-Categorize button** that groups uncategorised subjects into Core / Language / Optional / etc.
 3. **Elective toggle** in the subject "More" expanded panel (replaces the Category dropdown there); when ON, the subject auto-appears as a column in the Step 4 Student Groups preference matrix
 4. **Three elective grouping scenarios** fully supported end-to-end:
-   - **Case 1 — Intra-stream:** Maths vs Bio split within the Science stream only
-   - **Case 2 — Cross-stream:** PE vs Painting across Science AND Commerce together
-   - **Case 3 — Multi-slot regional language:** R1 / R2 / R3 each independently containing Hindi, Odia, etc.
+   - **Case 1 - Intra-stream:** Maths vs Bio split within the Science stream only
+   - **Case 2 - Cross-stream:** PE vs Painting across Science AND Commerce together
+   - **Case 3 - Multi-slot regional language:** R1 / R2 / R3 each independently containing Hindi, Odia, etc.
 
 ---
 
-## Part 1 — Type Changes (`frontend/src/types/index.ts`)
+## Part 1 - Type Changes (`frontend/src/types/index.ts`)
 
 ### 1.1 Add `electiveSlotId` to `Subject`
 
@@ -30,7 +30,7 @@ Inside the `Subject` interface, after the existing `isOptional?: boolean` line, 
 ```ts
 /** If set, this subject belongs to a named regional-language / elective slot
  *  (e.g. "R1", "R2", "R3"). Subjects sharing the same slot are mutually exclusive
- *  — students pick exactly one per slot. The slot name is used as the column-group
+ *  - students pick exactly one per slot. The slot name is used as the column-group
  *  header in the Student Groups preference matrix. */
 electiveSlotId?: string
 ```
@@ -61,7 +61,7 @@ In `dashboard.tsx`, find `TT_SNAPSHOT_FIELDS` and add `'subjectGroups'` to the a
 
 ---
 
-## Part 2 — Editable Category Group Headers (`SubjectsPanel.tsx`)
+## Part 2 - Editable Category Group Headers (`SubjectsPanel.tsx`)
 
 ### Current state
 `CategoryHeaderRow` renders the category name as a plain `<span>`. The user cannot rename a group without going to a separate "Category Manager" popover.
@@ -183,7 +183,7 @@ Pass `onRename={renameCategory}` to `CategoryHeaderRow` in the `groupedByCategor
 
 ---
 
-## Part 3 — AI Auto-Categorize Button (`SubjectsPanel.tsx`)
+## Part 3 - AI Auto-Categorize Button (`SubjectsPanel.tsx`)
 
 ### What it does
 When clicked, it looks at each subject's name and applies a heuristic map (similar to how the curriculum engine suggests classes) to assign a category:
@@ -250,30 +250,30 @@ This is undoable via Ctrl+Z (the existing `undoHistory` hook is already wired).
 
 ---
 
-## Part 4 — Elective Toggle Replacing Category Column in "More" Panel (`SubjectsPanel.tsx`)
+## Part 4 - Elective Toggle Replacing Category Column in "More" Panel (`SubjectsPanel.tsx`)
 
 ### Current state
-`ClassSlotsExpanded` already has an "Elective — chosen from options" toggle for `isOptional`. However the per-grade `GradeSlotRow` also shows a Category dropdown in column 4.
+`ClassSlotsExpanded` already has an "Elective - chosen from options" toggle for `isOptional`. However the per-grade `GradeSlotRow` also shows a Category dropdown in column 4.
 
 ### What to change
 
 The design goal: **Remove the Category dropdown from the expanded per-grade/per-section table**. Category is managed via the group header (now editable inline). The expanded "More" panel should focus on:
 1. Slots/week per grade
 2. Max/day
-3. **Elective toggle** (already exists at the top of ClassSlotsExpanded — keep it there)
+3. **Elective toggle** (already exists at the top of ClassSlotsExpanded - keep it there)
 4. Lab Required checkbox
-5. *(Optional)* An "Elective Slot" field (R1 / R2 / R3) — see Part 5
+5. *(Optional)* An "Elective Slot" field (R1 / R2 / R3) - see Part 5
 
 **In `GradeSlotRow`:** Remove the `CategorySelect` from column 4 and remove the "Category" column from `<colgroup>` and `<thead>`. The remaining columns are: Grade | Slots/Wk | Max/day | Lab Req. | Remove.
 
-**In `SectionSubRow`:** Same — remove the `CategorySelect` from column 4.
+**In `SectionSubRow`:** Same - remove the `CategorySelect` from column 4.
 
 **In `ClassSlotsExpanded`:** The `<colgroup>` and header `<th>` for "Category" should be removed. The `onAddCategory` prop can be removed from the call chain since category editing now lives in the group header rename flow.
 
 After this change, the per-subject "Category" is effectively set by:
 - Smart Create (assigns a category on subject creation)
 - AI Categorize button (bulk inference)
-- Dragging or moving a subject into a different group (if you add drag support — see optional enhancement below)
+- Dragging or moving a subject into a different group (if you add drag support - see optional enhancement below)
 - Or from `AddRow` default (`'Compulsory'`)
 
 The inline group header rename already covers "renaming a category group for all its subjects".
@@ -292,7 +292,7 @@ In `ClassSlotsExpanded`, below the existing Elective toggle, add a conditional f
       value={sub.electiveSlotId ?? ''}
       onChange={e => onChange({ electiveSlotId: e.target.value.trim() || undefined })}
       placeholder="e.g. R1, R2, R3…"
-      title="Optional: group this subject into a named elective slot. Subjects in the same slot are mutually exclusive — students pick one."
+      title="Optional: group this subject into a named elective slot. Subjects in the same slot are mutually exclusive - students pick one."
       style={{
         width: 80, padding: '3px 8px', border: '1.5px solid #E4E0FF',
         borderRadius: 5, fontSize: 11, outline: 'none',
@@ -312,11 +312,11 @@ The `electiveSlotId` field must be added to `Subject` in `types/index.ts` (done 
 
 ---
 
-## Part 5 — Student Groups Matrix: Multi-Slot Support (`step-student-groups.tsx`)
+## Part 5 - Student Groups Matrix: Multi-Slot Support (`step-student-groups.tsx`)
 
 ### The three scenarios and how the matrix handles them
 
-#### Case 1 — Intra-stream parallel (Maths OR Bio within Science)
+#### Case 1 - Intra-stream parallel (Maths OR Bio within Science)
 
 **Setup:**
 - Maths: `isOptional = true`, no `electiveSlotId`
@@ -325,7 +325,7 @@ The `electiveSlotId` field must be added to `Subject` in `types/index.ts` (done 
 
 **Matrix behaviour (existing code handles this correctly):**
 - Both appear as columns: `Maths` | `Biology`
-- Rows: XI-Sci-A, XI-Sci-B (only — because they're not assigned to Commerce)
+- Rows: XI-Sci-A, XI-Sci-B (only - because they're not assigned to Commerce)
 - User enters: XI-Sci-A → Maths: 20, Biology: 15 (must sum to total students)
 
 **Grouping rule (set in the grouping rule selector per column):**
@@ -333,14 +333,14 @@ The `electiveSlotId` field must be added to `Subject` in `types/index.ts` (done 
 - Biology: `SAME_STREAM_ONLY`
 
 **AI generates (existing `handleRegenerate`):**
-- Group "Maths — Science": [XI-Sci-A maths-students + XI-Sci-B maths-students] → one teaching group
-- Group "Biology — Science": [XI-Sci-A bio-students + XI-Sci-B bio-students] → one teaching group
+- Group "Maths - Science": [XI-Sci-A maths-students + XI-Sci-B maths-students] → one teaching group
+- Group "Biology - Science": [XI-Sci-A bio-students + XI-Sci-B bio-students] → one teaching group
 
-**No code changes needed for Case 1** — the existing system already handles this. The user just needs to set `isOptional = true` on the subjects and pick `SAME_STREAM_ONLY` grouping behavior.
+**No code changes needed for Case 1** - the existing system already handles this. The user just needs to set `isOptional = true` on the subjects and pick `SAME_STREAM_ONLY` grouping behavior.
 
 ---
 
-#### Case 2 — Cross-stream parallel (PE vs Painting across Science AND Commerce)
+#### Case 2 - Cross-stream parallel (PE vs Painting across Science AND Commerce)
 
 **Setup:**
 - PE: `isOptional = true`, assigned to XI-Sci-A, XI-Sci-B, XI-Com-A, XI-Com-B
@@ -358,11 +358,11 @@ The `electiveSlotId` field must be added to `Subject` in `types/index.ts` (done 
 - "PE": [XI-Sci-A PE students + XI-Sci-B PE students + XI-Com-A PE students + XI-Com-B PE students] → one big PE teaching group
 - "Painting": all remaining students → one Painting group
 
-**No code changes needed for Case 2** — `CROSS_STREAM_ALLOWED` already exists and maps to mode `'all'` in `computeGroupingMode`.
+**No code changes needed for Case 2** - `CROSS_STREAM_ALLOWED` already exists and maps to mode `'all'` in `computeGroupingMode`.
 
 ---
 
-#### Case 3 — Multi-slot regional language (R1/R2/R3) — NEW CODE REQUIRED
+#### Case 3 - Multi-slot regional language (R1/R2/R3) - NEW CODE REQUIRED
 
 **The problem:** Hindi appears in R1, R2, and R3 simultaneously. Each slot needs:
 - Its own teacher (Teacher-R1-Hindi ≠ Teacher-R2-Hindi)
@@ -414,9 +414,9 @@ const subjectList = useMemo(() => {
 
 Update every downstream consumer that currently treats `subjectList` as `string[]` to use the new `{ key, label, subjectName, slotId }` shape. Specifically:
 
-- `allCols` — already uses `subjectList.filter(...).map(s => ({ key: s.key, label: s.label }))` — works with new shape.
-- `isApplicableToSection(sub, sectionName, ...)` — must look up by `subjectName`, not `key`.
-- `subjectsToAdd` picker — show label + slot badge.
+- `allCols` - already uses `subjectList.filter(...).map(s => ({ key: s.key, label: s.label }))` - works with new shape.
+- `isApplicableToSection(sub, sectionName, ...)` - must look up by `subjectName`, not `key`.
+- `subjectsToAdd` picker - show label + slot badge.
 
 ### 5.2 Group columns by slot in the matrix header
 
@@ -473,7 +473,7 @@ allCols.forEach((col, si) => {
   generated.push({
     id: `...`,
     subject: subjectName,          // Always use the actual subject name
-    slotId,                        // NEW — undefined for non-slot subjects
+    slotId,                        // NEW - undefined for non-slot subjects
     slotLabel: slotId ? `${slotId}: ${subjectName}` : undefined,
     sectionNames: groupSections.map(r => r.sectionName),
     // ... rest of fields ...
@@ -489,7 +489,7 @@ In `dlgsToOptionalBlocks()`, when converting a DLG to an `OptionalBlock`, includ
 
 ```ts
 function dlgsToOptionalBlocks(dlgs: DynamicLearningGroup[]): OptionalBlock[] {
-  // Group DLGs by (slotId + subject) combo key — each unique combo = one OptionalBlock
+  // Group DLGs by (slotId + subject) combo key - each unique combo = one OptionalBlock
   const byKey = new Map<string, DynamicLearningGroup[]>()
   for (const dlg of dlgs) {
     const key = dlg.slotId ? `${dlg.slotId}:${dlg.subject}` : dlg.subject
@@ -509,11 +509,11 @@ function dlgsToOptionalBlocks(dlgs: DynamicLearningGroup[]): OptionalBlock[] {
 }
 ```
 
-This ensures the solver sees THREE separate `OptionalBlock` entries for Hindi when it appears in R1, R2, and R3 — each with independent teacher/room/pool.
+This ensures the solver sees THREE separate `OptionalBlock` entries for Hindi when it appears in R1, R2, and R3 - each with independent teacher/room/pool.
 
 ---
 
-## Part 6 — Solver Awareness (`lib/schedulingEngine.ts`)
+## Part 6 - Solver Awareness (`lib/schedulingEngine.ts`)
 
 The existing `solveTimetable` function processes `OptionalBlock[]`. The only change needed is to handle the new `slotId` field on `OptionalBlock` to avoid scheduling the same-subject-different-slot groups in the same time period:
 
@@ -527,14 +527,14 @@ The existing `solveTimetable` function processes `OptionalBlock[]`. The only cha
 // "no two groups teach subjectName at the same time" 
 // To:
 // "no two groups with the same (subjectName + slotId) teach at the same time"
-// (different slotIds may share a slot — they're independent teaching instances)
+// (different slotIds may share a slot - they're independent teaching instances)
 ```
 
 Specifically, find where the solver builds `subjectGroupMap` or equivalent and change the grouping key from `group.subjectName` to `${group.slotId ?? ''}:${group.subjectName}`.
 
 ---
 
-## Part 7 — OR-Group Combo Tab: Slot Label Field (`SubjectGroupsSection.tsx`)
+## Part 7 - OR-Group Combo Tab: Slot Label Field (`SubjectGroupsSection.tsx`)
 
 When a user creates an OR-group in the "Subject Combos" tab, they should be able to label it as a slot (R1/R2/R3). Add a "Slot label" field in `GroupModal`:
 
@@ -543,7 +543,7 @@ When a user creates an OR-group in the "Subject Combos" tab, they should be able
 {logic === 'OR' && (
   <div style={{ marginBottom: 14 }}>
     <label style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-      Slot label <span style={{ color: '#C4C0DC', fontWeight: 400 }}>(optional — for regional language slots)</span>
+      Slot label <span style={{ color: '#C4C0DC', fontWeight: 400 }}>(optional - for regional language slots)</span>
     </label>
     <input
       value={slotLabel} onChange={e => setSlotLabel(e.target.value.trim())}
@@ -591,7 +591,7 @@ Then use `slotMap.get(s.name)` to determine `electiveSlotId` for each optional s
 
 ---
 
-## Part 8 — Summary of All File Changes
+## Part 8 - Summary of All File Changes
 
 | File | Change |
 |------|--------|
@@ -604,14 +604,14 @@ Then use `slotMap.get(s.name)` to determine `electiveSlotId` for each optional s
 
 ---
 
-## Part 9 — UI Walkthrough for End Users
+## Part 9 - UI Walkthrough for End Users
 
 ### Setting up Case 3 (R1/R2/R3 Regional Languages) step by step:
 
 1. **Resources → Subjects tab:**
    - Add subjects: English, Hindi, Odia, Sanskrit
    - Mark each as Elective (toggle ON in "More" panel)
-   - No slot ID needed here — the slot will be defined via OR-groups
+   - No slot ID needed here - the slot will be defined via OR-groups
 
 2. **Resources → Subjects → Subject OR/AND Combos (bottom of Subjects tab):**
    - Click "New Combo"
@@ -643,13 +643,13 @@ Then use `slotMap.get(s.name)` to determine `electiveSlotId` for each optional s
 
 ---
 
-## Part 10 — Validation Rules to Add
+## Part 10 - Validation Rules to Add
 
 ### In the matrix (Step 4):
 
 1. **Per-slot row sum validation:** For each row and each slot group, the sum of students across slot subjects MUST equal the row total. Show a red warning if a row's R1 sum ≠ totalStudents.
 
-2. **Cross-slot warning:** If a subject appears in multiple slots AND a student shows up in two slots of the same student (impossible to know at setup time), add a tooltip: "Students appear in all slots — ensure each slot runs at a different time."
+2. **Cross-slot warning:** If a subject appears in multiple slots AND a student shows up in two slots of the same student (impossible to know at setup time), add a tooltip: "Students appear in all slots - ensure each slot runs at a different time."
 
 3. **Minimum group size:** Already enforced by `minGroupSize` slider.
 
@@ -661,14 +661,14 @@ Then use `slotMap.get(s.name)` to determine `electiveSlotId` for each optional s
 
 ## Implementation Order (recommended)
 
-1. `types/index.ts` — add fields (no runtime risk)
-2. `SubjectGroupsSection.tsx` — add `slotLabel` to interface + GroupModal field
-3. `SubjectsPanel.tsx` — editable headers + AI Categorize + remove Category column + elective slot input
-4. `step-student-groups.tsx` — slot-aware columns + two-row header + fix applicability + regenerate
-5. `step6-generate.tsx` — update `dlgsToOptionalBlocks`
-6. `lib/schedulingEngine.ts` — fix same-subject constraint key
+1. `types/index.ts` - add fields (no runtime risk)
+2. `SubjectGroupsSection.tsx` - add `slotLabel` to interface + GroupModal field
+3. `SubjectsPanel.tsx` - editable headers + AI Categorize + remove Category column + elective slot input
+4. `step-student-groups.tsx` - slot-aware columns + two-row header + fix applicability + regenerate
+5. `step6-generate.tsx` - update `dlgsToOptionalBlocks`
+6. `lib/schedulingEngine.ts` - fix same-subject constraint key
 
-Each step is independently deployable — later steps build on earlier ones but earlier ones are already useful standalone.
+Each step is independently deployable - later steps build on earlier ones but earlier ones are already useful standalone.
 
 ---
 
@@ -681,4 +681,4 @@ Because the same subject (Hindi) legitimately lives in R1, R2, and R3 simultaneo
 The existing preference matrix uses subject names as Map keys everywhere. Slot-prefixing is the minimal change that supports duplicate subject names across slots without restructuring the entire matrix data model.
 
 **Why are Cases 1 and 2 already working?**
-The existing `GroupingBehavior` system + `SAME_STREAM_ONLY` / `CROSS_STREAM_ALLOWED` modes already handle intra-stream and cross-stream grouping. Users just need to set `isOptional = true` and choose the right grouping behavior — the matrix, DLG generation, and solver already do the right thing.
+The existing `GroupingBehavior` system + `SAME_STREAM_ONLY` / `CROSS_STREAM_ALLOWED` modes already handle intra-stream and cross-stream grouping. Users just need to set `isOptional = true` and choose the right grouping behavior - the matrix, DLG generation, and solver already do the right thing.

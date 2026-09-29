@@ -15,9 +15,9 @@ import (
 // Service orchestrates PDF→text extraction, NLP parsing, and diff generation.
 //
 // When a source document changes the flow is:
-//  1. extractText  — PDF bytes → plain text   (pdf_extractor microservice)
-//  2. parseSubjects — plain text → []ParsedSubjectEntry  (syllabus_parser microservice)
-//  3. diffAgainstTemplates — compare parsed entries to existing templates
+//  1. extractText  - PDF bytes → plain text   (pdf_extractor microservice)
+//  2. parseSubjects - plain text → []ParsedSubjectEntry  (syllabus_parser microservice)
+//  3. diffAgainstTemplates - compare parsed entries to existing templates
 //  4. persist each diff as a pending curriculum_change
 //
 // CRITICAL: No change is applied here. All diffs remain in status='pending'

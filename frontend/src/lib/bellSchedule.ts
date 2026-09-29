@@ -1,5 +1,5 @@
 /**
- * THE BELL SCHEDULE — the moments a bell actually rings.
+ * THE BELL SCHEDULE - the moments a bell actually rings.
  *
  * The app already knows every period's true wall-clock start and end, per
  * section, from the bell rows the wizard persists (lib/bellTimes). What it
@@ -11,8 +11,8 @@
  * Two things this gets right that a naive "period start times" list would not.
  *
  * 1. ONE BELL PER MOMENT. Period 1 ends and Period 2 starts at the same
- *    minute. That is one bell, not two, and it is described as both — "P1 ends
- *    · P2 begins" — because whoever rings it needs to know what it means.
+ *    minute. That is one bell, not two, and it is described as both - "P1 ends
+ *    · P2 begins" - because whoever rings it needs to know what it means.
  *
  * 2. GROUPS, NOT ONE CLOCK. Nursery goes home at 12:30 and Class X at 15:20;
  *    a school with class-wise breaks or early dispersal has several bell
@@ -39,7 +39,7 @@ export interface BellGroup {
   rings: Ring[]
 }
 
-/** '8:05 AM' / '08:05' — matches the app's existing 12/24-hour preference. */
+/** '8:05 AM' / '08:05' - matches the app's existing 12/24-hour preference. */
 export function fmtRingTime(min: number, h24 = false): string {
   const h = Math.floor(min / 60), m = min % 60
   if (h24) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
@@ -66,7 +66,7 @@ function slotLabel(key: string, slot: SlotMins, periods: Period[]): string {
  * Ring times for one section, in order.
  *
  * Built from slot boundaries rather than from period starts, so the end of the
- * last lesson — home time, the bell that matters most — is never dropped.
+ * last lesson - home time, the bell that matters most - is never dropped.
  */
 export function ringsForSection(section: string, config: any, periods: Period[]): Ring[] {
   const times = sectionPeriodTimes(section, config, periods)
@@ -88,7 +88,7 @@ export function ringsForSection(section: string, config: any, periods: Period[])
   return [...byMinute.values()].sort((a, b) => a.at - b.at)
 }
 
-/** A block of the day, with a name — "Period 1", "Break", "Assembly". */
+/** A block of the day, with a name - "Period 1", "Break", "Assembly". */
 export interface BellSlot { startMin: number; endMin: number; label: string }
 
 /** Every block of one section's day, in order. */
@@ -130,7 +130,7 @@ export function bellGroups(sections: string[], config: any, periods: Period[]): 
  * The next bell at or after `nowMin`, for a live display.
  *
  * Returns undefined once the day's last bell has gone, rather than wrapping to
- * tomorrow's first — a board reading "next bell in 14 hours" at 5pm is noise.
+ * tomorrow's first - a board reading "next bell in 14 hours" at 5pm is noise.
  */
 export function nextRing(rings: Ring[], nowMin: number): Ring | undefined {
   return rings.find(r => r.at >= nowMin)
@@ -146,7 +146,7 @@ export function minutesToNextRing(rings: Ring[], nowMin: number): number | undef
  * What a bell means, in the fewest words that are true.
  *
  * Named for what STARTS: at 9:40 the useful fact is "Period 2", not "Period 1
- * ends · Period 2 begins" — one moment described twice, which reads as two
+ * ends · Period 2 begins" - one moment described twice, which reads as two
  * events. The last bell of the day starts nothing, so it says so.
  */
 export function describeRing(r: Ring): string {
@@ -183,7 +183,7 @@ export interface BellColumn { sections: string[]; slots: BellSlot[] }
  * Columns for the whole school, one per distinct daily pattern.
  *
  * Grouped by identical slots so a school on one clock gets a single column and
- * a school with early dispersal gets one per group — never one merged column
+ * a school with early dispersal gets one per group - never one merged column
  * showing times that ring for nobody.
  */
 export function bellColumns(
@@ -214,7 +214,7 @@ export interface BellCell {
 }
 export interface BellGridRow {
   startMin: number
-  /** When this row's band ends — the next boundary anywhere in the school. */
+  /** When this row's band ends - the next boundary anywhere in the school. */
   endMin: number
   cells: BellCell[]
 }
@@ -223,7 +223,7 @@ export interface BellGridRow {
  * The chart itself: one row per band of time, one cell per column.
  *
  * Row boundaries are every moment ANY column changes, so columns on different
- * clocks stay aligned against a single time axis — which is the only way a
+ * clocks stay aligned against a single time axis - which is the only way a
  * reader can compare them. A column with nothing running in a band gets an
  * empty cell rather than a borrowed neighbour's block.
  */
@@ -240,7 +240,7 @@ export function bellGrid(columns: BellColumn[]): BellGridRow[] {
       if (!slot) return { isStart: false }
       return { label: slot.label, isStart: slot.startMin === startMin, endMin: slot.endMin }
     })
-    // A band where every column is empty is a gap in nobody's day — drop it.
+    // A band where every column is empty is a gap in nobody's day - drop it.
     if (cells.some(c => c.label)) rows.push({ startMin, endMin, cells })
   }
   return rows

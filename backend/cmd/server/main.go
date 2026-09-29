@@ -43,7 +43,7 @@ func main() {
 	ctx := context.Background()
 
 	// Idempotent self-migration (currently the billing schema). Runs on every
-	// boot using the private DATABASE_URL — no public DB proxy, no manual step.
+	// boot using the private DATABASE_URL - no public DB proxy, no manual step.
 	// Non-fatal: log and continue if it fails, so a schema hiccup can't take the
 	// whole API down; the billing endpoints degrade to "free" until it succeeds.
 	if err := db.EnsureSchema(ctx, pool); err != nil {
@@ -66,7 +66,7 @@ func main() {
 		slog.Warn("curriculum sources seed failed", "err", err)
 	}
 
-	// 2. Seed built-in templates (idempotent — ON CONFLICT DO UPDATE)
+	// 2. Seed built-in templates (idempotent - ON CONFLICT DO UPDATE)
 	tplSvc := templates.NewService(pool)
 	if err := tplSvc.SeedBuiltIn(ctx); err != nil {
 		slog.Warn("curriculum templates seed failed", "err", err)
@@ -95,7 +95,7 @@ func main() {
 		ErrorHandler: customError,
 		// fasthttp's default ReadBufferSize is 4KB, which is too small for a
 		// real browser request once Clerk's session cookies + the Authorization
-		// JWT + standard headers are combined — those alone can exceed 4KB,
+		// JWT + standard headers are combined - those alone can exceed 4KB,
 		// causing the server to reject the request with 431 "Request Header
 		// Fields Too Large" before it ever reaches our auth middleware.
 		ReadBufferSize: 16384,
@@ -104,7 +104,7 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		// ALLOWED_ORIGINS is a comma-separated list — split it into individual
+		// ALLOWED_ORIGINS is a comma-separated list - split it into individual
 		// origins (Fiber rejects a single string containing commas).
 		AllowOrigins: splitAndTrim(getenv("ALLOWED_ORIGINS", "http://localhost:5173")),
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
@@ -127,7 +127,7 @@ func main() {
 	app.Get("/api/share/:token", h.GetShare) // public read-only timetable shares
 	// NOTE: there is deliberately no /access route. It used to hand over a
 	// restricted share to anyone who posted an allow-listed email, which made
-	// the two routes below — the actual proof of mailbox control — optional.
+	// the two routes below - the actual proof of mailbox control - optional.
 	app.Post("/api/share/:token/request-code", h.RequestShareCode) // email a one-time code (magic-link)
 	app.Post("/api/share/:token/verify", h.VerifyShareCode)        // verify the code, return the timetable
 	app.Get("/api/billing/config", h.BillingConfig)                // public: prices + whether billing is live
@@ -160,7 +160,7 @@ func main() {
 	api.Get("/members", h.ListMembers)
 	api.Post("/members", h.UpsertMember)
 	api.Delete("/members/:id", h.RemoveMember)
-	// Every timetable this account may see — their own, plus any school that
+	// Every timetable this account may see - their own, plus any school that
 	// lists them on its roster.
 	api.Get("/my-schedules", h.MySchedules)
 	api.Get("/timetables/:id/or-slots", h.ListOrSlots)
@@ -170,7 +170,7 @@ func main() {
 	// --- Curriculum routes ---
 	cur := handlers.NewCurriculumHandlerFromHandler(h)
 
-	// Read endpoints — available to authenticated users
+	// Read endpoints - available to authenticated users
 	api.Get("/curriculum/templates", cur.GetTemplates)
 	api.Get("/curriculum/boards", cur.GetBoards)
 	api.Get("/curriculum/changes", cur.GetChanges)
@@ -186,7 +186,7 @@ func main() {
 	// School overrides. Admin-gated rather than school-scoped, because there is
 	// nothing to scope BY: users has no school or organisation column, so the
 	// server cannot tell which school a caller belongs to. Until it can, these
-	// took school_id straight from the request — meaning any signed-in account
+	// took school_id straight from the request - meaning any signed-in account
 	// could read or overwrite any school's overrides, and DeleteOverride took an
 	// id and deleted it with no ownership check whatsoever. Closed for now; the
 	// correct fix is per-school authorization once schools exist server-side.
@@ -194,14 +194,14 @@ func main() {
 	api.Post("/curriculum/overrides", cur.UpsertOverride, requireAdmin)
 	api.Delete("/curriculum/overrides/:id", cur.DeleteOverride, requireAdmin)
 
-	// POST /curriculum/review — approve or reject pending changes
+	// POST /curriculum/review - approve or reject pending changes
 	// CRITICAL: Changes are NEVER auto-applied; this is the only path.
 	api.Post("/curriculum/review", cur.ReviewChanges, requireAdmin)
 
-	// POST /curriculum/apply — actually write approved changes to templates
+	// POST /curriculum/apply - actually write approved changes to templates
 	api.Post("/curriculum/apply", cur.ApplyApproved, requireAdmin)
 
-	// POST /curriculum/reset — restore built-in seed templates
+	// POST /curriculum/reset - restore built-in seed templates
 	api.Post("/curriculum/reset", cur.ResetTemplates, requireAdmin)
 
 	// Serve built frontend LAST so it only catches paths not handled by an

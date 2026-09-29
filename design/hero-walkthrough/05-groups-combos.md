@@ -1,14 +1,14 @@
-# Scene 5 — Step 4, Groups & Combos (AND / OR)
+# Scene 5 - Step 4, Groups & Combos (AND / OR)
 
-**Caption:** "One teacher, two subjects — handled."
+**Caption:** "One teacher, two subjects - handled."
 **Duration:** 3000ms
-**Source of truth:** `frontend/src/routes/wizard/step-student-groups.tsx` —
+**Source of truth:** `frontend/src/routes/wizard/step-student-groups.tsx` -
 tabs "AND Groups / OR Groups" (1047), toolbar "Combination blocks" + **AI
 Suggest** (amber, Sparkles icon, 1072-1074) + **New block** (violet, 1075),
 Global merge Same/Cross toggles per Section/Grade/Stream/Block (1114-1126),
 guide steps incl. "press 'Generate teaching groups'" (1095).
 
-## Real mechanics (verified — IMPORTANT DEVIATION FROM BRIEF)
+## Real mechanics (verified - IMPORTANT DEVIATION FROM BRIEF)
 
 The brief scripted: *cursor types "Physics AND Chemistry" then "Painting OR
 PE"*. **The real Step 4 has no free-text combo input.** Combos are built
@@ -26,13 +26,13 @@ Same/Cross merge scope. The honest scene uses the real controls:
    sections (two section-scoped chips collapse into one cross-section
    chip labeled with both sections + headcount).
 4. Quick cut to the **OR Groups** tab: an elective slot card
-   `Painting OR PE` — "students pick one option" (SubjectGroupsSection).
+   `Painting OR PE` - "students pick one option" (SubjectGroupsSection).
 
 ## Mockup structure
 
 ```
 [AND Groups]* [OR Groups]                       [✨ AI Suggest] [+ New block]
-Combination blocks — each card = one optional group
+Combination blocks - each card = one optional group
 ┌ Block: Science XI ─────────────────────────────────────────┐
 │ Section   │ Physics  Chemistry │ Total                     │
 │ XI-Sci-A  │   28        24     │  52 ✓                     │
@@ -65,6 +65,6 @@ below (both states composited, since RM has no tab-cut).
 
 - **Typed-syntax flag:** replaced per above. If marketing wants a typed
   moment, the only real typed grammar in the product is the allocation-cell
-  syntax (scene 4) — do not put a fake combo command bar in this scene.
+  syntax (scene 4) - do not put a fake combo command bar in this scene.
 - Merge scope semantics (Same/Cross per Section/Grade/Stream/Block) match
-  `SCOPE_DIMS` exactly — reuse those four axis labels verbatim.
+  `SCOPE_DIMS` exactly - reuse those four axis labels verbatim.

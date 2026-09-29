@@ -5,7 +5,7 @@
 // 'science', which was true of one school's roster and nothing else. The rule
 // since then is the one documented on resolveStream: the stream recorded on
 // the section is authoritative, and the name is only consulted when there
-// isn't one. A name carrying no stream marker is 'general' — not a guess.
+// isn't one. A name carrying no stream marker is 'general' - not a guess.
 import { detectStream, resolveStream } from './src/components/resources/curriculum'
 
 let bad = 0
@@ -22,7 +22,7 @@ const named: [string, string][] = [
   ['XI-HUM', 'arts'], ['XI-Hum-A', 'arts'], ['XI-Arts', 'arts'],
   ['XI-Sci-A', 'science'], ['XI-PCM-A', 'science'], ['XI-Spark', 'science'],
   ['XI-PCB-A', 'pcb'], ['XI-Bot-A', 'pcb'],
-  // "Computer" must never read as commerce — the 'com' prefix is a trap.
+  // "Computer" must never read as commerce - the 'com' prefix is a trap.
   ['XI-Computer', 'general'], ['XI-CompSci', 'general'],
 ]
 for (const [name, want] of named) check(detectStream(name), want, name)

@@ -3,7 +3,7 @@
  *
  * Persisted per browser rather than per school on purpose: this is a property
  * of the SCREEN, not of the timetable. The display in the corridor should ring;
- * the head of department's laptop, looking at the same board, should not — and
+ * the head of department's laptop, looking at the same board, should not - and
  * neither should be able to switch the other on.
  *
  * The custom recording lives here as a data URL. That is why bellAudio caps

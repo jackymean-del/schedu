@@ -3,7 +3,7 @@
 //
 // Architecture contract:
 //   - ALL curriculum intelligence lives in this backend package.
-//   - Frontend only calls the REST API — it never computes recommendations.
+//   - Frontend only calls the REST API - it never computes recommendations.
 //   - Changes are NEVER auto-applied. Every change requires admin approval.
 //   - School overrides ALWAYS win over board templates.
 package curriculum
@@ -130,7 +130,7 @@ type Change struct {
 
 // Template is the canonical definition of a subject for a given
 // board × grade_group combination. Populated from approved Versions.
-// Schools must NOT edit templates directly — they use Overrides.
+// Schools must NOT edit templates directly - they use Overrides.
 type Template struct {
 	ID           string          `json:"id"`
 	Board        Board           `json:"board"`
@@ -152,7 +152,7 @@ type Template struct {
 
 // Override is a school-specific adjustment to a curriculum template.
 // Fields set to nil inherit from the template; non-nil fields win.
-// School overrides ALWAYS take priority — this is the top of the hierarchy.
+// School overrides ALWAYS take priority - this is the top of the hierarchy.
 type Override struct {
 	ID                string     `json:"id"`
 	SchoolID          string     `json:"school_id"`

@@ -3,12 +3,12 @@
  *
  * The hard part is not the sound, it is the permission. Browsers refuse to let
  * a page play audio until somebody has interacted with it, and a corridor
- * display is by definition unattended — so a board that just calls play() at
+ * display is by definition unattended - so a board that just calls play() at
  * 9:40 is silent, silently. Every sound therefore goes through here, and the
  * screen can ask whether it is actually able to ring (`isArmed`) so it can say
  * "tap to enable" rather than failing where nobody can see it.
  *
- * `arm()` must be called from a real user gesture — a click handler, not an
+ * `arm()` must be called from a real user gesture - a click handler, not an
  * effect. After that the AudioContext stays usable for the life of the page,
  * which for this screen means until someone reloads it.
  *
@@ -36,14 +36,14 @@ export const BUILT_IN_RINGS: {
   { id: 'hammerring',  group: 'Bells',   name: 'Bell, rung',    hint: 'Struck over and over, for as long as you set', sustained: true },
   { id: 'electric',    group: 'Bells',   name: 'Electric bell', hint: 'The classic corridor brrrring', sustained: true },
   { id: 'gong',        group: 'Bells',   name: 'Brass gong',    hint: 'One deep strike, left to ring out' },
-  { id: 'handbell',    group: 'Bells',   name: 'Hand bell',     hint: 'Brass, swung — strikes in pairs', sustained: true },
+  { id: 'handbell',    group: 'Bells',   name: 'Hand bell',     hint: 'Brass, swung - strikes in pairs', sustained: true },
   { id: 'westminster', group: 'Chimes',  name: 'Westminster',   hint: 'The four-note quarter chime' },
   { id: 'chime',       group: 'Chimes',  name: 'Tubular chime', hint: 'Struck tube, soft edges' },
-  { id: 'marimba',     group: 'Chimes',  name: 'Marimba',       hint: 'Wooden and warm — good for infants' },
+  { id: 'marimba',     group: 'Chimes',  name: 'Marimba',       hint: 'Wooden and warm - good for infants' },
   { id: 'triangle',    group: 'Chimes',  name: 'Triangle',      hint: 'Bright, thin, gentle' },
   { id: 'twotone',     group: 'Signals', name: 'Two-tone',      hint: 'Bing-bong, before an announcement' },
   { id: 'alarmbell',   group: 'Signals', name: 'Alarm bell',    hint: 'Analogue fire-alarm gong, continuous', sustained: true },
-  { id: 'buzzer',      group: 'Signals', name: 'Buzzer',        hint: 'Harsh — hard to ignore', sustained: true },
+  { id: 'buzzer',      group: 'Signals', name: 'Buzzer',        hint: 'Harsh - hard to ignore', sustained: true },
   { id: 'ping',        group: 'Signals', name: 'Ping',          hint: 'Short and quiet' },
 ]
 
@@ -103,7 +103,7 @@ export async function arm(): Promise<boolean> {
 
 type Ctx = BaseAudioContext
 
-/** Noise, built once per context — the clapper's contact sound. */
+/** Noise, built once per context - the clapper's contact sound. */
 const noiseCache = new WeakMap<Ctx, AudioBuffer>()
 function noiseBuffer(c: Ctx): AudioBuffer {
   const hit = noiseCache.get(c)
@@ -146,7 +146,7 @@ function partial(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, d
 const BELL_PARTIALS: [ratio: number, gain: number, decayScale: number][] = [
   [0.5, 0.28, 1.00],   // hum
   [1.0, 0.40, 0.80],   // prime
-  [1.2, 0.30, 0.55],   // tierce — the minor third
+  [1.2, 0.30, 0.55],   // tierce - the minor third
   [1.5, 0.18, 0.40],   // quint
   [2.0, 0.16, 0.28],   // nominal
   [2.7, 0.08, 0.16],
@@ -165,14 +165,14 @@ function bellHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, d
 }
 
 /**
- * A HAMMER strike on a thick bell — the school bell that hangs by the office
+ * A HAMMER strike on a thick bell - the school bell that hangs by the office
  * and gets hit with a steel hammer, rather than one swung on a rope.
  *
  * Three things separate it from the clapper bell above, and all three are what
  * make it read as "hit with metal":
  *
  *  1. The contact is metal on metal, so the transient is brighter and lasts a
- *     little longer than a clapper's — two noise bands, one very high.
+ *     little longer than a clapper's - two noise bands, one very high.
  *  2. A hammer excites far more of the higher modes, so there are more
  *     partials, and the top ones are loud enough to hear as a distinct clang
  *     before they die away.
@@ -181,11 +181,11 @@ function bellHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, d
  *     slow beating is the shimmer a synthesised bell is always missing.
  */
 const HAMMER_PARTIALS: [ratio: number, gain: number, decayScale: number][] = [
-  [0.5,  0.22, 1.00],   // hum — long, and what is left at the end
+  [0.5,  0.22, 1.00],   // hum - long, and what is left at the end
   [1.0,  0.34, 0.85],   // prime
   [1.19, 0.30, 0.60],   // tierce, the minor third
   [1.5,  0.20, 0.45],   // quint
-  [2.0,  0.22, 0.35],   // nominal — a hammer drives this harder than a clapper
+  [2.0,  0.22, 0.35],   // nominal - a hammer drives this harder than a clapper
   [2.55, 0.14, 0.22],
   [3.01, 0.12, 0.17],
   [4.07, 0.08, 0.11],
@@ -209,7 +209,7 @@ function hammerHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number,
 }
 
 /**
- * A SMALL bell — a brass hand bell, not a tower one.
+ * A SMALL bell - a brass hand bell, not a tower one.
  *
  * Scaling a big bell down does not work, and this is why: in a small casting
  * the hum barely sounds at all, while the nominal an octave above the prime is
@@ -219,11 +219,11 @@ function hammerHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number,
  * sound like a small church.
  */
 const SMALL_BELL_PARTIALS: [ratio: number, gain: number, decayScale: number][] = [
-  [0.5,  0.10, 0.90],   // hum — nearly absent at this size
+  [0.5,  0.10, 0.90],   // hum - nearly absent at this size
   [1.0,  0.38, 0.75],   // prime
   [1.19, 0.28, 0.50],   // tierce
   [1.5,  0.22, 0.38],   // quint
-  [2.0,  0.28, 0.30],   // nominal — the bright one, and it carries
+  [2.0,  0.28, 0.30],   // nominal - the bright one, and it carries
   [2.61, 0.17, 0.20],
   [3.42, 0.12, 0.14],
   [4.51, 0.08, 0.10],
@@ -249,7 +249,7 @@ function malletHit(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number,
   for (const [r, g, ds] of parts) partial(c, out, t0, hz * r, gain * g, decay * ds)
 }
 
-/** A buzzing electrical voice — square-ish, sagging slightly as it holds. */
+/** A buzzing electrical voice - square-ish, sagging slightly as it holds. */
 function buzz(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, dur: number) {
   const osc = c.createOscillator()
   const lp = c.createBiquadFilter()
@@ -277,12 +277,12 @@ function buzz(c: Ctx, out: AudioNode, t0: number, hz: number, gain: number, dur:
  * Per-ring loudness trim.
  *
  * Written by ear-free measurement: each ring is rendered offline and its RMS
- * taken over the first second and a half — the part anyone actually hears as
+ * taken over the first second and a half - the part anyone actually hears as
  * "the bell". Whole-file RMS is the wrong yardstick here, because a single
  * strike left to ring out for nine seconds is mostly tail, and matching it to
  * a sustained buzz on that basis drives its strike into clipping.
  *
- * Untrimmed the spread is wide, and in unhelpful directions — the electric
+ * Untrimmed the spread is wide, and in unhelpful directions - the electric
  * bell came out quietest of all, because thirty short strikes average to less
  * energy than one held buzz. Left alone, the volume slider would mean a
  * different thing for every choice, and a school that changes its ring would
@@ -306,7 +306,7 @@ const LEVEL_TRIM: Record<BuiltInRing, number> = {
 export function synthRing(
   c: Ctx, out: AudioNode, t0: number, id: BuiltInRing, v: number,
   /** How long the sustained rings should keep going. Ignored by the rings
-   *  that have a length of their own — a chime is as long as a chime is. */
+   *  that have a length of their own - a chime is as long as a chime is. */
   seconds = DEFAULT_RING_SECONDS,
 ): number {
   const g = Math.max(0, Math.min(1, v)) * LEVEL_TRIM[id]
@@ -318,14 +318,14 @@ export function synthRing(
       return 9.4
 
     case 'hammerring': {
-      // Struck steadily by hand — about twice a second, which is as fast as
+      // Struck steadily by hand - about twice a second, which is as fast as
       // anybody swings a hammer for minutes at a time. The unevenness is on
       // purpose: a machine-perfect interval is the one thing a person never
       // manages, and it is what makes a loop sound like a loop.
       const gap = 0.46
       const hits = Math.max(2, Math.round(hold / gap))
       for (let i = 0; i < hits; i++) {
-        // Late, never early — a person swinging a hammer drifts behind the
+        // Late, never early - a person swinging a hammer drifts behind the
         // beat, and a negative offset would put the first strike before the
         // start of the render, which the audio clock refuses outright.
         const jitter = ((i * 37) % 11) * 0.006          // 0–60ms, repeatable
@@ -339,7 +339,7 @@ export function synthRing(
       return 0.6
 
     case 'triangle':
-      // Very high, very thin, and it rings for ages — almost all upper partials.
+      // Very high, very thin, and it rings for ages - almost all upper partials.
       partial(c, out, t0, 2093, 0.16 * g, 2.4)
       partial(c, out, t0, 3138, 0.10 * g, 2.0)
       partial(c, out, t0, 4186, 0.06 * g, 1.6)
@@ -357,7 +357,7 @@ export function synthRing(
       return 2.9
 
     case 'westminster': {
-      // The quarter chime, in E — the four notes everybody recognises.
+      // The quarter chime, in E - the four notes everybody recognises.
       const notes = [659.3, 587.3, 523.3, 392.0]
       notes.forEach((hz, i) => malletHit(c, out, t0 + i * 0.55, hz, 0.30 * g, 2.4))
       return 0.55 * 3 + 2.6
@@ -372,7 +372,7 @@ export function synthRing(
       // A brass hand bell, swung.
       //
       // The clapper crosses the bell and strikes the far wall, then swings
-      // back and strikes the near one — so hits come in PAIRS, close together,
+      // back and strikes the near one - so hits come in PAIRS, close together,
       // with a longer wait while the arm turns around. Even spacing is the
       // giveaway of a synthesised one; so is striking the same note twice,
       // because the two walls are never quite the same casting and the second
@@ -397,7 +397,7 @@ export function synthRing(
     }
 
     case 'alarmbell': {
-      // An analogue alarm bell — the fire-alarm gong, and the two domes on top
+      // An analogue alarm bell - the fire-alarm gong, and the two domes on top
       // of an old alarm clock. A single hammer sits between two gongs and is
       // driven back and forth about twenty times a second, hitting each in
       // turn. Each contact barely rings before the next arrives, and it is
@@ -418,7 +418,7 @@ export function synthRing(
 
     case 'electric': {
       // A solenoid drives the clapper into the gong ten times a second for as
-      // long as the current is on. Each contact is its own strike — a tremolo
+      // long as the current is on. Each contact is its own strike - a tremolo
       // on a held tone gets the rhythm but never the rattle.
       const gap = 0.1
       const hits = Math.max(4, Math.round(hold / gap))
@@ -453,7 +453,7 @@ function playBuiltIn(id: BuiltInRing, volume: number, seconds: number) {
   const c = audioCtx()
   if (!c) return
   // Everything goes through one gain node so a ring in progress can be cut
-  // short — the long ones (gong, the rung bell) outlast a second press.
+  // short - the long ones (gong, the rung bell) outlast a second press.
   const bus = c.createGain()
   bus.connect(c.destination)
   synthRing(c, bus, c.currentTime, id, volume, seconds)
@@ -490,7 +490,7 @@ function playCustom(dataUrl: string, volume: number, seconds: number) {
     if (Date.now() >= customStop) stopRing()
   }
   void customEl.play().catch(() => {
-    // Blocked despite arming — the board shows the "tap to enable" state, so
+    // Blocked despite arming - the board shows the "tap to enable" state, so
     // there is nothing useful to do here.
   })
 }
@@ -499,11 +499,11 @@ export interface RingChoice {
   sound: BuiltInRing | 'custom'
   customDataUrl?: string
   volume: number
-  /** How long the sustained rings — and a looped recording — keep going. */
+  /** How long the sustained rings - and a looped recording - keep going. */
   seconds?: number
 }
 
-/** Ring. Silent — and honest about it — when audio was never unlocked. */
+/** Ring. Silent - and honest about it - when audio was never unlocked. */
 export function ring(choice: RingChoice) {
   stopRing()
   const seconds = choice.seconds ?? DEFAULT_RING_SECONDS
@@ -514,7 +514,7 @@ export function ring(choice: RingChoice) {
   playBuiltIn(choice.sound, choice.volume, seconds)
 }
 
-/** Cut a ring short — used when auditioning one ring after another. */
+/** Cut a ring short - used when auditioning one ring after another. */
 export function stopRing() {
   if (customEl) {
     customEl.ontimeupdate = null
@@ -527,8 +527,8 @@ export function stopRing() {
 
 /**
  * The biggest custom recording we will keep. It is persisted with the rest of
- * the board's settings in localStorage — a ~5MB drawer shared with everything
- * else the app stores — and base64 inflates a file by a third, so 1MB of audio
+ * the board's settings in localStorage - a ~5MB drawer shared with everything
+ * else the app stores - and base64 inflates a file by a third, so 1MB of audio
  * costs about 1.4MB of that drawer.
  *
  * At ordinary bitrates this is roughly a minute of sound, which is far more
@@ -543,7 +543,7 @@ export function readAudioFile(file: File): Promise<{ dataUrl: string; name: stri
       reject(new Error('That is not an audio file.')); return
     }
     if (file.size > MAX_RING_BYTES) {
-      reject(new Error(`Too big — keep it under ${Math.round(MAX_RING_BYTES / 1024)} KB, which is about a minute of audio.`))
+      reject(new Error(`Too big - keep it under ${Math.round(MAX_RING_BYTES / 1024)} KB, which is about a minute of audio.`))
       return
     }
     const fr = new FileReader()

@@ -1,11 +1,11 @@
 /**
- * Multi-active schedules — the read-layer aggregation planned in memory:
+ * Multi-active schedules - the read-layer aggregation planned in memory:
  * several schedules can be `status: 'active'` at once (e.g. one for Classes
  * I–V, another for VI–X). Ops surfaces must see their UNION, while editing
  * surfaces keep working on the single open schedule.
  *
- * Every bundle keeps its OWN periods/startTime — different groups run
- * different bells — so cross-schedule comparison happens on wall-clock
+ * Every bundle keeps its OWN periods/startTime - different groups run
+ * different bells - so cross-schedule comparison happens on wall-clock
  * minutes, never on period ids.
  */
 import { sectionPeriodTimes } from './bellTimes'
@@ -99,7 +99,7 @@ function venueIntervals(b: ScheduleBundle, dayKey: string) {
   // Times come from the section's own BELL, not from adding up durations.
   //
   // Summing period durations from config.startTime silently drifts on any day
-  // that holds an assembly, a lunch or a dispersal — those rows take real
+  // that holds an assembly, a lunch or a dispersal - those rows take real
   // minutes off the clock and are not plain teaching periods, so everything
   // after them lands early. This function decides whether two classes are in
   // one room AT THE SAME TIME, so a drifting clock does not merely mislabel a
@@ -125,7 +125,7 @@ function venueIntervals(b: ScheduleBundle, dayKey: string) {
 
 /**
  * Aggregate "today" across every active schedule: sums/unions of the
- * per-schedule summaries, PLUS venue clashes BETWEEN schedules — the same
+ * per-schedule summaries, PLUS venue clashes BETWEEN schedules - the same
  * venue occupied by two schedules at overlapping wall-clock times, which no
  * single-schedule check can see.
  */

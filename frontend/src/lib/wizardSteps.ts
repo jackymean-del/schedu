@@ -1,8 +1,8 @@
 /**
  * The wizard's steps, named once.
  *
- * Four lists of these names existed — in pages/wizard (the stepper), pages/root
- * (the topbar), pages/dashboard (the resume hint) and a dead sidebar — and
+ * Four lists of these names existed - in pages/wizard (the stepper), pages/root
+ * (the topbar), pages/dashboard (the resume hint) and a dead sidebar - and
  * three of them disagreed. The same step read "Groups & Combos", "Student
  * Groups" and "Student groups" depending on where you looked, and the dead one
  * still had the pre-reorder ORDER, with Allocation at step 3.
@@ -12,7 +12,7 @@
  *
  * DELIBERATELY a standalone module with no component imports: pages/root shows
  * the step name in the topbar on every route, and importing it from
- * pages/wizard would drag the wizard's own chunk — the largest in the app — into
+ * pages/wizard would drag the wizard's own chunk - the largest in the app - into
  * the shell that loads on first paint.
  */
 

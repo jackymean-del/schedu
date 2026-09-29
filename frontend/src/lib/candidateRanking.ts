@@ -1,5 +1,5 @@
 /**
- * Candidate Ranking — schedU Doc Part 2.
+ * Candidate Ranking - schedU Doc Part 2.
  *
  * Given a target (section, subject) slot, rank every staff member by
  * suitability using the same factors the solver scores during

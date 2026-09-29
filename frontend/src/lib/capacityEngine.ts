@@ -1,5 +1,5 @@
 /**
- * Capacity Engine — schedU Doc Part 1, Step 1.
+ * Capacity Engine - schedU Doc Part 1, Step 1.
  *
  * Computes the maximum usable weekly teaching capacity for a class
  * group from the bell schedule. This is the hard ceiling that every
@@ -89,7 +89,7 @@ export function inferBandFromSection(sectionName: string): string {
 
 // ── Bell-true per-section capacity ───────────────────────────────────────────
 // config.bellSchedules (persisted by the Shift & Timing step) carries the
-// EXACT generated rows per generation unit — including per-group early
+// EXACT generated rows per generation unit - including per-group early
 // dispersal, so a Regular-mode Nursery with 3 periods/day caps at 15/week
 // while Seniors cap at 40. Prefer this over the band heuristic whenever the
 // bell data covers the section.
@@ -99,7 +99,7 @@ export type BellScheduleLite = {
   rows: Array<{ type: string; duration?: number; classes?: string[] }>
 }
 
-/** Class key from a section name — "Nursery-A" → 'nur', "XI-Sci-B" → 'xi'. */
+/** Class key from a section name - "Nursery-A" → 'nur', "XI-Sci-B" → 'xi'. */
 function sectionClassKey(sectionName: string): string {
   const norm = sectionName.toLowerCase().replace(/[\s-]/g, '')
   if (norm.startsWith('nur')) return 'nur'

@@ -5,7 +5,7 @@ import { BRAND, BUSINESS } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Contact',
-  description: 'Get in touch with bhusku — partnerships, product feedback, or support.',
+  description: 'Get in touch with bhusku - partnerships, product feedback, or support.',
   alternates: { canonical: '/contact' },
 }
 
@@ -19,7 +19,7 @@ export default function ContactPage() {
             Let&rsquo;s talk.
           </h1>
           <p className="mt-4 max-w-[420px] text-[15px] leading-[1.75] text-[#4B5275]">
-            Questions about a product, a partnership, or support — send a note and we&rsquo;ll get back to you.
+            Questions about a product, a partnership, or support - send a note and we&rsquo;ll get back to you.
           </p>
           <div className="mt-8 flex flex-col gap-3 text-[14px]">
             <div>

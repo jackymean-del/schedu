@@ -1,4 +1,4 @@
-# Beat 10 · Reports & analytics — track workload and usage over time
+# Beat 10 · Reports & analytics - track workload and usage over time
 
 **Caption:** "Track workload and usage over time."
 
@@ -13,7 +13,7 @@ counts, now plotted across a week instead of shown as a single snapshot).
 ## Composition
 
 A simple, clean bar or line chart (workload per teacher, or room-utilization
-% — pick whichever reads more universally across school/college/corporate
+% - pick whichever reads more universally across school/college/corporate
 contexts; recommend **room utilization %**, since "workload" skews
 school-teacher-specific while "room usage" reads the same for a university
 department or training center). One clear upward trend line, gold accent on
@@ -26,7 +26,7 @@ the final data point.
 | 0–10% | Empty axes, chart at 0. |
 | 10–85% | Bars/line draw in left-to-right, matching scroll position
   directly (this is a `clip-path: inset()` reveal driven by `--p`, not a
-  separate timed animation — cheapest possible implementation and it
+  separate timed animation - cheapest possible implementation and it
   reads as "scrubbing through a week" which fits the page's overall
   motif). |
 | 85–100% | Final data point gets the gold accent dot + a small "▲ 12%"
@@ -36,9 +36,9 @@ the final data point.
 
 **Hovering the chart** reveals exact numbers at that point (a vertical
 guide-line + tooltip following the pointer's x-position, snapped to the
-nearest data point) — implementable in plain CSS using a row of invisible
+nearest data point) - implementable in plain CSS using a row of invisible
 hover-target slices (one per data point, `:hover` reveals that slice's
-tooltip via a sibling selector) — no charting library, no JS beyond
+tooltip via a sibling selector) - no charting library, no JS beyond
 optionally smoothing the guide-line position (can ship JS-free with
 discrete snapping, which is honestly the better, calmer interaction anyway).
 
@@ -50,5 +50,5 @@ no draw-in animation.
 ## Honesty
 
 Axis labels present and real ("Room utilization, %", "Week"), but data
-values are round, generic illustrative numbers — never implying this is a
+values are round, generic illustrative numbers - never implying this is a
 real customer's live analytics.

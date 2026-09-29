@@ -1,13 +1,13 @@
 /**
- * School holiday calendar — Blueprint v5, Part C "Holiday Handling".
+ * School holiday calendar - Blueprint v5, Part C "Holiday Handling".
  *
  * "Admin can set holidays either upfront, at the start of the session, or on the
  *  go… Holidays feed directly into the coverage tracking: a declared holiday
  *  removes those slots from the 'available time to cover syllabus' count."
  *
  * Declared ONCE for the school. The hours each subject loses are then DERIVED
- * from the actual timetable — whatever was scheduled that weekday, for the
- * sections the holiday applies to — rather than asking anyone to log a loss per
+ * from the actual timetable - whatever was scheduled that weekday, for the
+ * sections the holiday applies to - rather than asking anyone to log a loss per
  * subject. That is the difference between this being usable and being theatre.
  *
  * Derivation is deliberately read-time, not materialised into each plan: delete
@@ -34,7 +34,7 @@ interface HolidayState {
   holidays: Holiday[]
   addHoliday: (h: Omit<Holiday, 'id'>) => void
   removeHoliday: (id: string) => void
-  /** Swap the whole list — used when a class-section is renamed and holidays
+  /** Swap the whole list - used when a class-section is renamed and holidays
    *  scoped to it must follow (lib/renameCascade). */
   replaceHolidays: (holidays: Holiday[]) => void
   reset: () => void
@@ -74,7 +74,7 @@ export interface HolidayLoss { hours: number; dates: string[] }
  *
  * Note the honest limitation: a holiday costs a subject the periods it holds on
  * that weekday in the CURRENT timetable. If the timetable changes later, the
- * figure changes with it — which is the right behaviour, but means this is a
+ * figure changes with it - which is the right behaviour, but means this is a
  * live estimate rather than an immutable historical record.
  */
 export function holidayImpact(

@@ -1,5 +1,5 @@
 /**
- * TeachersPanel — Tab 3.
+ * TeachersPanel - Tab 3.
  *
  * Unified subject→class mapping: each subject carries its own applicable classes.
  * Table: Teacher | Subject Assignments | Slots/Wk | Class Teacher Of | [ Show More ] [ Delete ]
@@ -9,7 +9,7 @@
  *   ┃ History   [VI-A]       ✕
  *   + Subject
  *
- * Clicking "+ Subject" opens a one-step portal list — picking a subject adds
+ * Clicking "+ Subject" opens a one-step portal list - picking a subject adds
  * it immediately (no classes yet). Classes are then assigned on the subject's
  * own row via the grade-grouped chip selector; ✕ removes the subject row.
  *
@@ -49,7 +49,7 @@ function getGrade(n: string) {
   const t = n.trim(), idx = t.lastIndexOf('-')
   // Treat the trailing segment as a section suffix (not part of the grade) if it is
   // ≤ 4 chars.  Limit bumped from 3→4 so "Arts" (4) is treated as a suffix rather
-  // than a grade name — keeping "XI-Arts", "XI-Com-A", "XI-Sci-A" all in "Grade XI".
+  // than a grade name - keeping "XI-Arts", "XI-Com-A", "XI-Sci-A" all in "Grade XI".
   if (idx > 0 && t.slice(idx + 1).length <= 4)
     return t.slice(0, idx)
               .replace(/-(science|commerce|humanities?|sci|com|arts?|hum|gen|pcm|pcb)$/i, '')
@@ -90,7 +90,7 @@ function Avatar({ name }: { name: string }) {
   )
 }
 
-// ─── AddSubjectFlow — one-step portal dropdown ────────────────────────────────
+// ─── AddSubjectFlow - one-step portal dropdown ────────────────────────────────
 // Picking a subject adds it to the educator immediately (with no classes).
 // Classes are assigned afterwards on the subject's own row.
 function AddSubjectFlow({ anchorEl, availableSubjects, onAdd, onClose }: {
@@ -170,7 +170,7 @@ function AddSubjectFlow({ anchorEl, availableSubjects, onAdd, onClose }: {
         ))}
       </div>
       <div style={{ padding: '6px 12px', borderTop: '1px solid #f0eeff', background: '#faf9ff', fontSize: 10, color: '#9896B5' }}>
-        Pick a subject — then assign its classes on the row.
+        Pick a subject - then assign its classes on the row.
       </div>
     </div>,
     document.body,
@@ -226,7 +226,7 @@ function SubjectAssignmentCell({ teacher, subjects, classOpts, onUpdateMappings 
   return (
     <div style={{ minWidth: 0 }}>
       {mappings.length === 0 && (
-        <span style={{ fontSize: 11, color: '#767384', fontStyle: 'italic', paddingLeft: 2 }}>— not assigned —</span>
+        <span style={{ fontSize: 11, color: '#767384', fontStyle: 'italic', paddingLeft: 2 }}>- not assigned -</span>
       )}
       {mappings.map((m, i) => (
         <SubjectLine key={m.subject + i} mapping={m}
@@ -278,7 +278,7 @@ function ExpandedDetails({ t, onChange }: { t: Staff; onChange: (p: Partial<Staf
       <label style={lbl}>
         Gender
         <select value={t.gender ?? ''} onChange={e => onChange({ gender: e.target.value as any })} style={fld}>
-          {GENDERS.map(g => <option key={g} value={g}>{g || '— not set —'}</option>)}
+          {GENDERS.map(g => <option key={g} value={g}>{g || '- not set -'}</option>)}
         </select>
       </label>
       <label style={lbl}>
@@ -377,7 +377,7 @@ function ShortNameCell({ value, onSave }: { value?: string; onSave: (v: string) 
 // Consults the shared cross-schedule staff directory (store/directoryStore.ts)
 // so "same name" is recognized automatically: typing a name that exactly
 // matches an existing entry auto-fills that teacher's role/subjects and links
-// via directoryId — no extra click — instead of silently creating a second,
+// via directoryId - no extra click - instead of silently creating a second,
 // disconnected record that later looks like a double-booking or a merged-away
 // duplicate. A genuinely different person just needs a distinguishable name
 // (e.g. a last initial) to be added as their own entry.
@@ -425,7 +425,7 @@ function AddRow({ onAdd }: { onAdd: (t: StaffExt) => void }) {
         />
         {match && (
           <div style={{ marginTop: 6, padding: '6px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', fontSize: 11, color: '#166534', lineHeight: 1.5 }}>
-            ✓ Matches <strong>{match.name}</strong> in your staff directory — will auto-link{match.subjects?.length ? ` (${match.subjects.join(', ')})` : ''}. Different person? Add a distinguishing detail (e.g. a last initial) to keep them separate.
+            ✓ Matches <strong>{match.name}</strong> in your staff directory - will auto-link{match.subjects?.length ? ` (${match.subjects.join(', ')})` : ''}. Different person? Add a distinguishing detail (e.g. a last initial) to keep them separate.
           </div>
         )}
       </td>
@@ -528,14 +528,14 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
           <SubjectAssignmentCell teacher={t} subjects={subjects} classOpts={classOpts} onUpdateMappings={updateMappings} />
         </td>
 
-        {/* Slots / Week — READ-ONLY here. Blueprint v6 puts workload editing on
+        {/* Slots / Week - READ-ONLY here. Blueprint v6 puts workload editing on
             Step 5 (Mapping): "User can override/change the load per teacher."
             Resources owns WHO exists and WHAT they teach; how many periods they
             may carry is a workload decision, and having it editable in two
             places let the two drift apart. */}
         <td style={{ ...TD, padding: '7px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           <div
-            title={`${cap} periods/week — the workload norm, or a per-teacher override set on the Mapping step.`}
+            title={`${cap} periods/week - the workload norm, or a per-teacher override set on the Mapping step.`}
             style={{
               width: 72, margin: '0 auto', padding: '4px 8px',
               border: `1.5px dashed ${loadBorder}`,
@@ -560,7 +560,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
             options={classTeacherOpts}
             onChange={v => onUpdate({ isClassTeacher: v[0] ?? '' })}
             singleSelect
-            placeholder="— none —"
+            placeholder="- none -"
             maxChips={1}
             minDropdownWidth={220}
           />
@@ -573,13 +573,13 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
             options={coClassTeacherOpts}
             onChange={v => onUpdate({ isCoClassTeacher: v[0] ?? '' } as Partial<StaffExt>)}
             singleSelect
-            placeholder="— none —"
+            placeholder="- none -"
             maxChips={1}
             minDropdownWidth={220}
           />
         </td>
 
-        {/* Actions — Show More / Scope / Delete */}
+        {/* Actions - Show More / Scope / Delete */}
         <td style={{ ...TD, padding: '6px 8px', whiteSpace: 'nowrap' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
             <button
@@ -638,7 +638,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   hasGaps?: boolean
 }) {
   // The workload norm a teacher falls back to when no per-person override has
-  // been set on Mapping. Read-only here — see the Slots/Wk cell.
+  // been set on Mapping. Read-only here - see the Slots/Wk cell.
   const config = useTimetableStore(s => (s as any).config)
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const workDayCount = config?.workDays?.length || 5
@@ -887,13 +887,13 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
             icon={<Users size={26} color={P} />}
             title="No educators yet"
             subtitle={subjects.length === 0
-              ? 'Add subjects first — then schedU can create a load-balanced faculty roster for them automatically, or you can add educators by hand.'
-              : `Let schedU create a starter faculty from your ${subjects.length} subject${subjects.length !== 1 ? 's' : ''} — one or more teachers per subject, sized to the weekly load, with class assignments wired. Rename and tune afterwards.`}
+              ? 'Add subjects first - then schedU can create a load-balanced faculty roster for them automatically, or you can add educators by hand.'
+              : `Let schedU create a starter faculty from your ${subjects.length} subject${subjects.length !== 1 ? 's' : ''} - one or more teachers per subject, sized to the weekly load, with class assignments wired. Rename and tune afterwards.`}
             smartLabel="Let me create smartly"
             smartSubtext={subjects.length > 0 ? `Teachers for ${subjects.length} subject${subjects.length !== 1 ? 's' : ''}` : undefined}
             onSmart={handleSmartCreate}
             smartDisabled={subjects.length === 0}
-            smartDisabledHint="Add subjects first — the roster is built from your subject list."
+            smartDisabledHint="Add subjects first - the roster is built from your subject list."
             manualLabel="Add manually"
             manualSubtext="Start with a blank table"
             onManual={() => setManualMode(true)}

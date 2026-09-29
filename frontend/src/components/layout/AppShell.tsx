@@ -1,5 +1,5 @@
 /**
- * AppShell — the single, persistent chrome for every signed-in page.
+ * AppShell - the single, persistent chrome for every signed-in page.
  *
  * Before this, only the dashboard had a sidebar; every other page fell back to
  * a bare top bar, so navigation "vanished" as soon as you left the dashboard.
@@ -45,7 +45,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: LifeBuoy, label: 'Support Center', href: '/support' },
       // Docs live on the marketing site since the domain split. Open them in
-      // a new tab — navigating this tab there would drop a signed-in user
+      // a new tab - navigating this tab there would drop a signed-in user
       // into logged-out marketing chrome and look like being signed out.
       { icon: BookOpen, label: 'Documentation',  href: 'https://schedu.bhusku.com/docs', external: true },
       { icon: Video,    label: 'Book a Demo',     href: '/demo' },
@@ -58,7 +58,7 @@ const W_SHUT = 64
 /**
  * Below this the sidebar stops being a column and becomes an overlay.
  *
- * At 375px it was taking 224px — sixty percent of the screen — leaving 151px
+ * At 375px it was taking 224px - sixty percent of the screen - leaving 151px
  * for content that needed 540, clipped with no way to scroll to it. The
  * dashboard's own "Fix venues" button was off-screen and unreachable. A phone
  * has no room for a permanent nav rail.
@@ -108,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const path = typeof window !== 'undefined' ? window.location.pathname : ''
   const active = activeHref(path)
-  // Overlaid, the sidebar takes no layout width at all — content gets the
+  // Overlaid, the sidebar takes no layout width at all - content gets the
   // whole screen and the nav floats above it.
   const W = open ? W_OPEN : W_SHUT
   const asideW = narrow ? W_OPEN : W
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         .as-icon:hover { background: #F0EDFF; }
       `}</style>
 
-      {/* Backdrop — tapping away closes the menu, the behaviour every phone
+      {/* Backdrop - tapping away closes the menu, the behaviour every phone
           user already expects. */}
       {narrow && open && (
         <div onClick={() => setOpen(false)} style={{
@@ -231,7 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {/* An "Upgrade" button that leads to a page with nothing to buy
                     is a dead end, so it only appears once payments are live. */}
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#685DBC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {billingLive ? 'Free Plan' : 'Free — early access'}
+                  {billingLive ? 'Free Plan' : 'Free - early access'}
                 </span>
               </span>
               {billingLive && (

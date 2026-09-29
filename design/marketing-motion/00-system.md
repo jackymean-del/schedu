@@ -1,6 +1,6 @@
-# Marketing motion system — shared rules
+# Marketing motion system - shared rules
 
-> Applies to all five animation docs in this folder. Design exploration —
+> Applies to all five animation docs in this folder. Design exploration -
 > hand to the next planning session for implementation; no React here.
 
 ## Brand inputs (from `design/brand/`)
@@ -9,7 +9,7 @@
   `#FAF9F5` · mist `#EDE9FF`. **No gradients.**
 - Stroke language: monoline, round caps, 15% stroke-to-canvas ratio where
   a mark-scale element appears.
-- The gold dot/knob is the recurring "actor" across all five animations —
+- The gold dot/knob is the recurring "actor" across all five animations -
   the same knob that lives in the logo and the app loader. One motion
   vocabulary everywhere.
 
@@ -29,7 +29,7 @@ tiny JS)**, with a gzip target:
 
 Enforcement rules:
 - Pure inline SVG + CSS keyframes. **No video, no canvas, no WebGL, no
-  animation libraries** (no Lottie, no GSAP — Lottie runtime alone is
+  animation libraries** (no Lottie, no GSAP - Lottie runtime alone is
   ~250KB and is exactly how bundles balloon).
 - No new font weights/families beyond what the site already loads.
 - Repeating elements (grid cells, student dots) generated as SVG `<use>`
@@ -38,7 +38,7 @@ Enforcement rules:
   `content-visibility: auto` / `IntersectionObserver` (the observer is
   shared, counts once, ~0.3 KB).
 
-## Reduced motion — explicit static fallbacks
+## Reduced motion - explicit static fallbacks
 `@media (prefers-reduced-motion: reduce)` must swap each animation to a
 **designed end state**, not a hidden or frozen-mid-tween frame. Each doc
 defines its exact static frame. Pattern:
@@ -51,13 +51,13 @@ defines its exact static frame. Pattern:
 ```
 
 The static frame is always the *resolved* state (schedule solved, 0
-conflicts, lists populated) — reduced-motion users see the conclusion, not
+conflicts, lists populated) - reduced-motion users see the conclusion, not
 the setup.
 
 ## Honesty rule
 Every animation is an **illustrative demo of a real product mechanic**,
 using obviously-generic content (Grade 8A, "Physics", "Mr. Rao"). Rules:
-- A small caption under each: *"Illustrative demo"* — set in 11px mist-gray,
+- A small caption under each: *"Illustrative demo"* - set in 11px mist-gray,
   always visible, not a tooltip.
 - Never real school names, never numbers implying live usage ("1,204
   schools scheduling right now" is banned).
@@ -67,7 +67,7 @@ using obviously-generic content (Grade 8A, "Physics", "Mr. Rao"). Rules:
 ## Shared timing grammar
 - Base easing: `cubic-bezier(.45, 0, .25, 1)` (same as the brand loader).
 - "Settle" moments (a cell landing, a stamp): `cubic-bezier(.2, .9, .3, 1.15)`
-  — one gentle overshoot, never bouncy.
+  - one gentle overshoot, never bouncy.
 - Loop lengths 6–14s with a 1.5–2s rest beat before repeating; adjacent
   animations on the page must have different loop lengths (avoids the
   page "breathing" in sync, which reads as templated).

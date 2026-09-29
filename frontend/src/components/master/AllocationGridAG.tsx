@@ -1,14 +1,14 @@
 /**
- * AllocationGridAG — Period-allocation spreadsheet.
+ * AllocationGridAG - Period-allocation spreadsheet.
  *
  * Architecture:
  *   AG Grid OWNS:  DOM rendering, cell editing, undo/redo, OS clipboard write
  *   Engine OWNS:   selection state, copy state, keyboard, paste validation, overlay
  *
  * Single source of truth: SpreadsheetEngineState  (useReducer)
- *   selection    — what is currently highlighted (CELL_RANGE | COLUMN_RANGE)
- *   copied       — copy buffer: serialized values + source range + AG Grid ranges for overlay
- *   pasteWarning — transient validation toast
+ *   selection    - what is currently highlighted (CELL_RANGE | COLUMN_RANGE)
+ *   copied       - copy buffer: serialized values + source range + AG Grid ranges for overlay
+ *   pasteWarning - transient validation toast
  *
  * All AG Grid event callbacks normalize into engine state.
  * All rendering derives from engine state.
@@ -46,7 +46,7 @@ import {
 } from '@/lib/capacityEngine'
 import { Search, ChevronDown, Minus, Plus, Check } from 'lucide-react'
 
-// Community only — ag-grid-enterprise is not a dependency of this project.
+// Community only - ag-grid-enterprise is not a dependency of this project.
 //
 // The grid used to ask for `rowNumbers` and `cellSelection` (column selection +
 // fill handle), both ENTERPRISE features. AG Grid logged error #200 for each on
@@ -56,7 +56,7 @@ import { Search, ChevronDown, Minus, Plus, Check } from 'lucide-react'
 //
 // The matching API calls went with them. `api.clearCellSelection()` is also
 // enterprise: the method EXISTS on the api object, so an optional call does
-// not guard it — it logged error #200 on every Escape press and cleared
+// not guard it - it logged error #200 on every Escape press and cleared
 // nothing. `clearFocusedCell` is community and does the part that mattered.
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -114,7 +114,7 @@ interface GridContext {
   getPeriodMinutes: () => number
   getSections:      () => Section[]
   /** Bell-true per-section weekly capacity (periods/day from the REAL bell ×
-   *  work days) — covers per-group early dispersal. Missing = no bell data. */
+   *  work days) - covers per-group early dispersal. Missing = no bell data. */
   getBellCaps:      () => Record<string, number>
 }
 
@@ -140,7 +140,7 @@ function describeAllocation(raw: string | undefined | null): string | null {
   return `${bits.join(' + ')} = ${p.weeklyTotal} period${p.weeklyTotal !== 1 ? 's' : ''}/week`
 }
 
-/** Canonical compact syntax from counts — mirrors the syntax guide's examples. */
+/** Canonical compact syntax from counts - mirrors the syntax guide's examples. */
 function composeSyntax(theory: number, lab: number, doubles: number, span: number): string {
   if (doubles > 0) return `${doubles}(${Math.max(2, span)}X)`
   if (theory > 0 && lab > 0) return `${theory}+${lab}`
@@ -150,7 +150,7 @@ function composeSyntax(theory: number, lab: number, doubles: number, span: numbe
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Usage cell renderer — "41 / 48•"
+// Usage cell renderer - "41 / 48•"
 // ─────────────────────────────────────────────────────────────────
 
 function UsageCellRenderer(params: ICellRendererParams<RowData>) {
@@ -182,7 +182,7 @@ function UsageCellRenderer(params: ICellRendererParams<RowData>) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Allocation Composer — popup cell editor
+// Allocation Composer - popup cell editor
 //
 // Typing stays first-class (the input is auto-focused and seeded with the
 // pressed key), but nobody has to MEMORISE the syntax any more: steppers for
@@ -239,12 +239,12 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
   const newTotal = usedOthers + (parsed.valid ? parsed.weeklyTotal : 0)
   const over = cap > 0 && newTotal > cap
 
-  // Same-grade sibling propagation happens in the valueSetter — be transparent.
+  // Same-grade sibling propagation happens in the valueSetter - be transparent.
   const grade = gradeOf(sectionName)
   const siblingCount = ctx.getSections().filter(s => gradeOf(s.name) === grade).length
 
   const bump = (kind: 'theory' | 'lab' | 'doubles', delta: number) => {
-    // Steppers and double-blocks are mutually exclusive in the syntax —
+    // Steppers and double-blocks are mutually exclusive in the syntax -
     // touching one family clears the other.
     let t = theory, l = lab, d = doubles
     if (kind === 'doubles') { d = Math.max(0, d + delta); if (d > 0) { t = 0; l = 0 } }
@@ -321,12 +321,12 @@ function AllocationComposer(props: CustomCellEditorProps<RowData> & { subjectNam
       {/* Live translation + capacity check */}
       <div style={{ fontSize: 10, lineHeight: 1.5, minHeight: 15 }}>
         {text.trim() === '' ? (
-          <span style={{ color: '#B0ABCC' }}>Empty — no periods for this subject</span>
+          <span style={{ color: '#B0ABCC' }}>Empty - no periods for this subject</span>
         ) : parsed.valid ? (
           <span style={{ color: '#15803D', fontWeight: 600 }}>
             {desc}
             <span style={{ color: over ? '#DC2626' : '#6D6A8A', fontWeight: 600 }}>
-              {' '}· class {newTotal}/{cap}{over ? ' — over capacity' : ''}
+              {' '}· class {newTotal}/{cap}{over ? ' - over capacity' : ''}
             </span>
           </span>
         ) : (
@@ -536,7 +536,7 @@ const GRID_STYLES = `
 .ag-alloc-wrap .ag-pinned-left-header .ag-header-cell,
 .ag-alloc-wrap .ag-pinned-left-cols-container .ag-cell { background: #FAFAFA !important; }
 
-/* ── Range selection — override all stacking levels ─────────────────────────
+/* ── Range selection - override all stacking levels ─────────────────────────
    AG Grid compounds ag-cell-range-selected-1/2/3/4 across overlapping ranges.
    Without overriding ALL variants, cells in two ranges go near-black.
    ─────────────────────────────────────────────────────────────────────────── */
@@ -592,7 +592,7 @@ const GRID_STYLES = `
 `
 
 // ─────────────────────────────────────────────────────────────────
-// Spreadsheet Engine — state machine
+// Spreadsheet Engine - state machine
 //
 // This is the single source of truth for all spreadsheet interactions.
 // Selection, copy state, and paste validation all live here.
@@ -621,7 +621,7 @@ interface SelectionCoords {
 interface CopiedState {
   sourceRange: SelectionCoords
   data:        string[][]   // [row][col], row-major
-  agRanges:    any[]        // raw AG Grid CellRange[] — for overlay recompute on scroll
+  agRanges:    any[]        // raw AG Grid CellRange[] - for overlay recompute on scroll
 }
 
 interface SpreadsheetEngineState {
@@ -707,7 +707,7 @@ export function AllocationGridAG({
 }: Props) {
   const store = useTimetableStore() as any
   const { sections, subjects, subjectAllocations, manualSubjectAllocations = {}, sectionCapacityOverrides = {}, config } = store
-  // store.periods is only populated AFTER the first generation — on a fresh
+  // store.periods is only populated AFTER the first generation - on a fresh
   // wizard run derive the abstract sequence from the bell-step breaks so the
   // capacity engine (and the auto-suggest that depends on it) works first time.
   const storePeriodsArr: Period[] = store.periods ?? NO_ROWS
@@ -721,7 +721,7 @@ export function AllocationGridAG({
 
   const cap = useMemo(() => computeCapacity(workDays, periods), [workDays, periods])
 
-  // Bell-true per-section weekly capacity — covers per-group early dispersal
+  // Bell-true per-section weekly capacity - covers per-group early dispersal
   // (Regular-mode Nursery with 3 periods/day caps at 15/wk, Seniors at 40).
   const bellCaps = useMemo(() => {
     const bellSchedules = (config as any)?.bellSchedules
@@ -737,11 +737,11 @@ export function AllocationGridAG({
   // ── DOM refs ──────────────────────────────────────────────────
   const gridRef          = useRef<AgGridReact<RowData>>(null)
   const wrapperRef       = useRef<HTMLDivElement>(null)
-  // .ag-theme-quartz div — position:relative anchor for the overlay.
+  // .ag-theme-quartz div - position:relative anchor for the overlay.
   // Overlay coords are relative to THIS element, not wrapperRef.
   const gridContainerRef = useRef<HTMLDivElement>(null)
 
-  // ── Live data refs — updated every render, O(1) ───────────────
+  // ── Live data refs - updated every render, O(1) ───────────────
   // These allow all useCallback / useMemo closures to read fresh data
   // without declaring it in their deps (which would cause re-creation).
   const allocationsRef  = useRef<Record<string, Record<string, string>>>(subjectAllocations)
@@ -778,7 +778,7 @@ export function AllocationGridAG({
   const isPastingRef = useRef(false)
 
   // ── Marching ants overlay ─────────────────────────────────────
-  // Derives entirely from ssState.copied — single source of truth.
+  // Derives entirely from ssState.copied - single source of truth.
   // No separate marchRangesRef, no marchActiveRef.
   type MarchRect = { left: number; top: number; width: number; height: number }
   const [marchRects, setMarchRects] = useState<MarchRect[]>([])
@@ -890,7 +890,7 @@ export function AllocationGridAG({
   }, [])
 
   // ── Helper: serialize SelectionCoords → string[][] ────────────
-  // Reads from allocationsRef (the Zustand store mirror) — NOT from the DOM.
+  // Reads from allocationsRef (the Zustand store mirror) - NOT from the DOM.
   // This is why the clipboard engine is decoupled from visual rendering.
   const serializeSelection = useCallback((
     sel: SelectionCoords,
@@ -919,10 +919,10 @@ export function AllocationGridAG({
     return rows
   }, [])
 
-  // ── Copy handler — single entry point for ALL copy operations ─
+  // ── Copy handler - single entry point for ALL copy operations ─
   // Called from onCellKeyDown (cell Ctrl+C) and suppressHeaderKeyboardEvent
   // (column header Ctrl+C).  Returns false everywhere so AG Grid still writes
-  // the TSV to the OS clipboard — we only add the engine state snapshot.
+  // the TSV to the OS clipboard - we only add the engine state snapshot.
   const handleCopy = useCallback((api: any) => {
     if (!api) return
     const agRanges = (api as any).getCellRanges?.() as any[] | undefined
@@ -945,7 +945,7 @@ export function AllocationGridAG({
   // Keep handleCopyRef in sync so useMemo([]) closures can call it
   handleCopyRef.current = handleCopy
 
-  // ── Grid context — stable, never recreated ────────────────────
+  // ── Grid context - stable, never recreated ────────────────────
   const gridContext = useMemo<GridContext>(() => ({
     getAllocations:   () => allocationsRef.current,
     getCap:           () => capRef.current,
@@ -956,9 +956,9 @@ export function AllocationGridAG({
     getBellCaps:      () => bellCapsRef.current,
   }), [])
 
-  // ── defaultColDef — stable, empty deps ───────────────────────
+  // ── defaultColDef - stable, empty deps ───────────────────────
   // Must be empty deps because AG Grid memoizes this at grid init.
-  // stateRef, dispatchRef, handleCopyRef are stable ref objects — safe to
+  // stateRef, dispatchRef, handleCopyRef are stable ref objects - safe to
   // read from an empty-deps useMemo closure.
   const defaultColDef = useMemo<ColDef<RowData>>(() => ({
     sortable: true,
@@ -1005,7 +1005,7 @@ export function AllocationGridAG({
       }
       return false
     },
-  }), []) // intentionally empty — reads only stable refs
+  }), []) // intentionally empty - reads only stable refs
 
   // ── Column definitions ────────────────────────────────────────
   const columnDefs = useMemo<ColDef<RowData>[]>(() => {
@@ -1085,11 +1085,11 @@ export function AllocationGridAG({
           ? { component: 'agTextCellEditor' }
           : { component: AllocationComposer, popup: true, popupPosition: 'under', params: { subjectName: sub.name } },
 
-        // Hover translation: "Mathematics — 5 theory + 1 lab = 6 periods/week"
+        // Hover translation: "Mathematics - 5 theory + 1 lab = 6 periods/week"
         tooltipValueGetter: (p) => {
           const sn = p.data?.sectionName ?? ''
           const d = describeAllocation(allocationsRef.current[sn]?.[sub.name])
-          return d ? `${sub.name} — ${d}` : sub.name
+          return d ? `${sub.name} - ${d}` : sub.name
         },
 
         valueGetter: (params: ValueGetterParams<RowData>) => {
@@ -1122,7 +1122,7 @@ export function AllocationGridAG({
 
           if (isPastingRef.current) {
             store.setSubjectAllocations?.(withCurrent)
-            // A paste is a deliberate entry too — mark it, or Suggest would
+            // A paste is a deliberate entry too - mark it, or Suggest would
             // quietly undo an imported set of figures.
             store.markSubjectAllocationsManual?.([sn], sub.name, val !== '')
             return true
@@ -1157,7 +1157,7 @@ export function AllocationGridAG({
           const c = effectiveCap(gridContext, sn)
           if (!validateAllocationCapacity(parsed, c).ok) return { backgroundColor: '#FFFBEB' }
           // A cell somebody set by hand survives Suggest, so it has to LOOK
-          // different from a derived one — otherwise "why didn't this change?"
+          // different from a derived one - otherwise "why didn't this change?"
           // has no answer on screen.
           if (manualRef.current?.[sn]?.[sub.name]) {
             return { borderLeft: '2px solid #685DBC', fontWeight: 700 } as Record<string, string | number>
@@ -1175,7 +1175,7 @@ export function AllocationGridAG({
     }
     return cols
     // `store` is closed over only for its setters, and zustand keeps those
-    // stable for the life of the store — depending on the store object itself
+    // stable for the life of the store - depending on the store object itself
     // would rebuild every column on every unrelated state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjects, gridContext, sortColsAZ])
@@ -1233,7 +1233,7 @@ export function AllocationGridAG({
     setStatusBar({ cells, periods: total, avg: cells > 0 ? Math.round((total / cells) * 10) / 10 : 0 })
   }, [normalizeAgRanges])
 
-  // ── onCellKeyDown — observe only, no preventDefault ───────────
+  // ── onCellKeyDown - observe only, no preventDefault ───────────
   // Delegates Ctrl+C to handleCopy; AG Grid handles everything else.
   const onCellKeyDown = useCallback((e: any) => {
     const ke = e.event as KeyboardEvent | undefined
@@ -1251,7 +1251,7 @@ export function AllocationGridAG({
     requestAnimationFrame(() => gridRef.current?.api?.refreshCells({ force: false }))
   }, [])
 
-  // ── processDataFromClipboard — shape compatibility validation ────
+  // ── processDataFromClipboard - shape compatibility validation ────
   // Excel rule: overlap with the copy source is IRRELEVANT.
   // The only thing that matters is whether the DESTINATION SELECTION
   // dimensions are compatible with the CLIPBOARD DATA dimensions.
@@ -1363,7 +1363,7 @@ export function AllocationGridAG({
 
     // Class assignments (Resources → Subjects → "Assign Classes") gate the
     // suggestion: once ANY subject carries explicit assignments, a subject is
-    // only suggested for its own sections — unassigned leftovers (e.g. Botany
+    // only suggested for its own sections - unassigned leftovers (e.g. Botany
     // never given a class) stay out of every row. A dataset with no
     // assignments at all keeps the universal default so first runs still fill.
     const explicitSecs = (s: Subject): string[] => {
@@ -1403,7 +1403,7 @@ export function AllocationGridAG({
     // Hand-typed cells survive the suggestion.
     //
     // This built `next` from an empty object and wrote it over everything, so
-    // Suggest wiped every figure a person had entered — including the ones
+    // Suggest wiped every figure a person had entered - including the ones
     // pasted in, whose own handler carries a comment saying marking them
     // manual would stop exactly that. It marked them; nothing here read the
     // marks. The wizard's version of this same button has always merged
@@ -1492,7 +1492,7 @@ export function AllocationGridAG({
         </div>
       </div>
 
-      {/* ── AG Grid container — position:relative anchor for the overlay ── */}
+      {/* ── AG Grid container - position:relative anchor for the overlay ── */}
       <div
         ref={gridContainerRef}
         className="ag-theme-quartz"
@@ -1541,9 +1541,9 @@ export function AllocationGridAG({
         />
 
         {/* ── Marching ants overlay ──────────────────────────────────
-            Renders from ssState.copied — the single source of truth.
+            Renders from ssState.copied - the single source of truth.
             One absolutely-positioned div per copied range.
-            pointerEvents:none — zero interference with grid interactions. */}
+            pointerEvents:none - zero interference with grid interactions. */}
         {marchRects.length > 0 && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5, overflow: 'hidden' }}>
             {marchRects.map((rect, i) => (

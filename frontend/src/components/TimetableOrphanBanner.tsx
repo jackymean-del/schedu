@@ -6,8 +6,8 @@
  * lessons until somebody reassigns them. Master Data already warns, because
  * that is where the fix happens.
  *
- * This is the other half. The timetable is where the problem is VISIBLE — a
- * period that looks staffed by a person who is gone — and it is the screen
+ * This is the other half. The timetable is where the problem is VISIBLE - a
+ * period that looks staffed by a person who is gone - and it is the screen
  * people actually live in. A warning only on the page you visit to fix things
  * is a warning you see after you already knew.
  *

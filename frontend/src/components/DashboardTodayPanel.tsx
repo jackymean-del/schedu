@@ -1,5 +1,5 @@
 /**
- * DashboardTodayPanel — a calm, read-only glance at today's schedule.
+ * DashboardTodayPanel - a calm, read-only glance at today's schedule.
  *
  * A school runs many classes at once, so a raw period-by-period list is
  * either too abstract (counts with no names) or too dense (every class,
@@ -9,7 +9,7 @@
  * cover. When nothing needs attention it says so plainly instead of
  * padding the space with a schedule nobody asked to see here.
  *
- * No filters or controls of its own — Open full editor goes to /timetable
+ * No filters or controls of its own - Open full editor goes to /timetable
  * for editing, printing, sharing, and substitution.
  *
  * Renders nothing when there's no active schedule with data.
@@ -41,7 +41,7 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
 
   // Every hook runs BEFORE the early return. This one sat after it, so the
   // first render (empty store, no schedule yet) ran one hook fewer than the
-  // render after loadActiveTimetableIntoStore hydrated the schedule — which is
+  // render after loadActiveTimetableIntoStore hydrated the schedule - which is
   // React's "rendered more hooks than during the previous render", and it took
   // the whole page down on the first load after signing in.
   const leaves = useLeaves(s => s.leaves)
@@ -96,13 +96,13 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
         {!summary.isWorkDay ? (
           <div style={{ padding: '28px 20px', textAlign: 'center' }}>
             <Coffee size={22} color="#C9C3EC" />
-            <div style={{ fontSize: 13.5, color: '#69707E', marginTop: 8 }}>No classes today — enjoy the day off.</div>
+            <div style={{ fontSize: 13.5, color: '#69707E', marginTop: 8 }}>No classes today - enjoy the day off.</div>
           </div>
         ) : allClear ? (
           <div style={{ padding: '24px 20px', textAlign: 'center' }}>
             <CheckCircle2 size={22} color="#0A8136" />
             <div style={{ fontSize: 13.5, fontWeight: 600, color: '#13111E', marginTop: 8 }}>
-              All clear — {summary.periodsToday} period{summary.periodsToday !== 1 ? 's' : ''} running as scheduled
+              All clear - {summary.periodsToday} period{summary.periodsToday !== 1 ? 's' : ''} running as scheduled
             </div>
             <div style={{ fontSize: 12, color: '#6B7079', marginTop: 3 }}>No absences today.</div>
           </div>

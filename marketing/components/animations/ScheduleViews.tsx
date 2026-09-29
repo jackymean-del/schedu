@@ -6,9 +6,9 @@ import { useInView } from "./useInView";
 /**
  * View-mode showcase + generation pipeline.
  * Mirrors the real product's actual two-axis architecture (PROJECT_REFERENCE
- * §4): an ENTITY axis (Class/Section, Teacher, Room, Subject — what the rows
+ * §4): an ENTITY axis (Class/Section, Teacher, Room, Subject - what the rows
  * represent) that is orthogonal to a DISPLAY-MODE axis (Traditional table,
- * Calendar/timeline, Print — how it's rendered). Any entity can be viewed in
+ * Calendar/timeline, Print - how it's rendered). Any entity can be viewed in
  * any mode, same as the real app's render engines. A live "now" playhead
  * appears in Traditional and Calendar modes (a live view); Print is a static
  * export, so it intentionally has none.
@@ -34,7 +34,7 @@ const CLASS_GRID = PERIODS.map((_, r) =>
   }))
 );
 
-// Wednesday, three classes — the shared relational slice Teacher/Room/
+// Wednesday, three classes - the shared relational slice Teacher/Room/
 // Subject/Calendar views are all honestly derived from.
 const WED_CLASSES: Record<string, { subject: string; teacher: string; venue: string }[]> = {
   "IX-A": [
@@ -203,7 +203,7 @@ export function ScheduleViews() {
         {mode === "Print" && <Print entity={entity} />}
       </div>
       <div className="sv-caption">
-        Illustrative demo — {entity} view · {mode} mode{mode === "Traditional" && transposed ? " (transposed)" : ""}
+        Illustrative demo - {entity} view · {mode} mode{mode === "Traditional" && transposed ? " (transposed)" : ""}
         {mode !== "Print" && " · live"}
       </div>
 
@@ -364,7 +364,7 @@ function Traditional({ entity, inView, transposed }: { entity: Entity; inView: b
       return (
         <div key={key} className="sv-cell" style={{ background: occ.length ? TINTS[label] : undefined }}>
           <div className="sv-cell-multi">
-            {occ.length === 0 && <span className="sv-cell-free-label">—</span>}
+            {occ.length === 0 && <span className="sv-cell-free-label">-</span>}
             {occ.map((o) => <div key={o.cls}>{o.cls} · {stripTitle(o.teacher)}</div>)}
           </div>
         </div>
@@ -515,7 +515,7 @@ function Calendar({ entity, inView }: { entity: Entity; inView: boolean }) {
   );
 }
 
-// ---- Print (static export) mode — no playhead, it's a fixed document ----
+// ---- Print (static export) mode - no playhead, it's a fixed document ----
 
 function Print({ entity }: { entity: Entity }) {
   const title = entity === "Class" ? "IX-A · Weekly Timetable" : `${entity} view · Weekly Timetable`;
@@ -566,8 +566,8 @@ function Print({ entity }: { entity: Entity }) {
             <tr key={label}>
               <td className="sv-print-key">{label}</td>
               {rowData(label).map((occ, i) => {
-                if (Array.isArray(occ)) return <td key={i}>{occ.length === 0 ? "—" : occ.map((o) => o.cls).join(", ")}</td>;
-                return <td key={i}>{occ ? <><div className="sv-print-subject">{occ.cls}</div><div className="sv-print-meta">{occ.subject} · {occ.venue}</div></> : "—"}</td>;
+                if (Array.isArray(occ)) return <td key={i}>{occ.length === 0 ? "-" : occ.map((o) => o.cls).join(", ")}</td>;
+                return <td key={i}>{occ ? <><div className="sv-print-subject">{occ.cls}</div><div className="sv-print-meta">{occ.subject} · {occ.venue}</div></> : "-"}</td>;
               })}
             </tr>
           ))}

@@ -1,21 +1,21 @@
 /**
- * Syllabus PACE — separating "how long we taught" from "how much we covered".
+ * Syllabus PACE - separating "how long we taught" from "how much we covered".
  *
  * The problem this solves
  * ----------------------
  * Hours taught is not syllabus covered. A teacher can spend 10 hours and get
  * through one chapter, or 5 hours and get through three. Tracking hours alone
- * therefore says nothing about whether the syllabus will actually finish — which
+ * therefore says nothing about whether the syllabus will actually finish - which
  * is the only question that matters.
  *
  * The solution, without asking anyone to do more work
  * --------------------------------------------------
  * We already hold two INDEPENDENT signals and were collapsing them into one:
  *
- *   1. CONTENT covered — the chapters faculty already tick off. Each chapter
+ *   1. CONTENT covered - the chapters faculty already tick off. Each chapter
  *      carries the hours it was *planned* to need, so ticked chapters give us
  *      progress measured in syllabus terms, not clock terms.
- *   2. TIME spent — derived, not entered: the periods this subject actually had
+ *   2. TIME spent - derived, not entered: the periods this subject actually had
  *      in the timetable between the term start and today, minus holidays.
  *
  * Their ratio is the teacher's real pace:
@@ -25,16 +25,16 @@
  *   pace > 1  → faster than planned
  *
  * Projecting that pace across the time still scheduled answers the actual
- * question: *will this syllabus finish?* — and it does so from data already
+ * question: *will this syllabus finish?* - and it does so from data already
  * being captured. No new field, no new faculty task.
  *
  * Holidays fall out of the model correctly: a lost day adds no content and no
  * time spent (nothing happened), but permanently removes time that was
- * remaining. So the projection worsens automatically — which is precisely what
+ * remaining. So the projection worsens automatically - which is precisely what
  * "that day's coverage goes waste" means.
  *
  * Honest limitation: pace needs CHAPTERS. A school logging only bulk hours has
- * no content signal — for those plans time is all we have, and `hasContentSignal`
+ * no content signal - for those plans time is all we have, and `hasContentSignal`
  * is false so the UI can say so rather than invent a number.
  */
 import type { ClassTimetable } from '@/types'
@@ -67,7 +67,7 @@ const dayBefore = (s: string) => shiftDay(s, -1)
 /**
  * Hours of a given subject actually scheduled for a section between two dates,
  * excluding declared holidays. This is the "time" side of the ratio, and it is
- * DERIVED — nobody types it.
+ * DERIVED - nobody types it.
  */
 export function scheduledHoursBetween(
   classTT: ClassTimetable,
@@ -117,8 +117,8 @@ export function scheduledHoursBetween(
 
 /**
  * Content actually covered, in syllabus hours. Delegates to the shared content
- * model so BOTH v6 entry methods — named checklist (with partials) and plain
- * chapter counts — feed pace identically.
+ * model so BOTH v6 entry methods - named checklist (with partials) and plain
+ * chapter counts - feed pace identically.
  */
 export function contentCoveredHours(p: SyllabusPlan | undefined): number {
   if (!p) return 0
@@ -126,7 +126,7 @@ export function contentCoveredHours(p: SyllabusPlan | undefined): number {
 }
 
 export interface PaceReport {
-  /** True only when chapters exist — otherwise there is no content signal. */
+  /** True only when chapters exist - otherwise there is no content signal. */
   hasContentSignal: boolean
   /** Syllabus hours' worth of chapters ticked. */
   contentCovered: number
@@ -157,7 +157,7 @@ export function paceFor(
     termStart: string; termEnd: string; today?: string
     periodMinutes: number; holidays?: Holiday[]
     /**
-     * Hours the timetable ran but this subject never received — a substitute
+     * Hours the timetable ran but this subject never received - a substitute
      * used the slot for a different subject (lib/substitutionCoverage). The
      * timetable alone can't know that, and charging the subject for a period it
      * never got would make its pace look worse than the teaching actually was.
@@ -166,7 +166,7 @@ export function paceFor(
   },
 ): PaceReport {
   // Clamp "now" into the term. Past the end date the term is simply over: time
-  // spent stops at the final teaching day and nothing remains — without this the
+  // spent stops at the final teaching day and nothing remains - without this the
   // spent figure keeps growing for years and the pace collapses towards zero.
   const rawToday = opts.today ?? iso(new Date())
   // Before the term, the "spent" window is deliberately empty (the day BEFORE

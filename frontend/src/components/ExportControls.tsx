@@ -1,5 +1,5 @@
 /**
- * Reusable export controls — a simple Export dropdown (Excel + PDF) plus a
+ * Reusable export controls - a simple Export dropdown (Excel + PDF) plus a
  * prominent Print button. Both PDF and Print open the shared, standardized
  * PrintPreview (institution header on top, schedU watermark footer, paper-saving
  * toggle). Paper size + orientation are chosen in the printer dialog.
@@ -38,7 +38,7 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {/* Export dropdown — Excel + PDF */}
+      {/* Export dropdown - Excel + PDF */}
       <div ref={ref} style={{ position: 'relative' }}>
         <button onClick={() => setOpen(o => !o)}
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', border: '1px solid #E5EBF5', borderRadius: 8, background: '#fff', color: '#374151', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
@@ -77,7 +77,7 @@ export function ExportControls({ filename, sheets, title = 'Report' }: {
         </div>
       )}
 
-      {/* Prominent Print button — opens the shared preview */}
+      {/* Prominent Print button - opens the shared preview */}
       <button onClick={openPreview}
         title="Print this page"
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', border: 'none', borderRadius: 8, background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,111,224,0.35)' }}>

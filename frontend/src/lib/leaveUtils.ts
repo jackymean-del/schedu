@@ -1,5 +1,5 @@
 /**
- * Teacher leave — who is out, on which days, for how long.
+ * Teacher leave - who is out, on which days, for how long.
  *
  * SCOPE: the school, not the person recording it. This used to be written to
  * `schedu-cal-leave:<uid>`, keyed by the signed-in account. That was invisible
@@ -8,13 +8,13 @@
  * principal signed in and the school looked fully staffed; the absent teacher
  * saw nothing on their own dashboard; and the Reports page counted absences
  * only for whoever happened to be looking. Holidays (lib/holidays) were already
- * school-scoped — leave was the odd one out.
+ * school-scoped - leave was the odd one out.
  *
  * Anything written under the old per-account keys is folded in on first load,
  * so a school that has been marking absences for a term does not lose them.
  *
  * Used by the Calendar (marking leave, arranging cover), the Dashboard's Today
- * panel, Reports and the coverage engine — one definition of "on leave today"
+ * panel, Reports and the coverage engine - one definition of "on leave today"
  * so they cannot drift.
  */
 import { create } from 'zustand'
@@ -69,7 +69,7 @@ export function migrateLegacyLeaves(storage: Storage = localStorage): number {
 
 // ── Pure helpers ──────────────────────────────────────────────────────────
 
-/** True if `isoDate` falls within this leave record — a single day for
+/** True if `isoDate` falls within this leave record - a single day for
  *  full/half-day leave, or the [date, endDate] range for long-duration leave. */
 export function leaveCoversDate(leave: CalLeave, isoDate: string): boolean {
   if (leave.duration === 'long' && leave.endDate) {

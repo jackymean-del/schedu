@@ -1,4 +1,4 @@
-// Drizzle ORM — Schedu Full Schema
+// Drizzle ORM - Schedu Full Schema
 // Aligned with: Schedu Detailed Workaround & Implementation Document
 import {
   pgTable, uuid, text, integer, boolean, jsonb,
@@ -18,9 +18,9 @@ export const subscriptionEnum = pgEnum("subscription_plan", [
 ])
 
 export const profileTypeEnum = pgEnum("profile_type", [
-  "fixed",     // Nursery/KG/Primary — students stay, teachers rotate
+  "fixed",     // Nursery/KG/Primary - students stay, teachers rotate
   "standard",  // Grade VI–X
-  "dynamic",   // Grade XI–XII — optional subjects, parallel blocks
+  "dynamic",   // Grade XI–XII - optional subjects, parallel blocks
 ])
 
 export const roomTypeEnum = pgEnum("room_type", [
@@ -35,7 +35,7 @@ export const timetableStatusEnum = pgEnum("timetable_status", [
   "draft", "generating", "ready", "published", "error", "locked"
 ])
 
-// Legacy — kept for backward compat with v2 data
+// Legacy - kept for backward compat with v2 data
 export const orgTypeEnum = pgEnum("org_type", [
   "school", "college", "corporate", "hospital", "ngo", "factory"
 ])
@@ -222,7 +222,7 @@ export const periodAllocations = pgTable("period_allocations", {
   createdAt:              timestamp("created_at").defaultNow(),
 })
 
-/** Academic combination groups — the heart of XI/XII optional scheduling */
+/** Academic combination groups - the heart of XI/XII optional scheduling */
 export const academicCombinations = pgTable("academic_combinations", {
   id:             uuid("id").primaryKey().defaultRandom(),
   sessionId:      uuid("session_id").references(() => academicSessions.id, { onDelete: "cascade" }),
@@ -256,7 +256,7 @@ export const subjectRules = pgTable("subject_rules", {
 
 /**
  * Parallel blocks: a set of optional subjects that MUST run simultaneously.
- * e.g. {Maths, Biology, PED, Painting} — students split into clusters.
+ * e.g. {Maths, Biology, PED, Painting} - students split into clusters.
  */
 export const parallelBlocks = pgTable("parallel_blocks", {
   id:         uuid("id").primaryKey().defaultRandom(),
@@ -404,7 +404,7 @@ export const absenceRecords = pgTable("absence_records", {
   index("absence_teacher_idx").on(t.teacherId),
 ])
 
-// Legacy — kept for backward compat
+// Legacy - kept for backward compat
 export const substitutions = pgTable("substitutions", {
   id:            uuid("id").primaryKey().defaultRandom(),
   timetableId:   uuid("timetable_id").references(() => timetables.id, { onDelete: "cascade" }),

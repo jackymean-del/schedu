@@ -4,7 +4,7 @@ import { reoptimizeTeachers } from './src/lib/schedulingEngine.ts'
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -29,7 +29,7 @@ const subjects = [
 ] as any[]
 
 // teacherWeeklyLoad is keyed by staff ID (tKey), not by the display name the
-// cells carry — that is exactly what keeps two teachers who share a name
+// cells carry - that is exactly what keeps two teachers who share a name
 // apart. Every check below used to look loads up by NAME, so each one read
 // undefined, compared 0 against the cap, and passed without testing anything.
 const loadOf = (r: any, id: string): number => r.teacherWeeklyLoad[id] ?? 0
@@ -70,7 +70,7 @@ ok(loadOf(r1, 't1') <= 4, 'T1 load respects cap (<=4)', `load ${loadOf(r1, 't1')
 ok(capViol(r1.teacherWeeklyLoad) === 0, 'no weekly-cap violations after run 1')
 ok(JSON.stringify(classTT) === before, 'input classTT not mutated')
 
-// Run 2: feed the improved result back in — should be "already optimal" (0 reassigned, unchanged stats)
+// Run 2: feed the improved result back in - should be "already optimal" (0 reassigned, unchanged stats)
 const r2 = reoptimizeTeachers({ classTT: r1.classTT, sections, staff, subjects, periods, workDays })
 console.log('--- run 2 (idempotency / never-worse) ---')
 console.log('reassigned:', r2.reassignedCount, 'stddev:', r2.teacherLoadStddev.toFixed(2))
@@ -78,7 +78,7 @@ ok(r2.teacherLoadStddev <= r1.teacherLoadStddev + 1e-9, 'never worse than the pr
 console.log('kept incumbent object:', r2.classTT === r1.classTT ? 'same ref' : 'new obj (ok if identical)')
 ok(capViol(r2.teacherWeeklyLoad) === 0, 'no weekly-cap violations after run 2')
 
-// ── Run 3: improvement IS possible — one section, T1 hogging all 6 slots
+// ── Run 3: improvement IS possible - one section, T1 hogging all 6 slots
 // (over cap 4) while T2 sits idle. Expect: T1 trimmed to <=4, overCap -> 0,
 // accepted, and reassignedCount = only the cells that actually changed.
 const classTT3: any = {

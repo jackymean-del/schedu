@@ -36,8 +36,8 @@ export async function pullMembers(): Promise<boolean> {
 /**
  * Add or update somebody, server first.
  *
- * The local store is updated either way — a school offline must still be able
- * to build its roster — but the caller is told whether it landed, because
+ * The local store is updated either way - a school offline must still be able
+ * to build its roster - but the caller is told whether it landed, because
  * "invited" means nothing until the server knows.
  */
 export async function upsertMember(
@@ -65,7 +65,7 @@ export async function setMemberRole(id: string, email: string, role: Role, staff
   }
 }
 
-/** Set the timetable name this account is known by — the join that makes a
+/** Set the timetable name this account is known by - the join that makes a
  *  teacher's own lessons findable. */
 export async function setMemberStaffName(
   id: string, email: string, role: Role, staffName: string,

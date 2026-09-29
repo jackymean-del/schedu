@@ -1,5 +1,5 @@
 /**
- * ExplanationPopover — UI for the engine Explanation System.
+ * ExplanationPopover - UI for the engine Explanation System.
  *
  * Compact popover that surfaces every factor the explanation engine
  * derived for a (teacher, section, subject) assignment. Two surface
@@ -17,7 +17,7 @@ import { Info, CheckCircle2, XCircle, Sparkles } from 'lucide-react'
 import type { AssignmentExplanation, ExplanationFactor } from '@/lib/explanationEngine'
 import { categoryLabel, categoryColor } from '@/lib/explanationEngine'
 
-// ─── Compact info icon — clickable for popover ───
+// ─── Compact info icon - clickable for popover ───
 export function ExplanationInfoIcon({
   explanation, anchor = 'top-right',
 }: {
@@ -59,7 +59,7 @@ export function ExplanationInfoIcon({
 }
 
 /**
- * The open popover, as its own component so PopoverPanel mounts WITH it —
+ * The open popover, as its own component so PopoverPanel mounts WITH it -
  * rendered from the parent it would bind Escape for the whole life of the icon.
  */
 function ExplanationPanel({ explanation, anchor, onClose }: {

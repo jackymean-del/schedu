@@ -1,11 +1,11 @@
 /**
- * Subscription — real plan state + working Razorpay checkout.
+ * Subscription - real plan state + working Razorpay checkout.
  *
  * - Current plan comes from real account state: the server's billing status
  *   (authoritative, webhook-driven) with the auth store as a fast fallback.
  * - Upgrade opens Razorpay Checkout for a monthly or yearly Pro subscription.
- *   The plan is only promoted to 'pro' server-side, by the activation webhook —
- *   never on the client — so a closed/failed checkout can't grant Pro.
+ *   The plan is only promoted to 'pro' server-side, by the activation webhook -
+ *   never on the client - so a closed/failed checkout can't grant Pro.
  * - Prices + whether billing is live are read from the public /billing/config
  *   endpoint, so the page is honest when billing isn't configured yet (button
  *   disabled, no dead-end).
@@ -25,7 +25,7 @@ declare global {
 }
 
 const FREE_FEATURES = [
-  'Human-Intelligence auto-scheduling — conflict-free in minutes',
+  'Human-Intelligence auto-scheduling - conflict-free in minutes',
   'Up to 10 sections',
   'Class, Faculty, Venue & Subject views',
   'Live calendar (view mode)',
@@ -35,7 +35,7 @@ const FREE_FEATURES = [
 const PRO_FEATURES = [
   'Up to 70 sections',
   'Live task assignment & substitutions',
-  'Team collaboration — invite & manage users',
+  'Team collaboration - invite & manage users',
   'Advanced engine & multi-shift / block scheduling',
   'Workload analytics & optimisation',
   'Priority support',
@@ -97,7 +97,7 @@ export function SubscriptionPage() {
   const money = (inr: number) => india ? formatINR(inr) : roundedUSD(inr, rate)
 
   useEffect(() => {
-    // Prices + whether billing is live — shared with the sidebar, fetched once.
+    // Prices + whether billing is live - shared with the sidebar, fetched once.
     loadBillingCfg()
     // Authoritative billing status for the signed-in user.
     billingApi.status().then(r => setStatus(r.data)).catch(() => { /* fall back to auth store */ })
@@ -120,7 +120,7 @@ export function SubscriptionPage() {
         if (data.plan === 'pro' || data.plan === 'enterprise') { setPhase('done'); return }
       } catch { /* keep polling */ }
     }
-    // Payment captured but webhook not yet reflected — reassure, don't alarm.
+    // Payment captured but webhook not yet reflected - reassure, don't alarm.
     setPhase('done')
   }
 
@@ -136,7 +136,7 @@ export function SubscriptionPage() {
         key: data.keyId,
         subscription_id: data.subscriptionId,
         name: 'schedU',
-        description: interval === 'yearly' ? 'schedU Pro — Annual' : 'schedU Pro — Monthly',
+        description: interval === 'yearly' ? 'schedU Pro - Annual' : 'schedU Pro - Monthly',
         prefill: { name: user?.name || '', email: user?.email || '' },
         theme: { color: '#685DBC' },
         handler: () => { setBusy(false); void pollActivation() },
@@ -144,7 +144,7 @@ export function SubscriptionPage() {
       })
       rzp.on('payment.failed', () => {
         setBusy(false); setPhase('error')
-        setErrMsg('The payment could not be completed. You have not been charged — please try again.')
+        setErrMsg('The payment could not be completed. You have not been charged - please try again.')
       })
       rzp.open()
     } catch (e) {
@@ -160,7 +160,7 @@ export function SubscriptionPage() {
       await refreshStatus()
       setConfirmCancel(false)
     } catch {
-      setErrMsg('Could not cancel right now — please try again, or reach out via Support.')
+      setErrMsg('Could not cancel right now - please try again, or reach out via Support.')
     } finally {
       setCancelling(false)
     }
@@ -177,7 +177,7 @@ export function SubscriptionPage() {
       <PageHeader icon="⚡" title="Subscription" description={billingEnabled ? "Your current plan and available upgrades." : "Your current plan. Everything is free while schedU is in early access."} />
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Current plan — real account state */}
+        {/* Current plan - real account state */}
         <div style={{ background: isPro ? '#13111E' : '#EDE9FF', border: `2px solid ${isPro ? '#A78BFA' : '#685DBC'}`, borderRadius: 14, padding: '18px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <Zap size={16} color={isPro ? '#A78BFA' : '#685DBC'} />
@@ -189,8 +189,8 @@ export function SubscriptionPage() {
           <div style={{ fontSize: 13, color: isPro ? '#C4C0E8' : '#4B5275', marginTop: 4 }}>
             {isPro
               ? (status?.status === 'cancelled'
-                  ? `Your Pro plan is cancelled${periodEnd ? ` — access continues until ${periodEnd}` : ''}.`
-                  : `You're on Pro${status?.interval ? ` (${status.interval})` : ''}${periodEnd ? ` — renews ${periodEnd}` : ''}.`)
+                  ? `Your Pro plan is cancelled${periodEnd ? ` - access continues until ${periodEnd}` : ''}.`
+                  : `You're on Pro${status?.interval ? ` (${status.interval})` : ''}${periodEnd ? ` - renews ${periodEnd}` : ''}.`)
               : 'Everything you need while schedU is in early access.'}
           </div>
 
@@ -219,12 +219,12 @@ export function SubscriptionPage() {
         {/* Activation / error banners */}
         {phase === 'activating' && (
           <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '10px 14px', fontSize: 12.5, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Loader2 size={14} className="spin" /> Payment received — activating your Pro plan…
+            <Loader2 size={14} className="spin" /> Payment received - activating your Pro plan…
           </div>
         )}
         {phase === 'done' && (
           <div style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.4)', borderRadius: 10, padding: '10px 14px', fontSize: 12.5, color: '#065F46', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Check size={14} /> You&rsquo;re on Pro — thank you! If anything still shows Free, refresh in a moment.
+            <Check size={14} /> You&rsquo;re on Pro - thank you! If anything still shows Free, refresh in a moment.
           </div>
         )}
         {phase === 'error' && errMsg && (
@@ -236,7 +236,7 @@ export function SubscriptionPage() {
         {/* No way to take money yet (no Razorpay keys) means there is nothing
             to sell, so the page says exactly that instead of showing prices
             behind a dead button. Driven by the backend's own `enabled` flag, so
-            it reverts to the paid pitch the moment keys are configured — no
+            it reverts to the paid pitch the moment keys are configured - no
             code change needed then. */}
         {!isPro && !billingEnabled && (
           <div style={{
@@ -247,13 +247,13 @@ export function SubscriptionPage() {
               Free for a limited time
             </div>
             <div style={{ fontSize: 14, color: '#4B5275', lineHeight: 1.55 }}>
-              Free for a limited time, for a limited number of first users — every feature, no card.
+              Free for a limited time, for a limited number of first users - every feature, no card.
               The prices below are what they return to, and we&rsquo;ll give plenty of notice first.
             </div>
           </div>
         )}
 
-        {/* Plan comparison — hidden once the user is Pro (nothing to upsell).
+        {/* Plan comparison - hidden once the user is Pro (nothing to upsell).
             Shown even when billing is off: the price is what makes "free"
             mean something, so it stays on screen, struck through. */}
         {!isPro && (
@@ -320,7 +320,7 @@ export function SubscriptionPage() {
                 </div>
                 <div style={{ fontSize: 11.5, color: billingEnabled ? '#8B87AD' : '#A78BFA', fontWeight: billingEnabled ? 400 : 700, marginBottom: !india ? 4 : 16, minHeight: 16 }}>
                   {billingEnabled
-                    ? (interval === 'yearly' ? `${money(yearlyPerMonth)}/mo · save ${discountPct}% vs monthly` : `or ${money(yearly)}/yr — save ${discountPct}%`)
+                    ? (interval === 'yearly' ? `${money(yearlyPerMonth)}/mo · save ${discountPct}% vs monthly` : `or ${money(yearly)}/yr - save ${discountPct}%`)
                     : 'Free for a limited time, for our first users'}
                 </div>
                 {!india && (

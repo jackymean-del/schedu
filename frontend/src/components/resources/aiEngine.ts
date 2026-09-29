@@ -1,5 +1,5 @@
 /**
- * aiEngine.ts — SmartSched AI Resource Assignment Engine
+ * aiEngine.ts - SmartSched AI Resource Assignment Engine
  *
  * Performs synchronized curriculum-aware assignment across ALL 4 resource types:
  *   1. Subjects → Classes    (board + grade relevance rules)
@@ -9,7 +9,7 @@
  *   5. Room → Subject mappings        (lab subjects → lab rooms)
  *
  * Architecture principles:
- *   - Pure function: inputs in, result out — no side effects
+ *   - Pure function: inputs in, result out - no side effects
  *   - Deterministic: same inputs always produce same result
  *   - Graceful degradation: works with partial data (no teachers, no rooms, etc.)
  */
@@ -29,7 +29,7 @@ export interface SubjectMapping { subject: string; classes: string[] }
 export type StaffExt = Staff & { subjectMappings?: SubjectMapping[] }
 
 /** A subject/class combination that couldn't be given a teacher without
- *  exceeding someone's safe workload cap — i.e. current staff supply is short. */
+ *  exceeding someone's safe workload cap - i.e. current staff supply is short. */
 export interface StaffingGap {
   subject:     string
   classes:     string[]
@@ -55,7 +55,7 @@ export interface AISnapshot {
 }
 
 // ─── Workload constants ───────────────────────────────────────────────────────
-/** Hard cap — no teacher should exceed this (slots/week) */
+/** Hard cap - no teacher should exceed this (slots/week) */
 const MAX_SLOTS = 32
 /** Target optimal load */
 const TARGET_SLOTS = 25
@@ -66,7 +66,7 @@ const MAX_CLASSES_PER_SUBJECT = 5
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-/** Subject assignment priority — core academics first */
+/** Subject assignment priority - core academics first */
 function subjectPriority(name: string): number {
   const rule = CURRICULUM[name]
   if (!rule) return 5
@@ -87,7 +87,7 @@ function recommendedSlots(
 }
 
 /** Pick the best teacher for a new (subject, batch) assignment, or null if NO
- *  teacher has room within their safe workload cap — the caller must never
+ *  teacher has room within their safe workload cap - the caller must never
  *  force an assignment past this; a null means the load should be reported
  *  as an unmet staffing need instead. */
 function pickTeacher(
@@ -105,17 +105,17 @@ function pickTeacher(
     const load       = teacherLoad.get(t.id) ?? 0
     const subCount   = teacherSubjectCount.get(t.id) ?? 0
     const hasSub     = (teacherMappings.get(t.id) ?? []).some(m => m.subject === subjectName)
-    // Each teacher's own configured cap, falling back to the global default —
+    // Each teacher's own configured cap, falling back to the global default -
     // never the other way around, so a custom (lower) cap is always honored.
     const cap = (t as any).maxPeriodsPerWeek ?? MAX_SLOTS
 
-    // Hard cap — skip any teacher this assignment would push over their limit.
+    // Hard cap - skip any teacher this assignment would push over their limit.
     // No exceptions: if nobody fits, bestId stays null and the caller records
     // this as an unmet staffing need instead of overloading someone.
     if (load + batchLoad > cap) continue
 
     // Score: lower is better. LOAD dominates so the least-loaded teacher wins
-    // (even balance / low makespan) — previously subCount×4 could make a
+    // (even balance / low makespan) - previously subCount×4 could make a
     // heavier-but-fewer-subjects teacher win, piling heavy subjects onto one
     // person. Continuity (already teaches it) is a gentle nudge to keep a
     // subject's sections together without overriding load balance; distinct
@@ -265,7 +265,7 @@ export function runAIAssignment(
   }
 
   // subject name → classes that couldn't be placed within ANY teacher's safe
-  // workload cap — surfaced to the caller as staffingGaps instead of ever
+  // workload cap - surfaced to the caller as staffingGaps instead of ever
   // forcing an over-cap assignment.
   const gapsBySubject = new Map<string, string[]>()
 
@@ -316,7 +316,7 @@ export function runAIAssignment(
           continue
         }
 
-        // The full batch doesn't fit anywhere as one block — never force it
+        // The full batch doesn't fit anywhere as one block - never force it
         // onto whoever's least loaded (that's how a teacher ends up at 49/32).
         // Instead try placing each class individually, so partial capacity on
         // OTHER teachers isn't wasted; anything still unplaced becomes a gap.
@@ -335,7 +335,7 @@ export function runAIAssignment(
       }
     }
   } else {
-    // No staff at all — every assigned class is an unmet staffing need.
+    // No staff at all - every assigned class is an unmet staffing need.
     for (const sub of updatedSubjects) {
       const classes = subjectClassMap.get(sub.id) ?? []
       if (classes.length > 0) gapsBySubject.set(sub.name, classes)
@@ -412,7 +412,7 @@ export function slotLoadLevel(slots: number): 'none' | 'low' | 'good' | 'high' |
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SMART CREATE — bootstrap Faculty / Rooms from the subject + class list.
+//  SMART CREATE - bootstrap Faculty / Rooms from the subject + class list.
 //  Used by each tab's first-run "Let me create smartly" empty state.
 // ════════════════════════════════════════════════════════════════════════════
 

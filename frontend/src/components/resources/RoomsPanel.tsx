@@ -1,5 +1,5 @@
 /**
- * RoomsPanel — Tab 4.
+ * RoomsPanel - Tab 4.
  * Rooms are grouped under a Block / Building / Area header (collapsible), mirroring
  * the Classes tab's grade grouping. Each block holds many rooms/venues; each room can
  * be assigned to multiple classes. The block label uses the Classroom.building field.
@@ -153,7 +153,7 @@ function BlockNameInput({ initial, onCommit }: { initial: string; onCommit: (v: 
 // ─── Add row ──────────────────────────────────────────────────────────────────
 // Consults the shared cross-schedule venue directory (store/directoryStore.ts):
 // typing a name that exactly matches an existing entry auto-fills its
-// type/capacity and links via directoryId — no extra click — instead of
+// type/capacity and links via directoryId - no extra click - instead of
 // silently creating a second, disconnected record. See TeachersPanel.tsx's
 // AddRow for the identical rationale on the staff side.
 function AddRow({ onAdd, defaultBlock, blocks }: {
@@ -234,7 +234,7 @@ function AddRow({ onAdd, defaultBlock, blocks }: {
         <tr>
           <td colSpan={6} style={{ padding: '0 12px 8px' }}>
             <div style={{ padding: '6px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', fontSize: 11, color: '#166534', lineHeight: 1.5 }}>
-              ✓ Matches <strong>{match.name}</strong> in your venue directory — will auto-link ({match.roomType || 'Classroom'}, cap. {match.capacity ?? 40}). Different room? Add a distinguishing detail (e.g. "Lab 2 – Block B") to keep it separate.
+              ✓ Matches <strong>{match.name}</strong> in your venue directory - will auto-link ({match.roomType || 'Classroom'}, cap. {match.capacity ?? 40}). Different room? Add a distinguishing detail (e.g. "Lab 2 – Block B") to keep it separate.
             </div>
           </td>
         </tr>
@@ -249,9 +249,9 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
   blocks: string[]
   classOpts: ChipOption[]
   subjectOpts: ChipOption[]
-  /** Sections in room.assignedSections — additional/shared-use (many-to-many) */
+  /** Sections in room.assignedSections - additional/shared-use (many-to-many) */
   assignedClasses: string[]
-  /** Sections whose section.room === this room name — the true 1-to-1 home sections */
+  /** Sections whose section.room === this room name - the true 1-to-1 home sections */
   homeSections: string[]
   onUpdate: (p: Partial<RoomExt>) => void
   onUpdateSections: (add: string[], remove: string[]) => void
@@ -288,7 +288,7 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
           <NameCell value={room.name} onSave={v => onUpdate({ name: v })} />
           <BlockPill block={blockOf(room)} blocks={blocks} onMove={b => onUpdate({ building: b })} />
         </div>
-        {/* Home classroom badge — shown under room name, 1-to-1 */}
+        {/* Home classroom badge - shown under room name, 1-to-1 */}
         {singleHome && (
           <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 9.5, fontWeight: 700, color: '#059669', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
@@ -301,13 +301,13 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
           <div style={{ marginTop: 3 }}>
             <span title={`Multiple sections share this home room (${homeSections.join(', ')}). Use Smart Create to reset home rooms.`}
               style={{ fontSize: 9.5, fontWeight: 700, color: '#92400E', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 4, padding: '1px 6px', cursor: 'help' }}>
-              ⚠ {homeSections.length} homes — reset needed
+              ⚠ {homeSections.length} homes - reset needed
             </span>
           </div>
         )}
       </td>
 
-      {/* Type — colored badge select */}
+      {/* Type - colored badge select */}
       <td style={TD}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
@@ -337,7 +337,7 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
         />
       </td>
 
-      {/* Assigned Classes — additional/shared sections (room.assignedSections, many-to-many) */}
+      {/* Assigned Classes - additional/shared sections (room.assignedSections, many-to-many) */}
       <td style={{ ...TD, paddingTop: 5, paddingBottom: 5 }}>
         <InlineChipSelect
           selected={assignedClasses}
@@ -358,12 +358,12 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
             placeholder="+ Special subjects"
             maxChips={3}
           />
-          {/* Parallel toggle — shown when room has 2+ sections or special subjects */}
+          {/* Parallel toggle - shown when room has 2+ sections or special subjects */}
           {(hasMultiSections || hasSpecialSubjects) && (
             <button
               title={parallel
-                ? 'Parallel sharing ON — multiple sections can use this room in the same period. Click to turn off.'
-                : 'Turn on parallel sharing — allow multiple sections to use this room simultaneously (e.g. combined Art & Craft, PE assembly)'}
+                ? 'Parallel sharing ON - multiple sections can use this room in the same period. Click to turn off.'
+                : 'Turn on parallel sharing - allow multiple sections to use this room simultaneously (e.g. combined Art & Craft, PE assembly)'}
               onClick={() => onUpdate({ parallelEnabled: !parallel })}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
@@ -399,7 +399,7 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
       </td>
     </tr>
 
-    {/* Parallel info row — shown below when parallel is ON */}
+    {/* Parallel info row - shown below when parallel is ON */}
     {parallel && assignedClasses.length > 0 && (
       <tr>
         <td colSpan={6} style={{ padding: '0 36px 8px', borderBottom: '1px solid #F0ECFE' }}>
@@ -407,7 +407,7 @@ function RoomRow_({ room, blocks, classOpts, subjectOpts, assignedClasses, homeS
             background: '#F5F2FF', border: '1px solid #DDD8FF', borderRadius: 6,
             padding: '6px 10px', fontSize: 11, color: '#5B4FB5', lineHeight: 1.5,
           }}>
-            <span style={{ fontWeight: 700 }}>⇌ Parallel sessions allowed —</span>{' '}
+            <span style={{ fontWeight: 700 }}>⇌ Parallel sessions allowed -</span>{' '}
             {assignedClasses.length > 1
               ? <>{assignedClasses.join(' · ')} can share a period in this room simultaneously</>
               : <>{assignedClasses[0]} is assigned; add more sections above to allow combined periods</>
@@ -451,7 +451,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
     undoHistory.push(rooms)
     const newRooms = linkOrRegisterVenues(seedStandardRooms(sections, subjects))
     setRooms(newRooms)
-    // Wire section.room — each section gets exactly ONE home classroom (1-to-1)
+    // Wire section.room - each section gets exactly ONE home classroom (1-to-1)
     setSections(sections.map(sec => {
       const homeRoom = newRooms.find(r => (r.assignedSections ?? []).includes(sec.name))
       return homeRoom ? { ...sec, room: homeRoom.name } : { ...sec, room: '' }
@@ -678,7 +678,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
           {hasHomeConflicts && (
             <button
               onClick={handleSmartCreate}
-              title="Home classroom data is misconfigured — one room is showing as home for multiple sections. Click to recreate one dedicated home classroom per section."
+              title="Home classroom data is misconfigured - one room is showing as home for multiple sections. Click to recreate one dedicated home classroom per section."
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 background: '#FEF3C7', color: '#92400E',
@@ -721,7 +721,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
       {/* Helper hint */}
       <div style={{ flexShrink: 0, fontSize: 11, color: '#6D6A8A', margin: '0 0 7px 2px', lineHeight: 1.5 }}>
         Group rooms by <strong style={{ color: P_D }}>block / building / area</strong> so timetabling knows which classes share a location.
-        Click a block name to rename it; use the pill beside a room to move it. Skipping this is fine — everything stays in “{DEFAULT_BLOCK}”.
+        Click a block name to rename it; use the pill beside a room to move it. Skipping this is fine - everything stays in “{DEFAULT_BLOCK}”.
       </div>
 
       {importOpen && (
@@ -749,7 +749,7 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
         }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
           <div style={{ flex: 1, fontSize: 12, color: '#78350F', lineHeight: 1.5 }}>
-            <strong>Home classroom misconfiguration detected.</strong> One or more rooms are shown as the home for multiple sections — but each class-section must have its own dedicated home classroom (1-to-1). Click <strong>"Fix Home Rooms"</strong> above to auto-assign one unique home classroom per section and clear the conflict.
+            <strong>Home classroom misconfiguration detected.</strong> One or more rooms are shown as the home for multiple sections - but each class-section must have its own dedicated home classroom (1-to-1). Click <strong>"Fix Home Rooms"</strong> above to auto-assign one unique home classroom per section and clear the conflict.
           </div>
           <button onClick={handleSmartCreate}
             style={{ background: '#F59E0B', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
@@ -765,13 +765,13 @@ export function RoomsPanel({ rooms, setRooms, sections, setSections, subjects, o
             icon={<Building2 size={26} color={P} />}
             title="No rooms yet"
             subtitle={sections.length === 0
-              ? 'Add classes first — then schedU can lay out a homeroom for each plus the labs your subjects need, or you can add rooms by hand.'
-              : `Let schedU lay out a starter set — one homeroom per class for your ${sections.length} section${sections.length !== 1 ? 's' : ''}, plus the special rooms your subjects need (Computer Lab, science labs, Library) with subject mappings wired.`}
+              ? 'Add classes first - then schedU can lay out a homeroom for each plus the labs your subjects need, or you can add rooms by hand.'
+              : `Let schedU lay out a starter set - one homeroom per class for your ${sections.length} section${sections.length !== 1 ? 's' : ''}, plus the special rooms your subjects need (Computer Lab, science labs, Library) with subject mappings wired.`}
             smartLabel="Let me create smartly"
             smartSubtext={sections.length > 0 ? `Homerooms + labs for ${sections.length} class${sections.length !== 1 ? 'es' : ''}` : undefined}
             onSmart={handleSmartCreate}
             smartDisabled={sections.length === 0}
-            smartDisabledHint="Add at least one class first — a homeroom is created per section."
+            smartDisabledHint="Add at least one class first - a homeroom is created per section."
             manualLabel="Add manually"
             manualSubtext="Start with a blank table"
             onManual={() => setManualMode(true)}

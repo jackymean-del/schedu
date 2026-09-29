@@ -1,9 +1,9 @@
 /**
- * Step 2 — Resources  (premium compact redesign)
+ * Step 2 - Resources  (premium compact redesign)
  *
  * Layout:
  *   ┌─ Sidebar (172px) ──────┬─ Content area ──────────────────────────────┐
- *   │  Classes          52   │  [Panel — inline editing, no drawers]        │
+ *   │  Classes          52   │  [Panel - inline editing, no drawers]        │
  *   │  Subjects         38   │                                              │
  *   │  Teachers         84   │                                              │
  *   │  Rooms            60   │                                              │
@@ -135,8 +135,8 @@ function buildSectionsForGrades(grades: string[]): Section[] {
  * Fit a set of freshly-built sections to an approximate target count WITHOUT
  * dropping any grade in the configured range.
  *
- * The old logic did `built.slice(0, target)`, which — for a range like I–V with
- * an approximate count of 5 — kept only the first 5 sections (I-A/B/C + II-A/B),
+ * The old logic did `built.slice(0, target)`, which - for a range like I–V with
+ * an approximate count of 5 - kept only the first 5 sections (I-A/B/C + II-A/B),
  * silently collapsing a five-grade school into two grades. Instead we distribute
  * the target evenly across the grades present, guaranteeing every grade keeps at
  * least one section (the explicit range always wins over an approximate count).
@@ -227,8 +227,8 @@ const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number; short?: 
   { name: 'Music',                    cat: 'CCA',          ppw: 1 },
   { name: 'Dance',                    cat: 'CCA',          ppw: 1 },
   { name: 'Art & Craft',              cat: 'CCA',          ppw: 2 },
-  // ── Sciences — Secondary + Sr. Secondary ────────────────────────────────────
-  // (stream: science/general — NOT Commerce or Humanities)
+  // ── Sciences - Secondary + Sr. Secondary ────────────────────────────────────
+  // (stream: science/general - NOT Commerce or Humanities)
   { name: 'Physics',                  cat: 'Compulsory',   ppw: 5,  short: 'PHY'  },
   { name: 'Chemistry',                cat: 'Compulsory',   ppw: 5,  short: 'CHEM' },
   { name: 'Biology',                  cat: 'Compulsory',   ppw: 5,  short: 'BIO'  },
@@ -241,7 +241,7 @@ const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number; short?: 
   { name: 'Business Studies',         cat: 'Compulsory',   ppw: 4,  short: 'BST'  },
   // ── Commerce + Humanities + optional in Science ──────────────────────────────
   { name: 'Economics',                cat: 'Compulsory',   ppw: 5,  short: 'ECO'  },
-  // ── 5th subject — Commerce and Humanities only ───────────────────────────────
+  // ── 5th subject - Commerce and Humanities only ───────────────────────────────
   { name: 'Entrepreneurship',         cat: 'Skill',        ppw: 4,  short: 'ENT'  },
   // ── Humanities stream ────────────────────────────────────────────────────────
   { name: 'History',                  cat: 'Compulsory',   ppw: 4,  short: 'HIS'  },
@@ -250,7 +250,7 @@ const DEFAULT_SUBJECTS: Array<{ name: string; cat: string; ppw: number; short?: 
   { name: 'Psychology',               cat: 'Optional',     ppw: 4,  short: 'PSY'  },
   { name: 'Sociology',                cat: 'Optional',     ppw: 4,  short: 'SOC'  },
   // ── All Sr. Secondary streams (CCA / activities) ─────────────────────────────
-  // Note: "EST" in the school timetable = Extra Study Time — a period slot, NOT a subject.
+  // Note: "EST" in the school timetable = Extra Study Time - a period slot, NOT a subject.
   { name: 'Physical Education',       cat: 'CCA',          ppw: 1,  short: 'PE'   },
   { name: 'Painting',                 cat: 'CCA',          ppw: 1,  short: 'PAINT'},
   { name: 'Library',                  cat: 'CCA',          ppw: 1,  short: 'LIB'  },
@@ -266,7 +266,7 @@ function buildDefaultSubjects(board: CurriculumBoard = 'CBSE', sections: Section
   const PRIMARY_ONLY_SUBJECTS = new Set([
     'Number Work','Nursery Rhymes & Stories','Activity / Free Play','EVS','Computer',
   ])
-  // Pre-primary-only subjects — exclude when there are no pre-primary sections.
+  // Pre-primary-only subjects - exclude when there are no pre-primary sections.
   const PREK_ONLY_SUBJECTS = new Set([
     'Number Work','Nursery Rhymes & Stories','Activity / Free Play',
   ])
@@ -295,11 +295,11 @@ function buildDefaultSubjects(board: CurriculumBoard = 'CBSE', sections: Section
         return true
       }
       if (presentGroups.size > 0 && !presentGroups.has('srSec')) {
-        // No sr-sec sections — drop sr-sec-only subjects
+        // No sr-sec sections - drop sr-sec-only subjects
         if (SRSEC_ONLY_SUBJECTS.has(d.name)) return false
       }
       if (presentGroups.size > 0 && !presentGroups.has('preK')) {
-        // No pre-primary sections — drop pre-primary-only subjects
+        // No pre-primary sections - drop pre-primary-only subjects
         if (PREK_ONLY_SUBJECTS.has(d.name)) return false
       }
       // Precise check against the curriculum brain: only generate a subject if
@@ -363,7 +363,7 @@ export function StepResourcesV2() {
   const [aiStatus,           setAiStatus]           = useState('')
   const [aiSnapshot,         setAiSnapshot]         = useState<AISnapshot | null>(null)
   // Classes that couldn't get a teacher within a safe workload after the last
-  // auto-assignment — e.g. "need ~2 more teachers for Drawing covering III-A,
+  // auto-assignment - e.g. "need ~2 more teachers for Drawing covering III-A,
   // III-B...". Empty means every class got a teacher within their cap.
   const [staffingGaps,       setStaffingGaps]       = useState<StaffingGap[]>([])
   const [facultyAiApplied,   setFacultyAiApplied]   = useState(false)
@@ -376,7 +376,7 @@ export function StepResourcesV2() {
   // ── Auto-extend subjects when a NEW class is added ──────────────────────────
   // When the user adds a section, any EXISTING subject the curriculum says that
   // grade/stream takes is auto-mapped onto the new section (grade-aware slots).
-  // Only genuinely-new section names trigger this — manual removals on existing
+  // Only genuinely-new section names trigger this - manual removals on existing
   // sections are never re-added, and no new subjects are created (the empty-state
   // "create smartly" handles bootstrapping). Skips the very first render so it
   // never fights a freshly-loaded store.
@@ -429,7 +429,7 @@ export function StepResourcesV2() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sections])
 
-  // ── Full auto-assign (all resources) — used by empty-state & Regenerate All ──
+  // ── Full auto-assign (all resources) - used by empty-state & Regenerate All ──
   async function handleGlobalAIAssign(board: CurriculumBoard) {
     if (aiLoading) return
     aiAbortRef.current = false
@@ -460,7 +460,7 @@ export function StepResourcesV2() {
     setTimeout(() => setAiStatus(''), 3500)
   }
 
-  // ── Per-tab auto-assign — only touches the relevant resource ───────────────
+  // ── Per-tab auto-assign - only touches the relevant resource ───────────────
   async function handleSubjectsAIAssign(board: CurriculumBoard) {
     if (aiLoading) return
     setAiLoading(true)
@@ -494,15 +494,15 @@ export function StepResourcesV2() {
     setAiStatus('Assigning teacher workloads & subjects…')
     await sleep(480)
 
-    // Pass 1 — assign with existing teachers (capped to board standard)
+    // Pass 1 - assign with existing teachers (capped to board standard)
     const workingStaff: any[] = (staff as any[]).map(t => ({ ...t, maxPeriodsPerWeek: maxPeriods }))
     let result = runAIAssignment(subjects, sections, workingStaff, rooms, board)
 
-    // Pass 2 — for every gap, synthesize exactly the needed teachers and
+    // Pass 2 - for every gap, synthesize exactly the needed teachers and
     // directly pre-assign the unmet classes to them.  We do NOT re-run the
     // full engine here: doing so would reset all load tracking from scratch,
     // letting the new (empty) teachers be grabbed by high-priority core subjects
-    // first — the gap subjects would lose again.  Instead we preserve the
+    // first - the gap subjects would lose again.  Instead we preserve the
     // pass-1 assignments and inject the gap teachers on top.
     if (result.staffingGaps.length > 0) {
       setAiStatus('Creating additional teachers for uncovered subjects…')
@@ -575,7 +575,7 @@ export function StepResourcesV2() {
     setAiStatus('')
   }
 
-  // ── Faculty HI Fix — set maxPeriodsPerWeek to the national SAFE teaching load ─
+  // ── Faculty HI Fix - set maxPeriodsPerWeek to the national SAFE teaching load ─
   // Sourced from the education-norms brain (lib/educationNorms.ts) so the per-
   // teacher cap matches the same policy the generate-step staffing alert uses:
   //   India (NCTE/RTE) safe 30 · England (STPCD+PPA) 22 · US 25 · AU 20 · every
@@ -594,7 +594,7 @@ export function StepResourcesV2() {
     setStaff(staff.map((t: Staff) => ({ ...t, maxPeriodsPerWeek: maxPeriods })))
   }
 
-  // ── Rooms HI Fix — infer room type and subject mappings from room names ───────
+  // ── Rooms HI Fix - infer room type and subject mappings from room names ───────
   function handleRoomAIFix() {
     const subjectNames: string[] = subjects.map((s: Subject) => s.name)
 
@@ -639,7 +639,7 @@ export function StepResourcesV2() {
   }
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
-  // Read/write shape is shared with Master Data — see lib/roomShape for why the
+  // Read/write shape is shared with Master Data - see lib/roomShape for why the
   // two pages must not each carry their own mapping.
   const [rooms, setRoomsLocal] = useState<RoomExt[]>(
     () => (store.rooms ?? []).map(roomRowFrom) as RoomExt[],
@@ -709,7 +709,7 @@ export function StepResourcesV2() {
   // ── Generate all ──────────────────────────────────────────────────────────
   /**
    * Fills in blank resources (subjects · staff · rooms).
-   * NEVER rebuilds sections if the user already has classes set up —
+   * NEVER rebuilds sections if the user already has classes set up -
    * existing sections are preserved and drive subject/staff assignment.
    */
   const handleGenerateAll = async () => {
@@ -729,7 +729,7 @@ export function StepResourcesV2() {
     } else {
       const targetSections = (config as any).numSections ?? undefined
       const built = buildSections(3)
-      // Distribute the approximate count across ALL grades in the range — never
+      // Distribute the approximate count across ALL grades in the range - never
       // truncate to the first grade or two (see fitSectionsToTarget).
       const raw   = fitSectionsToTarget(built, targetSections)
       workingSections = raw.map((sec: any) => ({
@@ -759,12 +759,12 @@ export function StepResourcesV2() {
 
     // ── 3. Subjects: build from the actual sections present, then auto-assign
     //       categories (Scholastic / Co-scholastic) so they're correct on the
-    //       first generate — no separate "categorize" step needed. ───────────
+    //       first generate - no separate "categorize" step needed. ───────────
     const allSubjects = buildDefaultSubjects(board, updatedSections)
       .map((s: any) => ({ ...s, category: inferCategory(s) }))
     const newSubjects = targetSubjects ? allSubjects.slice(0, targetSubjects) : allSubjects
 
-    // ── 4. Rooms — one home classroom per section + subject-implied specials ──
+    // ── 4. Rooms - one home classroom per section + subject-implied specials ──
     // seedStandardRooms pre-wires assignedSections so rooms know their home
     // class without relying on the exclusive section.room field.
     const newRooms = seedStandardRooms(updatedSections, newSubjects)
@@ -827,7 +827,7 @@ export function StepResourcesV2() {
         height: 'calc(100vh - 165px)', overflowY: 'auto',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Nav tabs — readiness dot embedded directly on each item */}
+        {/* Nav tabs - readiness dot embedded directly on each item */}
         {TAB_META.map(tab => {
           const active = activeTab === tab.key
           const count  = counts[tab.key]
@@ -867,7 +867,7 @@ export function StepResourcesV2() {
                   minWidth: 22, textAlign: 'center',
                 }}>{count}</span>
               ) : (
-                <span style={{ fontSize: 11, color: '#E0D4FF', fontWeight: 700 }}>—</span>
+                <span style={{ fontSize: 11, color: '#E0D4FF', fontWeight: 700 }}>-</span>
               )}
               {/* Red gap badge on Teachers tab */}
               {tab.key === 'teachers' && staffingGaps.length > 0 && (
@@ -881,7 +881,7 @@ export function StepResourcesV2() {
           )
         })}
 
-        {/* Fill / Regenerate button — visible whenever classes exist */}
+        {/* Fill / Regenerate button - visible whenever classes exist */}
         {counts.classes > 0 && (
           <div style={{ margin: '8px 10px 0' }}>
             <button
@@ -917,7 +917,7 @@ export function StepResourcesV2() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <div style={{ flex: 1, padding: '12px 18px 6px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
-          {/* ── Staffing gaps — only shown on the Teachers tab ──────────── */}
+          {/* ── Staffing gaps - only shown on the Teachers tab ──────────── */}
           {staffingGaps.length > 0 && activeTab === 'teachers' && (
             <div style={{
               background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 9,
@@ -926,12 +926,12 @@ export function StepResourcesV2() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 800, color: '#991B1B', marginBottom: 6 }}>
-                    ⚠ Allocation pending — {staffingGaps.reduce((a, g) => a + g.classes.length, 0)} class{staffingGaps.reduce((a, g) => a + g.classes.length, 0) !== 1 ? 'es' : ''} have no teacher within a safe workload
+                    ⚠ Allocation pending - {staffingGaps.reduce((a, g) => a + g.classes.length, 0)} class{staffingGaps.reduce((a, g) => a + g.classes.length, 0) !== 1 ? 'es' : ''} have no teacher within a safe workload
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
                     {staffingGaps.map(g => (
                       <div key={g.subject} style={{ fontSize: 11.5, color: '#7F1D1D' }}>
-                        <strong>{g.subject}</strong> — need ~{g.suggestedExtraTeachers} more teacher{g.suggestedExtraTeachers !== 1 ? 's' : ''}
+                        <strong>{g.subject}</strong> - need ~{g.suggestedExtraTeachers} more teacher{g.suggestedExtraTeachers !== 1 ? 's' : ''}
                         {' '}({g.unmetPeriods} periods/week short) for {g.classes.slice(0, 6).join(', ')}{g.classes.length > 6 ? ` +${g.classes.length - 6} more` : ''}
                       </div>
                     ))}
@@ -961,8 +961,8 @@ export function StepResourcesV2() {
               </h2>
               <p style={{ fontSize: 12.5, color: '#69707E', margin: '0 0 24px', lineHeight: 1.6 }}>
                 {configuredClassDefs?.length
-                  ? `Generate ${configuredClassDefs.length * 3} sections (3 per class, ${configuredClassDefs.length} classes from your setup), plus teachers, subjects and rooms — with class-teacher assignments pre-filled.`
-                  : 'Generate your classes, teachers, subjects and rooms in one click based on your setup — or switch to a tab and use + Add to enter them manually.'
+                  ? `Generate ${configuredClassDefs.length * 3} sections (3 per class, ${configuredClassDefs.length} classes from your setup), plus teachers, subjects and rooms - with class-teacher assignments pre-filled.`
+                  : 'Generate your classes, teachers, subjects and rooms in one click based on your setup - or switch to a tab and use + Add to enter them manually.'
                 }
               </p>
               <button
@@ -1005,7 +1005,7 @@ export function StepResourcesV2() {
                 </span>
               </div>
 
-              {/* Panels — all mounted, toggled via display */}
+              {/* Panels - all mounted, toggled via display */}
               <div style={{ flex: 1, minHeight: 0, display: activeTab === 'classes' ? 'flex' : 'none', flexDirection: 'column' }}>
                   {periods.length === 0 && (
                   <div style={{
@@ -1076,7 +1076,7 @@ export function StepResourcesV2() {
                   aiLoading={aiLoading && activeTab === 'rooms'}
                   aiApplied={roomsAiApplied}
                 />
-                {/* Blueprint v3, Step 2 — multi-block schools record relative
+                {/* Blueprint v3, Step 2 - multi-block schools record relative
                     block distances here; Step 4's AND logic prefers nearer blocks. */}
                 <BlockDistanceMatrix venueBuildings={(rooms as any[]).map(r => r?.building ?? '')} />
               </div>
@@ -1149,7 +1149,7 @@ export function StepResourcesV2() {
                 <button
                   onClick={() => { if (allReady) setStep(2) }}
                   disabled={!allReady}
-                  title={allReady ? 'All resources ready — proceed to Shift & Timing' : 'Complete all four resource tabs first'}
+                  title={allReady ? 'All resources ready - proceed to Shift & Timing' : 'Complete all four resource tabs first'}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '7px 16px', borderRadius: 7, border: 'none',
@@ -1171,7 +1171,7 @@ export function StepResourcesV2() {
         {/* Scope modal */}
         {scopeTarget && (
           <ScopeMatrixModal
-            entityName={scopeTarget.entity.name ?? scopeTarget.entity.actualName ?? '—'}
+            entityName={scopeTarget.entity.name ?? scopeTarget.entity.actualName ?? '-'}
             entityKind={scopeTarget.kind.replace('Bulk', '')}
             scope={scopeTarget.entity.scope}
             workDays={workDays}
@@ -1179,7 +1179,7 @@ export function StepResourcesV2() {
             cycleWeeks={cycleWeeks}
             anchorRect={scopeTarget.rect}
             entities={
-              // Grade/group-level scope passes memberIds — limit and order by them
+              // Grade/group-level scope passes memberIds - limit and order by them
               scopeTarget.kind === 'BulkSection'  ? sections
                   .filter((s: Section) => !(scopeTarget.entity as any).memberIds || (scopeTarget.entity as any).memberIds.includes(s.id))
                   .sort((a: Section, b: Section) => {

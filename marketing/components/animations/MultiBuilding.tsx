@@ -123,7 +123,7 @@ export function MultiBuilding() {
 
         @media (prefers-reduced-motion: reduce) {
           .mb-window, .mb-knob { animation: none !important; }
-          /* Campus fully lit, dot on P4 — everything placed */
+          /* Campus fully lit, dot on P4 - everything placed */
           .mb-window { opacity: 1 !important; }
           .mb-knob { transform: translateX(300px) !important; }
         }

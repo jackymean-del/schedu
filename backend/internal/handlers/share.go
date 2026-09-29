@@ -116,7 +116,7 @@ func (h *Handler) bumpViews(c fiber.Ctx, token string) {
 	_, _ = h.db.Exec(c.Context(), `UPDATE shared_timetables SET views = views + 1 WHERE token = $1`, token)
 }
 
-// GetShare returns a shared timetable by token. Public — no auth.
+// GetShare returns a shared timetable by token. Public - no auth.
 // For restricted shares it returns only {restricted:true, title} (no payload);
 // the viewer must then call AccessShare with an allow-listed email.
 func (h *Handler) GetShare(c fiber.Ctx) error {
@@ -141,14 +141,14 @@ func (h *Handler) GetShare(c fiber.Ctx) error {
 // REMOVED: AccessShare (POST /api/share/:token/access).
 //
 // It returned a RESTRICTED share's full payload to anyone who posted an
-// allow-listed email — no code, no proof of owning it. A school publishes its
+// allow-listed email - no code, no proof of owning it. A school publishes its
 // staff addresses on its own website, so "knows an allowed email" is not a
 // secret; the endpoint reduced a restricted share to a public one for anyone
 // holding the link. The request-code → verify pair right below exists to prove
 // the caller controls that mailbox, and this endpoint let a caller skip it.
 //
 // Nothing called it: the viewer page has always used request-code/verify. It
-// was pure attack surface, so it is gone rather than patched — there is no
+// was pure attack surface, so it is gone rather than patched - there is no
 // behaviour left for it to provide that GetShare (public) or VerifyShareCode
 // (restricted) doesn't already cover correctly.
 
@@ -168,7 +168,7 @@ type codeVerdict int
 const (
 	codeInvalid   codeVerdict = iota // no live code, or a wrong guess with budget left
 	codeAccepted                     // right code, within budget
-	codeExhausted                    // out of guesses — a new code is required
+	codeExhausted                    // out of guesses - a new code is required
 )
 
 // judgeCode decides a verification from the counted attempts. Pure, so the rule
@@ -224,7 +224,7 @@ func (h *Handler) RequestShareCode(c fiber.Ctx) error {
 	}
 
 	// Supersede any code already outstanding for this mailbox. Letting them
-	// accumulate makes guessing EASIER, not harder — each live code is another
+	// accumulate makes guessing EASIER, not harder - each live code is another
 	// value a blind guess can land on, and each carries its own attempt budget.
 	_, _ = h.db.Exec(c.Context(), `DELETE FROM share_access_codes WHERE token = $1 AND email = $2`, token, email)
 
@@ -260,7 +260,7 @@ func (h *Handler) VerifyShareCode(c fiber.Ctx) error {
 
 	// Charge the attempt BEFORE judging the code, in the same statement that
 	// reads it. A guess that is abandoned mid-flight, or that races other
-	// guesses, still costs its budget — otherwise the cap is advisory.
+	// guesses, still costs its budget - otherwise the cap is advisory.
 	rows, err := h.db.Query(c.Context(), `
 		UPDATE share_access_codes
 		   SET attempts = attempts + 1
@@ -288,12 +288,12 @@ func (h *Handler) VerifyShareCode(c fiber.Ctx) error {
 		// Burn the code outright: the only way forward is a fresh one, which
 		// re-proves control of the mailbox and resets the budget.
 		_, _ = h.db.Exec(c.Context(), `DELETE FROM share_access_codes WHERE token = $1 AND email = $2`, token, email)
-		return fiber.NewError(fiber.StatusTooManyRequests, "too many incorrect codes — request a new one")
+		return fiber.NewError(fiber.StatusTooManyRequests, "too many incorrect codes - request a new one")
 	case codeInvalid:
 		return fiber.NewError(fiber.StatusBadRequest, "that code is invalid or has expired")
 	}
 
-	// One-time use — consume all codes for this token+email.
+	// One-time use - consume all codes for this token+email.
 	_, _ = h.db.Exec(c.Context(), `DELETE FROM share_access_codes WHERE token = $1 AND email = $2`, token, email)
 
 	title, visibility, payload, allowed, err := h.shareRow(c, token)

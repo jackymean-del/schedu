@@ -1,5 +1,5 @@
 /**
- * What the TIMETABLE says each subject gets — across every ACTIVE schedule.
+ * What the TIMETABLE says each subject gets - across every ACTIVE schedule.
  *
  * Two things were wrong without this.
  *
@@ -9,7 +9,7 @@
  *    Typing a second, unrelated number invites it to disagree with reality.
  *
  * 2. It read the single OPEN schedule, so a school running "I–V TT" and
- *    "VI–X TT" side by side saw only whichever was last opened — three
+ *    "VI–X TT" side by side saw only whichever was last opened - three
  *    class-sections instead of forty-five. Ops surfaces must see the UNION of
  *    active schedules (see lib/activeSchedules); the Syllabus page is one.
  *
@@ -53,7 +53,7 @@ export function termOf(b: ScheduleBundle): { start: string; end: string } | null
  * The window to count hours over: the schedule's own range, narrowed to the
  * chosen academic term.
  *
- * Null means count nothing — either the schedule declares no dates, or it never
+ * Null means count nothing - either the schedule declares no dates, or it never
  * ran during that term. The second case is the reason this returns null rather
  * than falling back to the full range: a schedule that started in September
  * must contribute zero to a term that ended in August, not a year's hours.
@@ -68,11 +68,11 @@ function windowFor(b: ScheduleBundle, term?: AcademicTerm | null): { start: stri
  * The class-sections a schedule ACTUALLY has right now: present in its roster
  * AND present in its generated timetable.
  *
- * Both halves matter. classTT alone is not enough — a generated timetable keeps
+ * Both halves matter. classTT alone is not enough - a generated timetable keeps
  * whatever sections existed when it was generated, so a school that has since
  * dropped its Nursery classes still had "Nursery-A…D" appearing in every picker,
  * labelled with the schedule they were removed from. The roster alone is not
- * enough either — a section nobody scheduled has no hours and would only add an
+ * enough either - a section nobody scheduled has no hours and would only add an
  * empty row. The intersection is the honest answer to "what does this schedule
  * cover?", and it self-heals: regenerate, and stale keys drop out.
  *
@@ -93,7 +93,7 @@ export function liveSections(b: ScheduleBundle): string[] {
  * Deliberately NOT holiday-adjusted: this is what the school set aside, and
  * holidays/absences are then reported against it as lost time (see
  * lib/effectiveCoverage). Subtracting them here as well would count them twice
- * — once invisibly in the denominator, once in the "h lost" figure.
+ * - once invisibly in the denominator, once in the "h lost" figure.
  */
 export function allocatedHoursByPlan(bundles: ScheduleBundle[], term?: AcademicTerm | null): Record<string, number> {
   const out: Record<string, number> = {}
@@ -112,12 +112,12 @@ export function allocatedHoursByPlan(bundles: ScheduleBundle[], term?: AcademicT
 }
 
 /**
- * Hours of this subject that have ALREADY RUN — term start up to today.
+ * Hours of this subject that have ALREADY RUN - term start up to today.
  *
  * "Spent" is not something anyone should type either: the schedule is published,
  * so the app knows which periods have happened. Kept strictly separate from
  * coverage, which only ever moves when faculty record content. Conflating them
- * is the mistake Blueprint v6 exists to prevent — a teacher can spend ten hours
+ * is the mistake Blueprint v6 exists to prevent - a teacher can spend ten hours
  * and cover one chapter.
  */
 export function elapsedHoursByPlan(
@@ -148,7 +148,7 @@ export function elapsedHoursByPlan(
 }
 
 /**
- * Hours of this subject STILL TO COME — tomorrow up to the end of term.
+ * Hours of this subject STILL TO COME - tomorrow up to the end of term.
  *
  * Derived the same way as elapsed rather than as (allocated − spent), because
  * those two are measured differently on purpose: allocated is the full term as
@@ -184,7 +184,7 @@ export function futureHoursByPlan(
   return out
 }
 
-/** Calendar arithmetic, never UTC — see the note in syllabusPace about IST. */
+/** Calendar arithmetic, never UTC - see the note in syllabusPace about IST. */
 function nextDay(iso: string): string {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00`)
   d.setDate(d.getDate() + 1)
@@ -201,13 +201,13 @@ export interface Assignment {
 }
 
 /**
- * Who teaches what, to whom — read straight off the active timetables.
+ * Who teaches what, to whom - read straight off the active timetables.
  *
  * This is what lets the three pickers cascade from ANY starting point: choose a
  * faculty member and only their classes and subjects remain; choose a section and
  * only the subjects it is taught appear; choose a subject and only the sections
  * and staff attached to it. It also means nobody has to tell the syllabus page
- * who teaches a subject — the schedule already said.
+ * who teaches a subject - the schedule already said.
  */
 export function teachingMap(bundles: ScheduleBundle[]): Assignment[] {
   const seen = new Set<string>()
@@ -248,7 +248,7 @@ export function matching(map: Assignment[], sel: Selection): Assignment[] {
 }
 
 /**
- * Options for each picker, each computed from the OTHER two selections — so
+ * Options for each picker, each computed from the OTHER two selections - so
  * every dropdown only ever offers combinations that exist.
  */
 export function cascadeOptions(map: Assignment[], sel: Selection) {
@@ -268,7 +268,7 @@ export function teacherFor(map: Assignment[], subject: string, section: string):
 /**
  * Match a signed-in person to a name in the timetable. Staff are identified by
  * name here, so compare case- and space-insensitively and fall back to the local
- * part of their email — enough to recognise "anita.sharma@school.edu" as "Anita
+ * part of their email - enough to recognise "anita.sharma@school.edu" as "Anita
  * Sharma" without pretending to be an identity system.
  */
 export function matchStaffName(map: Assignment[], user?: { name?: string; email?: string }): string | undefined {
@@ -291,7 +291,7 @@ export interface ScheduleContext {
 }
 
 /**
- * The bundle that owns a section — pace and allocation for that section must be
+ * The bundle that owns a section - pace and allocation for that section must be
  * computed against ITS bell and ITS term, not a merged approximation.
  */
 export function contextForSection(
@@ -301,7 +301,7 @@ export function contextForSection(
 ): ScheduleContext | null {
   const b = bundles.find(x => liveSections(x).includes(section))
   if (!b) return null
-  // Pace must be measured over the same window as the hours beside it — a
+  // Pace must be measured over the same window as the hours beside it - a
   // "behind by 6 h" that was computed over the year while the hours on screen
   // were the term's would be two different questions sharing one row.
   const win = windowFor(b, term)
@@ -333,7 +333,7 @@ export function unionEntities(bundles: ScheduleBundle[]): UnionEntities {
   const scheduleOf: Record<string, string> = {}
   const subjectsBySection: Record<string, string[]> = {}
   for (const b of bundles) {
-    // Only sections the schedule currently has — see liveSections for why the
+    // Only sections the schedule currently has - see liveSections for why the
     // timetable's keys alone were showing classes the school had dropped.
     for (const s of liveSections(b)) {
       if (!sections.includes(s)) { sections.push(s); scheduleOf[s] = b.name }
@@ -355,8 +355,8 @@ export function unionEntities(bundles: ScheduleBundle[]): UnionEntities {
 }
 
 /**
- * Order class-sections the way a school lists them — Nursery before I, I before
- * II, X-A before X-B — rather than alphabetically, where "X-A" lands before
+ * Order class-sections the way a school lists them - Nursery before I, I before
+ * II, X-A before X-B - rather than alphabetically, where "X-A" lands before
  * "II-A" and nobody can find their class.
  */
 const ORDER_HINTS = ['PRE', 'NUR', 'LKG', 'UKG', 'KG', 'PREP']

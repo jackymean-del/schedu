@@ -1,6 +1,6 @@
 /**
  * Public, read-only timetable viewer at /share/<token>.
- * Fetches a self-contained snapshot from the public API — no auth, no store.
+ * Fetches a self-contained snapshot from the public API - no auth, no store.
  */
 import { useEffect, useState } from 'react'
 import { Seo } from '@/components/marketing/Seo'
@@ -13,7 +13,7 @@ export function SharedTimetablePage() {
   const [title, setTitle] = useState('Shared schedule')
   const [status, setStatus] = useState<'loading' | 'ready' | 'restricted' | 'error'>('loading')
 
-  // Email gate (restricted shares) — two steps: request code, then verify it
+  // Email gate (restricted shares) - two steps: request code, then verify it
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [gateStep, setGateStep] = useState<'email' | 'code'>('email')
@@ -79,7 +79,7 @@ export function SharedTimetablePage() {
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
-        // 429 means the code is spent — the server has deleted it, so staying
+        // 429 means the code is spent - the server has deleted it, so staying
         // on this step would leave the viewer typing into a code that can no
         // longer work. Send them back to the step that issues a new one, since
         // that is exactly what the message tells them to do.
@@ -258,7 +258,7 @@ export function SharedTimetablePage() {
                               <td key={p.id} className="border-l border-t border-[#E8E4FF] px-2 py-2 text-center align-top">
                                 {cell ? (
                                   cell.groups?.length ? (
-                                    /* A parallel cell runs more than one thing at once — an
+                                    /* A parallel cell runs more than one thing at once - an
                                        OR choice or a split class. Showing only the first
                                        teacher left the others off the timetable their own
                                        school had sent them, and sent half the class to the
@@ -281,7 +281,7 @@ export function SharedTimetablePage() {
                                     </>
                                   )
                                 ) : (
-                                  <span className="text-[#CBC6EC]">—</span>
+                                  <span className="text-[#CBC6EC]">-</span>
                                 )}
                               </td>
                             )
@@ -299,7 +299,7 @@ export function SharedTimetablePage() {
 
       <footer className="border-t border-[#F0EDFF] px-6 py-4 text-center text-[12px] text-[#6D6A8A]">
         Shared via{' '}
-        <a href="/" className="font-semibold text-[#685DBC] no-underline">schedU</a> — human-intelligence timetable scheduling
+        <a href="/" className="font-semibold text-[#685DBC] no-underline">schedU</a> - human-intelligence timetable scheduling
       </footer>
     </div>
   )

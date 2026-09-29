@@ -10,7 +10,7 @@
  * because the next row already states when the band ends.
  *
  * Three ways to head the columns, because schools describe themselves
- * differently — see VIEWS below. Everything is derived; nobody types a time.
+ * differently - see VIEWS below. Everything is derived; nobody types a time.
  */
 import { useMemo, useState } from 'react'
 import { useDialog } from '@/hooks/useDialog'
@@ -116,7 +116,7 @@ export function BellScheduleModal({
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      {/* The PANEL carries the dialog role, not the full-screen backdrop —
+      {/* The PANEL carries the dialog role, not the full-screen backdrop -
           giving it to the backdrop would tell a screen reader the dialog
           covers the whole viewport. */}
       <div {...dialogProps} style={{ width: '100%', maxWidth: 760, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)', outline: 'none' }}>
@@ -155,7 +155,7 @@ export function BellScheduleModal({
 
           {rows.length === 0 ? (
             <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
-              No bell times yet — generate a schedule and the bells come from its own timings, with nothing to type.
+              No bell times yet - generate a schedule and the bells come from its own timings, with nothing to type.
             </p>
           ) : (
             <>
@@ -163,7 +163,7 @@ export function BellScheduleModal({
                 <p style={{ fontSize: 12, color: '#6D6A8A', margin: '0 0 12px', lineHeight: 1.5 }}>
                   {active === 'block'
                     ? 'Each block runs on its own clock. A blank cell means that block has nothing running then.'
-                    : "These classes don't share a clock — early dispersal or class-wise breaks give them their own bells. A blank cell means that column has nothing running then."}
+                    : "These classes don't share a clock - early dispersal or class-wise breaks give them their own bells. A blank cell means that column has nothing running then."}
                 </p>
               )}
               <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'inherit' }}>

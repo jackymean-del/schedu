@@ -4,13 +4,13 @@
  *
  * engine-full-verify proves the invariants hold on ONE carefully built school,
  * plus a dozen hand-made edge cases. That is the right way to pin a known bug,
- * and the wrong way to answer "is it correct in every situation" — a fixture
+ * and the wrong way to answer "is it correct in every situation" - a fixture
  * only ever exercises the shape somebody thought to write down.
  *
- * So this generates schools across the whole configuration space — from a
+ * So this generates schools across the whole configuration space - from a
  * three-section primary to a saturated senior school with scarce staff, day-off
  * rules, blocked availability, room capacities, double periods, class teachers
- * and parallel groups — and machine-checks the output of each.
+ * and parallel groups - and machine-checks the output of each.
  *
  * TWO RULES make this worth running:
  *
@@ -18,7 +18,7 @@
  *     engine helper, or cellTeachers. It walks the raw classTT and rebuilds
  *     every fact from scratch. This codebase has already produced one bug where
  *     the solver's own conflict list and detectConflicts had drifted into the
- *     SAME blind spot independently — a checker sharing their code would have
+ *     SAME blind spot independently - a checker sharing their code would have
  *     agreed with both of them.
  *
  *  2. Every failure is REPRODUCIBLE. The generator is seeded, and a failing run
@@ -72,7 +72,7 @@ function generate(seed: number): Gen {
   const int = (lo: number, hi: number) => lo + Math.floor(r() * (hi - lo + 1))
 
   // Shape of the school. The ranges deliberately include the degenerate ends:
-  // one section, one work day, three periods — the sizes a real product meets
+  // one section, one work day, three periods - the sizes a real product meets
   // on day one and a fixture never covers.
   const nSections = int(1, 14)
   const nClassPeriods = int(3, 10)
@@ -100,7 +100,7 @@ function generate(seed: number): Gen {
   // Grade-prefixed names, because that is the shape day-off rules address:
   // a rule names a CLASS ("VII"), not a section, and the engine matches it
   // against the first hyphen segment. Naming sections Sec-0..Sec-n made every
-  // generated day-off rule match nothing, so the rule was never exercised —
+  // generated day-off rule match nothing, so the rule was never exercised -
   // the fixture quietly tested the absence of the feature.
   const GRADES = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
   const sections: Any[] = []
@@ -114,7 +114,7 @@ function generate(seed: number): Gen {
   }
 
   // Demand: from comfortably under capacity to slightly over it. The over case
-  // matters — a school that asks for more than fits must still get a legal
+  // matters - a school that asks for more than fits must still get a legal
   // timetable, just an incomplete one.
   const fillRatio = pick([0.35, 0.6, 0.8, 0.95, 1.0, 1.15])
   const target = Math.max(1, Math.round(capacity * fillRatio))
@@ -136,7 +136,7 @@ function generate(seed: number): Gen {
   }
 
   // Staffing: from generous to scarce. Scarcity is where a solver is most
-  // tempted to cheat — double-booking somebody to hit a target.
+  // tempted to cheat - double-booking somebody to hit a target.
   const supply = pick([0.5, 0.8, 1.0, 1.4, 2.2])
   const staff: Any[] = []
   let t = 0
@@ -168,7 +168,7 @@ function generate(seed: number): Gen {
     }
   }
 
-  // Blocked availability — a teacher genuinely unable to teach at a time.
+  // Blocked availability - a teacher genuinely unable to teach at a time.
   const teacherAvailability: Any = {}
   if (r() < 0.6) {
     for (const s of staff) {
@@ -204,7 +204,7 @@ function generate(seed: number): Gen {
   }
   for (const s of sections) sectionAdjacency[s.name] = adjacent
 
-  // Parallel groups — an OR choice ("Physics OR Chemistry") or an AND split
+  // Parallel groups - an OR choice ("Physics OR Chemistry") or an AND split
   // (two halves of a class taught at once). These pin a slot before any other
   // pass runs, so they are the one thing that can make every later pass work
   // around them, and they were the whole untested half of the engine.
@@ -233,7 +233,7 @@ function generate(seed: number): Gen {
         return { subject: sub, teacher: chosen.name, room: `Blk${b}-${i}`, capacity: int(20, 40) }
       }).filter(Boolean) as Any[]
       if (options.length < 2) continue
-      // Only sections that exist, and sometimes several — cross-section pooling.
+      // Only sections that exist, and sometimes several - cross-section pooling.
       const count = int(1, Math.min(3, sections.length))
       optionalBlocks.push({
         id: `blk${b}`, name: `Block${b}`,
@@ -245,7 +245,7 @@ function generate(seed: number): Gen {
   }
 
   // Section strengths. When present AND no blocks are authored, the engine
-  // INFERS optional blocks from them — a completely separate entry into Pass 0
+  // INFERS optional blocks from them - a completely separate entry into Pass 0
   // that authored blocks never reach.
   const sectionStrengths: Any[] = []
   if (!optionalBlocks.length && r() < 0.35) {
@@ -324,8 +324,8 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
 
   // Which sections are off on which day.
   //
-  // This implements the rule as DOCUMENTED — "classes are class-key prefixes,
-  // matched against the first hyphen/space segment of the section name" — and
+  // This implements the rule as DOCUMENTED - "classes are class-key prefixes,
+  // matched against the first hyphen/space segment of the section name" - and
   // deliberately not by calling the engine's own matcher. A verifier that
   // imports the code it is checking agrees with it by construction.
   const offOn = (section: string, day: string) => g.dayOffRules.some(rule => {
@@ -343,14 +343,14 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     })
   })
 
-  // A POOLED block is one lesson taught to several sections at once — the same
+  // A POOLED block is one lesson taught to several sections at once - the same
   // teacher, the same room, students from I-A and II-A in the room together.
   // Read from the INPUT blocks, not from the solver's output, so this stays a
   // statement about what was asked for rather than a copy of what was done.
   //
   // Without this the verifier reported every pooled block as a teacher clash
   // AND a room clash, which is the feature working exactly as designed.
-  // A block is NOT limited to its pinned slot — the engine runs it as many
+  // A block is NOT limited to its pinned slot - the engine runs it as many
   // periods a week as the subject quota needs, which on a one-day week puts two
   // instances of the same block on the same day. So a pooled lesson is
   // recognised by its SHAPE wherever it lands, not by the slot it was pinned
@@ -359,7 +359,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
   // The signature is the block's (subject, teacher) set. Two sections share a
   // lesson only when both cells carry that exact signature AND both sections
   // are listed on that block. A section the block does not name, or a cell that
-  // does not match, is still a clash — which is what keeps this a check rather
+  // does not match, is still a clash - which is what keeps this a check rather
   // than a blanket amnesty for anything parallel.
   const sigOf = (opts: Any[]) =>
     opts.map((o: Any) => `${(o.subject ?? '').trim()}~${(o.teacher ?? '').trim()}`).sort().join('|')
@@ -375,7 +375,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
   /**
    * Are these sections one pooled lesson at this slot?
    *
-   * Yes when every one of them carries the IDENTICAL parallel signature — the
+   * Yes when every one of them carries the IDENTICAL parallel signature - the
    * same subjects taught by the same people. That is one lesson with students
    * from several classes in it, which is what pooling means, and it is the
    * honest reading whether the block was authored or inferred from the
@@ -429,7 +429,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
         // Record this cell's parallel-group signature, if it has one.
         //
         // Both shapes, because a cell carries its parallel options in EITHER
-        // `groupAssignments` (OR/AND groups) or `options` (optional blocks) —
+        // `groupAssignments` (OR/AND groups) or `options` (optional blocks) -
         // and Pass 0, which is what pins a pooled block, writes the second one.
         // Reading only the first made every pooled lesson look like a clash.
         const parallel = [...(c.groupAssignments ?? []), ...(c.options ?? [])]
@@ -452,17 +452,17 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
         }
 
         for (const o of occ) {
-          // V3 — the teacher must exist and actually teach the subject.
+          // V3 - the teacher must exist and actually teach the subject.
           const st = staffByName.get(o.teacher)
           if (!st) { add('V9-ghost-teacher', `${section} ${day} ${pid}: unknown teacher ${o.teacher}`); continue }
           if (o.subject && !(st.subjects ?? []).includes(o.subject)) {
             add('V3-eligibility', `${o.teacher} assigned ${o.subject} in ${section} but teaches ${JSON.stringify(st.subjects)}`)
           }
-          // V6 — a blocked slot is a slot the teacher cannot work.
+          // V6 - a blocked slot is a slot the teacher cannot work.
           if (g.teacherAvailability?.[o.teacher]?.[day]?.[pid] === 'blocked') {
             add('V6-blocked', `${o.teacher} teaches ${section} ${day} ${pid} while blocked`)
           }
-          // V1 — one teacher, one place.
+          // V1 - one teacher, one place.
           const perSlot = busy.get(slotKey) ?? new Map<string, string[]>()
           const where = perSlot.get(o.teacher) ?? []
           where.push(section)
@@ -470,7 +470,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
           busy.set(slotKey, perSlot)
         }
 
-        // V8 — one room, one class.
+        // V8 - one room, one class.
         for (const o of occ) {
           if (!o.room) continue
           const perRoom = roomUse.get(slotKey) ?? new Map<string, Set<string>>()
@@ -480,7 +480,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
           roomUse.set(slotKey, perRoom)
         }
 
-        // V11 — count placements per (section, subject) to catch OVER-supply.
+        // V11 - count placements per (section, subject) to catch OVER-supply.
         const subs = groups.length
           ? groups.map((x: Any) => x.subject).filter(Boolean)
           : [c.subject]
@@ -495,7 +495,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
-  // V1 — report any teacher in two sections at one moment.
+  // V1 - report any teacher in two sections at one moment.
   for (const [slot, perSlot] of busy) {
     for (const [teacher, where] of perSlot) {
       const distinct = [...new Set(where)]
@@ -505,13 +505,13 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
-  // V8 — two different classes in one room at one moment.
+  // V8 - two different classes in one room at one moment.
   for (const [slot, perRoom] of roomUse) {
     for (const [room, secs] of perRoom) {
       if (secs.size > 1 && !isPooled(slot, [...secs])) {
         // A room clash is not automatically a bug. pickRoom resolves what it
         // can and, where no free room exists, deliberately places the lesson
-        // in the home room anyway rather than dropping it — on the condition,
+        // in the home room anyway rather than dropping it - on the condition,
         // stated in its own comment, that the result is FLAGGED.
         //
         // So the invariant is not "never clashes"; it is "never clashes
@@ -526,7 +526,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
-  // V11 — never schedule MORE of a subject than was asked for. Under is a
+  // V11 - never schedule MORE of a subject than was asked for. Under is a
   // shortfall the engine reports honestly; over is the engine inventing work.
   for (const [sec, row] of Object.entries(g.subjectAllocations)) {
     for (const [sub, spec] of Object.entries(row)) {
@@ -536,7 +536,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
-  // V7 — teacherTT must agree with classTT, in both directions.
+  // V7 - teacherTT must agree with classTT, in both directions.
   const teacherTT = out.teacherTT ?? {}
   for (const [tname, rec] of Object.entries(teacherTT as Any)) {
     for (const [day, slots] of Object.entries((rec as Any).schedule ?? {})) {
@@ -550,7 +550,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
-  // V12 — a multi-period block must not straddle a break.
+  // V12 - a multi-period block must not straddle a break.
   const adjacency = new Set(g.sectionAdjacency?.[g.sections[0]?.name] ?? [])
   const orderedClassIds = g.periods.filter(p => p.type === 'class').map(p => p.id)
   for (const [section, days] of Object.entries(classTT)) {
@@ -576,7 +576,7 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
 //
 // A checker that silently passes everything is worse than no checker: it
 // reports a clean bill of health on every run and nobody looks again. So
-// before checking the engine, the verifier is checked — each rule is handed
+// before checking the engine, the verifier is checked - each rule is handed
 // output it MUST reject, and the run aborts if any rule stays quiet.
 //
 // This is not hypothetical. Injecting a double-booking into one of the
@@ -596,7 +596,7 @@ function selfTest(): void {
   const expect = (rule: string, out: Any, why: string) => {
     const hits = verify(g, out).filter(v => v.rule.startsWith(rule))
     if (!hits.length) {
-      console.log(`✗ VERIFIER BROKEN: ${rule} did not fire — ${why}`)
+      console.log(`✗ VERIFIER BROKEN: ${rule} did not fire - ${why}`)
       process.exit(2)
     }
   }
@@ -662,7 +662,7 @@ function selfTest(): void {
     out.classTT[sec][day][pids[0]] = { subject: sub, teacher: who, room: 'RA' }
     const hits = verify(g2, out).filter(v => v.rule.startsWith('V6'))
     if (!hits.length) {
-      console.log('✗ VERIFIER BROKEN: V6 did not fire — a lesson in a blocked slot')
+      console.log('✗ VERIFIER BROKEN: V6 did not fire - a lesson in a blocked slot')
       process.exit(2)
     }
   }
@@ -689,7 +689,7 @@ function selfTest(): void {
       }
       const hits = verify(gb, out).filter(v => v.rule.startsWith('V1'))
       if (!hits.length) {
-        console.log('✗ VERIFIER BROKEN: V1 did not fire — a block teacher also teaching a section off the block')
+        console.log('✗ VERIFIER BROKEN: V1 did not fire - a block teacher also teaching a section off the block')
         process.exit(2)
       }
     }
@@ -705,7 +705,7 @@ function selfTest(): void {
       for (const sn of blk.sectionNames) out.classTT[sn] = { [blk.day]: { [blk.periodId]: cell } }
       const hits = verify(gb, out).filter(v => v.rule.startsWith('V1') || v.rule.startsWith('V8'))
       if (hits.length) {
-        console.log('✗ VERIFIER TOO STRICT: a genuinely pooled block was reported — ' + hits[0].detail)
+        console.log('✗ VERIFIER TOO STRICT: a genuinely pooled block was reported - ' + hits[0].detail)
         process.exit(2)
       }
     }
@@ -722,7 +722,7 @@ console.log(`Stress: ${RUNS} generated schools from seed ${BASE_SEED}\n`)
 const tally = new Map<string, number>()
 // What each run actually EXERCISED. A generator that quietly stopped producing
 // day-off rules, or class teachers, or scarcity, would go on passing forever
-// while testing less and less — which is the failure mode this whole file
+// while testing less and less - which is the failure mode this whole file
 // exists to avoid, so it is measured rather than assumed.
 const covered = new Map<string, number>()
 const cover = (k: string) => covered.set(k, (covered.get(k) ?? 0) + 1)
@@ -737,7 +737,7 @@ for (let i = 0; i < RUNS; i++) {
   try {
     g = generate(seed)
   } catch (e: Any) {
-    console.log(`✗ seed ${seed}: generator threw — ${e?.message}`)
+    console.log(`✗ seed ${seed}: generator threw - ${e?.message}`)
     failedRuns++
     continue
   }
@@ -758,7 +758,7 @@ for (let i = 0; i < RUNS; i++) {
       sectionStrengths: g.sectionStrengths,
     } as Any)
   } catch (e: Any) {
-    console.log(`✗ seed ${seed} (${g.label}): SOLVER THREW — ${e?.message}`)
+    console.log(`✗ seed ${seed} (${g.label}): SOLVER THREW - ${e?.message}`)
     console.log(`   replay: npx tsx engine-stress-verify.mts 1 ${seed}`)
     failedRuns++
     continue
@@ -813,7 +813,7 @@ for (let i = 0; i < RUNS; i++) {
   //
   // reoptimizeTeachers rewrites WHO teaches each lesson to even out staff load.
   // It moves the one thing every invariant here depends on, so a bug in it is
-  // a bug in the finished timetable — and it was outside this loop entirely.
+  // a bug in the finished timetable - and it was outside this loop entirely.
   // The SAME verifier runs over its output: a redistribution that creates a
   // double-booking has not improved anything.
   if (out.classTT && Object.keys(out.classTT).length && r0() < 0.5) {
@@ -834,19 +834,19 @@ for (let i = 0; i < RUNS; i++) {
       const reViolations = verify(g, { classTT: re.classTT, teacherTT: {} }, reReported)
       if (reViolations.length) {
         failedRuns++
-        console.log(`✗ seed ${seed} (${g.label}) — ${reViolations.length} violation(s) AFTER re-optimise`)
+        console.log(`✗ seed ${seed} (${g.label}) - ${reViolations.length} violation(s) AFTER re-optimise`)
         for (const x of reViolations.slice(0, 6)) console.log(`    ${x.rule}: ${x.detail}`)
         console.log(`   replay: npx tsx engine-stress-verify.mts 1 ${seed}`)
         for (const x of reViolations) tally.set('reopt/' + x.rule, (tally.get('reopt/' + x.rule) ?? 0) + 1)
       }
     } catch (e: Any) {
       failedRuns++
-      console.log(`✗ seed ${seed}: RE-OPTIMISER THREW — ${e?.message}`)
+      console.log(`✗ seed ${seed}: RE-OPTIMISER THREW - ${e?.message}`)
     }
   }
 
   // detectConflicts is asked only whether it ADMITS to what this verifier
-  // already found on its own — never to do the finding.
+  // already found on its own - never to do the finding.
   let reported: Any[] = []
   try {
     reported = detectConflicts(out.classTT, g.periods as Any,
@@ -855,7 +855,7 @@ for (let i = 0; i < RUNS; i++) {
   const violations = verify(g, out, reported)
   if (violations.length) {
     failedRuns++
-    console.log(`✗ seed ${seed} (${g.label}) — ${violations.length} violation(s)`)
+    console.log(`✗ seed ${seed} (${g.label}) - ${violations.length} violation(s)`)
     for (const x of violations.slice(0, 6)) console.log(`    ${x.rule}: ${x.detail}`)
     if (violations.length > 6) console.log(`    …and ${violations.length - 6} more`)
     console.log(`   replay: npx tsx engine-stress-verify.mts 1 ${seed}`)
@@ -888,7 +888,7 @@ for (const w of WANTED) {
 }
 if (missed.length) {
   console.log('')
-  console.log(missed.length + ' situation(s) never generated — raise the run count or fix the generator')
+  console.log(missed.length + ' situation(s) never generated - raise the run count or fix the generator')
 }
 
 const bad = failedRuns > 0 || missed.length > 0

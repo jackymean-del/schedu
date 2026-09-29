@@ -1,8 +1,8 @@
 /**
- * SubstitutionSettingsModal — how Calendar ranks and auto-picks substitutes.
+ * SubstitutionSettingsModal - how Calendar ranks and auto-picks substitutes.
  * Opened from the Calendar page's gear icon. Four collapsible sections so the
  * default view stays light: Auto-Suggestions, Scoring Priorities, Default
- * Limits, and Faculty Settings (the long one — collapsed by default).
+ * Limits, and Faculty Settings (the long one - collapsed by default).
  */
 import { useState } from 'react'
 import { useDialog } from '@/hooks/useDialog'
@@ -193,7 +193,7 @@ function Section({ title, icon, open, onToggle, badge, children }: {
   return (
     // flexShrink: 0 because the scroll container is a column flexbox: without
     // it every card is squeezed to fit the panel instead of the panel
-    // scrolling, and `overflow: hidden` then cuts the bottom off each one —
+    // scrolling, and `overflow: hidden` then cuts the bottom off each one -
     // "Max Suggestions to Show" and the Default Limits steppers vanished.
     <div style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
       <button onClick={onToggle} style={{

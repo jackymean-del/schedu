@@ -1,5 +1,5 @@
 /**
- * Reports & Analytics — derived entirely from data we already keep, no new
+ * Reports & Analytics - derived entirely from data we already keep, no new
  * logging layer. Every leave record is dated, so from a leave we can look up
  * the absent teacher's periods that day and check the substitution map to
  * learn, per date: which periods were covered (a substitute) and which were
@@ -69,7 +69,7 @@ export function rangeFor(preset: string, today = new Date()): DateRange {
   }
 }
 
-/** One schedule's data — Reports expands leaves against every source, so
+/** One schedule's data - Reports expands leaves against every source, so
  *  multiple active schedules aggregate while leaves are counted once. */
 export interface ReportSource {
   sections: any[]; periods: any[]; classTT: Record<string, any>
@@ -107,7 +107,7 @@ export function computeReports(params: {
 
   // Per-source period → wall-clock minutes (each schedule has its own bell).
   const srcTimes = sources.map(src => {
-    // The schedule's own bell, not a running total of durations — a day with
+    // The schedule's own bell, not a running total of durations - a day with
     // an assembly or a lunch row is longer than its teaching periods add up
     // to, and every figure after one lands early otherwise. Falls back to the
     // same cumulative sum when a schedule has no bell rows.
@@ -140,7 +140,7 @@ export function computeReports(params: {
   const schoolDates = dates.filter(iso =>
     teachingDays.has(DAY_KEY[new Date(iso + 'T00:00:00').getDay()].slice(0, 3)) && !closed.has(iso))
 
-  // Leave records touching the range — counted ONCE (schedule-independent).
+  // Leave records touching the range - counted ONCE (schedule-independent).
   const rangedLeaves = leaves.filter(l => dates.some(d => leaveCoversDate(l, d)))
   const leaveTypeMap = new Map<string, number>()
   const facultyOnLeave = new Set<string>()
@@ -153,7 +153,7 @@ export function computeReports(params: {
   }
 
   // Expand every leave into the periods it affects, per date, ACROSS all
-  // sources — a leave hits whichever schedule the teacher actually teaches in.
+  // sources - a leave hits whichever schedule the teacher actually teaches in.
   const events: AffectedEvent[] = []
   for (const l of rangedLeaves) {
     for (const date of dates) {
@@ -190,14 +190,14 @@ export function computeReports(params: {
   const covered = events.filter(e => e.substitute)
   const cancelled = events.filter(e => !e.substitute)
 
-  // Trends — leaves + substitutes per date across the range.
+  // Trends - leaves + substitutes per date across the range.
   const trends: TrendPoint[] = dates.map(date => ({
     date,
     leaves: rangedLeaves.filter(l => leaveCoversDate(l, date)).length,
     substitutes: covered.filter(e => e.date === date).length,
   }))
 
-  // Faculty stats — leave days + coverage taken on for others.
+  // Faculty stats - leave days + coverage taken on for others.
   const facMap = new Map<string, FacultyStat>()
   const fac = (name: string) => {
     if (!facMap.has(name)) facMap.set(name, { name, leaveDays: 0, periodsMissed: 0, periodsCovered: 0, periodsAsSub: 0 })

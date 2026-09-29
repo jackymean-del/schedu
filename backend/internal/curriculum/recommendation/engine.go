@@ -31,7 +31,7 @@ func NewEngine(tplSvc *templates.Service, ovrSvc *overrides.Service) *Engine {
 }
 
 // Recommend returns the merged subject list for the given parameters.
-// schoolID may be empty — in that case no overrides are applied.
+// schoolID may be empty - in that case no overrides are applied.
 func (e *Engine) Recommend(
 	ctx context.Context,
 	board curriculum.Board,

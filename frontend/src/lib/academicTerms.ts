@@ -1,7 +1,7 @@
 /**
- * ACADEMIC TERMS — the year split into the periods a school actually reports on.
+ * ACADEMIC TERMS - the year split into the periods a school actually reports on.
  *
- * (Not to be confused with lib/terms, which is the institution's naming words —
+ * (Not to be confused with lib/terms, which is the institution's naming words -
  * Class vs Batch vs Cohort. This is Term 1 / Term 2 / Term 3.)
  *
  * Until now a schedule ran over one date range and every hours figure covered
@@ -10,7 +10,7 @@
  * should be by the end of Term 1?". A subject can be comfortably on track for
  * the year and badly behind for the term whose exam is in three weeks.
  *
- * Terms sit alongside holidays (lib/holidays) — the same kind of fact, declared
+ * Terms sit alongside holidays (lib/holidays) - the same kind of fact, declared
  * once for the school by an administrator, applying to every schedule.
  *
  * TWO DELIBERATE CHOICES
@@ -89,7 +89,7 @@ export const useAcademicTerms = create<AcademicTermState>()(
 /**
  * The part of `scheduleRange` that falls inside `term`.
  *
- * Returns null when the two don't overlap — the caller should then count
+ * Returns null when the two don't overlap - the caller should then count
  * nothing for that schedule rather than falling back to its full range, which
  * would report a whole year's hours under a term the schedule never ran in.
  *
@@ -129,7 +129,7 @@ export function defaultTerm(terms: AcademicTerm[], isoDate: string): AcademicTer
 /**
  * Terms that overlap each other, as adjacent pairs.
  *
- * Overlaps are not rejected outright — a school mid-edit will briefly have them
+ * Overlaps are not rejected outright - a school mid-edit will briefly have them
  * and refusing the keystroke is worse than saying so. But a date inside two
  * terms makes "hours this term" ambiguous, so the UI warns.
  */
@@ -142,7 +142,7 @@ export function overlappingTerms(terms: AcademicTerm[]): Array<[AcademicTerm, Ac
   return out
 }
 
-/** Days between consecutive terms — usually the break, surfaced so a school can
+/** Days between consecutive terms - usually the break, surfaced so a school can
  *  tell an intended holiday from a mistyped date. */
 export function termGaps(
   terms: AcademicTerm[],

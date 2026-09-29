@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Ported from frontend/src/index.css — marketing-relevant rules only. The
+/* Ported from frontend/src/index.css - marketing-relevant rules only. The
    original file also carries the product app's reset/print/DataGrid/wizard
    styles, which have no matching elements on this site and are left out.
    `transition-all`/`transition-colors` are pinned to the SAME subset of
@@ -27,7 +27,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
   50%      { transform: translateY(-8px); }
 }
 
-/* Universal interactive element feedback — filter composites the whole
+/* Universal interactive element feedback - filter composites the whole
    element, so it works even with inline background styles. */
 button, [role="button"] {
   cursor: pointer;

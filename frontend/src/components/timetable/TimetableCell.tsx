@@ -128,7 +128,7 @@ export function TimetableCell({
   if (!cell?.subject) {
     return (
       <div className="bg-gray-50 text-gray-400 rounded text-[9.5px] px-1.5 py-1 min-h-[28px] flex items-center justify-center italic">
-        —
+        -
       </div>
     )
   }
@@ -156,7 +156,7 @@ export function TimetableCell({
     )
   }
 
-  // Single subject — original behaviour
+  // Single subject - original behaviour
   const colorClass = getSubjectColor(cell.subject)
   return (
     <div

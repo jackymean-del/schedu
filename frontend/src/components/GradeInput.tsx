@@ -1,5 +1,5 @@
 /**
- * GradeInput — a smart autocomplete input for class/grade range fields.
+ * GradeInput - a smart autocomplete input for class/grade range fields.
  *
  * Detects the naming prefix the user is typing (Class, Grade, Std, Form,
  * Year, …) and shows matching numbered suggestions (roman & arabic). Falls
@@ -37,7 +37,7 @@ function buildSuggestions(value: string): string[] {
   const preMatch = PRE_PRIMARY.filter(p => p.toLowerCase().startsWith(lower))
   if (preMatch.length) return preMatch
 
-  // Prefix match — generate roman + arabic variants
+  // Prefix match - generate roman + arabic variants
   for (const { test, label } of PREFIXES) {
     if (test.test(v)) {
       const sep = v.includes(' ') ? ' ' : '-'

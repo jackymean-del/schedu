@@ -1,10 +1,10 @@
 /**
- * TeacherAvailabilityEditor — pre-solve per-teacher slot availability matrix.
+ * TeacherAvailabilityEditor - pre-solve per-teacher slot availability matrix.
  *
  * Three-state toggle for each (day × period) cell:
- *   ○ available  — default, no entry stored (white)
- *   ★ preferred  — soft bonus: solver prefers scheduling here (green)
- *   ✕ blocked    — hard constraint: solver NEVER places a lesson here (red)
+ *   ○ available  - default, no entry stored (white)
+ *   ★ preferred  - soft bonus: solver prefers scheduling here (green)
+ *   ✕ blocked    - hard constraint: solver NEVER places a lesson here (red)
  *
  * Clicking cycles: available → preferred → blocked → available.
  * Shift+click on a day header  → toggle-block the entire column.
@@ -326,7 +326,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
               </button>
 
               <span style={{ fontSize: 15, fontWeight: 800, color: '#13111E', flex: 1 }}>
-                {selectedTeacher?.name ?? '—'}
+                {selectedTeacher?.name ?? '-'}
               </span>
 
               <button
@@ -423,7 +423,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
 
                   return (
                     <tr key={period.id}>
-                      {/* Period label — shift+click blocks/unblocks entire row */}
+                      {/* Period label - shift+click blocks/unblocks entire row */}
                       <td
                         onClick={e => handlePeriodRowClick(period.id, e.shiftKey)}
                         title="Shift+click to toggle-block entire period row"
@@ -445,7 +445,7 @@ export function TeacherAvailabilityEditor({ staff, periods, workDays, onClose }:
                           <td
                             key={day}
                             onClick={e => handleSlotClick(day, period.id, e.shiftKey)}
-                            title={`${selectedTeacher?.name} · ${day} · ${period.name} — click to change`}
+                            title={`${selectedTeacher?.name} · ${day} · ${period.name} - click to change`}
                             style={{
                               padding: 4,
                               border: `1px solid ${st.border}`,

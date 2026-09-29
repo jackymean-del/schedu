@@ -1,5 +1,5 @@
 /**
- * AllocationReportModal — Printable A4 allocation reports.
+ * AllocationReportModal - Printable A4 allocation reports.
  *
  * Four view tabs available in BOTH periods and teacher modes:
  *   Class-wise | Subject-wise | Teacher-wise | Room-wise
@@ -8,7 +8,7 @@
  * Multi-select: click chips to toggle. "All" clears the filter.
  *
  * Print/PDF uses CSS head-injection (visibility: hidden on body *,
- * visibility: visible on .print-report-overlay *) — works regardless of
+ * visibility: visible on .print-report-overlay *) - works regardless of
  * how deeply the modal is nested inside #root.
  */
 
@@ -16,7 +16,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { safeSheetName } from '@/lib/sheetNames'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { useDialog } from '@/hooks/useDialog'
-// xlsx is loaded on demand (export click) — keeps it out of the main bundle
+// xlsx is loaded on demand (export click) - keeps it out of the main bundle
 import { useTimetableStore } from '@/store/timetableStore'
 import type { Section, Subject, Staff } from '@/types'
 import { parseAllocation } from '@/lib/allocationSyntax'
@@ -46,7 +46,7 @@ function toHourMin(periods: number, periodMinutes: number): string {
 }
 
 function fmtPeriods(p: number, displayMode: 'periods' | 'hours', periodMinutes: number) {
-  if (p === 0) return '—'
+  if (p === 0) return '-'
   return displayMode === 'hours' ? toHourMin(p, periodMinutes) : String(p)
 }
 
@@ -105,7 +105,7 @@ const tdNum: React.CSSProperties = { ...tdStyle, textAlign: 'right', fontFamily:
  * "I-A" → "I", "Nursery-B" → "Nursery", "XI-Sci-A" → "XI-Sci".
  *
  * Only used where the caller says the names carry that structure (see
- * `groupLabel`), never inferred — a teacher called "Anne-Marie" must not
+ * `groupLabel`), never inferred - a teacher called "Anne-Marie" must not
  * become a group.
  */
 function groupOf(item: string): string | null {
@@ -122,7 +122,7 @@ const MAX_CHIPS = 40
  * A two-level filter: pick classes, then optionally narrow to sections.
  *
  * With two sections one row of chips was fine. With forty it was a horizontal
- * scroll strip — you could not see what existed, let alone reach "VIII-C".
+ * scroll strip - you could not see what existed, let alone reach "VIII-C".
  *
  * The top row is the one people actually want: CLASS. Pick one, several, or
  * All. Sections below then offer only what those classes contain, so choosing
@@ -197,7 +197,7 @@ function FilterBar({
 
   const clearAll = () => { setGroups(new Set()); setFilter(new Set()); setQ('') }
 
-  /** Sections covered by a set of classes — this IS what the table filters on,
+  /** Sections covered by a set of classes - this IS what the table filters on,
    *  so picking a class narrows the report immediately rather than only
    *  narrowing which chips are offered. */
   const membersOf = (gs: Set<string>) =>
@@ -265,7 +265,7 @@ function FilterBar({
         ))}
 
         {hidden > 0 && (
-          <span style={{ fontSize: 9.5, color: '#6D6A8A' }}>+{hidden} more — type to narrow</span>
+          <span style={{ fontSize: 9.5, color: '#6D6A8A' }}>+{hidden} more - type to narrow</span>
         )}
         {needle && shown.length === 0 && (
           <span style={{ fontSize: 9.5, color: '#6D6A8A' }}>Nothing matches “{q}”.</span>
@@ -467,7 +467,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
     a.click(); URL.revokeObjectURL(url)
   }, [buildExportData, title, activeTab])
 
-  // ── Print: CSS head-injection — works regardless of DOM nesting depth ─────────
+  // ── Print: CSS head-injection - works regardless of DOM nesting depth ─────────
   // Injects @media print with visibility:hidden on body* / visible on overlay*.
   // Cleaned up via afterprint event (fallback: 8 s timeout).
   const handlePrint = useCallback(() => {
@@ -549,7 +549,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', border: 'none', background: '#F8F7FF', color: '#0369A1', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', borderRight: '1px solid #DDD8FF' }}>
               <FileCsvIcon size={13} /> CSV
             </button>
-            <button onClick={handlePrint} title="Print / Save as PDF — A4 portrait & landscape"
+            <button onClick={handlePrint} title="Print / Save as PDF - A4 portrait & landscape"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', border: 'none', background: '#685DBC', color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Printer size={13} /> Print / PDF
             </button>
@@ -578,7 +578,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
         {/* ── Report body ── */}
         <div style={{ padding: '20px' }}>
 
-          {/* Print title — visible only on printed page */}
+          {/* Print title - visible only on printed page */}
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#13111E', margin: '0 0 2px' }}>{title}</h2>
             <div style={{ fontSize: 11, color: '#6D6A8A' }}>
@@ -685,7 +685,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                           </td>
                           <td style={{ ...tdStyle, fontSize: 11, color: '#4B5275' }}>
                             {activeSections.length === 0 ? (
-                              <span style={{ color: '#D1D5DB' }}>—</span>
+                              <span style={{ color: '#D1D5DB' }}>-</span>
                             ) : (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                 {activeSections.map(([sec, p]) => (
@@ -749,7 +749,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                           </td>
                           <td style={{ ...tdNum, color: '#6D6A8A' }}>{fmtPeriods(row.max, displayMode, periodMinutes)}</td>
                           <td style={{ ...tdNum, color: isOver ? '#DC2626' : row.utilisation >= 85 ? '#15803D' : '#4B5275' }}>
-                            {row.max > 0 ? `${row.utilisation}%` : '—'}
+                            {row.max > 0 ? `${row.utilisation}%` : '-'}
                           </td>
                           <td style={{ ...tdNum }}>{row.subjects}</td>
                           <td style={{ ...tdNum }}>{row.sections}</td>
@@ -796,7 +796,7 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
             <div>
               {storeRooms.length === 0 ? (
                 <div style={{ padding: '40px 0', textAlign: 'center', color: '#B8B4D4', fontSize: 13 }}>
-                  No rooms configured yet — add rooms in the Resources step.
+                  No rooms configured yet - add rooms in the Resources step.
                 </div>
               ) : (
                 <>
@@ -827,10 +827,10 @@ export function AllocationReportModal({ mode, onClose, displayMode = 'periods', 
                                 <span style={{ padding: '1px 7px', borderRadius: 6, fontSize: 10, background: '#F0EDFF', color: '#685DBC', fontWeight: 700 }}>
                                   {row.roomType}
                                 </span>
-                              ) : <span style={{ color: '#D1D5DB' }}>—</span>}
+                              ) : <span style={{ color: '#D1D5DB' }}>-</span>}
                             </td>
-                            <td style={{ ...tdNum }}>{row.capacity > 0 ? row.capacity : <span style={{ color: '#D1D5DB' }}>—</span>}</td>
-                            <td style={{ ...tdNum }}>{row.subjectCount || <span style={{ color: '#D1D5DB' }}>—</span>}</td>
+                            <td style={{ ...tdNum }}>{row.capacity > 0 ? row.capacity : <span style={{ color: '#D1D5DB' }}>-</span>}</td>
+                            <td style={{ ...tdNum }}>{row.subjectCount || <span style={{ color: '#D1D5DB' }}>-</span>}</td>
                             <td style={{ ...tdNum, fontWeight: 800, color: row.totalPeriods > 0 ? '#685DBC' : '#D1D5DB' }}>
                               {fmtPeriods(row.totalPeriods, displayMode, periodMinutes)}
                             </td>

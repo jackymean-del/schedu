@@ -1,7 +1,7 @@
 /**
  * MOVING SCHOOL FACTS OUT OF PERSONAL STORAGE.
  *
- * Several things were written to `<key>:<uid>` — keyed by whoever was signed in
+ * Several things were written to `<key>:<uid>` - keyed by whoever was signed in
  * when they were typed. That is right for a personal preference and wrong for
  * everything else, and almost everything stored this way turned out to be a
  * fact about the school:
@@ -13,7 +13,7 @@
  * The failure is quiet and identical every time. The principal records it, the
  * vice principal signs in and the school looks untouched; the corridor display
  * and the Live board show one administrator's view of the day. Nobody gets an
- * error — the data is simply somewhere else.
+ * error - the data is simply somewhere else.
  *
  * This module holds the two things every one of those migrations needs, so the
  * fifth one isn't a fifth copy of the same twenty lines.
@@ -34,7 +34,7 @@ export function legacyKeysFor(baseKey: string, storage: Storage): string[] {
  *
  * `identity` decides what counts as the same record. Two administrators who
  * each marked the same teacher absent on the same day produced two rows with
- * different random ids, and the school should see that day once — so identity
+ * different random ids, and the school should see that day once - so identity
  * is usually the meaning of the record, not its id. Ids are also honoured, so
  * a record genuinely copied between accounts collapses too.
  *
@@ -49,7 +49,7 @@ export function migrateLegacyLists<T extends { id?: string }>(opts: {
   current: T[]
   /** Stable description of what a record MEANS, for de-duplication. */
   identity: (item: T) => string
-  /** Applied to every migrated record — e.g. defaulting a field that did not
+  /** Applied to every migrated record - e.g. defaulting a field that did not
    *  exist before, without changing what the school already sees. */
   adopt?: (item: T) => T
   /** Called with the merged list when there was anything to move. */
@@ -66,7 +66,7 @@ export function migrateLegacyLists<T extends { id?: string }>(opts: {
       try {
         const parsed = JSON.parse(storage.getItem(k) || '[]')
         if (Array.isArray(parsed)) lists.push(parsed)
-      } catch { /* unreadable — skip rather than lose the rest */ }
+      } catch { /* unreadable - skip rather than lose the rest */ }
     }
 
     const merged = mergeById(identity, adopt, current, ...lists)
@@ -104,7 +104,7 @@ export function mergeById<T extends { id?: string }>(
 }
 
 /**
- * The single-object variant — for settings rather than lists.
+ * The single-object variant - for settings rather than lists.
  *
  * Where two administrators disagree there is no honest merge, so the rule is
  * stated rather than guessed: the FIRST account's value wins (keys are sorted,

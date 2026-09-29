@@ -1,16 +1,16 @@
 /**
- * SubjectGroupsSection — OR / AND (Parallel Split) subject-combo configurator
+ * SubjectGroupsSection - OR / AND (Parallel Split) subject-combo configurator
  *
- * OR  → "PHY OR CHEM OR BIO"  — ONE subject runs in the slot, for the WHOLE
+ * OR  → "PHY OR CHEM OR BIO"  - ONE subject runs in the slot, for the WHOLE
  *        class. Which one is decided by syllabus coverage: whichever subject is
  *        further behind takes the period (lib/orChoice), unless a teacher says
  *        otherwise for a given day.
- * AND → "PHY AND CHEM AND BIO" — all subjects in parallel, same slot, students
+ * AND → "PHY AND CHEM AND BIO" - all subjects in parallel, same slot, students
  *        split into groups.
  *
  * THE RULE THAT SEPARATES THEM: an OR group may only contain subjects EVERY
  * student in the class takes. It is a choice about which subject the class does
- * today, not about which students go where — that is what AND is for, and what
+ * today, not about which students go where - that is what AND is for, and what
  * optional blocks are for.
  *
  * This was stated in lib/orChoice and enforced nowhere: invalidOrSubjects
@@ -34,7 +34,7 @@ type SuggestionTemplate = {
   reason: string
 }
 
-/** Keyword clusters — each entry can emit OR, AND, or both suggestions */
+/** Keyword clusters - each entry can emit OR, AND, or both suggestions */
 const PATTERN_CLUSTERS: Array<{
   keywords:  string[]
   logic:     'OR' | 'AND' | 'BOTH'
@@ -49,7 +49,7 @@ const PATTERN_CLUSTERS: Array<{
     logic:     'AND',
     andLabel:  'Lab / Practical Parallel Split',
     orReason:  '',
-    andReason: 'Lab and practical groups run simultaneously — students split into separate rooms in the same slot',
+    andReason: 'Lab and practical groups run simultaneously - students split into separate rooms in the same slot',
   },
   // ── Science subjects → OR rotation + AND lab-split ───────────────────────
   {
@@ -57,8 +57,8 @@ const PATTERN_CLUSTERS: Array<{
     logic:     'BOTH',
     orLabel:   'Science Elective Rotation',
     andLabel:  'Science Lab Parallel Split',
-    orReason:  'Science electives rotate — one subject runs per slot based on teacher availability',
-    andReason: 'Students divide into groups — physics, chemistry, and biology labs run simultaneously in the same period',
+    orReason:  'Science electives rotate - one subject runs per slot based on teacher availability',
+    andReason: 'Students divide into groups - physics, chemistry, and biology labs run simultaneously in the same period',
   },
   // ── Arts subjects → OR rotation + AND activity split ─────────────────────
   {
@@ -66,7 +66,7 @@ const PATTERN_CLUSTERS: Array<{
     logic:     'BOTH',
     orLabel:   'Arts & Co-curricular Rotation',
     andLabel:  'Arts Activity Parallel Split',
-    orReason:  'Co-curricular subjects rotate — students attend their chosen activity in a shared slot',
+    orReason:  'Co-curricular subjects rotate - students attend their chosen activity in a shared slot',
     andReason: 'Students are pre-divided into arts groups (music/art/dance) that run simultaneously',
   },
   // ── PE / activity subjects → OR rotation + AND parallel groups ────────────
@@ -83,7 +83,7 @@ const PATTERN_CLUSTERS: Array<{
     keywords:  ['french', 'german', 'spanish', 'japanese', 'arabic', 'persian', 'sanskrit', 'chinese', 'mandarin'],
     logic:     'OR',
     orLabel:   'Foreign / Classical Language Options',
-    orReason:  'Students choose one optional language — subjects rotate in the same language period',
+    orReason:  'Students choose one optional language - subjects rotate in the same language period',
   },
   // ── Commerce → OR rotation + AND parallel split ───────────────────────────
   {
@@ -92,7 +92,7 @@ const PATTERN_CLUSTERS: Array<{
     orLabel:   'Commerce Elective Rotation',
     andLabel:  'Commerce Parallel Split',
     orReason:  'Commerce optional subjects rotate in a shared slot',
-    andReason: 'Students divide into commerce groups — accountancy, economics, and business studies run simultaneously',
+    andReason: 'Students divide into commerce groups - accountancy, economics, and business studies run simultaneously',
   },
   // ── Humanities → OR rotation + AND parallel split ─────────────────────────
   {
@@ -108,7 +108,7 @@ const PATTERN_CLUSTERS: Array<{
     keywords:  ['computer science', 'information technology', 'informatics', 'computer application', 'artificial intelligence', 'data science'],
     logic:     'OR',
     orLabel:   'Computing Options',
-    orReason:  'Computing variants share the same slot — one runs per period',
+    orReason:  'Computing variants share the same slot - one runs per period',
   },
 ]
 
@@ -130,7 +130,7 @@ function generateSuggestions(
    * Never suggest what the modal would refuse.
    *
    * These clusters were written around "students choose one optional language"
-   * — an OR group of optional subjects, which is exactly what an OR group may
+   * - an OR group of optional subjects, which is exactly what an OR group may
    * not be. Suggesting it and then blocking Save would be the app arguing with
    * itself, so an OR suggestion carrying optional subjects becomes an AND
    * suggestion: students divide into parallel groups, which is what was
@@ -146,12 +146,12 @@ function generateSuggestions(
       label: andLabel ?? sug.label.replace(/rotation/i, 'Parallel Split'),
       reason: andReason
         ?? `${bad.join(', ')} ${bad.length === 1 ? 'is optional' : 'are optional'}, so not every student takes `
-           + `${bad.length === 1 ? 'it' : 'them'} — these run in parallel with the class divided into groups, `
+           + `${bad.length === 1 ? 'it' : 'them'} - these run in parallel with the class divided into groups, `
            + 'rather than one subject running for everybody.',
     })
   }
 
-  // 1. Pattern-based suggestions — emit OR / AND / both per cluster
+  // 1. Pattern-based suggestions - emit OR / AND / both per cluster
   for (const cluster of PATTERN_CLUSTERS) {
     const matched = allSubjects.filter(s =>
       !alreadyCombo.has(s) &&
@@ -200,19 +200,19 @@ function generateSuggestions(
     if (!covered('OR')) {
       pushOr({
         id:       `sug_sec_or_${sigKey}`,
-        label:    'Subjects for the same classes — Rotation',
+        label:    'Subjects for the same classes - Rotation',
         logic:    'OR',
         subjects: subs,
-        reason:   'These subjects are taught to exactly the same classes — so the class can do whichever is further behind on syllabus in a shared slot',
+        reason:   'These subjects are taught to exactly the same classes - so the class can do whichever is further behind on syllabus in a shared slot',
       })
     }
     if (!covered('AND')) {
       push({
         id:       `sug_sec_and_${sigKey}`,
-        label:    'Subjects for the same classes — Parallel Split',
+        label:    'Subjects for the same classes - Parallel Split',
         logic:    'AND',
         subjects: subs,
-        reason:   'Alternatively, students can be pre-divided into groups — all subjects run simultaneously in the same period',
+        reason:   'Alternatively, students can be pre-divided into groups - all subjects run simultaneously in the same period',
       })
     }
   }
@@ -313,7 +313,7 @@ function GroupModal({
 
   // An OR group is a choice for the WHOLE class, so every subject in it must be
   // one every student takes. An optional subject here would schedule a period
-  // only part of the room can attend — which is what AND groups and optional
+  // only part of the room can attend - which is what AND groups and optional
   // blocks exist for. lib/orChoice has always said so; this is where it is
   // finally enforced rather than merely documented.
   const badForOr = useMemo(
@@ -372,7 +372,7 @@ function GroupModal({
                 }}>
                   <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: '0.04em' }}>OR</div>
                   <div style={{ fontSize: 10, fontWeight: 500, marginTop: 3, lineHeight: 1.4, opacity: 0.9 }}>
-                    Rotation — one subject<br />runs per slot
+                    Rotation - one subject<br />runs per slot
                   </div>
                 </button>
               )
@@ -390,14 +390,14 @@ function GroupModal({
                 }}>
                   <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: '0.04em' }}>AND</div>
                   <div style={{ fontSize: 10, fontWeight: 500, marginTop: 3, lineHeight: 1.4, opacity: 0.9 }}>
-                    Parallel split — students<br />divide into groups
+                    Parallel split - students<br />divide into groups
                   </div>
                 </button>
               )
             })()}
           </div>
 
-          {/* AND disclaimer — distinguish from Student Groups */}
+          {/* AND disclaimer - distinguish from Student Groups */}
           {logic === 'AND' && (
             <div style={{
               display: 'flex', gap: 8, marginTop: 10, padding: '9px 12px',
@@ -407,7 +407,7 @@ function GroupModal({
               <div style={{ fontSize: 11, color: '#0C4A6E', lineHeight: 1.55 }}>
                 <strong>Different from Student Groups:</strong> Student Groups combine students from{' '}
                 <em>different class-sections</em> for the <em>same subject</em>. A Parallel Split
-                divides <em>one class-section</em> into groups — each studying a <em>different subject</em>{' '}
+                divides <em>one class-section</em> into groups - each studying a <em>different subject</em>{' '}
                 in the same period slot (e.g. Physics lab + Chemistry lab running simultaneously).
               </div>
             </div>
@@ -431,11 +431,11 @@ function GroupModal({
           />
         </div>
 
-        {/* ── Slot label (OR combos only — for multi-slot regional languages) ── */}
+        {/* ── Slot label (OR combos only - for multi-slot regional languages) ── */}
         {logic === 'OR' && (
           <div style={{ marginBottom: 14 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: '#69707E', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Slot label <span style={{ color: '#767384', fontWeight: 400 }}>(optional — for regional-language slots)</span>
+              Slot label <span style={{ color: '#767384', fontWeight: 400 }}>(optional - for regional-language slots)</span>
             </label>
             <input
               value={slotLabel} onChange={e => setSlotLabel(e.target.value)}
@@ -533,7 +533,7 @@ function GroupModal({
           />
         </div>
 
-        {/* ── Room / Location — AND only ── */}
+        {/* ── Room / Location - AND only ── */}
         {logic === 'AND' && (
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: '#69707E', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -559,7 +559,7 @@ function GroupModal({
               <label style={{ fontSize: 11, fontWeight: 700, color: '#69707E', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Applies to sections
                 <span style={{ color: '#767384', fontWeight: 400, marginLeft: 5 }}>
-                  {sections.length === 0 ? '— all sections' : `(${sections.length} selected)`}
+                  {sections.length === 0 ? '- all sections' : `(${sections.length} selected)`}
                 </span>
               </label>
               {sections.length > 0 && (
@@ -572,7 +572,7 @@ function GroupModal({
               )}
             </div>
 
-            {/* Selected section chips — always visible at top */}
+            {/* Selected section chips - always visible at top */}
             {sections.length > 0 && (
               <div style={{
                 display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8,
@@ -672,7 +672,7 @@ function GroupModal({
             <span>
               {badForOr.join(', ')} {badForOr.length === 1 ? 'is an optional subject' : 'are optional subjects'},
               so {badForOr.length === 1 ? 'it cannot' : 'they cannot'} be part of an OR group. OR decides which
-              subject the <strong>whole class</strong> does in a period — every student attends whichever one
+              subject the <strong>whole class</strong> does in a period - every student attends whichever one
               runs. If these subjects are taken by different students, use <strong>AND</strong>, which splits
               the class into parallel groups.
             </span>
@@ -743,7 +743,7 @@ export function SubjectGroupsSection({
   subjectSectionsMap?: Record<string, string[]>
   /** Start the collapsible panel open (default false; set true when used as primary content) */
   defaultOpen?: boolean
-  /** Hide all AND (parallel-split) UI — OR rotations only. */
+  /** Hide all AND (parallel-split) UI - OR rotations only. */
   orOnly?: boolean
 }) {
   const [open,               setOpen]               = useState(defaultOpen)
@@ -825,7 +825,7 @@ export function SubjectGroupsSection({
                 border: `1px solid ${OR_BDR}`, borderRadius: 6, padding: '3px 9px',
               }}>
                 <span style={{ fontSize: 8, fontWeight: 900, background: OR_TAG, color: '#fff', borderRadius: 2, padding: '0 3px' }}>OR</span>
-                <strong>Rotation</strong> — one subject per slot
+                <strong>Rotation</strong> - one subject per slot
               </span>
               {!orOnly && (
                 <span style={{
@@ -834,7 +834,7 @@ export function SubjectGroupsSection({
                   border: `1px solid ${AND_BDR}`, borderRadius: 6, padding: '3px 9px',
                 }}>
                   <span style={{ fontSize: 8, fontWeight: 900, background: AND_TAG, color: '#fff', borderRadius: 2, padding: '0 3px' }}>AND</span>
-                  <strong>Parallel split</strong> — same slot, students divide
+                  <strong>Parallel split</strong> - same slot, students divide
                 </span>
               )}
             </div>
@@ -942,7 +942,7 @@ export function SubjectGroupsSection({
             {/* ── Existing combos ── */}
             {groups.length === 0 && suggestions.length === 0 ? (
               <p style={{ fontSize: 12, color: '#767384', margin: '0 0 12px', fontStyle: 'italic' }}>
-                No combos yet — add one below.
+                No combos yet - add one below.
               </p>
             ) : groups.length === 0 ? null : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>

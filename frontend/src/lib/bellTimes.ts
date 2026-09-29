@@ -3,12 +3,12 @@
  *
  * The timetable views (routes/timetable.tsx) treat `config.bellSchedules` as
  * GROUND TRUTH: step-bell persists the exact generated rows per generation unit
- * (assembly, teaching, short-break/lunch, dispersal — each with a real
+ * (assembly, teaching, short-break/lunch, dispersal - each with a real
  * duration), and every clock time shown to the user is derived from them. The
  * calendar historically ignored this and just summed `periods[].duration` from
  * `config.startTime`, which silently drifts whenever the day contains assembly
  * time, a lunch, or per-section early dispersal that isn't a plain teaching
- * period — pushing afternoon lessons earlier than they really are.
+ * period - pushing afternoon lessons earlier than they really are.
  *
  * This module gives the calendar the same ground-truth clock so a lesson that
  * runs till 3:20 PM in the timetable also runs till 3:20 PM on the calendar.
@@ -21,7 +21,7 @@ type BellRow = { id: string; name: string; type: string; duration: number; class
 type BellSchedule = { startTime: string; rows: BellRow[] }
 type CwBreak = { id: string; type?: string; classes: string[]; afterPeriod: number; duration: number }
 
-// e.g. "Nursery-A" → "nur", "LKG-B" → "lkg", "XI-Sci-A" → "xi" — mirrors
+// e.g. "Nursery-A" → "nur", "LKG-B" → "lkg", "XI-Sci-A" → "xi" - mirrors
 // routes/timetable.tsx so a section resolves to the same bell group.
 export function getSectionClassKey(sectionName: string): string {
   const norm = sectionName.toLowerCase().replace(/[\s-]/g, '')
@@ -97,7 +97,7 @@ export function sectionPeriodTimes(sectionName: string, config: any, periods: Pe
 }
 
 /** A representative period→time map for a whole schedule (first section with a
- *  bell, else naive) — for callers that need one global clock (ruler bounds,
+ *  bell, else naive) - for callers that need one global clock (ruler bounds,
  *  cross-schedule overlap checks) rather than per-section precision. */
 export function schedulePeriodTimes(config: any, periods: Period[], sections: { name: string }[]): Map<string, SlotMins> {
   for (const s of sections) {

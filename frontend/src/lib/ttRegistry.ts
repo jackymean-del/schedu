@@ -2,7 +2,7 @@
  * Page-independent helpers for the per-user timetable list the dashboard
  * renders. Lets pages outside the dashboard (the wizard's publish action)
  * mark the active timetable's status without the dashboard component being
- * mounted — every wizard↔dashboard transition is a full page navigation, so
+ * mounted - every wizard↔dashboard transition is a full page navigation, so
  * there's no shared in-memory state, only localStorage (and the server).
  *
  * Uses the SAME keys dashboard.tsx uses ('schedu-tt-list[:userId]',
@@ -67,7 +67,7 @@ export function markActiveTimetableUnpublished(): void {
 
 const TT_SNAPSHOT_PFX = 'schedu-tt-snap-'
 // Must mirror dashboard.tsx's TT_SNAPSHOT_FIELDS so load/save here round-trip
-// the SAME data the dashboard persists — including resources (sections, staff,
+// the SAME data the dashboard persists - including resources (sections, staff,
 // subjects, rooms, strengths) and the elective-grouping data. Missing any field
 // here means it silently won't survive a per-timetable save/restore.
 const TT_SNAPSHOT_FIELDS = [
@@ -79,7 +79,7 @@ const TT_SNAPSHOT_FIELDS = [
   'sectionStrengths','subjectGroupingRules','subjectAllocations','manualSubjectAllocations',
   // Both sides of the allocation matrix, and the hand-typed capacity
   // denominator beside it. They persist globally through the store, so they
-  // looked saved — but a snapshot is rebuilt from THIS list and overwrites
+  // looked saved - but a snapshot is rebuilt from THIS list and overwrites
   // the whole key, so per schedule they were never written and any that got
   // there were wiped on the next save. The effect was one schedule's typed
   // numbers showing up under another schedule's sections.
@@ -89,7 +89,7 @@ const TT_SNAPSHOT_FIELDS = [
 /**
  * Load the active timetable's snapshot into the store.
  * Called by pages (Calendar, Reports, etc.) that read store data but aren't
- * the wizard — so after a page refresh the timetable data is available even
+ * the wizard - so after a page refresh the timetable data is available even
  * if the user didn't come via the dashboard's "Continue" button.
  * No-op when the store already has data (classTT non-empty).
  */
@@ -99,7 +99,7 @@ export function loadActiveTimetableIntoStore(): void {
 
   const state = useTimetableStore.getState()
 
-  // Already populated — nothing to do.
+  // Already populated - nothing to do.
   if (Object.keys(state.classTT ?? {}).length > 0) return
 
   // Try the per-user namespaced snapshot key first, then the un-namespaced one.
@@ -136,13 +136,13 @@ export function listTimetables(): { id: string; name: string; status?: string }[
  * Switch the active timetable in place (no reload): snapshot the outgoing
  * schedule, force-load the target's snapshot into the store (reset first so
  * nothing bleeds between schedules), THEN point the active id at the new one.
- * Returns false when the target has no snapshot yet — the caller should send
+ * Returns false when the target has no snapshot yet - the caller should send
  * the user to the dashboard/wizard for that one instead.
  *
  * CRITICAL ordering: the active-id pointer must only move once the target's
  * snapshot has actually been loaded. Flipping it first (as this used to) and
  * bailing out on a missing snapshot leaves `schedu-active-tt` pointing at a
- * schedule whose data was never loaded into the store — the store still holds
+ * schedule whose data was never loaded into the store - the store still holds
  * the OUTGOING schedule's data, so any later save (anything that persists via
  * saveActiveTimetableSnapshot) silently overwrites the new schedule's snapshot
  * with the old schedule's data. This is how a schedule's own data can end up
@@ -173,8 +173,8 @@ export function switchActiveTimetable(id: string): boolean {
 
 /**
  * Persist the CURRENT store state as the active timetable's snapshot, scoped to
- * that timetable (and this user). Lets pages outside the dashboard — notably
- * Master Data — save resource edits PER TIMETABLE instead of leaking them into
+ * that timetable (and this user). Lets pages outside the dashboard - notably
+ * Master Data - save resource edits PER TIMETABLE instead of leaking them into
  * the single global persisted store. No-op when there's no active timetable.
  *
  * Writes the same per-user namespaced key loadActiveTimetableIntoStore() reads
@@ -191,7 +191,7 @@ export function saveActiveTimetableSnapshot(): void {
   const uid = useAuthStore.getState().user?.id ?? ''
   try {
     localStorage.setItem(`${TT_SNAPSHOT_PFX}${uid}:${id}`, JSON.stringify(snap))
-  } catch { /* quota full — silently ignore */ }
+  } catch { /* quota full - silently ignore */ }
 
   if (CLERK_ENABLED) {
     saveTimetableSnapshot(id, snap).catch(() => { /* offline / transient */ })

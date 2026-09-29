@@ -90,7 +90,7 @@ export default function OpengraphImage() {
 
         {/* tagline */}
         <div style={{ display: "flex", fontSize: 24, fontWeight: 500, color: "#8B87AD", marginTop: 18 }}>
-          A live board that follows the clock — for any institution, any curriculum.
+          A live board that follows the clock - for any institution, any curriculum.
         </div>
 
         {/* bhusku attribution */}

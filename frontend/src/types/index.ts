@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // ═══════════════════════════════════════════════════════════════
-//  SCHEDU — Complete Data Model
+//  SCHEDU - Complete Data Model
 //  Aligned with: Schedu Detailed Workaround & Implementation Doc
 // ═══════════════════════════════════════════════════════════════
 
@@ -17,9 +17,9 @@ export type StreamType = 'Science' | 'Commerce' | 'Humanities' | 'General' | str
 
 /**
  * Scheduling profile determines HOW the timetable is built.
- * - fixed:    Nursery/KG/Primary — students stay, teachers rotate
- * - standard: Grade VI–X         — standard subject+teacher scheduling
- * - dynamic:  Grade XI–XII       — students move, optional subjects, parallel blocks
+ * - fixed:    Nursery/KG/Primary - students stay, teachers rotate
+ * - standard: Grade VI–X         - standard subject+teacher scheduling
+ * - dynamic:  Grade XI–XII       - students move, optional subjects, parallel blocks
  */
 export type ProfileType = 'fixed' | 'standard' | 'dynamic'
 
@@ -49,7 +49,7 @@ export type TimetableStatus = 'draft' | 'generating' | 'ready' | 'published' | '
 /** Subscription tier */
 export type SubscriptionPlan = 'free' | 'basic' | 'pro' | 'enterprise'
 
-/** Org type — kept for multi-context support */
+/** Org type - kept for multi-context support */
 export type OrgType = 'school' | 'college' | 'corporate' | 'hospital' | 'ngo' | 'factory'
 export const OrgTypeSchema = z.enum(['school', 'college', 'corporate', 'hospital', 'ngo', 'factory'])
 
@@ -183,7 +183,7 @@ export interface Subject {
   name: string
   shortName?: string
   category?: SubjectCategoryType
-  /** schedU subject type — drives scheduling path:
+  /** schedU subject type - drives scheduling path:
    *  'core' = mandatory single-subject period
    *  'optional' = part of an OptionalBlock (parallel offerings)
    *  'lab' = specialized room required (Chemistry Lab, Computer Lab, etc.) */
@@ -191,10 +191,10 @@ export interface Subject {
   isOptional?: boolean
   /** If set, this subject belongs to a named regional-language / elective slot
    *  (e.g. "R1", "R2", "R3"). Subjects sharing the same slot are mutually
-   *  exclusive — students pick exactly one per slot. The slot name is used as the
+   *  exclusive - students pick exactly one per slot. The slot name is used as the
    *  column-group header in the Student Groups preference matrix. For subjects
    *  that appear in MULTIPLE slots simultaneously (e.g. Hindi in R1, R2 and R3)
-   *  the slot relationship is defined on the OR-combo's `slotLabel` instead — see
+   *  the slot relationship is defined on the OR-combo's `slotLabel` instead - see
    *  SubjectAndOrGroup. */
   electiveSlotId?: string
   requiresLab?: boolean
@@ -205,18 +205,18 @@ export interface Subject {
   color: string
   sections?: string[]      // legacy: section names this subject applies to
   classConfigs: SubjectClassConfig[]
-  /** Optional capacity per session — relevant for activity/elective subjects */
+  /** Optional capacity per session - relevant for activity/elective subjects */
   capacity?: number
-  /** Room type required (e.g. 'lab', 'ground', 'art-room') — drives room allocation */
+  /** Room type required (e.g. 'lab', 'ground', 'art-room') - drives room allocation */
   roomTypeRequired?: RoomType
-  /** schedU Scope System — when set, subject can only be scheduled where allowed */
+  /** schedU Scope System - when set, subject can only be scheduled where allowed */
   scope?: ScopeMatrix
   /** schedU Cross-Class Grouping behavior (Doc: Part 3).
    *  Controls how the AI may merge sections for parallel/optional sessions.
-   *    NO_GROUPING         — isolated to one section only
-   *    SAME_GRADE_ONLY     — only siblings within the same grade may pool
-   *    CROSS_GRADE_ALLOWED — different grades may pool (PE, assembly, etc.)
-   *    FLEXIBLE_GROUPING   — AI decides dynamically based on capacity + room */
+   *    NO_GROUPING         - isolated to one section only
+   *    SAME_GRADE_ONLY     - only siblings within the same grade may pool
+   *    CROSS_GRADE_ALLOWED - different grades may pool (PE, assembly, etc.)
+   *    FLEXIBLE_GROUPING   - AI decides dynamically based on capacity + room */
   groupingBehavior?: 'NO_GROUPING' | 'SAME_GRADE_ONLY' | 'CROSS_GRADE_ALLOWED' | 'FLEXIBLE_GROUPING'
 }
 
@@ -230,7 +230,7 @@ export interface SubjectClassConfig {
   category?: string
   /** Per-section lab requirement override */
   requiresLab?: boolean
-  /** Per-section elective flag — when true, students choose this subject from a
+  /** Per-section elective flag - when true, students choose this subject from a
    *  list of options for this specific class. Drives the Groups preference matrix.
    *  Setting this on any section also sets the global Subject.isOptional flag. */
   isOptional?: boolean
@@ -309,9 +309,9 @@ export interface TeacherPreferences {
 
 /**
  * Per-teacher slot availability matrix.
- *   'available'  — normal teachable slot (default)
- *   'preferred'  — soft preference to schedule here (solver bonus)
- *   'blocked'    — hard constraint — solver must NOT place lessons here
+ *   'available'  - normal teachable slot (default)
+ *   'preferred'  - soft preference to schedule here (solver bonus)
+ *   'blocked'    - hard constraint - solver must NOT place lessons here
  *
  * Shape: teacherName → day (uppercase) → periodId → SlotStatus
  * Absence of a key is treated as 'available'.
@@ -460,7 +460,7 @@ export const InstructionalClusterSchema = z.object({
 /**
  * A parallel block groups mutually exclusive optional subjects
  * that must run at the SAME time slot.
- * e.g. {Maths, Biology, PED, Painting} — one time slot, students split into clusters
+ * e.g. {Maths, Biology, PED, Painting} - one time slot, students split into clusters
  */
 export interface ParallelBlock {
   id: string
@@ -521,7 +521,7 @@ export interface Shift {
 
 // ─────────────────────────────────────────────────────────────
 // 12. SESSION INSTANCES (Scheduled Periods)
-//     The actual timetable — what happens where and when
+//     The actual timetable - what happens where and when
 // ─────────────────────────────────────────────────────────────
 
 export interface SessionInstance {
@@ -537,12 +537,12 @@ export interface SessionInstance {
 // ─────────────────────────────────────────────────────────────
 // OPTIONAL-BLOCK / COMBINATION SUPPORT (Final spec MVP)
 // schedU's key differentiator: one period can host multiple
-// parallel subjects (PE / Art / Painting) — each with its own
+// parallel subjects (PE / Art / Painting) - each with its own
 // teacher, room, and capacity. Students self-select; the system
 // only tracks combination-wise strength, not individual students.
 // ─────────────────────────────────────────────────────────────
 
-/** Subject scheduling type — drives which engine path is used */
+/** Subject scheduling type - drives which engine path is used */
 export type SubjectType = 'core' | 'optional' | 'lab'
 
 /** A single option inside an optional block.
@@ -558,7 +558,7 @@ export interface OptionalOption {
   allocatedStrength?: number // students choosing this option
 }
 
-/** An Optional Block — multiple parallel subjects scheduled
+/** An Optional Block - multiple parallel subjects scheduled
  *  into the same period across one or more sections.
  *  E.g. OPTIONAL_BLOCK_1 = [PE, Art, Painting] on Tue Period 3. */
 export interface OptionalBlock {
@@ -570,8 +570,8 @@ export interface OptionalBlock {
   options: OptionalOption[]    // parallel subjects in this block
   totalCapacity?: number       // sum of option capacities
   periodsPerWeek?: number      // pinned weekly slot count (overrides subject-derived quota)
-  logic?: 'AND' | 'OR'         // cell display joiner — AND = parallel split, OR = rotation (default)
-  slotId?: string              // named elective slot (R1/R2/R3) — independent teaching instance
+  logic?: 'AND' | 'OR'         // cell display joiner - AND = parallel split, OR = rotation (default)
+  slotId?: string              // named elective slot (R1/R2/R3) - independent teaching instance
   /** Grouping behaviour derived from the Groups-step merge rule (Same/Cross ×
    *  section/grade/stream/block). Overrides the per-subject default when set. */
   behavior?: string
@@ -599,7 +599,7 @@ export const OptionalBlockSchema = z.object({
   slotId: z.string().optional(),
 })
 
-/** A subject combination — e.g. "PCM + CS" with strength.
+/** A subject combination - e.g. "PCM + CS" with strength.
  *  schedU uses combinations (not student rosters) to size sessions. */
 export interface SubjectCombination {
   id: string
@@ -618,7 +618,7 @@ export const SubjectCombinationSchema = z.object({
 })
 
 // ─────────────────────────────────────────────────────────────
-// schedU Scope System — per-entity slot allowability matrix
+// schedU Scope System - per-entity slot allowability matrix
 // ─────────────────────────────────────────────────────────────
 
 /** A single cell in a ScopeMatrix: structural allow/disallow.
@@ -657,7 +657,7 @@ export function isScopeAllowed(matrix: ScopeMatrix | undefined, day: string, per
   return getScopeState(matrix, day, periodId) === 'allowed'
 }
 
-/** schedU Phase 6 — Simplified section-strength matrix.
+/** schedU Phase 6 - Simplified section-strength matrix.
  *
  *  Per-section, how many students take each subject. From this single
  *  matrix the AI engine infers EVERYTHING:
@@ -973,14 +973,14 @@ export const DEFAULT_SOFT_CONSTRAINTS: SoftConstraint[] = [
 // ─────────────────────────────────────────────────────────────
 
 export interface WizardConfig {
-  // Step 1 — Organization
+  // Step 1 - Organization
   orgType: OrgType | null
   countryCode: string | null
   board: BoardType
   timeFormat: '12h' | '24h'
   timezone: string
 
-  // Step 2 — Bell Schedule
+  // Step 2 - Bell Schedule
   workDays: string[]
   startTime: string
   endTime: string
@@ -989,35 +989,35 @@ export interface WizardConfig {
   defaultSessionDuration: number
   shifts: Shift[]
 
-  // Step 1 — Grade groups selected (e.g. ["primary","middle"])
+  // Step 1 - Grade groups selected (e.g. ["primary","middle"])
   gradeGroups: string[]
   schoolName: string
   academicYear: string
 
-  // Step 3 — Resources (counts for quick generation)
+  // Step 3 - Resources (counts for quick generation)
   numStaff: number
   numSections: number
   numSubjects: number
 
-  // Step 4 — Academic
+  // Step 4 - Academic
   schedulingMode: ProfileType
   hasOptionals: boolean      // XI/XII optional subject mode
   workingDaysPerYear: number
 
-  // Step 6 — Timetable identity
+  // Step 6 - Timetable identity
   timetableName: string
   timetableStartDate: string   // YYYY-MM-DD
   timetableEndDate: string     // YYYY-MM-DD
 
-  // Step 2 — class-specific day-off rules  (e.g. Saturday off for Nursery/LKG/UKG)
+  // Step 2 - class-specific day-off rules  (e.g. Saturday off for Nursery/LKG/UKG)
   // day: short format ('Sat', 'Mon', …)  ·  classes: class keys ('nur', 'lkg', 'ukg', 'i', …)
   dayOffRules?: Array<{ id: string; day: string; classes: string[] }>
 
-  // Step 2 — class-wise break configuration (different break timings per class group)
+  // Step 2 - class-wise break configuration (different break timings per class group)
   // afterPeriod: 0 = after assembly (before P1), 1 = after P1, etc.
   classwiseBreaks?: Array<{
     id: string; name: string; type: 'short-break' | 'lunch' | 'assembly' | 'dispersal'
-    classes: string[]   // class keys ('nur', 'lkg', …) — empty = all
+    classes: string[]   // class keys ('nur', 'lkg', …) - empty = all
     afterPeriod: number
     duration: number
   }>
@@ -1150,15 +1150,15 @@ export const StaffSchema = z.object({
   isClassTeacher: z.string().default(''),
   isCoClassTeacher: z.string().optional(),
   maxPeriodsPerWeek: z.number().int().positive(),
-  /** Per-DAY teaching cap (Blueprint v6 Step 0 — workload may be stated per week
+  /** Per-DAY teaching cap (Blueprint v6 Step 0 - workload may be stated per week
    *  or per day). Optional: absent means "derive it from the weekly figure", so
    *  existing records need no migration. Enforced as a hard constraint by the
-   *  scheduling engine — see lib/facultyWorkload. */
+   *  scheduling engine - see lib/facultyWorkload. */
   maxPeriodsPerDay: z.number().int().positive().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
   scope: ScopeMatrixSchema.optional(),   // schedU Scope System
   /** Links this schedule's row to a shared cross-schedule roster entry
-   *  (store/directoryStore.ts). Optional — old records simply lack it. */
+   *  (store/directoryStore.ts). Optional - old records simply lack it. */
   directoryId: z.string().optional(),
 })
 export type Staff = z.infer<typeof StaffSchema>
@@ -1184,17 +1184,17 @@ export interface Room {
   id: string
   generatedName: string
   actualName: string
-  /** Display casing — 'Classroom', 'Computer Lab'. See lib/roomShape: this was
+  /** Display casing - 'Classroom', 'Computer Lab'. See lib/roomShape: this was
    *  declared as a lowercase union that the editors never actually wrote, so
    *  the union documented a shape no stored record had. Free-form because a
    *  school may add its own venue type. */
   roomType: string
   capacity: number
   shiftId?: string
-  /** schedU Scope System — when set, room can only be used where allowed */
+  /** schedU Scope System - when set, room can only be used where allowed */
   scope?: ScopeMatrix
   /** Links this schedule's row to a shared cross-schedule roster entry
-   *  (store/directoryStore.ts). Optional — old records simply lack it. */
+   *  (store/directoryStore.ts). Optional - old records simply lack it. */
   directoryId?: string
 }
 
@@ -1259,7 +1259,7 @@ export interface AndGroupScope {
 export interface AndComboGroup {
   id: string
   name: string                   // auto-named from columns, e.g. "Maths / Bio"
-  applicableSections: string[]   // rows — which sections this split applies to
+  applicableSections: string[]   // rows - which sections this split applies to
   /** Column subjects (mutually-exclusive options). Primary UI field. */
   subjects?: string[]
   /** Kept in sync with `subjects` (one single-subject bundle per column) so the
@@ -1269,7 +1269,7 @@ export interface AndComboGroup {
    *  rail (a "block"). Set from class-group or a custom name. */
   blockId?: string
   blockName?: string
-  /** When false, room capacity is ignored when generating teaching groups —
+  /** When false, room capacity is ignored when generating teaching groups -
    *  all pooled sections go into a single group regardless of size. Default true. */
   roomCapacitySensitive?: boolean
   /** How sections merge into teaching groups (default PER_SECTION). */
@@ -1302,7 +1302,7 @@ export interface AndTeachingGroup {
 }
 
 /** One OR-group slot: students pick exactly one subject from this slot.
- *  Separate slots are independent — a student can appear in R1, R2, AND R3. */
+ *  Separate slots are independent - a student can appear in R1, R2, AND R3. */
 export interface ElectiveSlot {
   id: string
   name: string           // "R1 Regional Language", "Physical Activity Elective"

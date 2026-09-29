@@ -1,5 +1,5 @@
 /**
- * TimetableSwapModal — interactive post-solve timetable editor.
+ * TimetableSwapModal - interactive post-solve timetable editor.
  *
  * Presents a periods × days grid for a selected section.
  * Two-click swap / move flow:
@@ -10,16 +10,16 @@
  *        • Same cell    → deselect.
  *
  * While a cell is held, every target slot is annotated:
- *   ✓ green  — safe (no teacher clash in this section's modified grid)
- *   ⚠ amber  — teacher is already at that slot in another section
- *   ✕ red    — that slot is a break period (locked)
+ *   ✓ green  - safe (no teacher clash in this section's modified grid)
+ *   ⚠ amber  - teacher is already at that slot in another section
+ *   ✕ red    - that slot is a break period (locked)
  *
  * A pending-changes log tracks every swap/move. "Apply" fires onApplyFixes with
  * the mutated classTT copy. "Undo last" reverts the most recent pending change.
  * "Reset" clears all pending changes back to original.
  *
  * Pure inline styles (consistent with master/ component family).
- * No drag-and-drop library — just two-click select+place.
+ * No drag-and-drop library - just two-click select+place.
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
@@ -89,7 +89,7 @@ export function TimetableSwapModal({
   const [selectedSection, setSelectedSection] = useState(
     initialSection ?? sections[0]?.name ?? '',
   )
-  // Working copy of classTT — mutated as user applies swaps
+  // Working copy of classTT - mutated as user applies swaps
   const [workingTT, setWorkingTT] = useState<ClassTimetable>(() => deepCloneTT(classTT))
   // Held slot = the "picked up" cell
   const [held, setHeld] = useState<SlotKey | null>(null)
@@ -119,7 +119,7 @@ export function TimetableSwapModal({
       periods.forEach(period => {
         const key = slotKey(day, period.id)
 
-        // Break row — locked
+        // Break row - locked
         if (period.type === 'break') { map.set(key, 'break'); return }
 
         // Self
@@ -151,7 +151,7 @@ export function TimetableSwapModal({
       return
     }
 
-    // Already holding something — place it
+    // Already holding something - place it
     if (held.day === day && held.periodId === period.id) {
       // Click same cell → deselect
       setHeld(null)
@@ -425,7 +425,7 @@ export function TimetableSwapModal({
           <span style={{ flex: 1, fontSize: 10.5, color: '#6D6A8A' }}>
             {hasChanges
               ? `${changes.length} pending change${changes.length !== 1 ? 's' : ''}`
-              : 'No changes yet — click a cell to begin'}
+              : 'No changes yet - click a cell to begin'}
           </span>
           {hasChanges && (
             <>

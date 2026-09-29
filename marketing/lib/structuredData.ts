@@ -1,5 +1,5 @@
 /**
- * Shared schema.org JSON-LD — only real, currently-published values (brand
+ * Shared schema.org JSON-LD - only real, currently-published values (brand
  * name, URL, contact email shown on /contact). No invented ratings, review
  * counts, or founding dates. Mirrors frontend/src/lib/structuredData.ts.
  */

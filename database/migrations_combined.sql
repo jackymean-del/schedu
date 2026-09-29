@@ -1,5 +1,5 @@
 -- ====== database/migrations/001_initial.sql ======
--- SmartSched v3 Schema — PostgreSQL 17 + Drizzle ORM
+-- SmartSched v3 Schema - PostgreSQL 17 + Drizzle ORM
 -- Run: psql $DATABASE_URL -f 001_initial.sql
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -66,7 +66,7 @@ CREATE TRIGGER users_updated_at
 
 -- ====== database/migrations/002_schedu_full_schema.sql ======
 -- ═══════════════════════════════════════════════════════════════
--- Migration 002 — Schedu Full Schema
+-- Migration 002 - Schedu Full Schema
 -- Adds all tables for the complete Schedu academic scheduling model
 -- ═══════════════════════════════════════════════════════════════
 

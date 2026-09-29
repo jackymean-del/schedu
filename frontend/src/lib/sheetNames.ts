@@ -11,11 +11,11 @@
  * A worksheet name Excel will actually accept.
  *
  * Sheet names come from section names, which a school types. Three ordinary
- * cases made the whole export throw — and the caller never caught it, so the
+ * cases made the whole export throw - and the caller never caught it, so the
  * menu closed and no file appeared, with nothing said:
  *
- *   · two sections sharing a name (this app deliberately allows that — see
- *     lib/nameConflicts — so the export must cope with it);
+ *   · two sections sharing a name (this app deliberately allows that - see
+ *     lib/nameConflicts - so the export must cope with it);
  *   · two long names that are identical in their first 31 characters, which is
  *     where Excel truncates;
  *   · a name containing : \ / ? * [ ], and "I-A/B" is a normal way to write a

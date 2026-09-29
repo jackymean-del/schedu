@@ -1,10 +1,10 @@
 /**
- * "Who does this apply to?" — the scope control shared by every calendar entry
+ * "Who does this apply to?" - the scope control shared by every calendar entry
  * that can be school-wide or narrower: holidays, ad-hoc missed days, events.
  *
  * Scope is stored as a list of SECTION names, because that is the granularity
  * everything downstream works in (holidayImpact walks classTT section by
- * section). An EMPTY list means the whole school — the common case, and the one
+ * section). An EMPTY list means the whole school - the common case, and the one
  * that needs no thought.
  *
  * The picker itself is offered class-first, since "the whole of Class IX is on
@@ -48,7 +48,7 @@ export function describeScope(value: string[] | undefined, allSections: string[]
 }
 
 /**
- * The same thing phrased for the middle of a sentence — "…this for the whole
+ * The same thing phrased for the middle of a sentence - "…this for the whole
  * school", "…this for IX, X-A". Never lower-cased: class names are proper
  * names, and "declaring this for ix-a" reads like a typo.
  */
@@ -98,7 +98,7 @@ export function ScopePicker({ sections, value, onChange, label = 'Applies to' }:
         }}>
           {sections.length === 0 && (
             <span style={{ fontSize: 11.5, color: '#777391' }}>
-              No classes in this schedule yet — it will apply school-wide.
+              No classes in this schedule yet - it will apply school-wide.
             </span>
           )}
           {groups.map(g => {
@@ -126,7 +126,7 @@ export function ScopePicker({ sections, value, onChange, label = 'Applies to' }:
           })}
           <div style={{ fontSize: 11, color: '#777391' }}>
             {value.length === 0
-              ? 'Nothing selected — it will apply to the whole school.'
+              ? 'Nothing selected - it will apply to the whole school.'
               : `Applies to ${describeScope(value, sections)}. Everyone else keeps their normal day.`}
           </div>
         </div>

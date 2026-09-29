@@ -1,5 +1,5 @@
 /**
- * DLGInspector — visualises the Dynamic Learning Groups produced by
+ * DLGInspector - visualises the Dynamic Learning Groups produced by
  * the engine. Shows how the solver pooled sections per subject,
  * which behavior rule governed each pool, and whether any pool was
  * cap-split because of room capacity.
@@ -37,7 +37,7 @@ interface Props {
 }
 
 export function DLGInspector({ dlgs, periods, rooms = [] }: Props) {
-  // Group DLGs by (day, periodId) — DLGs that share a slot form a parallel block
+  // Group DLGs by (day, periodId) - DLGs that share a slot form a parallel block
   const groupedByBlock = useMemo(() => {
     const m = new Map<string, DynamicLearningGroup[]>()
     dlgs.forEach(d => {

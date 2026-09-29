@@ -27,7 +27,7 @@ const razorpayAPI = "https://api.razorpay.com/v1"
 
 // Config is read once from the environment. When KeyID/KeySecret are empty the
 // whole billing feature is considered DISABLED and every entry point degrades
-// gracefully (the app keeps working, upgrade is simply unavailable) — so the
+// gracefully (the app keeps working, upgrade is simply unavailable) - so the
 // service is safe to deploy before the Razorpay account exists.
 type Config struct {
 	KeyID         string

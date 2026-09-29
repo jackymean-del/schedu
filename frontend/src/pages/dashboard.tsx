@@ -1,12 +1,12 @@
 /**
- * Dashboard — Page 4
+ * Dashboard - Page 4
  *
  * Sidebar sections:
- *   WORKSPACE      — Dashboard · Schedules · Calendar · Insights
- *   ADMINISTRATION — Users · Resources · Settings
- *   HELP & SUPPORT — Support Center · Documentation · Book a Demo
+ *   WORKSPACE      - Dashboard · Schedules · Calendar · Insights
+ *   ADMINISTRATION - Users · Resources · Settings
+ *   HELP & SUPPORT - Support Center · Documentation · Book a Demo
  *
- * "New timetable" → opens CreateTimetableModal (Page 5 — Wizard Step 0)
+ * "New timetable" → opens CreateTimetableModal (Page 5 - Wizard Step 0)
  */
 
 import { schedulePeriodTimes } from '@/lib/bellTimes'
@@ -205,13 +205,13 @@ const TT_SNAPSHOT_FIELDS = [
   'classTT','teacherTT','substitutions','orDecisions','substitutionSettings','conflicts','suggestions',
   'optionalConfigs','subjectPools','participantPools','rooms',
   'facilities','teacherPools',
-  // Elective-grouping data — keep OR/AND combos, generated groups, the
+  // Elective-grouping data - keep OR/AND combos, generated groups, the
   // preference matrix and grouping rules so they survive snapshot save/restore.
   'subjectGroups','subjectCombinations','dynamicLearningGroups',
   'sectionStrengths','subjectGroupingRules','subjectAllocations','manualSubjectAllocations',
   // Both sides of the allocation matrix, and the hand-typed capacity
   // denominator beside it. They persist globally through the store, so they
-  // looked saved — but a snapshot is rebuilt from THIS list and overwrites
+  // looked saved - but a snapshot is rebuilt from THIS list and overwrites
   // the whole key, so per schedule they were never written and any that got
   // there were wiped on the next save. The effect was one schedule's typed
   // numbers showing up under another schedule's sections.
@@ -319,7 +319,7 @@ const SEED_TT: TTEntry[] = [
 
 // Per-user local cache of the timetable list. In server-backed mode this is a
 // resilient mirror so a freshly-created/generated draft is shown immediately
-// and never lost if a server round-trip is slow or fails — the server stays
+// and never lost if a server round-trip is slow or fails - the server stays
 // authoritative and is merged in on load.
 function ttListKey() { return `${TTLIST_KEY}:${cacheNS}` }
 function loadLocalTTList(): TTEntry[] {
@@ -331,7 +331,7 @@ function loadLocalTTList(): TTEntry[] {
 }
 function loadTTList(): TTEntry[] {
   // Initial render: server-backed starts empty (the mount effect merges local
-  // cache + server once the user — and cache namespace — are known).
+  // cache + server once the user - and cache namespace - are known).
   return SERVER_BACKED ? [] : loadLocalTTList()
 }
 function saveTTList(list: TTEntry[]) {
@@ -344,7 +344,7 @@ function mergeTTLists(server: TTEntry[], local: TTEntry[]): TTEntry[] {
   return [...localOnly, ...server].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
 }
 
-/** Build a TTEntry by inspecting the CURRENT wizard store — used to "adopt"
+/** Build a TTEntry by inspecting the CURRENT wizard store - used to "adopt"
  *  work that exists only because the user reached /wizard directly (e.g. a
  *  sidebar link), bypassing the New-timetable dialog entirely. Without this,
  *  that work has no TTEntry/id and never appears on the dashboard. */
@@ -389,7 +389,7 @@ const W_EXPANDED  = 220
 const TRANSITION  = 'width 0.22s cubic-bezier(0.4,0,0.2,1)'
 
 // ══════════════════════════════════════════════════════════════
-//  CreateTimetableModal  (Page 5 — Wizard Step 0)
+//  CreateTimetableModal  (Page 5 - Wizard Step 0)
 // ══════════════════════════════════════════════════════════════
 function CreateTimetableModal({
   onClose, onOpenWizard,
@@ -406,7 +406,7 @@ function CreateTimetableModal({
   const [board,      setBoard]      = useState<BoardKey>('CBSE')
   const [fromGrade,  setFromGrade]  = useState('')
   const [toGrade,    setToGrade]    = useState('')
-  // Counts start blank — nothing is invented until the user enters a number.
+  // Counts start blank - nothing is invented until the user enters a number.
   const [classes,    setClasses]    = useState<number | ''>('')
   const [teachers,   setTeachers]   = useState<number | ''>('')
   const [rooms,      setRooms]      = useState<number | ''>('')
@@ -529,7 +529,7 @@ function CreateTimetableModal({
               Create new schedule
             </h2>
             <p style={{ fontSize: 13, color: '#69707E' }}>
-              the engine will generate all defaults — you only refine.
+              the engine will generate all defaults - you only refine.
             </p>
           </div>
           <button onClick={onClose} style={{
@@ -609,11 +609,11 @@ function CreateTimetableModal({
         <div style={{ marginBottom: 6 }}>
           <label style={lbl}>Class range <span style={{ color: '#EF4444' }}>*</span></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <GradeInput className="ct-input" value={fromGrade} onChange={setFromGrade} placeholder="From — e.g. Class-I" />
-            <GradeInput className="ct-input" value={toGrade}   onChange={setToGrade}   placeholder="To — e.g. Class-X" />
+            <GradeInput className="ct-input" value={fromGrade} onChange={setFromGrade} placeholder="From - e.g. Class-I" />
+            <GradeInput className="ct-input" value={toGrade}   onChange={setToGrade}   placeholder="To - e.g. Class-X" />
           </div>
           <p style={{ fontSize: 12, color: '#69707E', marginTop: 6 }}>
-            Type your own naming — “Class-I”, “Grade 1”, “KG1”, “PP2”, “Nursery”, “Form 1”, “Year 7”. schedU adapts to your convention, tidies the spacing, and groups the levels automatically.
+            Type your own naming - “Class-I”, “Grade 1”, “KG1”, “PP2”, “Nursery”, “Form 1”, “Year 7”. schedU adapts to your convention, tidies the spacing, and groups the levels automatically.
           </p>
         </div>
 
@@ -640,7 +640,7 @@ function CreateTimetableModal({
                   className="ct-num"
                   type="number"
                   min={1}
-                  placeholder="—"
+                  placeholder="-"
                   value={f.value}
                   onChange={e => { const v = e.target.value; f.set(v === '' ? '' : Math.max(0, Number(v))) }}
                 />
@@ -718,7 +718,7 @@ const lbl: React.CSSProperties = {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  EditTimetableModal — edit step-0 metadata of an existing TT
+//  EditTimetableModal - edit step-0 metadata of an existing TT
 // ══════════════════════════════════════════════════════════════
 function EditTimetableModal({
   tt, onClose, onSave,
@@ -729,7 +729,7 @@ function EditTimetableModal({
 }) {
   const BOARDS: BoardKey[] = ['CBSE', 'ICSE', 'IB', 'State', 'Custom']
 
-  // Read actual wizard data from snapshot — most accurate source of truth
+  // Read actual wizard data from snapshot - most accurate source of truth
   const snap = useMemo(() => derivedFromSnapshot(tt.id), [tt.id])
 
   const [name,      setName]      = useState(tt.name)
@@ -737,7 +737,7 @@ function EditTimetableModal({
   const [endDate,   setEndDate]   = useState(tt.endDate)
   const [board,     setBoard]     = useState<BoardKey>((tt.board as BoardKey) ?? 'CBSE')
 
-  // Grade range: TTEntry wins — UNLESS it still holds the hardcoded 'Nursery'
+  // Grade range: TTEntry wins - UNLESS it still holds the hardcoded 'Nursery'
   // creation-time default that was never explicitly set by the user, in which
   // case the snapshot (derived from actual sections) is more accurate.
   const [fromGrade, setFromGrade] = useState(
@@ -747,7 +747,7 @@ function EditTimetableModal({
   )
   const [toGrade, setToGrade] = useState(tt.toGrade ?? snap?.toGrade ?? '')
 
-  // Counts: TTEntry always wins — it reflects the user's explicit entries.
+  // Counts: TTEntry always wins - it reflects the user's explicit entries.
   // Snapshot fills only fields that were never saved (null / undefined).
   const [classes,  setClasses]  = useState(String(tt.approxClasses))
   const [subjects, setSubjects] = useState(
@@ -920,7 +920,7 @@ function EditTimetableModal({
           )}
         </div>
 
-        {/* Approximate counts — all 4 */}
+        {/* Approximate counts - all 4 */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
             <label style={{ ...lbl, marginBottom: 0 }}>Approximate counts</label>
@@ -948,7 +948,7 @@ function EditTimetableModal({
                 <input
                   type="number" min={1}
                   value={f.value}
-                  placeholder="—"
+                  placeholder="-"
                   onChange={e => f.set(e.target.value)}
                   style={{
                     ...numInp,
@@ -1002,7 +1002,7 @@ export function DashboardPage() {
   const { user, logout, authReady } = useAuthStore()
   const org = useOrgProfile()
   // Up here with the other hooks, NOT beside the code that uses it further
-  // down. Below, this component returns early while auth is still resolving —
+  // down. Below, this component returns early while auth is still resolving -
   // so a hook after that point runs on the second render and not the first,
   // which is React's "rendered more hooks than during the previous render".
   // That is the login transition exactly, and it took the whole page down.
@@ -1042,7 +1042,7 @@ export function DashboardPage() {
 
   // Namespace the local snapshot cache to this user (prevents one account from
   // reading another's cached data in a shared browser). Safe to call on every
-  // render — it only sets a module-level string.
+  // render - it only sets a module-level string.
   setCacheNS(user?.id)
 
   // Server-backed: show the local cache instantly, then merge in the server.
@@ -1064,7 +1064,7 @@ export function DashboardPage() {
 
         if (!ownsActive && hasRealWork) {
           // Real wizard work with no matching TTEntry (e.g. reached /wizard
-          // directly) — adopt it into the list instead of losing it.
+          // directly) - adopt it into the list instead of losing it.
           let entry = buildEntryFromCurrentStore(
             activeId || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6))
           )
@@ -1077,7 +1077,7 @@ export function DashboardPage() {
           saveTTSnapshot(entry.id)
         } else if (!ownsActive && activeId) {
           // Dangling pointer to a deleted/foreign timetable with nothing to
-          // recover — safe to clear.
+          // recover - safe to clear.
           useTimetableStore.getState().resetAll()
           setActiveTTId(null)
         }
@@ -1092,7 +1092,7 @@ export function DashboardPage() {
         setSyncIssue(
           status === 401 ? 'auth-401' : status ? `http-${status}` : 'offline'
         )
-        // offline — local cache already shown
+        // offline - local cache already shown
       })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1154,7 +1154,7 @@ export function DashboardPage() {
     let saved = entry
     if (SERVER_BACKED) {
       try { saved = { ...entry, id: await ttRepo.createTimetable(entry) } }
-      catch { /* offline — keep the local id; snapshot sync will retry later */ }
+      catch { /* offline - keep the local id; snapshot sync will retry later */ }
     }
 
     const next = [saved, ...ttList]
@@ -1179,14 +1179,14 @@ export function DashboardPage() {
   const handleContinue = async (t: TTEntry) => {
     const currentId = getActiveTTId()
     if (currentId === t.id) {
-      // Already the active one — just navigate
+      // Already the active one - just navigate
       window.location.href = '/wizard'
       return
     }
-    // Resolve the incoming timetable's state FIRST — only commit the active-id
+    // Resolve the incoming timetable's state FIRST - only commit the active-id
     // switch once we know what to load. Flipping the pointer before an async
     // restore resolves (as this used to) leaves `schedu-active-tt` pointing at
-    // a timetable whose data was never actually loaded into the store — the
+    // a timetable whose data was never actually loaded into the store - the
     // store still holds the OUTGOING timetable's sections/classTT, so any
     // later save silently overwrites the incoming timetable's real snapshot
     // with the outgoing one's data. That's how one timetable can end up an
@@ -1208,7 +1208,7 @@ export function DashboardPage() {
     if (snap) {
       applySnapshot(snap)
     } else {
-      // No saved state anywhere for this timetable yet — start fresh rather
+      // No saved state anywhere for this timetable yet - start fresh rather
       // than leaving the outgoing timetable's data in the store.
       useTimetableStore.getState().resetWizard()
       useTimetableStore.getState().setConfig({ timetableName: t.name } as any)
@@ -1223,7 +1223,7 @@ export function DashboardPage() {
   const handleViewTimetable = async (t: TTEntry) => {
     const currentId = getActiveTTId()
     if (currentId !== t.id) {
-      // Same ordering fix as handleContinue — resolve state before committing
+      // Same ordering fix as handleContinue - resolve state before committing
       // the active-id switch.
       let snap: Record<string, unknown> | null = null
       if (SERVER_BACKED) {
@@ -1283,7 +1283,7 @@ export function DashboardPage() {
     saveTTList(next)
     if (getActiveTTId() === id) {
       setActiveTTId(null)
-      // Clear the live store too — leaving its sections/classTT behind (even
+      // Clear the live store too - leaving its sections/classTT behind (even
       // with no active pointer) makes the "adopt orphaned wizard work" check
       // on the next dashboard load (see the SERVER_BACKED useEffect above)
       // mistake this deleted schedule's leftover in-memory content for real
@@ -1335,7 +1335,7 @@ export function DashboardPage() {
 
     /** Trim an array: if cur.length > target → slice; if < → reset to []
      *  (so the wizard's auto-generate step can fill in a fresh count); if
-     *  EQUAL, leave it alone. The equal case matters more than it looks —
+     *  EQUAL, leave it alone. The equal case matters more than it looks -
      *  the modal pre-fills the CURRENT counts, so submitting the form
      *  without changing any number (the common case) must be a no-op, not
      *  silently wipe every resource array to empty. */
@@ -1368,7 +1368,7 @@ export function DashboardPage() {
       // Awaited (not fire-and-forget): handleContinue below re-fetches this
       // same timetable's snapshot from the server, preferring it over the
       // local cache. If that fetch raced ahead of this save, it could load
-      // back the STALE server copy we just corrected — undoing this fix.
+      // back the STALE server copy we just corrected - undoing this fix.
       if (SERVER_BACKED) await ttRepo.saveTimetableSnapshot(updated.id, snap).catch(() => { /* best-effort */ })
     } catch { /* ignore storage errors */ }
 
@@ -1397,10 +1397,10 @@ export function DashboardPage() {
     await handleContinue(updated)
   }
 
-  // Wait for auth to resolve before deciding — otherwise a fresh load (or the
+  // Wait for auth to resolve before deciding - otherwise a fresh load (or the
   // OAuth return) briefly sees no user and flashes the login form. Show the
   // branded loader until Clerk has loaded, then redirect only if truly signed out.
-  // Above the auth gate, with the other hooks — see the note on that gate.
+  // Above the auth gate, with the other hooks - see the note on that gate.
   const conflictCount = useMemo(
     () => detectConflicts(store.classTT ?? {}, store.periods ?? [], {
       sections: store.sections ?? [],
@@ -1414,7 +1414,7 @@ export function DashboardPage() {
 
   const firstName  = user.name?.split(' ')[0] ?? 'there'
   // Generic, type-neutral org identity from the onboarding profile. No
-  // 'school'/'CBSE'/year assumptions — only what the user actually entered.
+  // 'school'/'CBSE'/year assumptions - only what the user actually entered.
   const orgName = org.name?.trim() || user.schoolName || 'Your organization'
   const orgSubtitle = [orgName, org.kind, org.period].filter(Boolean).join(' · ')
   // Stats are derived from the wizard store, which is per-browser and may hold
@@ -1427,7 +1427,7 @@ export function DashboardPage() {
   //
   // `conflicts` is in the per-schedule SNAPSHOT list but deliberately not in
   // the store's persist partialize, and loadActiveTimetableIntoStore no-ops
-  // once classTT has rehydrated — so after any plain reload the stored array
+  // once classTT has rehydrated - so after any plain reload the stored array
   // was empty and this tile read "0 conflicts" for a timetable that had them.
   // A false all-clear is the worst number this dashboard can show.
   //
@@ -1435,12 +1435,12 @@ export function DashboardPage() {
   // moment a lesson is dragged, the same reason the review dashboard counts
   // teacher load from classTT rather than from the solver's own tally.
 
-  // "Today" stats — actionable, day-specific numbers (what's running, who's
+  // "Today" stats - actionable, day-specific numbers (what's running, who's
   // out, what still needs a sub) instead of static institution-wide counts
   // that just repeat what the schedules list below already shows.
   //
   // MULTI-ACTIVE: when several schedules are active at once (e.g. I–V and
-  // VI–X), aggregate across ALL of them — sums/unions per schedule plus
+  // VI–X), aggregate across ALL of them - sums/unions per schedule plus
   // cross-schedule venue clashes on the wall-clock axis. Snapshots are fresh
   // here because the mount effect saves the open schedule's snapshot first.
   const activeBundles = hasTimetables ? loadActiveBundles(user?.id ?? '') : []
@@ -1463,14 +1463,14 @@ export function DashboardPage() {
     : undefined
 
   // "Right now" bridge to the Calendar's Live view: which period is in
-  // progress at this minute and how many classes are in session — the
+  // progress at this minute and how many classes are in session - the
   // dashboard stays a triage surface, Live stays the moment lens.
   const liveNow = (() => {
     if (!hasTimetables || !todaySummary?.isWorkDay) return undefined
     const periods: any[] = store.periods ?? []
     // The school's own bell decides what is on now. Summing durations from
     // the start time puts every period after an assembly or a lunch early, so
-    // this tile named the wrong period — and said a class was in session when
+    // this tile named the wrong period - and said a class was in session when
     // the school was at lunch.
     const bell = schedulePeriodTimes(store.config, periods, sections ?? [])
     const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
@@ -1578,7 +1578,7 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Pulse — one plain-language status line + the action that matters */}
+          {/* Pulse - one plain-language status line + the action that matters */}
           <DashboardPulse
             hasSchedule={hasTimetables}
             isWorkDay={todaySummary?.isWorkDay ?? false}
@@ -1596,7 +1596,7 @@ export function DashboardPage() {
             onNewSchedule={() => setShowCreate(true)}
           />
 
-          {/* Syllabus alert — always-on visibility for whatever is slipping, so
+          {/* Syllabus alert - always-on visibility for whatever is slipping, so
               nobody has to go hunting. Renders nothing when everything is fine. */}
           <SyllabusAlert />
 
@@ -1613,10 +1613,10 @@ export function DashboardPage() {
                 padding: '10px 14px', marginBottom: 10, fontSize: 12.5, color: '#92400E',
               }}>
                 {syncIssue === 'auth-401'
-                  ? '⚠️ Couldn’t verify your sign-in with the server (401). Showing locally-saved schedules only — they may not be backed up yet. This usually means the backend auth key is out of date.'
+                  ? '⚠️ Couldn’t verify your sign-in with the server (401). Showing locally-saved schedules only - they may not be backed up yet. This usually means the backend auth key is out of date.'
                   : syncIssue === 'offline'
-                  ? '⚠️ Couldn’t reach the server — showing locally-saved schedules only.'
-                  : `⚠️ Server error (${syncIssue.replace('http-', '')}) — showing locally-saved schedules only.`}
+                  ? '⚠️ Couldn’t reach the server - showing locally-saved schedules only.'
+                  : `⚠️ Server error (${syncIssue.replace('http-', '')}) - showing locally-saved schedules only.`}
               </div>
             )}
 
@@ -1740,10 +1740,10 @@ export function DashboardPage() {
                     {tt.status === 'archived' && (
                       <TtBtn onClick={() => handleViewTimetable(tt)}>View</TtBtn>
                     )}
-                    {/* Restore Data — only when this timetable genuinely has NO saved
+                    {/* Restore Data - only when this timetable genuinely has NO saved
                         snapshot (data may have been overwritten by another timetable's
                         config). Active/generated timetables always have one, so this
-                        never shows for them. Uses snapKey() — the namespaced key the
+                        never shows for them. Uses snapKey() - the namespaced key the
                         snapshot is actually stored under. */}
                     {tt.status !== 'active' && !localStorage.getItem(snapKey(tt.id)) && (
                       <TtBtn onClick={() => handleRepairSnapshot(tt)}>
@@ -1751,7 +1751,7 @@ export function DashboardPage() {
                       </TtBtn>
                     )}
 
-                    {/* Edit button — all rows */}
+                    {/* Edit button - all rows */}
                     <button
                       onClick={() => setEditingTT(tt)}
                       title="Edit schedule settings" aria-label="Edit schedule settings"
@@ -1767,7 +1767,7 @@ export function DashboardPage() {
                       <Pencil size={13} />
                     </button>
 
-                    {/* Duplicate button — all rows */}
+                    {/* Duplicate button - all rows */}
                     <button
                       onClick={() => handleDuplicate(tt)}
                       title="Duplicate schedule" aria-label="Duplicate schedule"
@@ -1783,7 +1783,7 @@ export function DashboardPage() {
                       <Copy size={13} />
                     </button>
 
-                    {/* Delete button — all rows */}
+                    {/* Delete button - all rows */}
                     <button
                       onClick={() => setConfirmDelete(confirmDelete === tt.id ? null : tt.id)}
                       title="Delete schedule" aria-label="Delete schedule"
@@ -1812,7 +1812,7 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* A calm glance at today's schedule — no toolbar, no filters, just
+          {/* A calm glance at today's schedule - no toolbar, no filters, just
               today's periods and anything needing attention. The full editor
               (Traditional/Calendar toggle, print, share, substitution, etc.)
               lives at /timetable, one click away, rather than being duplicated

@@ -9,7 +9,7 @@ import (
 )
 
 // parseAdmins turns "user_a, user_b" into a lookup set. Pure, so the important
-// case — an unset or blank variable yielding NOBODY rather than everybody — can
+// case - an unset or blank variable yielding NOBODY rather than everybody - can
 // be tested without a server.
 func parseAdmins(raw string) map[string]bool {
 	out := map[string]bool{}
@@ -38,7 +38,7 @@ func parseAdmins(raw string) map[string]bool {
 func RequireAdmin() fiber.Handler {
 	admins := parseAdmins(os.Getenv("ADMIN_CLERK_IDS"))
 	if len(admins) == 0 {
-		slog.Warn("auth: ADMIN_CLERK_IDS is empty — curriculum mutation endpoints will reject everyone. " +
+		slog.Warn("auth: ADMIN_CLERK_IDS is empty - curriculum mutation endpoints will reject everyone. " +
 			"Set it to your Clerk user id (dashboard.clerk.com → Users → the id starting user_) to enable them.")
 	} else {
 		slog.Info("auth: curriculum admin endpoints enabled", "admins", len(admins))
@@ -53,7 +53,7 @@ func RequireAdmin() fiber.Handler {
 			// carries. Telling you your own id discloses nothing you did not send.
 			if uid != "" {
 				return fiber.NewError(fiber.StatusForbidden,
-					"this endpoint is restricted to administrators — add your id to ADMIN_CLERK_IDS to enable it: "+uid)
+					"this endpoint is restricted to administrators - add your id to ADMIN_CLERK_IDS to enable it: "+uid)
 			}
 			return fiber.NewError(fiber.StatusForbidden, "this endpoint is restricted to administrators")
 		}

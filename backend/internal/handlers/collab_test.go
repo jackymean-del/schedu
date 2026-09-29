@@ -6,7 +6,7 @@ import (
 )
 
 // opt is the option shape mayClaim checks. It comes from the SCHOOL's stored
-// timetable now, not from the request body — see orCell.
+// timetable now, not from the request body - see orCell.
 type opt = orOption
 
 // mayClaim is the entire authorisation decision for a teacher taking an OR
@@ -80,7 +80,7 @@ func TestNormEmail(t *testing.T) {
 
 // mayClear is the other half of the authorisation. Guarding only the claim
 // leaves a teacher able to drop a colleague's period and let syllabus coverage
-// hand it back to them — the same outcome mayClaim refuses, reached sideways.
+// hand it back to them - the same outcome mayClaim refuses, reached sideways.
 func TestMayClear(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -110,7 +110,7 @@ func TestMayClear(t *testing.T) {
 
 // dayKeyOf has to agree with lib/days.ts DAY_NAMES exactly. If it drifts, the
 // server looks up a slot that is not there, orCell returns nothing, and every
-// teacher claim is refused with "that period is not a subject choice" — a
+// teacher claim is refused with "that period is not a subject choice" - a
 // failure that looks like a permissions bug and is really an off-by-one.
 func TestDayKeyOf(t *testing.T) {
 	// 2026-09-06 is a Sunday, so this walks a full week from index 0.
@@ -136,7 +136,7 @@ func TestMayClaimRejectsForgedOptions(t *testing.T) {
 	// asserting they teach Chemistry. Against the SCHOOL's list they do not.
 	forged := []opt{{Subject: "Chemistry", Teacher: "R. Rao"}}
 	if !mayClaim(forged, "Chemistry", "R. Rao") {
-		t.Fatal("the forged list is internally consistent — this is why it must never be the one checked")
+		t.Fatal("the forged list is internally consistent - this is why it must never be the one checked")
 	}
 	real := []opt{
 		{Subject: "Physics", Teacher: "R. Rao"},

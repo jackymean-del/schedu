@@ -1,5 +1,5 @@
 /** Lightweight per-route Suspense fallback for lazy-loaded pages (routeTree.gen.ts).
- *  Deliberately tiny/dependency-free — it renders while the route's own chunk
+ *  Deliberately tiny/dependency-free - it renders while the route's own chunk
  *  is still downloading, so it must not itself pull anything heavy. */
 export function RouteLoadingFallback() {
   return (

@@ -1,21 +1,21 @@
 /**
- * Schedu design tokens — the single source of truth for brand styling.
+ * Schedu design tokens - the single source of truth for brand styling.
  *
  * Import from here (or from components/resources/shared.tsx, which re-exports
  * BRAND as P/P_D/P_L/P_B for back-compat). Do NOT hard-code purple hexes:
  * the brand purple is #685DBC and its dark/light/border variants below.
  *
  * Category palettes (room types, class groups, calendar accents) are
- * intentionally multi-coloured and live next to their feature code —
+ * intentionally multi-coloured and live next to their feature code -
  * they are NOT brand tokens.
  */
 
 export const BRAND = {
-  /** Primary brand purple — buttons, links, active states, accents */
+  /** Primary brand purple - buttons, links, active states, accents */
   primary:      '#685DBC',
-  /** Darker variant — hover states, emphasised text on light purple */
+  /** Darker variant - hover states, emphasised text on light purple */
   primaryDark:  '#6358C4',
-  /** Light tint — selected/active backgrounds, chips */
+  /** Light tint - selected/active backgrounds, chips */
   primaryLight: '#EDE9FF',
   /** Translucent border / focus ring */
   primaryBorder: 'rgba(124,111,224,0.22)',

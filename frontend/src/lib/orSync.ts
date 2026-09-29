@@ -3,7 +3,7 @@
  *
  * Everything else in this app is local-first: a school's roster, its schedules
  * and its dated overlays live in the browser of whoever plans them. OR
- * decisions cannot, because the person making them is somebody else — a
+ * decisions cannot, because the person making them is somebody else - a
  * teacher on their own phone tapping "I'll take this period". The server holds
  * those, and this is the read side.
  *
@@ -60,7 +60,7 @@ export async function pullOrDecisions(
   return true
 }
 
-/** Shallow equality on the decision maps — enough to skip a pointless render. */
+/** Shallow equality on the decision maps - enough to skip a pointless render. */
 function sameMap(a: OrMap, b: OrMap): boolean {
   const ak = Object.keys(a), bk = Object.keys(b)
   if (ak.length !== bk.length) return false
@@ -84,8 +84,8 @@ export function readBundleOrDecisions(uid: string, id: string): OrMap {
 /**
  * Keep this browser's cached OR decisions fresh for a date window.
  *
- * Used by the dated surfaces — the day console, the calendar, the corridor
- * board — so a teacher's claim reaches the person planning the day. The board
+ * Used by the dated surfaces - the day console, the calendar, the corridor
+ * board - so a teacher's claim reaches the person planning the day. The board
  * polls, because nobody is standing at it to press refresh; the others pull on
  * mount and when the window moves.
  *

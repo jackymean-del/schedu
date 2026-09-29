@@ -5,14 +5,14 @@ import { teacherNorms } from './educationNorms'
 // ─── Country Data ─────────────────────────────────────────
 //
 // NOTE ON `maxPeriodsWeek` / `maxPeriodsDay`:
-// These describe the SCHOOL DAY — how many periods a class sits through (India:
+// These describe the SCHOOL DAY - how many periods a class sits through (India:
 // 6 a day, 36 a week). They are NOT a teacher's teaching cap, which is a
 // different and much lower figure (India's safe teaching load is 30/week) and
 // lives in lib/educationNorms, resolved through lib/teacherCap.
 //
 // Reading these as a teacher cap is exactly the bug that had a UK teacher
 // allowed 32–40 periods against a 22-period norm. If you need a teacher's limit,
-// call teacherWeeklyCap(staff) — never a figure from this table.
+// call teacherWeeklyCap(staff) - never a figure from this table.
 export const COUNTRIES: Country[] = [
   {
     code: 'IN', flag: '🇮🇳', name: 'India', subtitle: 'NCTE · Labour Act 1948',
@@ -385,7 +385,7 @@ export function generateBreaks(orgType: OrgType, n: number) {
   return list.slice(0, Math.max(2, Math.min(n, list.length)))
 }
 
-// ─── Subject Category Colors — schedU Spec ────────────────
+// ─── Subject Category Colors - schedU Spec ────────────────
 // Per Final Functional Doc §7 (Recommended UI Enhancements):
 //   Sports    → Green
 //   Arts      → Purple
@@ -447,7 +447,7 @@ const COLOR_MAP: [string[], string][] = [
   [['DISPERSAL','DISMISSAL','SIGN-OFF','HANDOVER','SHIFT END'],
    'bg-rose-100 text-rose-900 border-l-4 border-rose-600 font-bold'],
 
-  // ── Breaks — muted italic ──
+  // ── Breaks - muted italic ──
   [['LUNCH','MEAL'], 'bg-amber-100 text-amber-800 border-l-4 border-amber-400 italic'],
   [['BREAK','RECESS','PAUSE','MORNING TEA','COFFEE'], 'bg-yellow-50 text-yellow-700 border-l-4 border-yellow-400 italic'],
   [['DIARY'], 'bg-slate-50 text-slate-600 border-l-4 border-slate-300 italic'],

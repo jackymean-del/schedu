@@ -47,10 +47,10 @@ import type {
   SubjectPool,
   OptionalCombination,
 
-  // schedU Phase 2 — Optional Blocks + Combinations (Final Doc)
+  // schedU Phase 2 - Optional Blocks + Combinations (Final Doc)
   OptionalBlock,
   SubjectCombination,
-  // schedU Phase 6 — Simplified section-strength matrix
+  // schedU Phase 6 - Simplified section-strength matrix
   SectionStrength,
 
   // Legacy (used by existing wizard + engine)
@@ -72,7 +72,7 @@ import { parseAllocation } from '@/lib/allocationSyntax'
 // ── Bidirectional sync helpers (period ↔ teacher) ───────────
 //   computeNewTarget: parse a cell-syntax string into a numeric total
 //   reflowTeachersForCell: adjust existing teacher assignments so their
-//     sum matches the new target — additions go to the most-loaded
+//     sum matches the new target - additions go to the most-loaded
 //     existing teacher; removals drain the least-loaded first. When no
 //     teachers exist yet, the map is returned unchanged (the user can
 //     run "Auto-assign" later).
@@ -137,7 +137,7 @@ interface ScheduState {
   config: WizardConfig
 
   // ════════════════════════════════════════════════════════════
-  //  SCHEDU MODEL — Full institutional data
+  //  SCHEDU MODEL - Full institutional data
   // ════════════════════════════════════════════════════════════
 
   // Layer 1: Resource Engine
@@ -180,7 +180,7 @@ interface ScheduState {
   sidebarTab: 'legend' | 'staff' | 'shifts' | 'health' | 'pools'
 
   // ════════════════════════════════════════════════════════════
-  //  LEGACY STATE — for existing wizard and scheduling engine
+  //  LEGACY STATE - for existing wizard and scheduling engine
   //  (backed by old types; kept until full migration)
   // ════════════════════════════════════════════════════════════
   sections: Section[]
@@ -191,7 +191,7 @@ interface ScheduState {
   teacherTT: Record<string, TeacherSchedule>
   substitutions: Record<string, string>
   /**
-   * Which subject an OR period actually runs, per DATE — key
+   * Which subject an OR period actually runs, per DATE - key
    * `section|YYYY-MM-DD|periodId` (lib/orChoice). A dated overlay exactly like
    * substitutions: the base timetable keeps holding the CHOICE, and this says
    * which way one particular day went. Absent means nobody has decided, and
@@ -211,14 +211,14 @@ interface ScheduState {
   schedulingMode: 'period-based' | 'duration-based'
   workingDaysPerYear: number
 
-  // ── schedU Phase 2 — Optional Blocks + Combinations ──
+  // ── schedU Phase 2 - Optional Blocks + Combinations ──
   optionalBlocks: OptionalBlock[]
   subjectCombinations: SubjectCombination[]
 
-  // ── schedU Phase 6 — Section-Strength Matrix (the new simple input) ──
+  // ── schedU Phase 6 - Section-Strength Matrix (the new simple input) ──
   sectionStrengths: SectionStrength[]
 
-  // ── Doc Part 1 — Period Allocation matrix (cell syntax strings) ──
+  // ── Doc Part 1 - Period Allocation matrix (cell syntax strings) ──
   //    Shape: { [sectionName]: { [subjectName]: "5+1" | "3(2X)" | ... } }
   //    Empty/unset cell ⇒ engine falls back to Subject.periodsPerWeek default.
   //    Named `subjectAllocations` to avoid colliding with engine output `periodAllocations`.
@@ -226,7 +226,7 @@ interface ScheduState {
   /**
    * Cells in subjectAllocations a PERSON typed, as opposed to ones the period
    * allocation engine derived. Re-deriving preserves these instead of silently
-   * discarding hand-tuned work — see lib/periodAllocationEngine.mergePreservingManual.
+   * discarding hand-tuned work - see lib/periodAllocationEngine.mergePreservingManual.
    */
   manualSubjectAllocations: Record<string, Record<string, true>>
 
@@ -235,14 +235,14 @@ interface ScheduState {
   //    When set, overrides the band-level capacity computed from the bell schedule.
   sectionCapacityOverrides: Record<string, number>
 
-  // ── Doc 2 Step 3 — Teacher Allocation matrix ──
+  // ── Doc 2 Step 3 - Teacher Allocation matrix ──
   //    Shape: { [teacherName]: { [sectionName]: { [subjectName]: periods } } }
   //    Bidirectionally synced with subjectAllocations:
   //      - Sum of teacherAllocations[*][sec][sub] == parsed total of subjectAllocations[sec][sub]
   //      - Edit either side → the other reflows.
   teacherAllocations: Record<string, Record<string, Record<string, number>>>
 
-  // ── Doc Part 2 — Blocked slots from last solve (location-side telemetry) ──
+  // ── Doc Part 2 - Blocked slots from last solve (location-side telemetry) ──
   blockedSlots: Array<{
     section: string
     day: string
@@ -250,19 +250,19 @@ interface ScheduState {
     reasons: Array<{ category: string; detail: string; affected?: string }>
   }>
 
-  // ── Teacher Availability — pre-solve per-teacher slot matrix ──
+  // ── Teacher Availability - pre-solve per-teacher slot matrix ──
   teacherAvailability: TeacherAvailability
 
-  // ── Step 4 — AND Combo Groups (bundle-based split, e.g. PCM vs PCB) ──
+  // ── Step 4 - AND Combo Groups (bundle-based split, e.g. PCM vs PCB) ──
   andComboGroups: AndComboGroup[]
-  // ── Step 4 — Elective Slots (OR groups — students pick one per slot) ──
+  // ── Step 4 - Elective Slots (OR groups - students pick one per slot) ──
   electiveSlots: ElectiveSlot[]
 
-  // ── Step 4 — Subject Grouping Rules (per-subject cross-class behavior) ──
+  // ── Step 4 - Subject Grouping Rules (per-subject cross-class behavior) ──
   //    Shape: { [subjectName]: GroupingBehavior }
   subjectGroupingRules: Record<string, 'NO_GROUPING' | 'SAME_GRADE_ONLY' | 'CROSS_GRADE_ALLOWED' | 'FLEXIBLE_GROUPING'>
 
-  // ── Doc Part 3 — Dynamic Learning Groups from last solve ──
+  // ── Doc Part 3 - Dynamic Learning Groups from last solve ──
   dynamicLearningGroups: Array<{
     id: string
     subject: string
@@ -281,7 +281,7 @@ interface ScheduState {
   }>
 
   // ─────────────────────────────────────────────────────────────
-  //  ACTIONS — Schedu model
+  //  ACTIONS - Schedu model
   // ─────────────────────────────────────────────────────────────
   setStep: (n: number) => void
   setConfig: (c: Partial<WizardConfig>) => void
@@ -382,11 +382,11 @@ interface ScheduState {
   upsertSubjectCombination: (c: SubjectCombination) => void
   removeSubjectCombination: (id: string) => void
 
-  // ── schedU Phase 6 — Section Strengths ──
+  // ── schedU Phase 6 - Section Strengths ──
   setSectionStrengths: (s: SectionStrength[]) => void
   upsertSectionStrength: (s: SectionStrength) => void
 
-  // ── Doc Part 1 — Subject Period Allocations (cell-syntax matrix) ──
+  // ── Doc Part 1 - Subject Period Allocations (cell-syntax matrix) ──
   setSubjectAllocations: (a: Record<string, Record<string, string>>) => void
   /** Mark (or unmark) cells as hand-set. Applied to every section given, since a
    *  grid edit propagates across a grade's sections. */
@@ -395,18 +395,18 @@ interface ScheduState {
   setSubjectAllocationCell: (section: string, subject: string, value: string) => void
   setSectionCapacityOverrides: (o: Record<string, number>) => void
 
-  // ── Doc 2 Step 3 — Teacher Allocation (bidirectional sync) ──
+  // ── Doc 2 Step 3 - Teacher Allocation (bidirectional sync) ──
   setTeacherAllocations: (t: Record<string, Record<string, Record<string, number>>>) => void
   setTeacherAllocationCell: (teacher: string, section: string, subject: string, periods: number) => void
 
-  // ── Doc Part 2 — Blocked slots setter ──
+  // ── Doc Part 2 - Blocked slots setter ──
   setBlockedSlots: (b: Array<{ section: string; day: string; periodId: string; reasons: Array<{ category: string; detail: string; affected?: string }> }>) => void
-  // ── Doc Part 3 — DLG setter ──
+  // ── Doc Part 3 - DLG setter ──
   setDynamicLearningGroups: (g: ScheduState['dynamicLearningGroups']) => void
-  // ── Step 4 — AND Combo Groups + Elective Slots ──
+  // ── Step 4 - AND Combo Groups + Elective Slots ──
   setAndComboGroups: (g: AndComboGroup[]) => void
   setElectiveSlots: (s: ElectiveSlot[]) => void
-  // ── Step 4 — Subject Grouping Rules ──
+  // ── Step 4 - Subject Grouping Rules ──
   setSubjectGroupingRule: (subject: string, behavior: 'NO_GROUPING' | 'SAME_GRADE_ONLY' | 'CROSS_GRADE_ALLOWED' | 'FLEXIBLE_GROUPING') => void
   setSubjectGroupingRules: (rules: ScheduState['subjectGroupingRules']) => void
 
@@ -697,7 +697,7 @@ export const useTimetableStore = create<ScheduState>()(
         setSchedulingMode: (schedulingMode) => set({ schedulingMode }),
         setWorkingDaysPerYear: (workingDaysPerYear) => set({ workingDaysPerYear }),
 
-        // ── schedU Phase 2 — Optional Blocks + Combinations ──
+        // ── schedU Phase 2 - Optional Blocks + Combinations ──
         setOptionalBlocks: (optionalBlocks) => set({ optionalBlocks }),
         upsertOptionalBlock: (b) => set((s) => {
           const i = s.optionalBlocks.findIndex(x => x.id === b.id)
@@ -719,7 +719,7 @@ export const useTimetableStore = create<ScheduState>()(
           subjectCombinations: s.subjectCombinations.filter(x => x.id !== id),
         })),
 
-        // ── schedU Phase 6 — Section Strengths actions ──
+        // ── schedU Phase 6 - Section Strengths actions ──
         setSectionStrengths: (sectionStrengths) => set({ sectionStrengths }),
         upsertSectionStrength: (s) => set((st) => {
           const i = st.sectionStrengths.findIndex(x => x.sectionName === s.sectionName)
@@ -728,7 +728,7 @@ export const useTimetableStore = create<ScheduState>()(
             : { sectionStrengths: [...st.sectionStrengths, s] }
         }),
 
-        // ── Doc Part 1 — Subject Period Allocation actions ──
+        // ── Doc Part 1 - Subject Period Allocation actions ──
         setSubjectAllocations: (subjectAllocations) => set({ subjectAllocations }),
         markSubjectAllocationsManual: (sections, subject, manual) =>
           set((st) => {
@@ -761,7 +761,7 @@ export const useTimetableStore = create<ScheduState>()(
           return { subjectAllocations: next, teacherAllocations: teacherNext }
         }),
 
-        // ── Doc 2 Step 3 — Teacher Allocation actions (bidirectional sync) ──
+        // ── Doc 2 Step 3 - Teacher Allocation actions (bidirectional sync) ──
         setTeacherAllocations: (teacherAllocations) => set({ teacherAllocations }),
         setBlockedSlots: (blockedSlots) => set({ blockedSlots }),
         setDynamicLearningGroups: (dynamicLearningGroups) => set({ dynamicLearningGroups }),
@@ -773,7 +773,7 @@ export const useTimetableStore = create<ScheduState>()(
         setTeacherSlotStatus: (teacher, day, periodId, status) => set((s) => {
           const ta = { ...s.teacherAvailability }
           if (status === 'available') {
-            // Remove entry (available is the implicit default — no need to store it)
+            // Remove entry (available is the implicit default - no need to store it)
             if (!ta[teacher]) return {}
             const tDay = { ...(ta[teacher][day] ?? {}) }
             delete tDay[periodId]
@@ -917,7 +917,7 @@ export const useTimetableStore = create<ScheduState>()(
           teacherTT: state.teacherTT,
           // Must be persisted here too, not just in the per-timetable snapshot:
           // loadActiveTimetableIntoStore() no-ops once classTT is populated, and
-          // classTT rehydrates from THIS generic persist on a plain page reload —
+          // classTT rehydrates from THIS generic persist on a plain page reload -
           // so any field only captured in the snapshot (not here) would silently
           // vanish on refresh even though the snapshot itself still has it.
           substitutions: state.substitutions,
@@ -939,7 +939,7 @@ export const useTimetableStore = create<ScheduState>()(
           sectionStrengths: state.sectionStrengths,
           subjectAllocations: state.subjectAllocations,
           // Which of those cells a person set. Must persist alongside the values
-          // themselves — without it, a reload turns every hand-tuned figure back
+          // themselves - without it, a reload turns every hand-tuned figure back
           // into a derived one and the next Suggest silently overwrites it.
           manualSubjectAllocations: state.manualSubjectAllocations,
           sectionCapacityOverrides: state.sectionCapacityOverrides,

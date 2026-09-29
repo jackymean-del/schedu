@@ -17,7 +17,7 @@ func NewService(engine *Engine) *Service { return &Service{engine: engine} }
 // Parameters:
 //   - board:      e.g. "CBSE", "IB"
 //   - gradeGroup: e.g. "middle", "srSec"
-//   - streams:    e.g. ["science"] — nil means no stream filter (return all)
+//   - streams:    e.g. ["science"] - nil means no stream filter (return all)
 //   - schoolID:   empty string = no school-level overrides applied
 func (s *Service) ForGrade(
 	ctx context.Context,

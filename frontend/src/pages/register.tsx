@@ -1,5 +1,5 @@
 /**
- * Sign-up page — custom schedU UI, powered by real Clerk auth (custom flow).
+ * Sign-up page - custom schedU UI, powered by real Clerk auth (custom flow).
  *
  * Left panel  : brand sidebar with 4 feature bullets + trust line
  * Right panel : registration form → email-code verification step
@@ -36,13 +36,13 @@ function GoogleMark() {
 }
 
 const FEATURES = [
-  { color: '#0EA5E9', bg: '#E0F2FE', title: 'engine-generated allocations', desc: 'No manual tables — the engine suggests everything from scratch.',
+  { color: '#0EA5E9', bg: '#E0F2FE', title: 'engine-generated allocations', desc: 'No manual tables - the engine suggests everything from scratch.',
     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>) },
   { color: '#3B82F6', bg: '#DBEAFE', title: 'Spreadsheet-native editing', desc: 'Inline editing, drag-fill, copy-paste from Excel.',
     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>) },
   { color: '#F97316', bg: '#FFEDD5', title: 'Conflict-free guarantee', desc: 'Hard constraints enforced. the engine flags soft ones.',
     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>) },
-  { color: '#8B5CF6', bg: '#EDE9FF', title: 'Export anywhere', desc: 'PDF, Excel, print — class, teacher, or room view.',
+  { color: '#8B5CF6', bg: '#EDE9FF', title: 'Export anywhere', desc: 'PDF, Excel, print - class, teacher, or room view.',
     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>) },
 ]
 
@@ -69,7 +69,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
   const [email, setEmail] = useState('')
   const [organization, setOrganization] = useState('')
   const [state, setState] = useState('')
-  // Pre-filled from the browser's timezone/locale — no IP lookup, no third-party
+  // Pre-filled from the browser's timezone/locale - no IP lookup, no third-party
   // geo service, works offline. Purely a suggestion the user can overwrite.
   const [country, setCountry] = useState(() => countryHours(detectCountry())?.name ?? '')
   const [phone, setPhone] = useState('')
@@ -152,7 +152,7 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
         </div>
       </aside>
 
-      {/* RIGHT — FORM / VERIFY PANEL */}
+      {/* RIGHT - FORM / VERIFY PANEL */}
       <main style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '52px 40px', overflowY: 'auto' }}>
         <div style={{ width: '100%', maxWidth: 440 }}>
 
@@ -300,8 +300,8 @@ function ClerkRegister() {
   const [pendingEmail, setPendingEmail] = useState('')
 
   const onSubmit = async (f: RegFields) => {
-    if (!isLoaded || !signUp) throw new Error('Authentication is still loading — please try again.')
-    // The country typed at sign-up is the school's education system — resolve it
+    if (!isLoaded || !signUp) throw new Error('Authentication is still loading - please try again.')
+    // The country typed at sign-up is the school's education system - resolve it
     // to a reference code so the national norms are right from the first login.
     // Unrecognised input is left unset rather than guessed at.
     rememberSignupCountry(f.country)
@@ -328,7 +328,7 @@ function ClerkRegister() {
   }
 
   const onVerify = async (code: string) => {
-    if (!isLoaded || !signUp) throw new Error('Authentication is still loading — please try again.')
+    if (!isLoaded || !signUp) throw new Error('Authentication is still loading - please try again.')
     const res = await signUp.attemptEmailAddressVerification({ code })
     if (res.status === 'complete' && res.createdSessionId) {
       await setActive({ session: res.createdSessionId })

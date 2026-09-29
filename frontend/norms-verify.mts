@@ -1,5 +1,5 @@
 /**
- * Education-norms verification — banding, allocation math, bell compliance,
+ * Education-norms verification - banding, allocation math, bell compliance,
  * and the teacher-requirement alert. Run: npx tsx norms-verify.mts
  */
 import {
@@ -11,7 +11,7 @@ import { countryOptions } from './src/lib/countryHours.ts'
 
 let failures = 0
 const check = (ok: boolean, label: string, extra = '') => {
-  console.log(`${ok ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${ok ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!ok) failures++
 }
 
@@ -82,7 +82,7 @@ check(r4.teachersNeeded === 63 && r4.status === 'over', 'Australia norms need 63
 
 // ── Global coverage: EVERY supported country resolves to a real norm ───────
 // This used to walk a world-wide country list (lib/allCountries), which was
-// deleted as dead code — taking this file's ability to run with it. The list
+// deleted as dead code - taking this file's ability to run with it. The list
 // that matters is the one we actually claim coverage for (NORM_COUNTRIES),
 // cross-checked against the countries the settings picker can offer.
 const explicit = new Set(['IN', 'GB', 'US', 'AU'])
@@ -102,7 +102,7 @@ for (const code of NORM_COUNTRIES) {
 check(badBands.length === 0, `every covered country returns valid student+teacher norms (${NORM_COUNTRIES.length} countries)`, badBands.length ? `bad: ${badBands.join(',')}` : 'all valid')
 check(uncovered === 0, `every non-explicit country maps to a REGION (not flat default)`, uncovered ? `${uncovered} fell through to INTL` : `${NORM_COUNTRIES.length - explicit.size} region-mapped`)
 
-// Anything the user can PICK in Settings must be covered — the two lists are
+// Anything the user can PICK in Settings must be covered - the two lists are
 // maintained separately (countryHours vs educationNorms), so they can drift.
 // 'OECD' is the average row, not a country.
 const pickable = countryOptions().map(o => o.code).filter(c => c !== 'OECD')

@@ -15,7 +15,7 @@ export const P_L = BRAND.primaryLight
 export const P_B = BRAND.primaryBorder
 
 // ─── Table layout constants ────────────────────────────────────────────────────
-export const ROW_H = 40  // px — target row height
+export const ROW_H = 40  // px - target row height
 
 export const TH: React.CSSProperties = {
   padding: '0 10px',
@@ -73,7 +73,7 @@ export const deleteBtn: React.CSSProperties = {
   transition: 'all 0.1s',
 }
 
-/** Reusable icon-only delete button — use everywhere instead of text Delete */
+/** Reusable icon-only delete button - use everywhere instead of text Delete */
 export function DeleteActionButton({ onDelete, tooltip = 'Delete' }: {
   onDelete: () => void
   tooltip?: string
@@ -129,7 +129,7 @@ export const outlineBtn: React.CSSProperties = {
  * Big centered first-run choice shown when a resource tab is empty: build it for
  * the user from the curriculum ("Let me create smartly") or start by hand ("Add
  * manually"). Used by Subjects / Faculty / Rooms. The smart action is disabled
- * (with a hint) when its prerequisite is missing — e.g. no classes added yet.
+ * (with a hint) when its prerequisite is missing - e.g. no classes added yet.
  */
 export function SmartEmptyState({
   icon, title, subtitle,
@@ -159,7 +159,7 @@ export function SmartEmptyState({
       <div style={{ fontSize: 12.5, color: '#6D6A8A', maxWidth: 440, lineHeight: 1.55, marginBottom: 24 }}>{subtitle}</div>
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'stretch' }}>
-        {/* Smart create — primary, prominent */}
+        {/* Smart create - primary, prominent */}
         <button
           onClick={smartDisabled || busy ? undefined : onSmart}
           disabled={smartDisabled || busy}
@@ -183,7 +183,7 @@ export function SmartEmptyState({
           {smartSubtext && <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.92 }}>{smartSubtext}</span>}
         </button>
 
-        {/* Manual — secondary */}
+        {/* Manual - secondary */}
         <button
           onClick={busy ? undefined : onManual}
           disabled={busy}
@@ -213,10 +213,10 @@ export function SmartEmptyState({
 
 // ─── Undo history hook ────────────────────────────────────────────────────────
 /**
- * Ref-based undo stack. Stable function refs — safe in useEffect/onKeyDown.
+ * Ref-based undo stack. Stable function refs - safe in useEffect/onKeyDown.
  * Call push(currentValue) BEFORE every mutation.
  * Call undo() on Ctrl+Z to get the previous value (or undefined if empty).
- * Use onKeyDown on the panel outer div — bubbles up from any focused input.
+ * Use onKeyDown on the panel outer div - bubbles up from any focused input.
  */
 export function useUndoHistory<T>(): {
   push: (snapshot: T) => void
@@ -270,7 +270,7 @@ export function ResourceGlobalStyles() {
         box-shadow: 0 0 0 3px rgba(124,111,224,0.2) !important;
         outline: none !important;
       }
-      /* Hide number spinners — use keyboard or type directly */
+      /* Hide number spinners - use keyboard or type directly */
       .rp-num::-webkit-inner-spin-button,
       .rp-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       .rp-num { -moz-appearance: textfield; }
@@ -487,7 +487,7 @@ export function InlineChipSelect({
 
   const hasGroups = options.some(o => o.group)
 
-  /** All unique group names from options — stable list for rendering filter buttons. */
+  /** All unique group names from options - stable list for rendering filter buttons. */
   const allGroups = useMemo(() => {
     const groups: string[] = []
     const seen = new Set<string>()
@@ -500,7 +500,7 @@ export function InlineChipSelect({
     return groups
   }, [options])
 
-  /** Options visible in the list — respects search text AND active grade filter. */
+  /** Options visible in the list - respects search text AND active grade filter. */
   const grouped = useMemo(() => {
     const q = search.toLowerCase()
     const map = new Map<string, ChipOption[]>()
@@ -572,7 +572,7 @@ export function InlineChipSelect({
                 const visibleVals = new Set(Array.from(grouped.values()).flat().map(o => o.value))
                 onChange(selected.filter(v => !visibleVals.has(v)))
               }} style={{ fontSize: 10, color: '#888', background: '#F0F0F0', border: '1px solid #E4E4E4', borderRadius: 3, padding: '2px 7px', cursor: 'pointer' }}>None</button>
-              {/* Grade filter buttons — two separate visual states:
+              {/* Grade filter buttons - two separate visual states:
                     • light purple tint  = this grade has ≥1 selected section (selection indicator)
                     • dark purple / bold = this grade is the ACTIVE VIEW FILTER (click to narrow list)
                   Clicking a button sets/clears the view filter; it does NOT change the selection. */}
@@ -745,7 +745,7 @@ export function ImportModal({
           {tab === 'upload' && (
             <div>
               <p style={{ margin: '0 0 14px', fontSize: 12, color: '#6B6891', lineHeight: 1.55 }}>
-                Upload a <strong>.csv</strong>, <strong>.tsv</strong>, or plain text file — one row per line.
+                Upload a <strong>.csv</strong>, <strong>.tsv</strong>, or plain text file - one row per line.
               </p>
               <div onClick={() => fileRef.current?.click()}
                 style={{ border: '2px dashed #DDD8FF', borderRadius: 10, padding: '38px 20px', textAlign: 'center', cursor: 'pointer', background: '#FAFAFE', transition: 'all 0.12s' }}
@@ -762,14 +762,14 @@ export function ImportModal({
           {tab === 'paste' && (
             <div>
               <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6B6891', lineHeight: 1.55 }}>
-                Paste directly from Excel or Google Sheets (Ctrl+V) — tab or comma separated.
+                Paste directly from Excel or Google Sheets (Ctrl+V) - tab or comma separated.
               </p>
               <textarea ref={taRef} value={raw} onChange={e => setRaw(e.target.value)}
                 placeholder="Paste here (Ctrl+V)…"
                 style={{ width: '100%', boxSizing: 'border-box', height: 150, border: `1.5px solid ${raw ? (rows.length > 0 ? '#86EFAC' : '#FECACA') : '#DDD8FF'}`, outline: 'none', resize: 'none', padding: '10px 12px', fontSize: 12, fontFamily: '"ui-monospace","Cascadia Code",monospace', color: '#111028', background: '#fff', borderRadius: 7, lineHeight: 1.6, transition: 'border-color 0.15s' }}
               />
               <div style={{ marginTop: 5, fontSize: 11, color: rows.length > 0 ? '#0A8136' : (raw ? '#DC2626' : '#9896B5'), fontWeight: rows.length > 0 ? 600 : 400 }}>
-                {rows.length > 0 ? `✓ ${rows.length} row${rows.length !== 1 ? 's' : ''} ready to import` : raw ? 'No valid rows detected — check format' : 'Paste rows above'}
+                {rows.length > 0 ? `✓ ${rows.length} row${rows.length !== 1 ? 's' : ''} ready to import` : raw ? 'No valid rows detected - check format' : 'Paste rows above'}
               </div>
             </div>
           )}

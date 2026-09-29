@@ -1,8 +1,8 @@
 /**
- * Explanation Engine — schedU Doc Part 2 (AI Explanation System).
+ * Explanation Engine - schedU Doc Part 2 (AI Explanation System).
  *
  * Mirrors the solver's scoring factors so the UI can show users the
- * exact reasoning behind any teacher assignment. Pure functions —
+ * exact reasoning behind any teacher assignment. Pure functions -
  * no state, no side effects.
  *
  * Used by:
@@ -23,7 +23,7 @@ export type FactorCategory =
   | 'ct'             // is class teacher for this section
   | 'scope-locked'   // scope = locked at this slot
   | 'scope-disabled' // scope = disabled (soft penalty)
-  | 'fallback'       // no subject match — last resort pick
+  | 'fallback'       // no subject match - last resort pick
 
 export interface ExplanationFactor {
   category: FactorCategory
@@ -78,7 +78,7 @@ export function explainAssignment(ctx: ExplainContext): AssignmentExplanation {
   } else {
     factors.push({
       category: 'fallback', positive: false, weight: 0,
-      reason: `Not listed as a ${ctx.subject.name} teacher — fallback assignment`,
+      reason: `Not listed as a ${ctx.subject.name} teacher - fallback assignment`,
     })
   }
 
@@ -100,7 +100,7 @@ export function explainAssignment(ctx: ExplainContext): AssignmentExplanation {
   if (isCT) {
     factors.push({
       category: 'ct', positive: true, weight: 15,
-      reason: `Class teacher for ${ctx.section.name} — owns this section`,
+      reason: `Class teacher for ${ctx.section.name} - owns this section`,
     })
     score += 15
   }
@@ -129,7 +129,7 @@ export function explainAssignment(ctx: ExplainContext): AssignmentExplanation {
       const bonus = Math.min(30, deficit * 2)
       factors.push({
         category: 'workload', positive: true, weight: bonus,
-        reason: `Below target weekly load (${load}/${target} — fair distribution)`,
+        reason: `Below target weekly load (${load}/${target} - fair distribution)`,
       })
       score += bonus
     } else if (load > target) {
@@ -170,7 +170,7 @@ export function explainAssignment(ctx: ExplainContext): AssignmentExplanation {
       if (state === 'locked') {
         factors.push({
           category: 'scope-locked', positive: false, weight: -999,
-          reason: `${label} scope LOCKED at ${ctx.day} ${ctx.periodId} — hard constraint`,
+          reason: `${label} scope LOCKED at ${ctx.day} ${ctx.periodId} - hard constraint`,
         })
       } else if (state === 'disabled') {
         factors.push({
@@ -196,7 +196,7 @@ export function explainAssignment(ctx: ExplainContext): AssignmentExplanation {
   let summary = ''
   if (topPositive) summary = topPositive.reason
   else if (topNegative) summary = topNegative.reason
-  else summary = `${ctx.teacher.name} assigned — no specific factors detected`
+  else summary = `${ctx.teacher.name} assigned - no specific factors detected`
 
   // ── Recommendation verdict ──
   const recommended = score >= 50 &&

@@ -1,13 +1,13 @@
 /**
- * timetableExport — pure data-formatting helpers for timetable exports.
+ * timetableExport - pure data-formatting helpers for timetable exports.
  *
  * Each function returns a plain 2-D array (AoA = array-of-arrays) that
  * SheetJS can consume directly via `XLSX.utils.aoa_to_sheet`.
  *
  * Three export shapes are supported:
- *   classSheet(section)   — one sheet per class  (periods × days grid)
- *   teacherSheet(teacher) — one sheet per teacher (periods × days grid)
- *   flatRows()            — every assignment as a flat CSV-friendly row
+ *   classSheet(section)   - one sheet per class  (periods × days grid)
+ *   teacherSheet(teacher) - one sheet per teacher (periods × days grid)
+ *   flatRows()            - every assignment as a flat CSV-friendly row
  *
  * Pure functions. No React, no SheetJS, no side effects.
  */
@@ -47,7 +47,7 @@ export function formatCell(
 
 /**
  * Build a 2-D array for one section's timetable:
- *   Row 0   : header — empty | Mon | Tue | Wed | Thu | Fri …
+ *   Row 0   : header - empty | Mon | Tue | Wed | Thu | Fri …
  *   Row 1…  : period name | cell content per day
  */
 export function buildClassSheet(
@@ -63,12 +63,12 @@ export function buildClassSheet(
 
   periods.forEach(period => {
     const label = period.type === 'break'
-      ? `— ${period.name} —`
+      ? `- ${period.name} -`
       : period.name
     const row: (string | number)[] = [label]
 
     if (period.type === 'break') {
-      // Break row — shade entire row with a marker
+      // Break row - shade entire row with a marker
       workDays.forEach(() => row.push(''))
     } else {
       workDays.forEach(day => {
@@ -87,7 +87,7 @@ export function buildClassSheet(
 /**
  * Build a 2-D array for one teacher's timetable (derived by scanning
  * classTT for cells assigned to that teacher):
- *   Row 0   : header — Period / Day | Mon | Tue | …
+ *   Row 0   : header - Period / Day | Mon | Tue | …
  *   Row 1…  : period label | "Subject (Section)" per day
  */
 export function buildTeacherSheet(
@@ -101,7 +101,7 @@ export function buildTeacherSheet(
 
   periods.forEach(period => {
     const label = period.type === 'break'
-      ? `— ${period.name} —`
+      ? `- ${period.name} -`
       : period.name
     const row: (string | number)[] = [label]
 
@@ -117,7 +117,7 @@ export function buildTeacherSheet(
           // subject that teacher actually takes.
           //
           // An OR/AND cell runs parallel subjects in one slot and names a
-          // teacher per subject, mirroring only the first into cell.teacher —
+          // teacher per subject, mirroring only the first into cell.teacher -
           // so this handed a teacher a timetable with their parallel-group
           // classes silently missing from it, and nobody turns up to a lesson
           // that is not on the sheet they were given. It would also have
@@ -160,7 +160,7 @@ export function buildFlatSheet(options: ExportOptions): (string | number)[][] {
         if (!cell?.subject) return
         // One row per teaching pair, not per cell. This sheet says it lists
         // every assignment; a parallel cell holds more than one, and emitting
-        // only cell.teacher dropped every group after the first — from the
+        // only cell.teacher dropped every group after the first - from the
         // export people use for mail-merge and to move data elsewhere.
         const pairs = teachingPairsInCell(cell)
         if (!pairs.length) {
@@ -186,7 +186,7 @@ export function buildFlatSheet(options: ExportOptions): (string | number)[][] {
 
 // ─── Print HTML ──────────────────────────────────────────
 
-/** Colour palette for subjects — cycles through a set of pastels. */
+/** Colour palette for subjects - cycles through a set of pastels. */
 
 /**
  * Generate a complete, self-contained HTML document for all class timetables.

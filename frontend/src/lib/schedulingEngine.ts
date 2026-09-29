@@ -5,8 +5,8 @@
  * This is the frontend JS equivalent of OR-Tools CP-SAT.
  * 
  * Supports:
- *   MODE 1 — Period-Based (weekly_periods given directly)
- *   MODE 2 — Duration-Based (convert total hours → weekly periods)
+ *   MODE 1 - Period-Based (weekly_periods given directly)
+ *   MODE 2 - Duration-Based (convert total hours → weekly periods)
  * 
  * All scheduling data internally converts to:
  *   Class + Subject + WeeklyFrequency
@@ -66,7 +66,7 @@ export interface SolverInput {
   workDays: string[]
   /**
    * School default teacher cap in periods/week, from the norms database. Passed
-   * IN rather than read from a store so the solver stays a pure function —
+   * IN rather than read from a store so the solver stays a pure function -
    * testable, and safe to move to a worker. Omitted only by legacy callers.
    */
   defaultTeacherMaxPeriods?: number
@@ -74,7 +74,7 @@ export interface SolverInput {
   softConstraints?: SoftConstraint[]
   /** schedU Phase 3: Optional blocks to pin into specific (day, period, sections) slots */
   optionalBlocks?: import('@/types').OptionalBlock[]
-  /** Per-class combination strengths — used for capacity overflow detection */
+  /** Per-class combination strengths - used for capacity overflow detection */
   subjectCombinations?: import('@/types').SubjectCombination[]
   /** schedU Phase 6: Section-subject strength matrix.
    *  When provided AND optionalBlocks is empty, the engine AUTO-INFERS
@@ -89,25 +89,25 @@ export interface SolverInput {
    *  multiple pools when a single pool exceeds a subject's room cap. */
   rooms?: Array<{ id?: string; actualName?: string; generatedName?: string; name?: string; capacity?: number; roomType?: string }>
   /** Teacher availability matrix (teacherName → day → periodId → status).
-   *  'blocked' slots are treated as permanently busy — solver will never
+   *  'blocked' slots are treated as permanently busy - solver will never
    *  place a lesson there.  'preferred' slots get a soft scoring bonus. */
   teacherAvailability?: import('@/types').TeacherAvailability
   /** Class-specific day-off rules from the bell schedule step.
    *  e.g. [{ day: 'Sat', classes: ['nur', 'lkg', 'ukg'] }]
    *  day:     short format ('Mon', 'Sat', …) mapped to UPPERCASE workDay keys.
-   *  classes: class-key prefixes ('nur', 'lkg', 'ukg', 'i', 'xi', …) —
+   *  classes: class-key prefixes ('nur', 'lkg', 'ukg', 'i', 'xi', …) -
    *           matched against section names by case-insensitive prefix. */
   dayOffRules?: Array<{ id?: string; day: string; classes: string[] }>
   /** Bell-true adjacency per section: list of class-period ids pN such that
    *  pN → pN+1 are genuinely back-to-back in THIS section's bell schedule
    *  (no short break / lunch between them). When provided, multi-period
    *  session blocks (doublePeriods / Xs=Yp syntax) are only placed across
-   *  pairs in this list — a double period never straddles a break.
+   *  pairs in this list - a double period never straddles a break.
    *  Sections missing from the map fall back to plain array adjacency. */
   sectionAdjacency?: Record<string, string[]>
 }
 
-/** schedU Phase 6 — Auto-infer Optional Blocks from section strengths.
+/** schedU Phase 6 - Auto-infer Optional Blocks from section strengths.
  *
  *  Heuristics:
  *    1. For each section, find the maximum subject strength = section size.
@@ -147,7 +147,7 @@ function inferOptionalBlocksFromStrengths(
   if (optsBySection.size === 0) return []
 
   // 2) For each section, group its optionals into "parallel sets" (subjects
-  //    whose strengths sum to roughly the section total — they're offered
+  //    whose strengths sum to roughly the section total - they're offered
   //    at the same time slot).
   type ParallelSet = { sectionName: string; subjects: string[]; perSubjectStrength: Record<string, number> }
   const parallelSets: ParallelSet[] = []
@@ -159,7 +159,7 @@ function inferOptionalBlocksFromStrengths(
     })
   })
 
-  // 3) Doc Part 3 — Dynamic Cross-Class Same-Period Assignment Engine.
+  // 3) Doc Part 3 - Dynamic Cross-Class Same-Period Assignment Engine.
   //    Pool parallel sets across sections using each subject's
   //    `groupingBehavior` metadata to decide what may merge:
   //      NO_GROUPING         → no pooling; one block per section
@@ -173,7 +173,7 @@ function inferOptionalBlocksFromStrengths(
     sectionNames: string[]
     subjects: string[]
     capacityBySubject: Record<string, number>
-    /** Per-section per-subject strengths — kept so the capacity splitter
+    /** Per-section per-subject strengths - kept so the capacity splitter
      *  can rebalance sections into multiple pools when one pool exceeds
      *  a subject's room cap. */
     sectionContribs: Record<string, Record<string, number>>
@@ -252,7 +252,7 @@ function inferOptionalBlocksFromStrengths(
     return undefined
   }
 
-  /** Doc Part 3 — Split one pool into multiple pools whenever any
+  /** Doc Part 3 - Split one pool into multiple pools whenever any
    *  subject in the pool exceeds its preferred room's capacity. Uses
    *  greedy bin-packing: sort sections by total contribution descending,
    *  drop each into the first bin that can accommodate it across ALL
@@ -269,7 +269,7 @@ function inferOptionalBlocksFromStrengths(
     })
     if (!anyOverflow) return [pool]
 
-    // Sort sections by total contribution desc — largest sections placed first
+    // Sort sections by total contribution desc - largest sections placed first
     const orderedSecs = [...pool.sectionNames].sort((a, b) => {
       const totA = pool.subjects.reduce((acc, s) => acc + (pool.sectionContribs[a]?.[s] ?? 0), 0)
       const totB = pool.subjects.reduce((acc, s) => acc + (pool.sectionContribs[b]?.[s] ?? 0), 0)
@@ -315,7 +315,7 @@ function inferOptionalBlocksFromStrengths(
     const behavior = mostRestrictive(subjs)
 
     if (behavior === 'NO_GROUPING') {
-      // Each section gets its own block — never merge.
+      // Each section gets its own block - never merge.
       sets.forEach(ps => {
         const p = mergeSets([ps], subjs)
         p.behavior = behavior
@@ -336,20 +336,20 @@ function inferOptionalBlocksFromStrengths(
         pools.push(p)
       })
     } else {
-      // CROSS_GRADE_ALLOWED or FLEXIBLE_GROUPING — pool all into one.
+      // CROSS_GRADE_ALLOWED or FLEXIBLE_GROUPING - pool all into one.
       const p = mergeSets(sets, subjs)
       p.behavior = behavior
       pools.push(p)
     }
   })
 
-  // 3.5) Doc Part 3 — Room capacity splitting.
+  // 3.5) Doc Part 3 - Room capacity splitting.
   //      For every pool, if any subject's pooled strength exceeds its
   //      preferred room capacity, bin-pack the sections into multiple
   //      smaller pools so no bin violates capacity.
   const finalPools: PoolEntry[] = pools.flatMap(p => splitByRoomCapacity(p))
 
-  // 4) Assign each pool to a (day, period) — first available across
+  // 4) Assign each pool to a (day, period) - first available across
   //    every section in the pool.
   const usedSlot = new Set<string>() // "section|day|period"
   const inferred: import('@/types').OptionalBlock[] = []
@@ -358,7 +358,7 @@ function inferOptionalBlocksFromStrengths(
     let placedDay = workDays[0], placedPid = classPeriods[0]?.id ?? ''
     outer: for (const day of workDays) {
       for (const p of classPeriods) {
-        // First class period is reserved for class teachers — skip
+        // First class period is reserved for class teachers - skip
         if (p.id === classPeriods[0]?.id) continue
         const allFree = entry.sectionNames.every(s => !usedSlot.has(`${s}|${day}|${p.id}`))
         if (allFree) {
@@ -376,8 +376,8 @@ function inferOptionalBlocksFromStrengths(
     // teacher)`, which handed the subject to whoever happened to be spare: a
     // block of "Computer OR Social Studies" put the Computer teacher on
     // Computer and the ENGLISH teacher on Social Studies, in fourteen sections
-    // at once. Pass 2 states the rule in its own comment — specialists busy
-    // means try something else, "NEVER hand the lesson to a random teacher" —
+    // at once. Pass 2 states the rule in its own comment - specialists busy
+    // means try something else, "NEVER hand the lesson to a random teacher" -
     // and this path quietly did the opposite.
     //
     // An option with no teacher is the honest outcome, and matches what the
@@ -439,7 +439,7 @@ export interface SolverOutput {
   dynamicLearningGroups?: DynamicLearningGroup[]
   /** Per-teacher final weekly load (for fairness diagnostics). */
   teacherWeeklyLoad?: Record<string, number>
-  /** Stddev of teacher loads — lower is more balanced. */
+  /** Stddev of teacher loads - lower is more balanced. */
   teacherLoadStddev?: number
   /** Slots the engine could not fill, with structured reasons. */
   blockedSlots?: BlockedSlot[]
@@ -457,7 +457,7 @@ export type BlockedReasonCategory =
 export interface BlockedReason {
   category: BlockedReasonCategory
   detail: string
-  /** Entity name involved — teacher / subject / section depending on category. */
+  /** Entity name involved - teacher / subject / section depending on category. */
   affected?: string
 }
 
@@ -481,12 +481,12 @@ export function blockedCategoryLabel(c: BlockedReasonCategory): string {
   }
 }
 
-/** Short remedy hint per category — surfaces in the UI as suggested action. */
+/** Short remedy hint per category - surfaces in the UI as suggested action. */
 export function blockedRemedy(c: BlockedReasonCategory): string {
   switch (c) {
     case 'subject-scope-locked':   return 'Loosen the subject scope OR allow another subject at this slot'
     case 'section-scope-locked':   return 'Unlock this section scope at this slot'
-    case 'after-dispersal':        return 'This class’s day has already ended at this period — it isn’t a gap. Trim its weekly allocations to fit its shorter day, or extend its bell in Shift & timing'
+    case 'after-dispersal':        return 'This class’s day has already ended at this period - it isn’t a gap. Trim its weekly allocations to fit its shorter day, or extend its bell in Shift & timing'
     case 'no-eligible-teachers':   return 'Add a teacher to the subject pool or expand subject lists'
     case 'subject-quota-met':      return 'Increase the periods-per-week target for this section'
     case 'subject-max-per-day':    return 'Raise maxPeriodsPerDay for this subject'
@@ -543,13 +543,13 @@ export function extractDynamicLearningGroups(
 const tKey = (st: { id?: string; name?: string }) => st?.id || st?.name || ''
 
 /**
- * The per-day teaching cap in force for one teacher — their own figure if set,
+ * The per-day teaching cap in force for one teacher - their own figure if set,
  * otherwise derived from their weekly cap so the two can never contradict each
  * other (lib/facultyWorkload). Returns 0 when no cap applies, which
  * atDailyLimit reads as "unlimited".
  *
  * Module scope because BOTH the first-pass solver and the re-optimiser must
- * apply the same limit — a cap the re-optimiser ignored would be undone the
+ * apply the same limit - a cap the re-optimiser ignored would be undone the
  * moment anyone pressed "optimise".
  */
 function dailyCapFor(st: any, workDayCount: number): number {
@@ -594,11 +594,11 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   //
   // Availability and load belong to a PERSON. Keying them by name made two
   // staff called 'Anita Sharma' share one weekly cap, so lessons two people
-  // could have covered went unplaced — and with a tight cap a subject could
+  // could have covered went unplaced - and with a tight cap a subject could
   // end up with no periods at all.
   //
-  // Cells still carry the NAME, because everything downstream — substitutions,
-  // leave, cover, the rename cascade — is name-keyed by design. Cells this
+  // Cells still carry the NAME, because everything downstream - substitutions,
+  // leave, cover, the rename cascade - is name-keyed by design. Cells this
   // solver writes also carry teacherId, so a re-solve can tell the two apart.
   // Name → every key that answers to it. Used only where the data gives us a
   // bare name (an existing cell, the availability matrix, an optional block).
@@ -614,7 +614,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   const keysFor = (name: string | undefined): string[] => keysByName.get(name ?? '') ?? (name ? [name] : [])
 
   /** The person a placed cell refers to. Cells this solver writes carry
-   *  teacherId; older ones only have a name, so fall back to resolving it —
+   *  teacherId; older ones only have a name, so fall back to resolving it -
    *  ambiguous only when two staff share a name, which is the case that was
    *  already broken. */
   const cellKeys = (cell: { teacher?: string; teacherId?: string } | undefined): string[] =>
@@ -635,7 +635,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         Object.entries(periodMap).forEach(([periodId, status]) => {
           if (status === 'blocked') {
             // The UI records availability against a NAME, so it applies to every
-            // person answering to it — marking both never double-books anyone.
+            // person answering to it - marking both never double-books anyone.
             for (const k of keysFor(tName)) {
               if (!teacherBusy[k]) {
                 teacherBusy[k] = Object.fromEntries(workDays.map(d => [d, new Set<string>()]))
@@ -647,7 +647,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       })
     })
   }
-  // 'preferred' slots are used as a soft scoring bonus — see assignment scoring below.
+  // 'preferred' slots are used as a soft scoring bonus - see assignment scoring below.
   const teacherPreferredSlots: Set<string> = new Set(
     Object.entries(input.teacherAvailability ?? {}).flatMap(([tName, dayMap]) =>
       Object.entries(dayMap).flatMap(([day, periodMap]) =>
@@ -669,13 +669,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   //
   // The solver used to write each section's HOME room onto every lesson and
   // never ask whether it was free. For a school with a room per class that is
-  // correct by construction — but give two sections the same room, which is
+  // correct by construction - but give two sections the same room, which is
   // what a shared lab or a school with fewer rooms than classes looks like,
   // and both were booked into it every period of the week.
   //
   // This does not attempt real venue allocation: no subject says "I need a
   // lab" yet, and nothing is optimised. It does the one thing that is
-  // unambiguous — when the home room is already taken, use one that is free.
+  // unambiguous - when the home room is already taken, use one that is free.
   //
   // When there is nowhere free (or the school has entered no rooms at all) it
   // falls back to the home room, which is exactly the old behaviour. That
@@ -717,7 +717,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
   // ── Doc Part 1: per-(section, subject) target periods/week ──
   //   The allocation matrix is AUTHORITATIVE for a section once it has a row:
-  //   a subject with no cell in that row is NOT taught there (target 0) — the
+  //   a subject with no cell in that row is NOT taught there (target 0) - the
   //   global Subject.periodsPerWeek default only applies when the section has
   //   no allocation data at all (user skipped the Allocation step entirely).
   //   This is what keeps unassigned/unallocated subjects out of the timetable.
@@ -731,7 +731,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       const cell = row?.[sub.name]
       if (cell) {
         const p = parseAllocation(cell)
-        // Invalid syntax = user wrote something unparseable — treat as 0
+        // Invalid syntax = user wrote something unparseable - treat as 0
         // (grid marks the cell red) rather than resurrecting the default.
         targetPeriods[sec.name][sub.name] = p.valid ? p.weeklyTotal : 0
       } else if (hasRow) {
@@ -752,13 +752,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   //                  on the same day)
   //     quota[Wed]=1, quota[Thu]=1, quota[Fri]=1, quota[Mon]=1, rest = 0
   //
-  //   The quota is used as a "soft preference" in the subject scoring below —
+  //   The quota is used as a "soft preference" in the subject scoring below -
   //   subjects still below their daily budget get a priority bonus so the
   //   solver fills budgeted days first, spreading empty slots evenly.
 
   // ── Subject-group adjacency helpers ──────────────────────
   //   Subjects in the same group (languages, sciences, etc.) should NOT
-  //   be placed back-to-back — it's cognitively exhausting (e.g. Hindi
+  //   be placed back-to-back - it's cognitively exhausting (e.g. Hindi
   //   then Sanskrit then Odia in three consecutive periods).
   //   Heavy (cognitively demanding) subjects also penalise back-to-back.
   const SUBJECT_GROUPS: Array<[string, string[]]> = [
@@ -802,7 +802,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   }
 
   // ── Per-subject session span (consecutive periods per placement) ──
-  //   Built from the subjectAllocations matrix — doublePeriods > 0 means the
+  //   Built from the subjectAllocations matrix - doublePeriods > 0 means the
   //   subject must be placed as consecutive blocks of doubleSpan periods.
   //   e.g. "1s=2p" → doublePeriods=1 doubleSpan=2  → every placement is a 2-period block
   const sessionSpan: Record<string, Record<string, number>> = {}
@@ -855,12 +855,12 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   const teacherSectionSet: Record<string, Set<string>> = {}
   staff.forEach(t => { teacherSectionSet[tKey(t)] = new Set() })
 
-  // Class teacher map — resolve IDs to names (UI stores staff.id, engine needs staff.name)
+  // Class teacher map - resolve IDs to names (UI stores staff.id, engine needs staff.name)
   const classTeacherMap: Record<string, string> = {}
   staff.forEach(st => { if (st.isClassTeacher) classTeacherMap[st.isClassTeacher] = st.name })
   sections.forEach(sec => {
     if (!sec.classTeacher) return
-    // sec.classTeacher may be a staff ID or a staff name — resolve to name
+    // sec.classTeacher may be a staff ID or a staff name - resolve to name
     const resolved = staff.find(s => s.id === sec.classTeacher || s.name === sec.classTeacher)
     if (resolved) classTeacherMap[sec.name] = resolved.name
   })
@@ -874,7 +874,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
   // ── Day-off rules: build per-section off-day set ──────────────────────────
   // DayOffRule.day is short format ('Sat') → map to full uppercase ('SATURDAY')
-  // DayOffRule.classes are class-key prefixes — match section names by prefix.
+  // DayOffRule.classes are class-key prefixes - match section names by prefix.
   const SHORT_TO_FULL: Record<string, string> = {
     Mon: 'MONDAY', Tue: 'TUESDAY', Wed: 'WEDNESDAY',
     Thu: 'THURSDAY', Fri: 'FRIDAY', Sat: 'SATURDAY', Sun: 'SUNDAY',
@@ -923,7 +923,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       )
 
   // ── Pass 0: Place Optional Blocks (schedU Phase 3) ────
-  // Pinned slots — must run FIRST so other passes skip them.
+  // Pinned slots - must run FIRST so other passes skip them.
   // Each block applies across all listed sections (cross-section pooling).
   effectiveBlocks.forEach(block => {
     // Validate: no teacher should appear twice within the same block
@@ -963,12 +963,12 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     // A group is NOT limited to its pinned slot: schedule it across as many
     // periods/week as the subject quota requires, using the pinned slot first
     // (when free) then additional FREE slots where the teacher, room and ALL
-    // sections are simultaneously available. This is what lets the engine — not
-    // the Student-Groups page — decide how many periods a group runs.
+    // sections are simultaneously available. This is what lets the engine - not
+    // the Student-Groups page - decide how many periods a group runs.
     const optSubjects = block.options.map(o => o.subject).filter(Boolean)
     const refSec = block.sectionNames[0]
     // OR combo is a SPECIAL extra slot (e.g. "Physics OR Chemistry") that runs
-    // IN ADDITION to the individual Physics / Chemistry periods — so it must be
+    // IN ADDITION to the individual Physics / Chemistry periods - so it must be
     // rare (1–2/week, default 1) and must NOT consume the subjects' own quotas.
     // AND combo is a parallel split (students divide) and IS the subjects' period,
     // so it takes the full subject quota.
@@ -980,7 +980,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           : Math.max(1, ...optSubjects.map(sub =>
               targetPeriods[refSec]?.[sub] ?? subjects.find(s => s.name === sub)?.periodsPerWeek ?? 0)))
     const blockRoom = block.options[0]?.room ?? ''
-    // Period 1 is reserved for the class teacher — combos avoid it and only fall
+    // Period 1 is reserved for the class teacher - combos avoid it and only fall
     // back to it as a last resort when no other slot is free.
     const period1Id = classPeriods[0]?.id
 
@@ -1027,7 +1027,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         if (!classTT[secName]) classTT[secName] = {}
         if (!classTT[secName][day]) classTT[secName][day] = {}
         if (classTT[secName][day][periodId]) return
-        // teacher blank at section level — real teacher lives in options[]
+        // teacher blank at section level - real teacher lives in options[]
         classTT[secName][day][periodId] = {
           subject: cellSubject, teacher: '', room: blockRoom,
           optionalBlockId: block.id, options: block.options,
@@ -1040,7 +1040,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       //
       // This pass reserved its teachers and left its rooms unmarked, so every
       // later pass believed the block's room was empty. A block pinned into a
-      // section's own classroom — which is what the inferred ones use — was
+      // section's own classroom - which is what the inferred ones use - was
       // then joined there by whichever class owns that room, and two different
       // lessons ran in it at once. Pass 0 goes first, so nothing downstream
       // could have noticed on its own.
@@ -1075,7 +1075,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     if (!ctName) return
     const ctKeys = keysFor(ctName); ctKeys.forEach(ensureBusy)
     const ctStaff = staff.find(s => s.name === ctName)
-    // Pick a subject this teacher can actually teach for this section —
+    // Pick a subject this teacher can actually teach for this section -
     // PREFER one that is genuinely taught here (target quota > 0), so the
     // daily Period-1 slot never shows a subject this class doesn't take.
     const ctRawSubs: string[] = ctStaff?.subjects ?? []
@@ -1090,7 +1090,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       eligible[0] ?? ctRawSubs[0] ?? subjects[0]?.name ?? ''
     const ctSubject = ctSubjectRaw.replace(/.*::/, '')
 
-    // The allocation row is authoritative — the same rule Pass 2 follows — so
+    // The allocation row is authoritative - the same rule Pass 2 follows - so
     // the class teacher's Period 1 is BOUNDED by their subject's weekly quota.
     //
     // Without this the subject was placed on every working day regardless of
@@ -1173,7 +1173,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     // Explicit assignments (sections[] from the Resources picker, plus
     // classConfigs[].sectionName for legacy data) restrict a subject to those
     // sections. Subjects with NO assignments are only universal when they also
-    // carry a target quota here — targetPeriods already encodes "allocation
+    // carry a target quota here - targetPeriods already encodes "allocation
     // row is authoritative", so a 0-target subject never gets placed.
     const sectionSubjects = subjects.filter(sub => {
       const fromConfigs = ((sub as any).classConfigs ?? [])
@@ -1184,7 +1184,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     })
     if (!sectionSubjects.length) return
 
-    // Sort subjects by weekly periods (highest first — greedy)
+    // Sort subjects by weekly periods (highest first - greedy)
     const sorted = [...sectionSubjects].sort((a, b) => b.periodsPerWeek - a.periodsPerWeek)
 
     workDays.forEach((day, di) => {
@@ -1193,7 +1193,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
       classPeriods.forEach((period, pi) => {
         // Skip if already filled (by class teacher pass, Pass 0 optional block, etc.)
-        // NOTE: do NOT blanket-skip pi===0 — sections without a class teacher still
+        // NOTE: do NOT blanket-skip pi===0 - sections without a class teacher still
         // need Period 1 to be filled here, otherwise it is always blank.
         if (classTT[sec.name][day][period.id]) return
 
@@ -1211,7 +1211,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         })
 
         if (!availableSubs.length) {
-          // No subject fits — mark as free
+          // No subject fits - mark as free
           recordBlock(sec.name, day, period.id, 'subject-quota-met',
             `All subjects for ${sec.name} have either met their weekly quota or hit max-per-day`)
           return
@@ -1254,7 +1254,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           //
           // Spreading a subject across DAYS was already handled (subjectDayQuota
           // above). Nothing spread it across SLOTS, so a class could take Maths
-          // in period 1 every single day of the week — and whichever subject
+          // in period 1 every single day of the week - and whichever subject
           // drew the last period kept it all week too, which is the one nobody
           // wants.
           //
@@ -1280,7 +1280,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           ? (sec.scope.cells?.[day]?.[period.id] ?? 'allowed')
           : 'allowed'
         if (sectionScopeState === 'locked') {
-          // A dispersal lock means the class's day is simply over — that is
+          // A dispersal lock means the class's day is simply over - that is
           // expected structure, not a schedule failure. Reporting it as a
           // generic scope lock ("unlock this scope") sent users chasing a
           // non-existent problem.
@@ -1324,7 +1324,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         // ── Try each candidate subject in score order until one places with a
         //    PROPER teacher. A subject whose specialists are all busy at this
         //    slot is skipped (it will be placed later, where its specialist is
-        //    free) instead of being handed to a random unrelated teacher — a
+        //    free) instead of being handed to a random unrelated teacher - a
         //    school would never let the Art teacher cover Mathematics just to
         //    fill a box. The any-teacher fallback survives ONLY for subjects
         //    that no staff member teaches at all (incomplete data).
@@ -1336,7 +1336,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           // Priority 1: teacher explicitly assigned to this section+subject via matrix
           // Priority 2: teacher with grade-level assignment
           // Priority 3: teacher with global subject name
-          // In all cases: hard constraint — teacher must not be already busy this slot
+          // In all cases: hard constraint - teacher must not be already busy this slot
           // Section- and grade-scoped matching lives in teachesSubject; this
           // is the bare name the global fallback below looks for.
           const simpleKey  = chosenSub.name
@@ -1364,7 +1364,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               (st.subjects ?? []).includes(simpleKey) && isAvailable(st)
             )
           }
-          // Last resort — ONLY when nobody on staff teaches this subject at all
+          // Last resort - ONLY when nobody on staff teaches this subject at all
           // (incomplete teacher-subject links): any non-busy teacher, so the
           // subject isn't permanently blank. When specialists exist but are
           // busy, we skip to the next subject instead.
@@ -1373,7 +1373,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           }
           if (!eligibleTeachers.length) continue
 
-          // ── AI teacher selection — composite scoring ──
+          // ── AI teacher selection - composite scoring ──
           // Replaces simple "least-busy-today" with a weighted score:
           //   + vertical continuity (already teaches this subject elsewhere)
           //   + section familiarity (already seen in this section)
@@ -1389,16 +1389,16 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             const todayLoad = teacherLoadToday[name] ?? 0
             const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
 
-            // Vertical continuity — already teaches this subject in another section
+            // Vertical continuity - already teaches this subject in another section
             if (teacherSubjectSet[name]?.has(chosenSub.name)) score += 25
-            // Section familiarity — already teaches something in this section
+            // Section familiarity - already teaches something in this section
             if (teacherSectionSet[name]?.has(sec.name)) score += 8
 
             // Load-balance bias: prefer teachers under the global target
             if (weeklyLoad < targetWeeklyLoadPerTeacher) {
               score += Math.min(30, (targetWeeklyLoadPerTeacher - weeklyLoad) * 2)
             } else {
-              // Over target — penalise proportionally
+              // Over target - penalise proportionally
               score -= Math.min(40, (weeklyLoad - targetWeeklyLoadPerTeacher) * 3)
             }
             // Strong avoid near max load (90%+)
@@ -1410,7 +1410,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             // ── Compaction: do not strand a free period ─────────────────────
             //
             // A free period with lessons either side of it is the single most
-            // common complaint about a generated timetable — too short to
+            // common complaint about a generated timetable - too short to
             // leave the building, too long to do nothing with. The scorer had
             // no notion of adjacency at all, so those holes were an accident
             // rather than a trade-off: it pushed a teacher's lessons apart
@@ -1430,7 +1430,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               const nextId = classPeriods[pi + 1]?.id
               const touching = (prevId && busyToday.has(prevId)) || (nextId && busyToday.has(nextId))
               if (touching) {
-                // How long a run this would extend — three in a row is a
+                // How long a run this would extend - three in a row is a
                 // stretch, beyond that it stops being a kindness.
                 let run = 0
                 for (let k = pi - 1; k >= 0 && busyToday.has(classPeriods[k].id); k--) run++
@@ -1479,7 +1479,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             penalties.push({ constraint: 'consecutive-heavy', penalty: 7, details: `${chosenSub.name} consecutive in ${sec.name}` })
           }
 
-          // Scope 'disabled' state — soft penalty (placement allowed but discouraged)
+          // Scope 'disabled' state - soft penalty (placement allowed but discouraged)
           if (sectionScopeState === 'disabled') {
             penalties.push({ constraint: 'section-scope-disabled', penalty: 15, details: `${sec.name} marked disabled at ${day} ${period.id}` })
           }
@@ -1512,7 +1512,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
               spanPeriods.every(cp => !teacherBusy[tKey(teacher)][day].has(cp.id))
             if (allFree) {
-              // One room for the whole block — a class does not move mid-double.
+              // One room for the whole block - a class does not move mid-double.
               const spanIds = spanPeriods.map(cp => cp.id)
               const spanRoom = pickRoom(sec, day, spanIds)
               spanPeriods.forEach(cp => {
@@ -1524,7 +1524,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               placed = true
               break
             }
-            // Consecutive not available — fall through to single placement as graceful degradation
+            // Consecutive not available - fall through to single placement as graceful degradation
           }
 
           const cellRoom = pickRoom(sec, day, [period.id])
@@ -1547,7 +1547,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
 
         if (!placed) {
           // Every candidate subject either had all its specialists busy here or
-          // was scope-locked — leave the slot free rather than fabricate a
+          // was scope-locked - leave the slot free rather than fabricate a
           // wrong-teacher lesson; the skipped subjects get placed in later slots.
           const firstSub = scoredSubs[0]?.sub ?? availableSubs[0]
           penalties.push({
@@ -1556,7 +1556,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             details: `No teacher for ${firstSub.name} in ${sec.name} ${day} ${period.id}`,
           })
           recordBlock(sec.name, day, period.id, 'no-eligible-teachers',
-            `No candidate subject could be placed — each remaining subject's teachers are busy or scope-locked at this slot`, firstSub?.name)
+            `No candidate subject could be placed - each remaining subject's teachers are busy or scope-locked at this slot`, firstSub?.name)
         }
       })
     })
@@ -1569,11 +1569,11 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // sections: two Music teachers covering thirty classes are booked solid
   // when XI and XII come round, and those lessons were simply never placed.
   // The school is short 3 Music periods on a timetable that has room for
-  // them — they just needed a second look.
+  // them - they just needed a second look.
   //
   // Two moves, tried in that order:
-  //   1. Direct   — an empty slot where a specialist happens to be free.
-  //   2. Displace — an empty slot where the specialist is busy with another
+  //   1. Direct   - an empty slot where a specialist happens to be free.
+  //   2. Displace - an empty slot where the specialist is busy with another
   //      class: move THAT lesson somewhere it still works, which frees the
   //      specialist here. One level deep, never a chain.
   //
@@ -1583,12 +1583,12 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // period 1) are never moved. When neither move works the lesson stays
   // unplaced, exactly as it was before.
   {
-    /** Periods each teacher already has on `day` — a daily cap is an
+    /** Periods each teacher already has on `day` - a daily cap is an
      *  availability question, so it is recomputed per attempt. */
     // Per-day teaching counts, kept CURRENT rather than recomputed.
     //
     // This used to rebuild the whole map on every call by walking every section
-    // and every period of the day — and it is called from inside the innermost
+    // and every period of the day - and it is called from inside the innermost
     // loops of the repair, once per candidate teacher per candidate slot. On a
     // fully-utilised school the repair has a great deal to do, and the cost
     // compounded: measured at 27 SECONDS for forty sections, against 102ms for
@@ -1626,7 +1626,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       return true
     }
 
-    /** Could this section hold one more `sub` here — slot empty, day on,
+    /** Could this section hold one more `sub` here - slot empty, day on,
      *  nothing scope-locked, and still inside the subject's per-day max? */
     const slotOpenFor = (sec: any, sub: any, day: string, pid: string): boolean => {
       if (sectionOffDays.get(sec.name)?.has(day)) return false
@@ -1673,7 +1673,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       // The room goes back too. Lifting a lesson without releasing its venue
       // leaves the slot marked occupied by a class that is no longer in it, so
       // the very next placement finds the section's own room "taken" and sends
-      // it somewhere else — which is exactly what happened: three senior
+      // it somewhere else - which is exactly what happened: three senior
       // classes were moved into spare rooms while their own sat empty.
       if (cell?.room) roomBusy[day]?.[pid]?.delete(cell.room)
       subjectCount[secName][cell.subject] = Math.max(0, (subjectCount[secName][cell.subject] ?? 0) - 1)
@@ -1723,7 +1723,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               continue
             }
 
-            // 2. Displace — move one lesson out of the specialist's way.
+            // 2. Displace - move one lesson out of the specialist's way.
             //    Either they are teaching in this very slot, or their day is
             //    already full (the per-day cap derived from their weekly one,
             //    which is what actually blocks the last Music lesson: spare
@@ -1736,7 +1736,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               if (!holdsSlot && !dayFull) continue    // free here, rejected for some other reason
 
               // Their lesson in this slot if they hold it, else any lesson of
-              // theirs today — shortening the day is what buys the room.
+              // theirs today - shortening the day is what buys the room.
               const victimSlots = holdsSlot
                 ? [period.id]
                 : classPeriods.map(p => p.id).filter(vp => teacherBusy[k]?.[day]?.has(vp))
@@ -1766,7 +1766,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
                 }
                 if (!moved) continue
 
-                // Room made — unless making it used the specialist up.
+                // Room made - unless making it used the specialist up.
                 if (!canTeachAt(st, day, period.id, dayLoad(day))) break
                 put(sec, sub, day, period.id, st)
                 penalties.push({
@@ -1782,7 +1782,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           }
         }
 
-        // 3. Swap inside the section — the case the two moves above cannot
+        // 3. Swap inside the section - the case the two moves above cannot
         //    reach: every slot this class has free falls on a day its
         //    specialist is already full, while one of its own lessons sits on
         //    a day they are not. Trade the two: our subject takes that slot,
@@ -1863,7 +1863,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // Two staff sharing a name used to be ONE teacher here, because every load
   // and availability map was keyed by name: their weekly caps merged and
   // lessons went unplaced. They are now tracked per person (see tKey), so no
-  // conflict is raised for it — the timetable is simply correct.
+  // conflict is raised for it - the timetable is simply correct.
   //
   // Sharing a name still matters elsewhere: leave, cover and workload match
   // by name, so marking one absent marks both. lib/nameConflicts warns about
@@ -1883,7 +1883,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         // teacher PER SUBJECT in groupAssignments; the cell-level `teacher` is
         // documented as a copy of the first one, kept for backward
         // compatibility. deriveTeacherAllocations, deriveSubjectAllocations and
-        // rebuildTeacherTT all walk the full list. This did not — so the
+        // rebuildTeacherTT all walk the full list. This did not - so the
         // teacher taking the second group could be down for another class at
         // the same moment and nothing would say so. The more groups a school
         // runs, the more of its staff were invisible to the check.
@@ -1924,7 +1924,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         details: `Teacher loads stddev=${stddev.toFixed(2)} around target=${targetWeeklyLoadPerTeacher}`,
       })
     }
-    // Per-teacher overload penalties — exceeded individual max
+    // Per-teacher overload penalties - exceeded individual max
     staff.forEach(t => {
       const load = teacherWeeklyLoad[tKey(t)] ?? 0
       const max = (t as any).maxPeriodsPerWeek ?? normCap
@@ -1995,18 +1995,18 @@ export function buildTeacherTT(
 }
 
 /**
- * deriveTeacherAllocations — the BACKWARD counterpart to generation.
+ * deriveTeacherAllocations - the BACKWARD counterpart to generation.
  *
  * Rebuilds the teacher→section→subject→periods matrix by counting the actual
  * lessons in a (possibly hand-edited / re-optimised) timetable. Call this after
  * any post-generation change that reassigns WHO teaches (Re-optimize Teachers,
  * a manual swap) and persist the result via `setTeacherAllocations`, so the
  * Allocation view and workload analytics reflect the timetable instead of the
- * pre-generation plan. `subjectAllocations` (the demand — how many periods a
+ * pre-generation plan. `subjectAllocations` (the demand - how many periods a
  * subject gets) is NOT affected by a teacher reassignment, so it is left as-is.
  *
  * Keys match the store: section NAME (classTT is keyed by `section.name`),
- * subject name and teacher name — the same keys the Allocation page reads.
+ * subject name and teacher name - the same keys the Allocation page reads.
  */
 export function deriveTeacherAllocations(
   classTT: ClassTimetable,
@@ -2036,7 +2036,7 @@ export function deriveTeacherAllocations(
 }
 
 /**
- * deriveSubjectAllocations — the class/period side of backward sync. Counts, per
+ * deriveSubjectAllocations - the class/period side of backward sync. Counts, per
  * section, how many periods each subject actually got in the timetable, returned
  * as the store's `Record<section, Record<subject, string>>` shape (values are
  * plain period counts). Pairs with deriveTeacherAllocations so a "Backward Sync"
@@ -2048,7 +2048,7 @@ export function deriveTeacherAllocations(
  *
  * deriveSubjectAllocations counts cells, so it can only ever return a plain
  * number. The allocation matrix is richer than that: "2s=2p" means two DOUBLE
- * periods — the thing a lab needs — and "4" means four singles. Backward Sync
+ * periods - the thing a lab needs - and "4" means four singles. Backward Sync
  * used to write the derived counts straight over the matrix, so a school that
  * had asked for doubles got "4" back, silently, and discovered it at the next
  * generation when the lab was split across four separate days.
@@ -2060,7 +2060,7 @@ export function deriveTeacherAllocations(
  * Sync exists for.
  *
  * Subjects the plan has but the timetable does not are left alone too. A
- * subject can be missing because the solver could not place it — baking that
+ * subject can be missing because the solver could not place it - baking that
  * failure into the plan would quietly reduce what the school asked for to what
  * it happened to get.
  */
@@ -2080,12 +2080,12 @@ export function mergeDerivedAllocations(
       const typed = prevRow[sub]
       const counted = newRow[sub]
 
-      // In the plan but nowhere in the timetable — keep what was asked for.
+      // In the plan but nowhere in the timetable - keep what was asked for.
       if (counted === undefined) {
         if (typed !== undefined) row[sub] = typed
         continue
       }
-      // New in the timetable — take the count.
+      // New in the timetable - take the count.
       if (typed === undefined) { row[sub] = counted; continue }
 
       const before = parseAllocation(typed)
@@ -2128,7 +2128,7 @@ export function deriveSubjectAllocations(
 
 // ─── Teacher Re-optimisation Pass ────────────────────────
 /**
- * reoptimizeTeachers — re-run the AI teacher-assignment scoring on an
+ * reoptimizeTeachers - re-run the AI teacher-assignment scoring on an
  * existing classTT WITHOUT changing subject placements.
  *
  * Use this after the user applies manual fixes that skew the workload
@@ -2136,7 +2136,7 @@ export function deriveSubjectAllocations(
  * isClassTeacher pin) have their teacher replaced. Pinned cells stay
  * exactly as-is.
  *
- * Pure function — uses the same composite scoring algorithm as Pass 2 of
+ * Pure function - uses the same composite scoring algorithm as Pass 2 of
  * the main solver (vertical continuity, familiarity, load-balance bias,
  * overload penalty, today exhaustion, scope-disabled soft penalty,
  * consecutive back-to-back penalty).
@@ -2148,12 +2148,12 @@ export interface ReoptimizeInput {
   subjects: Subject[]
   periods: Period[]
   workDays: string[]
-  /** See SolverInput.defaultTeacherMaxPeriods — the re-optimiser needs the same
+  /** See SolverInput.defaultTeacherMaxPeriods - the re-optimiser needs the same
    *  figure, or it would undo caps the first pass respected. */
   defaultTeacherMaxPeriods?: number
   subjectAllocations?: Record<string, Record<string, string>>
   /**
-   * The same availability matrix the first pass was given — for exactly the
+   * The same availability matrix the first pass was given - for exactly the
    * reason stated above about caps, and it was missing.
    *
    * Without it this function cannot know a teacher is unavailable, so it moved
@@ -2174,7 +2174,7 @@ export interface ReoptimizeResult {
   reassignedCount: number
 }
 
-/** Weekly load per teacher + stddev + cap violations for a classTT — used to
+/** Weekly load per teacher + stddev + cap violations for a classTT - used to
  *  judge whether a re-optimise attempt actually improved on the incumbent. */
 function measureLoads(
   classTT: ClassTimetable, sections: Section[], staff: Staff[], workDays: string[],
@@ -2210,7 +2210,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   const normCap = input.defaultTeacherMaxPeriods ?? 30
   const classPeriods = periods.filter(p => p.type === 'class')
 
-  // Incumbent stats — the bar any re-optimise attempt must beat. Without
+  // Incumbent stats - the bar any re-optimise attempt must beat. Without
   // this, a greedy pass that happened to land WORSE (higher stddev, new cap
   // violations) was still returned and applied.
   const before = measureLoads(input.classTT, sections, staff, workDays, classPeriods, normCap)
@@ -2225,7 +2225,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   const cellKeys = (cell: { teacher?: string; teacherId?: string } | undefined): string[] =>
     cell?.teacherId ? [cell.teacherId] : keysFor(cell?.teacher)
 
-  // Deep-clone classTT — we mutate the clone, never the caller's data
+  // Deep-clone classTT - we mutate the clone, never the caller's data
   const classTT: ClassTimetable = JSON.parse(JSON.stringify(input.classTT))
 
   // ── Phase 1: identify pinned vs re-assignable cells ──
@@ -2242,7 +2242,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   type WorkItem = {
     secName: string; day: string; periodId: string
     subject: string; periodIdx: number
-    prevTeacher: string   // incumbent — "reassigned" means it actually changed
+    prevTeacher: string   // incumbent - "reassigned" means it actually changed
   }
   const workItems: WorkItem[] = []
 
@@ -2259,7 +2259,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
           // subject in options[] / groupAssignments[], mirroring only the first
           // into `teacher`. Marking that copy busy left every LATER group's
           // teacher looking free, so the re-optimiser handed them a second
-          // lesson at the same moment — it created the double-booking while
+          // lesson at the same moment - it created the double-booking while
           // tidying the load chart, and the timetable came back worse than it
           // went in.
           //
@@ -2270,7 +2270,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
           for (const k of keys) { ensureBusy(k); teacherBusy[k]?.[day]?.add(period.id) }
         } else {
           const prevTeacher = cell.teacher ?? ''
-          cell.teacher = ''   // clear — will be re-assigned below
+          cell.teacher = ''   // clear - will be re-assigned below
           workItems.push({ secName: sec.name, day, periodId: period.id, subject: cell.subject, periodIdx: pi, prevTeacher })
         }
       })
@@ -2318,7 +2318,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       if (teacherBusy[tKey(st)]?.[day]?.has(periodId)) return false
       // A blocked slot is a slot this person cannot work. Hard, as in Pass 2.
       if (input.teacherAvailability?.[st.name]?.[day]?.[periodId] === 'blocked') return false
-      // PER-DAY workload cap — hard, same as Phase 2.
+      // PER-DAY workload cap - hard, same as Phase 2.
       if (atDailyLimit(loadTodayForCap[st.name] ?? 0, dailyCapFor(st, workDays.length))) return false
       const tScope = (st as any).scope
       if (tScope) {
@@ -2342,7 +2342,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     // Weekly cap is a HARD constraint here: a teacher already at their max
     // must not win another slot just because they score well on subject
     // match. Only if a tier has no under-cap candidate do we relax within
-    // that tier (an overload warning beats a blank cell — same philosophy
+    // that tier (an overload warning beats a blank cell - same philosophy
     // as the main solver).
     const underCap = (st: Staff): boolean => {
       const maxWeek = (st as any).maxPeriodsPerWeek ?? normCap
@@ -2359,7 +2359,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     // There is deliberately NO third tier handing the lesson to whoever is
     // free. This used to fall back to `staff.filter(isAvailable)`, so when
     // every Computer teacher was busy or at their cap the period was given to
-    // the Art teacher — re-optimisation inventing a qualification in order to
+    // the Art teacher - re-optimisation inventing a qualification in order to
     // even out a load chart.
     //
     // Returning here leaves the cell exactly as it was, which is the honest
@@ -2424,7 +2424,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     teacherSubjectSet[tKey(teacher)]?.add(subject)
     teacherSectionSet[tKey(teacher)]?.add(secName)
     // "Reassigned" = the teacher actually changed. Re-picking the incumbent
-    // is not a change — counting it made the banner claim absurd numbers.
+    // is not a change - counting it made the banner claim absurd numbers.
     if (teacher.name !== prevTeacher) reassignedCount++
   })
 
@@ -2459,7 +2459,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
 
   // ── Phase 5: accept only if genuinely better ──
   // "Better" = fewer cap violations, or equal violations with lower stddev.
-  // Otherwise keep the incumbent untouched and say so — re-optimise must
+  // Otherwise keep the incumbent untouched and say so - re-optimise must
   // never be able to make a schedule worse.
   const after = measureLoads(classTT, sections, staff, workDays, classPeriods, normCap)
   const improved = after.overCap < before.overCap ||
@@ -2470,7 +2470,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     const balancePenalty = Math.min(50, Math.round(before.stddev * 4))
     if (balancePenalty > 0) keptPenalties.push({
       constraint: 'workload-imbalance', penalty: balancePenalty,
-      details: `Teacher loads stddev=${before.stddev.toFixed(2)} — re-optimise found nothing better, kept as-is`,
+      details: `Teacher loads stddev=${before.stddev.toFixed(2)} - re-optimise found nothing better, kept as-is`,
     })
     staff.forEach(t => {
       const load = before.load[t.name] ?? 0
@@ -2570,7 +2570,7 @@ export function detectConflicts(
   classTT: ClassTimetable,
   periods: Period[],
   /** Optional roster. Given both, a class too big for the room it is in is
-   *  reported as well — see the capacity pass at the end. Callers without the
+   *  reported as well - see the capacity pass at the end. Callers without the
    *  roster to hand get exactly what they got before. */
   opts?: {
     sections?: Array<{ name: string; strength?: number }>
@@ -2590,14 +2590,14 @@ export function detectConflicts(
     workDays.forEach(day => {
       const teacherMap: Record<string, string> = {}
       const roomMap: Record<string, string> = {}
-      // Track which sections share an optional block at this slot — they're
+      // Track which sections share an optional block at this slot - they're
       // expected to have the same teachers and should NOT be flagged.
       const blockSlotIds: Record<string, string> = {} // sec -> blockId
       Object.entries(classTT).forEach(([sec, sd]) => {
         const cell: any = sd[day]?.[p.id]
         if (cell?.optionalBlockId) blockSlotIds[sec] = cell.optionalBlockId
 
-        // Every teacher in the cell, not just the first — see the matching
+        // Every teacher in the cell, not just the first - see the matching
         // note in solveTimetable. An OR/AND cell carries a teacher per subject
         // in groupAssignments and mirrors only the first into `cell.teacher`,
         // so anyone taking a later group was invisible to this check.
@@ -2608,7 +2608,7 @@ export function detectConflicts(
           if (otherSec) {
             // Skip the conflict if both sections share the same optional block
             if (blockSlotIds[sec] && blockSlotIds[otherSec] && blockSlotIds[sec] === blockSlotIds[otherSec]) {
-              // intentional cross-section pooling — not a conflict
+              // intentional cross-section pooling - not a conflict
               continue
             }
             conflicts.push({
@@ -2625,8 +2625,8 @@ export function detectConflicts(
 
         // ── Two classes sent to the same room at the same time ──
         //
-        // 'room-clash' has been in the Conflict union — and in the resolution
-        // wizard's label list — since the beginning, and nothing has ever
+        // 'room-clash' has been in the Conflict union - and in the resolution
+        // wizard's label list - since the beginning, and nothing has ever
         // produced one. Meanwhile the solver copies each section's HOME room
         // onto every lesson without ever asking whether that room is free, so
         // two sections sharing a room (a lab, a computer suite, any school
@@ -2641,7 +2641,7 @@ export function detectConflicts(
           const holder = roomMap[cell.room]
           if (holder && holder !== sec) {
             // Sections pooled into one optional block are MEANT to share a
-            // room — same exemption the teacher check above makes.
+            // room - same exemption the teacher check above makes.
             const pooled = blockSlotIds[sec] && blockSlotIds[holder] &&
               blockSlotIds[sec] === blockSlotIds[holder]
             if (!pooled) {
@@ -2665,8 +2665,8 @@ export function detectConflicts(
   // 'capacity-exceeded' was the third conflict type the app declared, gave a
   // label to in the resolution wizard, and never once produced. It is worth
   // producing now that the solver actually chooses rooms: the numbers needed
-  // are already on the roster — a section carries its strength, a room its
-  // capacity — and forty-five children in a room for thirty is discovered on
+  // are already on the roster - a section carries its strength, a room its
+  // capacity - and forty-five children in a room for thirty is discovered on
   // the day otherwise.
   //
   // Reported once per (class, room) pairing rather than per slot. The mismatch

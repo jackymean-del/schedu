@@ -1,12 +1,12 @@
 /**
- * PenaltyTrendChart — compact sparkline showing score evolution as
+ * PenaltyTrendChart - compact sparkline showing score evolution as
  * the user applies fixes. Each tick is one penalty score snapshot.
  *
  * Lower score = better, so the line trending DOWN is good.
  * Color gradient applied per segment: red → amber → green based on
  * the trend direction.
  *
- * v2: hover-to-inspect — each dot is interactive. Hovering reveals a
+ * v2: hover-to-inspect - each dot is interactive. Hovering reveals a
  * floating tooltip with score, event label, per-point delta, and
  * position. An invisible larger hit-target circle sits over each dot
  * so small dots are easy to hover.
@@ -24,7 +24,7 @@ export interface ScorePoint {
   event?: string
   /** Optional human-readable timestamp ("Just now", "2s ago") */
   label?: string
-  /** Per-constraint penalty totals at this snapshot — drives breakdown trend. */
+  /** Per-constraint penalty totals at this snapshot - drives breakdown trend. */
   breakdown?: Record<string, number>
 }
 
@@ -51,7 +51,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
 
   if (history.length < 2) {
-    // Not enough data — show a neutral placeholder
+    // Not enough data - show a neutral placeholder
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
@@ -149,7 +149,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
             />
           )}
 
-          {/* Dots — visible circles + invisible larger hit-targets */}
+          {/* Dots - visible circles + invisible larger hit-targets */}
           {history.map((p, i) => {
             const cx = xFor(i)
             const cy = yFor(p.score)
@@ -194,7 +194,7 @@ export function PenaltyTrendChart({ history, width = 220, height = 44 }: Props) 
         </div>
       </div>
 
-      {/* Floating tooltip — rendered outside the chart container so it can
+      {/* Floating tooltip - rendered outside the chart container so it can
           escape overflow:hidden parents and sit above everything */}
       {hoveredPoint && (
         <div

@@ -1,5 +1,5 @@
 /**
- * Inline step guide — a calm, in-page help banner shown at the top of a wizard
+ * Inline step guide - a calm, in-page help banner shown at the top of a wizard
  * step (NOT a popup). The user can hide it; the choice persists across every
  * step and session. When hidden, a small "Show guide" pill lets them bring it
  * back on any step.

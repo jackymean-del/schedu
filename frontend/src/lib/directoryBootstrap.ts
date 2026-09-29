@@ -5,12 +5,12 @@
  * same `loadActiveBundles` used everywhere else for cross-schedule reads),
  * seeds the directory from whatever staff/rooms already exist (deduping by
  * trimmed/lowercased name), AND writes the resulting directoryId back onto
- * each schedule's own row — otherwise pre-existing data would only ever have
+ * each schedule's own row - otherwise pre-existing data would only ever have
  * *contributed* a name to the directory without ever being linked to it, so a
  * later rename/merge in the Directory view couldn't find it to cascade into.
  *
  * Deliberately does NOT try to merge or flag pre-existing coincidental name
- * collisions here — the existing cross-schedule teacher-clash banner
+ * collisions here - the existing cross-schedule teacher-clash banner
  * (pages/calendar.tsx, teacherClashes) already surfaces those for the user to
  * resolve. This just makes sure going-forward wizard entry (and the Directory
  * view's rename/merge cascade) has something real to match against.
@@ -22,7 +22,7 @@ import { getActiveTimetableId, saveActiveTimetableSnapshot } from './ttRegistry'
 
 export function bootstrapDirectoryFromSchedules(uid: string): void {
   // Mock auth has no ClerkAuthSync equivalent to rebind the directory on
-  // account switch, so treat a changed uid as the reset signal here too —
+  // account switch, so treat a changed uid as the reset signal here too -
   // this is the one guaranteed call site for every auth mode.
   if (useDirectoryStore.getState().ownerId !== uid) {
     useDirectoryStore.getState().resetForOwner(uid)

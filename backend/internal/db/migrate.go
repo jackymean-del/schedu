@@ -10,7 +10,7 @@ import (
 // billingSchema mirrors database/migrations/007_billing.sql. It is inlined (not
 // embedded from the repo-root migrations dir) because Railway builds with the
 // backend/ directory as the build root, so files outside it aren't in the build
-// context. Every statement is idempotent, so running it on each boot is safe —
+// context. Every statement is idempotent, so running it on each boot is safe -
 // this lets the service migrate itself using its own (private) DATABASE_URL,
 // with no public DB proxy and no manual step.
 const billingSchema = `
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS billing_events (
 // shareSchema mirrors database/migrations/006_share_access_codes.sql plus
 // 008_share_code_attempts.sql, inlined for the same reason as billingSchema
 // above. VerifyShareCode reads and writes `attempts` on every call, so the
-// column has to exist before the new binary serves its first request — it
+// column has to exist before the new binary serves its first request - it
 // cannot wait for a manual migration.
 //
 // The CREATE is repeated here rather than assuming 006 ran: ALTER TABLE fails

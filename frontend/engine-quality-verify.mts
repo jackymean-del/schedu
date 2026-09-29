@@ -1,5 +1,5 @@
 /**
- * IS THE TIMETABLE ANY GOOD — not just legal?
+ * IS THE TIMETABLE ANY GOOD - not just legal?
  * Run: npx tsx engine-quality-verify.mts
  *
  * engine-full-verify proves the timetable is legal: no clashes, right number of
@@ -8,7 +8,7 @@
  * once the clashes are gone, is SHAPE:
  *
  *   stranded frees   a teacher's free period with lessons on both sides of it.
- *                    Not a break — twenty minutes too short to leave and too
+ *                    Not a break - twenty minutes too short to leave and too
  *                    long to fill, and the single most common complaint about
  *                    any generated timetable.
  *   load spread      one person carrying thirty periods while another carries
@@ -27,7 +27,7 @@ import { solveTimetable } from './src/lib/schedulingEngine.ts'
 type Any = any
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -159,7 +159,7 @@ for (const perGrade of [2, 4]) {
   ok(m.worstDay <= 5, 'no teacher has more than 5 stranded frees in one day', `worst ${m.worstDay}`)
   ok(m.sd <= 6, 'teaching load stays reasonably even across staff', `sd ${m.sd}`)
   // A subject must not own one period of the day all week. Gated at zero
-  // because the engine now achieves zero — it was 18 and 31 before the slot
+  // because the engine now achieves zero - it was 18 and 31 before the slot
   // variety term, so this is a real property to hold rather than an aspiration.
   ok(m.sameSlot === 0,
     'no class takes one subject in the same slot 4+ times a week', `${m.sameSlot}`)

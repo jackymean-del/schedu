@@ -1,5 +1,5 @@
 /**
- * The single global 404 for the whole site — static export produces exactly
+ * The single global 404 for the whole site - static export produces exactly
  * one out/404.html from this root boundary; nested not-found.tsx files don't
  * take effect on a static host, so route-specific 404 copy isn't possible.
  */

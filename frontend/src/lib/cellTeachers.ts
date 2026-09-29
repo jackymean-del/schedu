@@ -4,14 +4,14 @@
  * A timetable cell usually names one teacher. An OR/AND cell does not: it runs
  * parallel subjects in a single slot and names a teacher PER SUBJECT in
  * `groupAssignments`, mirroring only the first into the cell-level `teacher`
- * field. The type says as much — that field is kept "for backward
- * compatibility" — but the shape is quietly lossy, and reading it is the
+ * field. The type says as much - that field is kept "for backward
+ * compatibility" - but the shape is quietly lossy, and reading it is the
  * obvious thing to do.
  *
  * Four subsystems read the copy and were wrong in four different ways:
  *
  *   conflict detection    a teacher in a later group could be double-booked
- *                         elsewhere and nothing said so (twice — the solver's
+ *                         elsewhere and nothing said so (twice - the solver's
  *                         own list and detectConflicts had drifted into the
  *                         same blind spot independently)
  *   the cover flow        an absent teacher taking a later group left a class
@@ -21,8 +21,8 @@
  *                         the double-booking itself
  *   leave reporting       periods lost to an absence were undercounted
  *
- * So it lives here once. Anything answering "who teaches this?" — as opposed to
- * "what should this cell say?" — should call these rather than reach for the
+ * So it lives here once. Anything answering "who teaches this?" - as opposed to
+ * "what should this cell say?" - should call these rather than reach for the
  * field.
  */
 
@@ -71,7 +71,7 @@ export function teachersInCell(cell: TeachingCell | undefined | null): string[] 
   return solo ? [solo] : []
 }
 
-/** Every (teacher, subject) pair in the cell — for surfaces that must say
+/** Every (teacher, subject) pair in the cell - for surfaces that must say
  *  WHICH group a teacher is with, such as a cover list. */
 export function teachingPairsInCell(
   cell: TeachingCell | undefined | null,
@@ -96,7 +96,7 @@ export function teachingPairsInCell(
  * Who is ACTUALLY teaching an OR cell once the day's choice is known.
  *
  * An OR cell offers a choice of subject to the whole class, so the solver has
- * to reserve every option's teacher — it cannot know in advance which subject
+ * to reserve every option's teacher - it cannot know in advance which subject
  * will run. Once the day resolves, only one of them teaches, and the others are
  * free: free to cover an absence, free to be offered as a substitute, free to
  * be counted as free. Leaving them marked busy takes half a science department

@@ -1,5 +1,5 @@
 /**
- * Which subject an OR period runs, and — mostly — when it refuses to say.
+ * Which subject an OR period runs, and - mostly - when it refuses to say.
  * Run: npx tsx or-choice-verify.mts
  *
  * An OR group is a subject CHOICE for a whole class ("Physics OR Chemistry"),
@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs'
 type Any = any
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -62,7 +62,7 @@ console.log('\n── what it refuses to guess ──')
   ok(half.subject === 'Physics', 'it falls back to a stable order rather than a coin toss')
   ok(/cannot be compared/i.test(half.explain), 'and names the untracked side', half.explain)
 
-  // Untracked must NOT be treated as 0% — that is the trap this guards.
+  // Untracked must NOT be treated as 0% - that is the trap this guards.
   ok(half.subject !== 'Chemistry',
     'the untracked subject does not win by being counted as zero')
 }
@@ -79,7 +79,7 @@ console.log('\n── ties and degenerate input ──')
   ok(resolveOrChoice([], SEC, {}) === null, 'an empty group resolves to nothing at all')
   ok(resolveOrChoice([{ subject: '  ' } as Any], SEC, {}) === null, 'and so does a blank subject')
 
-  // Same inputs, same answer — this drives what a school sees on the day.
+  // Same inputs, same answer - this drives what a school sees on the day.
   const a = resolveOrChoice(opts, SEC, plansFor(40, 70))!
   const b = resolveOrChoice(opts, SEC, plansFor(40, 70))!
   ok(a.subject === b.subject && a.explain === b.explain, 'the same day resolves the same way twice')
@@ -89,7 +89,7 @@ console.log('\n── an OR group may not contain optional subjects ──')
 {
   // OR is a choice for the WHOLE class, so every student takes whichever runs.
   // An optional subject would schedule a period only part of the room can
-  // attend — that is what AND groups are for.
+  // attend - that is what AND groups are for.
   const subjects = [
     { name: 'Physics' }, { name: 'Chemistry' },
     { name: 'Painting', isOptional: true },
@@ -130,7 +130,7 @@ console.log('')
 console.log('── a person can decide, and their choice wins ──')
 {
   // Coverage is a good default, not an instruction. The teacher in front of
-  // the class knows things the percentages do not — a lab free this morning,
+  // the class knows things the percentages do not - a lab free this morning,
   // an exam next week, a topic half-finished.
   const byHand = resolveOrChoice(opts, SEC, plansFor(40, 70), { subject: 'Chemistry', by: 'Devi' })!
   ok(byHand.subject === 'Chemistry' && byHand.reason === 'manual',
@@ -158,7 +158,7 @@ console.log('── the teachers who did not take it are free ──')
   ok(freedTeachers(opts, 'Biology').length === 2,
     'a choice outside the group releases nobody rather than guessing')
 
-  // Somebody teaching BOTH options is still busy — the one case where
+  // Somebody teaching BOTH options is still busy - the one case where
   // releasing would be actively wrong.
   const both = [{ subject: 'Physics', teacher: 'Rao' }, { subject: 'Chemistry', teacher: 'Rao' }]
   ok(freedTeachers(both, 'Physics').length === 0, 'a teacher who covers both options stays busy')

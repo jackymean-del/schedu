@@ -2,7 +2,7 @@
  * A cover is arranged for a DAY, not for every Monday.
  *
  * Substitutions used to be keyed `section|MONDAY|periodId`. The timetable
- * itself is keyed that way and should be — it is a weekly template. But a
+ * itself is keyed that way and should be - it is a weekly template. But a
  * substitution is not part of the template: it is what happened on one date
  * because somebody was away. Storing it against the weekday made a one-off
  * cover permanent, so the substitute appeared every Monday until a human
@@ -14,7 +14,7 @@
  * Monday. Measured before the change: two sections sharing a room reported 1
  * clash normally and 0 once last week's cover was in place.
  *
- * The dated key is what the rest of the flow already used — arranging a cover
+ * The dated key is what the rest of the flow already used - arranging a cover
  * writes a coverage record stamped with `date`, and leave records are dated
  * too. The overlay was the only part still keyed by weekday.
  *
@@ -41,14 +41,14 @@ export const isDatedSubKey = (key: string): boolean =>
 /**
  * Move legacy weekday-keyed substitutions onto real dates.
  *
- * There is no way to recover which date a weekday key was meant for — that
+ * There is no way to recover which date a weekday key was meant for - that
  * information was never stored. Every option here is a guess, so this picks the
  * least harmful one: the matching weekday in the week the migration runs in.
  * The cover happens once, on a day close to when it was arranged, and then
  * stops repeating.
  *
- * Nothing is deleted. Anything that cannot be placed — an unrecognised day
- * name — is carried through untouched rather than dropped, because losing a
+ * Nothing is deleted. Anything that cannot be placed - an unrecognised day
+ * name - is carried through untouched rather than dropped, because losing a
  * school's cover silently is worse than leaving a key that no longer matches.
  */
 export function migrateWeekdaySubs(
@@ -90,7 +90,7 @@ export function migrateWeekdaySubs(
  * snapshot, because a school's covers live in both. Idempotent: a dated key is
  * recognised and passed through, so a second run does nothing.
  *
- * Returns how many entries moved, for the console — silent data surgery is
+ * Returns how many entries moved, for the console - silent data surgery is
  * worth being able to see afterwards.
  */
 export function migrateLegacySubstitutions(storage: Storage = localStorage, today: Date = new Date()): number {

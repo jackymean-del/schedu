@@ -8,7 +8,7 @@
  *
  * Gating (both conditions, not either):
  *  - the user is actually authenticated, and
- *  - the current route is an app route — never on /login, /register, the
+ *  - the current route is an app route - never on /login, /register, the
  *    marketing pages or a public share link, where a persisted session from an
  *    earlier visit would otherwise make it appear before sign-in.
  */
@@ -18,7 +18,7 @@ import { useOrgProfile, isOrgProfileComplete } from '@/store/orgProfile'
 
 const ACCENT = '#685DBC'
 
-/** Routes that are public or part of signing in — never nudge on these. */
+/** Routes that are public or part of signing in - never nudge on these. */
 const PUBLIC_PREFIXES = [
   '/login', '/register', '/sso-callback', '/share', '/demo',
   '/features', '/pricing', '/docs', '/contact',

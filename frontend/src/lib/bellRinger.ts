@@ -10,7 +10,7 @@
  * on a timer:
  *
  *  1. A ring is EDGE-triggered. It fires on the moment the clock crosses the
- *     bell time, never because "it is now past 9:40" — otherwise it repeats
+ *     bell time, never because "it is now past 9:40" - otherwise it repeats
  *     every tick for the rest of the minute.
  *
  *  2. The first look of a session fires NOTHING. Open the board at 3pm and the
@@ -20,10 +20,10 @@
  *
  *  3. A gap fires nothing either. A display that slept, or a tab the browser
  *     throttled, comes back with a jump of minutes or hours. The bells it
- *     missed are missed — they were supposed to be heard at a particular
+ *     missed are missed - they were supposed to be heard at a particular
  *     moment, and ringing 12:20 at 12:47 tells the school a lie.
  *
- * Everything is passed in — the clock included — so none of this needs a real
+ * Everything is passed in - the clock included - so none of this needs a real
  * afternoon to test.
  */
 import type { Ring } from './bellSchedule'
@@ -39,7 +39,7 @@ export interface BellAlarm {
 }
 
 export interface DueRing {
-  /** Identity of the moment, unique per day — "MONDAY:580". */
+  /** Identity of the moment, unique per day - "MONDAY:580". */
   key: string
   /** Minutes from midnight. */
   at: number
@@ -68,7 +68,7 @@ export function ringsDue(opts: {
    */
   prevMin: number | undefined
   nowMin: number
-  /** True when the school is closed — a holiday bell is not a bell. */
+  /** True when the school is closed - a holiday bell is not a bell. */
   silent?: boolean
 }): DueRing[] {
   const { rings, alarms, dayKey, prevMin, nowMin, silent } = opts

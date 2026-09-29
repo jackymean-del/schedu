@@ -1,7 +1,7 @@
 /**
- * ClassesPanel — Tab 1.
+ * ClassesPanel - Tab 1.
  * Columns: Class | Strength | Actions
- * Class Teacher is handled in the Shift & Timing step — not here.
+ * Class Teacher is handled in the Shift & Timing step - not here.
  */
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
@@ -38,7 +38,7 @@ function normalizeGrade(g?: string): string {
   return (g ?? '').trim().replace(/^(class|grade|std|standard)\s*[-\s]*/i, '')
 }
 
-/** The grades to seed when "Create smartly" is used — from the onboarding
+/** The grades to seed when "Create smartly" is used - from the onboarding
  *  range (config.grades, else config.fromGrade/toGrade), with a sane fallback. */
 function gradesForGroup(group: string): string[] {
   const k = group.toLowerCase().replace(/[^a-z]/g, '')
@@ -53,11 +53,11 @@ function smartRangeGrades(): string[] {
   const cfg = useTimetableStore.getState().config as any
   const explicit = Array.isArray(cfg?.grades) ? cfg.grades.map(normalizeGrade).filter(Boolean) : []
   if (explicit.length) return explicit
-  // Adaptive: parse the typed from/to to numeric levels — this handles ANY
+  // Adaptive: parse the typed from/to to numeric levels - this handles ANY
   // naming convention ("Class-V", "Grade 5", "V", "Std 5") via the shared
   // parser. The old GRADE_ORDER.indexOf() only matched "Class I" (space) and
   // silently fell through to the I–X fallback for hyphenated input like
-  // "Class-V" — so a I–V school was seeded all the way to Class X.
+  // "Class-V" - so a I–V school was seeded all the way to Class X.
   const f = parseGradeLevel(cfg?.fromGrade)
   const t = parseGradeLevel(cfg?.toGrade)
   if (f !== null && t !== null && f <= t) {
@@ -401,7 +401,7 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams, in
             >{sec.name}</span>
           )}
 
-          {/* Stream pill — shows inferred name for legacy classes, explicit name for new */}
+          {/* Stream pill - shows inferred name for legacy classes, explicit name for new */}
           {editingStream ? (
             <div style={{ position: 'relative' }}>
               <input
@@ -422,7 +422,7 @@ function SectionRow({ sec, onUpdate, onDelete, onScopeClick, existingStreams, in
             // Solid pill if explicitly stored; dashed outline if only inferred from name
             <span
               onClick={() => { setTmpStream(inferredStream); setEditingStream(true) }}
-              title={sec.stream ? 'Click to change stream' : 'Stream inferred from class name — click to confirm or rename'}
+              title={sec.stream ? 'Click to change stream' : 'Stream inferred from class name - click to confirm or rename'}
               style={{
                 fontSize: 10.5, fontWeight: 600,
                 color:      sec.stream ? P        : '#7C78AA',
@@ -618,7 +618,7 @@ function StreamCreatePopover({ onClose, onCreate, existingStreams }: {
 
 // ─── Stream setup banner ───────────────────────────────────────────────────────
 // Auto-appears when any stream name looks abbreviated (≤ 5 chars).
-// Shows all streams as labelled text inputs — user types full names, clicks Apply.
+// Shows all streams as labelled text inputs - user types full names, clicks Apply.
 function StreamSetupBanner({ streams, onApply }: {
   streams: string[]
   onApply: (map: Record<string, string>) => void
@@ -654,7 +654,7 @@ function StreamSetupBanner({ streams, onApply }: {
             Enter full stream names
           </div>
           <div style={{ fontSize: 11.5, color: '#B45309', marginTop: 1 }}>
-            Short names detected — type the full name for each stream below.
+            Short names detected - type the full name for each stream below.
           </div>
         </div>
       </div>
@@ -707,7 +707,7 @@ function StreamSetupBanner({ streams, onApply }: {
   )
 }
 
-// ─── Stream name input — always visible in the stream header row ─────────────
+// ─── Stream name input - always visible in the stream header row ─────────────
 function StreamNameInput({ initial, onCommit, onCancel: _onCancel }: {
   initial: string
   onCommit: (v: string) => void
@@ -914,7 +914,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
   const [importOpen,       setImportOpen]       = useState(false)
   const [manual,           setManual]           = useState(false)
 
-  // "Create smartly" — auto-seed grade sections from the onboarding range.
+  // "Create smartly" - auto-seed grade sections from the onboarding range.
   // Pre-primary grades get one section; others get A–D. All editable after.
   const smartCreate = () => {
     const preK = new Set(['Nursery', 'LKG', 'UKG'])
@@ -928,7 +928,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
     if (out.length) setSections(out as unknown as Section[])
   }
 
-  // Dynamic group definitions — user can rename or create new groups
+  // Dynamic group definitions - user can rename or create new groups
   const [groupDefs, setGroupDefs] = useState(() => GROUP_DEFS.map(g => ({ ...g })))
   const [searchFocused, setSearchFocused] = useState(false)
   const searchRef   = useRef<HTMLInputElement>(null)
@@ -988,7 +988,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
   const [collapsedGrades,  setCollapsedGrades]  = useState<Set<string>>(new Set())
   const [collapsedStreams,  setCollapsedStreams]  = useState<Set<string>>(new Set())
 
-  // All unique stream names in use — used for autocomplete everywhere
+  // All unique stream names in use - used for autocomplete everywhere
   const existingStreams = useMemo(() =>
     [...new Set(
       sections
@@ -1100,7 +1100,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
         if (!byGroup.has(grp)) byGroup.set(grp, new Map())
         byGroup.get(grp)!.set(grade, sm)
       })
-    // Empty groups (no sections) are intentionally NOT shown — a group only
+    // Empty groups (no sections) are intentionally NOT shown - a group only
     // appears once at least one section falls under it.
     const groupSortKeyDyn = (name: string) => { const i = groupDefs.findIndex(d => d.name === name); return i >= 0 ? i : 99 }
     return new Map([...byGroup.entries()].sort((a, b) => groupSortKeyDyn(a[0]) - groupSortKeyDyn(b[0])))
@@ -1127,7 +1127,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
     undoHistory.push(sections)
     setSections(sections.filter(s => !ids.has(s.id)))
   }
-  /** Rename a grade — updates the grade field AND the "Grade-…" name prefix of its sections. */
+  /** Rename a grade - updates the grade field AND the "Grade-…" name prefix of its sections. */
   function renameGrade(oldGrade: string, newGrade: string) {
     const trimmed = newGrade.trim().replace(/^grade\s+/i, '')
     if (!trimmed || trimmed === oldGrade) return
@@ -1315,7 +1315,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
             <div style={{ fontSize: 30, marginBottom: 8 }}>🎓</div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E', marginBottom: 6 }}>No classes yet</div>
             <div style={{ fontSize: 12.5, color: '#6D6A8A', maxWidth: 420, lineHeight: 1.6, marginBottom: 20 }}>
-              Let schedU create starter classes from your class range — pre-primary gets one section, other grades get A–D. Rename and tune afterwards.
+              Let schedU create starter classes from your class range - pre-primary gets one section, other grades get A–D. Rename and tune afterwards.
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
               <button onClick={smartCreate}
@@ -1402,7 +1402,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                           )}
                           <DeleteActionButton
                             onDelete={() => removeMany(groupIds)}
-                            tooltip={`Delete ${group} — removes all ${groupSecs.length} sections`}
+                            tooltip={`Delete ${group} - removes all ${groupSecs.length} sections`}
                           />
                         </div>
                       </td>
@@ -1468,7 +1468,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                                 )}
                                 <DeleteActionButton
                                   onDelete={() => removeMany(gradeIds)}
-                                  tooltip={`Delete Grade ${grade} — removes its ${gradeSecs.length} sections`}
+                                  tooltip={`Delete Grade ${grade} - removes its ${gradeSecs.length} sections`}
                                 />
                               </div>
                             </td>
@@ -1476,7 +1476,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
 
                           {!gradeCollapsed && Array.from(streamMap.entries()).map(([stream, secs]) => {
                             if (!hasStreams) {
-                              // No streams for this grade — render sections directly
+                              // No streams for this grade - render sections directly
                               return secs.map(sec => (
                                 <SectionRow
                                   key={sec.id} sec={sec}
@@ -1510,7 +1510,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                                         <ChevronDown size={13} strokeWidth={2.5} />
                                       </span>
 
-                                      {/* Stream name — always an input so user types directly */}
+                                      {/* Stream name - always an input so user types directly */}
                                       <StreamNameInput
                                         initial={stream}
                                         onCommit={v => renameStream(grade, stream, v)}
@@ -1531,7 +1531,7 @@ export function ClassesPanel({ sections, setSections, onScopeClick }: {
                                   <td style={{ ...streamHdrCell, textAlign: 'center' }}>
                                     <DeleteActionButton
                                       onDelete={() => removeMany(streamIds)}
-                                      tooltip={`Delete ${stream} (${grade}) — removes its ${secs.length} classes`}
+                                      tooltip={`Delete ${stream} (${grade}) - removes its ${secs.length} classes`}
                                     />
                                   </td>
                                 </tr>

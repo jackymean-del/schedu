@@ -1,5 +1,5 @@
 /**
- * Shared app footer — matches landing page footer.
+ * Shared app footer - matches landing page footer.
  * Used on login, register, dashboard, and wizard pages.
  */
 export function AppFooter({ style }: { style?: React.CSSProperties }) {

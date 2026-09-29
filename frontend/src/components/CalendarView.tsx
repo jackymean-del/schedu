@@ -1,5 +1,5 @@
 /**
- * CalendarView — Professional timetable visualization
+ * CalendarView - Professional timetable visualization
  *
  * ── Modes ──────────────────────────────────────────────────────────────────
  *  Timeline (default)
@@ -71,13 +71,13 @@ export interface CalendarViewProps {
   blockedSlots?: BlockedSlot[]
   dynamicLearningGroups?: DynamicLearningGroup[]
   rooms?: Array<{ actualName?: string; generatedName?: string; name?: string; capacity?: number }>
-  // Per-section subject strengths — drives the parallel-block hover breakdown.
+  // Per-section subject strengths - drives the parallel-block hover breakdown.
   sectionStrengths?: Array<{ sectionName: string; subjectStrengths?: Record<string, number> }>
   classwiseBreaks?: Array<{
     id:string; name:string; type:string
     classes:string[]; afterPeriod:number; duration:number
   }>
-  /** Controlled layout mode — lets the parent's own view pills drive
+  /** Controlled layout mode - lets the parent's own view pills drive
    *  matrix/timeline/month instead of the internal tabs. */
   layout?: CalMode
   /** Hide the internal ⊟/📅/📆 layout tabs when the parent renders its own. */
@@ -104,7 +104,7 @@ const MINOR_INT:  Record<ZoomLevel, number> = { "60min": 30, "30min": 15, "15min
 
 // Subject colour comes from lib/subjectColors, the same engine the ops
 // calendar uses. This file had its own palette and its own hash, so a subject
-// was one colour here and a different one there — while that module's own
+// was one colour here and a different one there - while that module's own
 // documentation promised "one colour per subject, identical everywhere it
 // appears", naming this very view. Six subjects out of six disagreed.
 
@@ -135,7 +135,7 @@ function shortRoom(name: string): string {
 }
 
 /**
- * Smart short name lookup — uses stored shortName field if configured, falls back to generated
+ * Smart short name lookup - uses stored shortName field if configured, falls back to generated
  */
 function getStaffShortName(staffName: string, staff: Staff[]): string {
   if (!staffName) return ""
@@ -212,7 +212,7 @@ function rulerLabel(mins:number, fmt:"12h"|"24h"="12h"): string {
 // ─────────────────────────────────────────────
 type CwBreak={id:string;name:string;type:string;classes:string[];afterPeriod:number;duration:number}
 
-// MUST match getSectionClassKey() in routes/timetable.tsx exactly — the
+// MUST match getSectionClassKey() in routes/timetable.tsx exactly - the
 // classwiseBreaks[].classes arrays are keyed by THAT function. Any divergence
 // means per-section break filtering breaks and the calendar shows wrong
 // (non-staggered) break timing.
@@ -263,7 +263,7 @@ const KEY_LABEL: Record<string,string> = {
   vi:'VI', vii:'VII', viii:'VIII', ix:'IX', x:'X', xi:'XI', xii:'XII',
 }
 // Optional/parallel-block aware teacher lookup (teacher lives in options[] when
-// the section-level teacher is blank — e.g. a combined IP group for XI-Sci-A+B).
+// the section-level teacher is blank - e.g. a combined IP group for XI-Sci-A+B).
 function cellTeacherInfo(cell: any, tn: string): { subject: string; room: string } | null {
   if (!cell) return null
   if (cell.teacher === tn && cell.subject) return { subject: cell.subject, room: cell.room ?? "" }
@@ -389,7 +389,7 @@ function DetailPanel({d,tf,onClose,onEdit}:{
 
 // ─────────────────────────────────────────────
 // ─────────────────────────────────────────────
-// Single timeline block renderer — NO drag state props (prevents mass re-renders)
+// Single timeline block renderer - NO drag state props (prevents mass re-renders)
 // ─────────────────────────────────────────────
 function Block({
   block, left, width, rowH, compact, dayKey,
@@ -412,7 +412,7 @@ function Block({
   onDragEnd?: ()=>void
   onClassTeacherDragAttempt?: (msg:string)=>void
 }) {
-  // Hooks first — a zero-width block still has to run them, or React sees a
+  // Hooks first - a zero-width block still has to run them, or React sees a
   // different hook count on the render where the block gains width.
   const [hovered, setHovered] = useState(false)
   if (width <= 0) return null
@@ -427,7 +427,7 @@ function Block({
           top:compact?2:3, bottom:compact?2:3, background:bs.bg,
           border:`1px solid ${bs.border}`, borderRadius:4,
           zIndex: 1,
-          // pointerEvents:none — break/lunch blocks are purely informational.
+          // pointerEvents:none - break/lunch blocks are purely informational.
           // Keeping them event-transparent guarantees they can NEVER intercept
           // the drag/click of a taught card that overlaps them (staggered slots).
           pointerEvents:"none" as const,
@@ -459,7 +459,7 @@ function Block({
   }
 
   // ── Empty period ─────────────────────────────────────────────────────
-  // pointerEvents:none is CRITICAL — virtual free/empty blocks (staggered)
+  // pointerEvents:none is CRITICAL - virtual free/empty blocks (staggered)
   // can overlap a real taught block (e.g. a free P6@12:45 overlaps a primary
   // class's P5 that runs to 1:15). Without this, the transparent placeholder
   // sits on top and steals the drag, making the taught block undraggable.
@@ -512,7 +512,7 @@ function Block({
         left:left+1, width:Math.max(width-2,2),
         top:compact?2:3, bottom:compact?2:3,
         // Sit ABOVE break/lunch blocks (zIndex 1) but BELOW the DropZone overlay
-        // (zIndex 20) — keeps the card grabbable when a staggered break overlaps
+        // (zIndex 20) - keeps the card grabbable when a staggered break overlaps
         // it, while drop highlights still render on top.
         zIndex: 4,
         background: col.bg,
@@ -526,7 +526,7 @@ function Block({
         outlineOffset: isSrcBlock ? "-2px" : undefined,
         userSelect:"none" as const,
         boxShadow:"0 1px 3px rgba(0,0,0,0.06)",
-        // Pluck effect — source block dims + grayscales when being dragged
+        // Pluck effect - source block dims + grayscales when being dragged
         opacity: isSrcBlock ? 0.15 : 1,
         filter: isSrcBlock ? "grayscale(80%)" : undefined,
         transition:"opacity 0.08s ease, filter 0.08s ease",
@@ -565,7 +565,7 @@ function Block({
         <span style={{ position:"absolute" as const, top:3, right:4,
           width:5, height:5, borderRadius:"50%", background:"#F59E0B" }} />
       )}
-      {/* No icon — cursor handles the UX */}
+      {/* No icon - cursor handles the UX */}
       {/* Delete button */}
       {editMode && hovered && onDelete && (
         <button onClick={e=>{e.stopPropagation(); onDelete(block.sectionName, dayKey, block.periodId)}}
@@ -610,7 +610,7 @@ function ConflictModal({ message, onClose }:{ message:string; onClose:()=>void }
 }
 
 // ─────────────────────────────────────────────
-// Conflict detection — checks teacher clashes + class-teacher protection
+// Conflict detection - checks teacher clashes + class-teacher protection
 // Returns null if safe, or a human-readable reason string
 // ─────────────────────────────────────────────
 function getSwapConflict(
@@ -669,7 +669,7 @@ function getSwapConflict(
 }
 
 // ─────────────────────────────────────────────
-// Drop zone overlay — rendered on top of blocks ONLY during active drag
+// Drop zone overlay - rendered on top of blocks ONLY during active drag
 // Green = safe, Red = conflict. Solid border for visibility.
 // ─────────────────────────────────────────────
 function DropZone({
@@ -720,7 +720,7 @@ function DropZone({
         boxShadow: isOver ? `0 0 0 2px ${isConflict ? "#EF4444" : "#10B981"}` : "none",
       }}
     >
-      {/* +/✕ badge — only on the cell currently under the cursor */}
+      {/* +/✕ badge - only on the cell currently under the cursor */}
       {isOver && width >= 24 && (
         <div style={{
           position:"absolute" as const, top:"50%", left:"50%",
@@ -743,7 +743,7 @@ function DropZone({
 }
 
 // ─────────────────────────────────────────────
-// CalendarView — main component
+// CalendarView - main component
 // ─────────────────────────────────────────────
 export function CalendarView({
   classTT, periods, workDays, startTime, sectionTimes, timeFormat="12h",
@@ -766,7 +766,7 @@ export function CalendarView({
   /**
    * The date a weekday column stands for. This view navigates by week and
    * shows a week range in its header, so every column belongs to the week of
-   * curDate — and a cover belongs to a date, not to every Monday.
+   * curDate - and a cover belongs to a date, not to every Monday.
    */
   const dateOfWeekday = useCallback((dayKey:string):string => {
     const idx = DAY_NAMES.findIndex(d => sameDay(d, dayKey ?? ''))
@@ -775,7 +775,7 @@ export function CalendarView({
     return localISO(d)
   },[curDate])
   const [activeD,    setActiveD]    = useState<ActiveDetail|null>(null)
-  // drag state: only src key + hover key — lightweight strings, not objects
+  // drag state: only src key + hover key - lightweight strings, not objects
   const [dragSrcKey,      setDragSrcKey]      = useState<string|null>(null)
   const [dragSrc,         setDragSrc]         = useState<{section:string;day:string;periodId:string}|null>(null)
   const [dragSrcEntity,   setDragSrcEntity]   = useState<string|null>(null)  // matrix: row (entity) where drag started
@@ -822,7 +822,7 @@ export function CalendarView({
   // ── Full-break detection (header/break rule) ─────────────────────────
   // A break is "full" (show as a solid break block in teacher/room/subject
   // views) only when ALL classes are on it simultaneously. Partial/classwise
-  // breaks are NOT shown as break blocks — during that time the in-session
+  // breaks are NOT shown as break blocks - during that time the in-session
   // classes' teaching blocks fill the slot instead.
   const allClassKeys = useMemo(()=>new Set(sections.map(s=>secKey(s.name))),[sections])
   const isFullBreak = useCallback((pid:string):boolean=>{
@@ -840,7 +840,7 @@ export function CalendarView({
     return timesFor(repSec, buildSecPeriods(repSec,periods,classwiseBreaks))
   },[sections,periods,classwiseBreaks,dayStartMin,timesFor])
 
-  // Distinct teaching slots across ALL class groups — mirrors the traditional
+  // Distinct teaching slots across ALL class groups - mirrors the traditional
   // teacher view's "unified time-slot column model". With staggered breaks a
   // single Period N occurs at several wall-clock times (e.g. P5 @ 12:05 for
   // VI-XII and P5 @ 12:35 for Nursery-V); each distinct (periodId, startMin)
@@ -882,7 +882,7 @@ export function CalendarView({
 
   // Unified matrix columns: Assembly + distinct teaching slots + FULL break
   // columns (e.g. Morning Break), sorted by start time. Partial/staggered
-  // lunches are NOT columns — they overlay as "Lunch" cells (same rule as the
+  // lunches are NOT columns - they overlay as "Lunch" cells (same rule as the
   // traditional teacher view). This gives the matrix its break columns and the
   // correct staggered period structure without any time-axis width math.
   type MCol = { key:string; periodId:string; name:string; type:Period["type"]; start:number; end:number }
@@ -911,7 +911,7 @@ export function CalendarView({
     return [...cols.values()].sort((a,b)=>a.start-b.start)
   },[periods,classwiseBreaks,groupSchedules,dayStartMin,isFullBreak])
 
-  // Partial (staggered) lunch break windows — non-full, non-short breaks with
+  // Partial (staggered) lunch break windows - non-full, non-short breaks with
   // their exact wall-clock window and a compressed class label. Used to render
   // lunch blocks in the teacher/room/subject TIMELINE where the entity is free.
   const partialLunchWindows = useMemo(()=>{
@@ -967,7 +967,7 @@ export function CalendarView({
     const blocks:TimeBlock[]=[]
     const gTm=timesFor(sections[0]?.name ?? '', periods)
     const rTm=repSecTimes(dayKey)
-    // Global breaks — only FULL (school-wide) breaks render as solid blocks.
+    // Global breaks - only FULL (school-wide) breaks render as solid blocks.
     // Partial/classwise breaks are skipped; in-session teaching blocks fill them.
     periods.forEach(p=>{
       if(p.type==="class") return
@@ -1022,7 +1022,7 @@ export function CalendarView({
     distinctTeachingSlots(dayKey).forEach((slot,sk)=>{
       if(taughtSlotKeys.has(sk)) return     // teacher teaches exactly this slot → skip
       // CRITICAL: also skip slots whose TIME overlaps a taught block. A staggered
-      // P6@12:45 slot overlaps a primary class's P5 card (12:35–1:15) — the teacher
+      // P6@12:45 slot overlaps a primary class's P5 card (12:35–1:15) - the teacher
       // is actually busy then, so a free block there is wrong and (overlapping the
       // real card) makes the card unselectable/undraggable.
       if (blocks.some(b=>b.periodType==="class" && b.subject && b.startMin < slot.endMin && b.endMin > slot.startMin)) return
@@ -1030,7 +1030,7 @@ export function CalendarView({
         key:`__free|${tName}|${sk}|${dayKey}`, periodId:slot.periodId,
         periodName:slot.periodName, periodType:"class",
         startMin:slot.startMin, endMin:slot.endMin,
-        sectionName:"",   // virtual — use dragSrc.section when dropped
+        sectionName:"",   // virtual - use dragSrc.section when dropped
         subject:"", teacher:tName, room:"",   // teacher stamped for filter
         isSub:false, isClassTeacher:false, absent:false,
       })
@@ -1043,7 +1043,7 @@ export function CalendarView({
     const blocks:TimeBlock[]=[]
     const gTm=timesFor(sections[0]?.name ?? '', periods)
     const rTm=repSecTimes(dayKey)
-    // Global breaks — only FULL (school-wide) breaks render as solid blocks.
+    // Global breaks - only FULL (school-wide) breaks render as solid blocks.
     periods.forEach(p=>{
       if(p.type==="class") return
       if(!isFullBreak(p.id)) return
@@ -1091,14 +1091,14 @@ export function CalendarView({
     // Set room:roomName so the DropZone filter only shows these on THIS room's rows
     distinctTeachingSlots(dayKey).forEach((slot,sk)=>{
       if(occupiedSlotKeys.has(sk)) return    // room used in exactly this slot → skip
-      // Skip slots whose TIME overlaps an occupied block (staggered) — avoids a
+      // Skip slots whose TIME overlaps an occupied block (staggered) - avoids a
       // spurious free block covering a real card and blocking its drag.
       if (blocks.some(b=>b.periodType==="class" && b.subject && b.startMin < slot.endMin && b.endMin > slot.startMin)) return
       blocks.push({
         key:`__free|${roomName}|${sk}|${dayKey}`, periodId:slot.periodId,
         periodName:slot.periodName, periodType:"class",
         startMin:slot.startMin, endMin:slot.endMin,
-        sectionName:"",   // virtual — use dragSrc.section when dropped
+        sectionName:"",   // virtual - use dragSrc.section when dropped
         subject:"", teacher:"", room:roomName,  // room stamped for filter
         isSub:false, isClassTeacher:false, absent:false,
       })
@@ -1111,7 +1111,7 @@ export function CalendarView({
     const blocks:TimeBlock[]=[]
     const gTm=timesFor(sections[0]?.name ?? '', periods)
     const rTm=repSecTimes(dayKey)
-    // Global breaks — only FULL (school-wide) breaks render as solid blocks.
+    // Global breaks - only FULL (school-wide) breaks render as solid blocks.
     periods.forEach(p=>{
       if(p.type==="class") return
       if(!isFullBreak(p.id)) return
@@ -1172,7 +1172,7 @@ export function CalendarView({
       const vr = selectedEntity!=="ALL" ? allRooms.filter(r=>r===selectedEntity) : allRooms
       return vr.map(r=>({ id:r, label:r, group:"Venue" }))
     }
-    // subject — show subjects as rows
+    // subject - show subjects as rows
     if (viewMode==="subject") {
       const subs = new Set<string>()
       Object.values(classTT).forEach(sd=>Object.values(sd).forEach(dd=>
@@ -1274,7 +1274,7 @@ export function CalendarView({
 
   // ── Shared track renderer (absolute-positioned blocks in a day cell) ──
   const renderTrack = (allBlocks:TimeBlock[], rowH:number, compact:boolean, dayKey:string) => {
-    // Breaks toggle: when off, drop Assembly/break/lunch blocks — teaching only.
+    // Breaks toggle: when off, drop Assembly/break/lunch blocks - teaching only.
     const toggled = showBreaks ? allBlocks : allBlocks.filter(b => b.periodType === "class")
     // SAFETY NET: never render a break/lunch block that overlaps a real taught
     // card in this row. A staggered lunch (e.g. VI-X 12:45–1:15) can land behind
@@ -1304,7 +1304,7 @@ export function CalendarView({
           pointerEvents:"none" as const,
         }} />
       ))}
-      {/* Blocks — no drag state props, no mass re-renders */}
+      {/* Blocks - no drag state props, no mass re-renders */}
       {blocks.map(b=>{
         const bLeft  = (b.startMin-dayStartMin)*pxPerMin
         const bWidth = (b.endMin-b.startMin)*pxPerMin
@@ -1331,7 +1331,7 @@ export function CalendarView({
           />
         )
       })}
-      {/* Drop zone overlay — ONLY rendered during drag, scope depends on viewMode */}
+      {/* Drop zone overlay - ONLY rendered during drag, scope depends on viewMode */}
       {dragSrc && blocks.map(b=>{
         if (b.periodType!=="class") return null
         if (b.key === dragSrcKey) return null   // skip the source cell itself
@@ -1362,7 +1362,7 @@ export function CalendarView({
         // Virtual free blocks (sectionName="") use the dragged cell's section as drop target
         const dropSection = b.sectionName || dragSrc.section
 
-        // Conflict check — works for same-section and cross-section swaps
+        // Conflict check - works for same-section and cross-section swaps
         const conflict = getSwapConflict(
           classTT,
           dragSrc.section, dragSrc.day, dragSrc.periodId,
@@ -1430,7 +1430,7 @@ export function CalendarView({
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // RENDER — Week Timeline / Compact
+  // RENDER - Week Timeline / Compact
   // All entities as rows · All workdays as adjacent column-groups
   // ══════════════════════════════════════════════════════════════════════
   const renderWeekView = (compact:boolean) => {
@@ -1546,7 +1546,7 @@ export function CalendarView({
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // RENDER — Period Grid (clean P1..Pn columns, days as super-columns)
+  // RENDER - Period Grid (clean P1..Pn columns, days as super-columns)
   // Mirrors the traditional table but shows every workday side-by-side.
   // Pure period columns → no time-axis width math → no staggered-break
   // duration artefacts. Breaks are not cells; a thick divider separates days.
@@ -1554,7 +1554,7 @@ export function CalendarView({
   const renderPeriodGrid = () => {
     const days = workDays
     const rows = entityList   // already scoped by selectedEntity
-    // Breaks toggle: when off, drop Assembly/break columns — teaching periods only.
+    // Breaks toggle: when off, drop Assembly/break columns - teaching periods only.
     const cols = showBreaks ? matrixColumns : matrixColumns.filter(c => c.type === "class")
     const PCOL_W = 104, BCOL_W = 58
     const cellH = density === "compact" ? 32 : 48
@@ -1675,7 +1675,7 @@ export function CalendarView({
                     const isSrcCell = dragSrcKey === mKey
                     const tgtSection = b ? b.sectionName : (entClassKey ? ent.id : (dragSrc?.section ?? ""))
                     // SAME-ROW ONLY: drops are confined to the row (entity) the drag
-                    // started in — you can't move a period into another teacher/room/
+                    // started in - you can't move a period into another teacher/room/
                     // subject/class timetable by dragging across rows.
                     const sameRow = dragSrcEntity === ent.id
                     const dragActive = editMode && !!dragSrc && !isSrcCell && sameRow
@@ -1780,7 +1780,7 @@ export function CalendarView({
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // RENDER — Matrix
+  // RENDER - Matrix
   // Single entity → days as rows · ALL entities → entity groups with day sub-rows
   // ══════════════════════════════════════════════════════════════════════
   const renderMatrix = () => {
@@ -1974,7 +1974,7 @@ export function CalendarView({
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // RENDER — Month
+  // RENDER - Month
   // ══════════════════════════════════════════════════════════════════════
   const renderMonth = () => {
     const grid  = getMonthGrid(curDate.getFullYear(), curDate.getMonth())
@@ -2065,7 +2065,7 @@ export function CalendarView({
         borderBottom:"1px solid #E5EBF5", flexShrink:0, background:"#F8FAFC",
         flexWrap:"wrap" as const,
       }}>
-        {/* Mode tabs — hidden when the parent renders its own layout pills */}
+        {/* Mode tabs - hidden when the parent renders its own layout pills */}
         {!hideLayoutTabs && (
           <div style={{ display:"flex", border:"1px solid #E5EBF5", borderRadius:6, overflow:"hidden" }}>
             {([["matrix","⊟ Matrix"],["timeline","📅 Weekly"],["month","📆 Monthly"]] as [CalMode,string][]).map(([m,lbl])=>(
@@ -2122,7 +2122,7 @@ export function CalendarView({
         {/* Show / hide breaks toggle (non-month views) */}
         {calMode!=="month"&&(
           <button onClick={()=>setShowBreaks(v=>!v)}
-            title={showBreaks ? "Hide Assembly & breaks — show teaching periods only" : "Show Assembly, short breaks & lunch"}
+            title={showBreaks ? "Hide Assembly & breaks - show teaching periods only" : "Show Assembly, short breaks & lunch"}
             style={{
               display:"flex", alignItems:"center", gap:5, padding:"4px 10px",
               border:`1px solid ${showBreaks?"#685DBC":"#E5EBF5"}`, borderRadius:6,

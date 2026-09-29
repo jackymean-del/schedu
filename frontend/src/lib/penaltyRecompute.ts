@@ -1,5 +1,5 @@
 /**
- * penaltyRecompute — derive the workload-related penalties straight
+ * penaltyRecompute - derive the workload-related penalties straight
  * from the current store state, no solver re-run required.
  *
  * The solver's output captures every penalty at the moment of solve.
@@ -47,7 +47,7 @@ export function recomputeWorkloadPenalties(input: RecomputeInput): RecomputedPen
     loads[t.name] = total
   })
 
-  // Fairness target — same formula the solver uses
+  // Fairness target - same formula the solver uses
   let totalRequired = 0
   Object.values(subjectAllocations ?? {}).forEach(secMap => {
     Object.values(secMap ?? {}).forEach(cellStr => {

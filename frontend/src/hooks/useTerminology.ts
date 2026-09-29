@@ -1,5 +1,5 @@
 /**
- * useTerminology() — Spec Rule 5 (Non-negotiable)
+ * useTerminology() - Spec Rule 5 (Non-negotiable)
  * 
  * React components must NEVER hardcode "Teacher", "Class", or "Period".
  * All domain labels must come from this hook.

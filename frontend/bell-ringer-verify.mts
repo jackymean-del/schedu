@@ -1,5 +1,5 @@
 /**
- * The board's bell: what rings, when, and — mostly — what must NOT ring.
+ * The board's bell: what rings, when, and - mostly - what must NOT ring.
  * Run: npx tsx bell-ringer-verify.mts
  */
 import { ringsDue, parseClock, toClock, RING_GRACE_MIN, type BellAlarm } from './src/lib/bellRinger.ts'
@@ -10,7 +10,7 @@ import {
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
-  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' — ' + extra : ''}`)
+  console.log(`${cond ? '✓' : '✗'} ${label}${extra ? ' - ' + extra : ''}`)
   if (!cond) fail++
 }
 
@@ -97,7 +97,7 @@ ok(toClock(930) === '15:30' && toClock(425) === '07:05', 'minutes turn back into
 
 console.log('\n── the ring catalogue ──')
 // The sounds themselves are Web Audio and cannot be rendered here; they are
-// measured in the browser instead — rendered offline, with levels and strike
+// measured in the browser instead - rendered offline, with levels and strike
 // counts checked. What CAN go wrong in a plain import is the bookkeeping: a
 // ring added to the union and forgotten in the list, or two sharing an id.
 const ids = BUILT_IN_RINGS.map(r => r.id)

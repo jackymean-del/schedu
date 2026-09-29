@@ -1,4 +1,4 @@
-# Claude Code Instructions — AND Groups + OR Groups (Step 4 Redesign)
+# Claude Code Instructions - AND Groups + OR Groups (Step 4 Redesign)
 
 > Replaces the old "Student Groups + Subject Combos" two-tab design.  
 > **Key files:** `types/index.ts`, `routes/wizard/step-student-groups.tsx`,
@@ -13,21 +13,21 @@ The existing "Student Preference Matrix" treats every optional subject as an ind
 column and validates `sum of chosen subjects = total students`. This is **wrong** for
 combination-based scheduling because:
 
-- Physics is in both PCM and PCB — "how many took Physics?" is meaningless
+- Physics is in both PCM and PCB - "how many took Physics?" is meaningless
 - LKG/UKG rows appear even though they have no optional subjects
 - Entering Maths=21 + Bio=19 fills 40 students, but then Physics/Chemistry also
-  show editable cells — entering anything there breaks the sum validation
+  show editable cells - entering anything there breaks the sum validation
 - The matrix cannot distinguish between "subjects a student takes together" vs
   "subjects a student picks one from"
 
 ---
 
-## New Design: Two Tabs — AND Groups + OR Groups
+## New Design: Two Tabs - AND Groups + OR Groups
 
 ### Tab 1: AND Groups
 **Definition:** A student belongs to exactly **one subject bundle**. The bundle defines
 ALL the subjects that student takes together. The split between bundles is
-mutually exclusive — the sum of all bundle headcounts = section total.
+mutually exclusive - the sum of all bundle headcounts = section total.
 
 **Example:**  
 Science stream has two bundles: PCM (Physics+Chemistry+Maths) and PCB
@@ -41,7 +41,7 @@ Each parallel slot pairs one PCM group with one PCB group in separate rooms.
 
 ### Tab 2: OR Groups
 **Definition:** A student picks **one subject** from an elective slot. The slot is
-independent of other slots — a student can appear in R1 AND R2 AND R3 because each
+independent of other slots - a student can appear in R1 AND R2 AND R3 because each
 is a separate period block.
 
 **Example:**  
@@ -50,7 +50,7 @@ but section may have 41 students who must all choose exactly one R1 language).
 
 ---
 
-## Part 1 — New Type Definitions (`types/index.ts`)
+## Part 1 - New Type Definitions (`types/index.ts`)
 
 ### 1.1 SubjectBundle (one combination option within an AND group)
 
@@ -101,18 +101,18 @@ export interface AndTeachingGroup {
     studentCount: number
   }>
   totalStrength: number
-  teacher?: string       // one teacher per subject — resolved in Allocation step
+  teacher?: string       // one teacher per subject - resolved in Allocation step
   room?: string
   roomCapacity?: number
   capacityWarning?: boolean
 }
 ```
 
-### 1.4 ElectiveSlot (OR group — rename from SubjectAndOrGroup)
+### 1.4 ElectiveSlot (OR group - rename from SubjectAndOrGroup)
 
 ```ts
 /** One OR-group slot: students pick exactly one subject from this slot.
- *  Separate slots are independent — a student can appear in R1, R2, AND R3. */
+ *  Separate slots are independent - a student can appear in R1, R2, AND R3. */
 export interface ElectiveSlot {
   id: string
   name: string           // "R1 Regional Language", "Physical Activity Elective"
@@ -154,11 +154,11 @@ Add both to `TT_SNAPSHOT_FIELDS` in `dashboard.tsx`.
 
 ---
 
-## Part 2 — Step 4 Redesign (`step-student-groups.tsx`)
+## Part 2 - Step 4 Redesign (`step-student-groups.tsx`)
 
 Delete the entire current file content and replace with the architecture below. Keep
 the existing helper functions (`guessStream`, `generateGroupId`, `getBehaviors`,
-`computeGroupingMode`, `groupColor`, `BEHAVIOR_META`, `MODE_META`) — they are reused
+`computeGroupingMode`, `groupColor`, `BEHAVIOR_META`, `MODE_META`) - they are reused
 in the group generation logic.
 
 ### 2.1 Tab structure
@@ -166,9 +166,9 @@ in the group generation logic.
 ```tsx
 const TABS = [
   { key: 'and', label: 'AND Groups', icon: <Layers size={14} />,
-    desc: 'Subject combinations — students split by bundle (PCM/PCB, Arts/Commerce)' },
+    desc: 'Subject combinations - students split by bundle (PCM/PCB, Arts/Commerce)' },
   { key: 'or',  label: 'OR Groups',  icon: <Shuffle size={14} />,
-    desc: 'Elective slots — students pick one subject from a list (R1/R2/R3, PE/Art)' },
+    desc: 'Elective slots - students pick one subject from a list (R1/R2/R3, PE/Art)' },
 ] as const
 type ActiveTab = 'and' | 'or'
 ```
@@ -180,7 +180,7 @@ type ActiveTab = 'and' | 'or'
 │  Layers icon  "AND Groups"  subtitle  [+ New AND Group]  [⚡ AI Suggest]     │
 └──────────────────────────────────────────────────────────────────────────────┘
 
-[AI suggestion cards — appear when aiSuggested=true, shown before user cards]
+[AI suggestion cards - appear when aiSuggested=true, shown before user cards]
 ┌─ Card: "Science XI–XII: PCM vs PCB" ───────────────── [Edit] [Delete] ────┐
 │  Applies to: XI-Sci-A · XI-Sci-B · XII-Sci-A · XII-Sci-B                 │
 │                                                                             │
@@ -201,7 +201,7 @@ type ActiveTab = 'and' | 'or'
 
 The AI should scan `subjects[]` from the store and suggest AND combo groups when it finds:
 
-**Pattern 1 — Stream-specific combinations:**
+**Pattern 1 - Stream-specific combinations:**
 - Check if any subjects have `isOptional=true` and are assigned to XI/XII Science/Commerce/Humanities sections
 - For Science: if both "Mathematics" and "Biology" are optional and assigned to same Science sections → suggest "PCM vs PCB"
 - For Commerce: if "Mathematics" and "Business Studies" are optional → suggest combo cards
@@ -387,7 +387,7 @@ function AndGroupCard({
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{secName}</span>
                   </td>
                   <td style={miniTD('center')}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280' }}>{total || '—'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280' }}>{total || '-'}</span>
                   </td>
                   {group.bundles.map(b => (
                     <td key={b.id} style={miniTD('center')}>
@@ -408,7 +408,7 @@ function AndGroupCard({
                   ))}
                   <td style={miniTD('center')}>
                     {total === 0 ? (
-                      <span style={{ fontSize: 10, color: '#C4C0DC' }}>—</span>
+                      <span style={{ fontSize: 10, color: '#C4C0DC' }}>-</span>
                     ) : isMatch ? (
                       <span style={{ color: '#15803D', fontSize: 11, fontWeight: 700 }}>✓ {sum}/{total}</span>
                     ) : isOver ? (
@@ -533,11 +533,11 @@ function generateAndGroups(
 ### 2.6 AND Group creation/edit modal
 
 The "New AND Group" and "Edit" modal contains:
-1. **Group name** — text input
-2. **Applicable Sections** — multi-select chip picker (filtered to senior secondary by default)
-3. **Bundles** — dynamic list of bundles, each with:
+1. **Group name** - text input
+2. **Applicable Sections** - multi-select chip picker (filtered to senior secondary by default)
+3. **Bundles** - dynamic list of bundles, each with:
    - Bundle name (text input: "PCM", "PCB", "Arts", "Commerce")
-   - Bundle subjects (chip selector from `subjects[]` — only subjects with `isOptional=true`)
+   - Bundle subjects (chip selector from `subjects[]` - only subjects with `isOptional=true`)
    - Bundle color (color swatch)
    - [+ Add Bundle] button, minimum 2 bundles
 
@@ -553,11 +553,11 @@ The OR Groups tab replaces the existing Subject Combos tab but keeps the same co
    - Cells = student counts
    - Validation: sum per row = section total
 4. **Add `slotLabel` field** (R1, R2, R3) for regional language grouping
-5. **Keep the AI suggestion engine** from `generateSuggestions()` — it already detects language/PE/art patterns correctly for OR logic
+5. **Keep the AI suggestion engine** from `generateSuggestions()` - it already detects language/PE/art patterns correctly for OR logic
 
 ---
 
-## Part 3 — Teaching Group Generation Logic
+## Part 3 - Teaching Group Generation Logic
 
 ### Combined `handleGenerateAll` 
 
@@ -607,7 +607,7 @@ function handleGenerateAll() {
 
 ---
 
-## Part 4 — Solver Bridge (`step6-generate.tsx`)
+## Part 4 - Solver Bridge (`step6-generate.tsx`)
 
 ### `andGroupsToOptionalBlocks`
 
@@ -668,7 +668,7 @@ function electiveSlotsToOptionalBlocks(slots: ElectiveSlot[]): OptionalBlock[] {
           room: group.room,
         }],
         // Within same slot label, subjects are mutually exclusive in time
-        // (all R1 subjects run at the same time — different rooms)
+        // (all R1 subjects run at the same time - different rooms)
         // Between slot labels, subjects are independent
         // (R1 and R2 run at different times)
         slotSiblings: slots
@@ -685,7 +685,7 @@ function electiveSlotsToOptionalBlocks(slots: ElectiveSlot[]): OptionalBlock[] {
 
 ---
 
-## Part 5 — Solver Changes (`lib/schedulingEngine.ts`)
+## Part 5 - Solver Changes (`lib/schedulingEngine.ts`)
 
 ### 5.1 AND group constraint: subjects in the same bundle must NOT share a time slot
 
@@ -714,12 +714,12 @@ function electiveSlotsToOptionalBlocks(slots: ElectiveSlot[]): OptionalBlock[] {
 
 ---
 
-## Part 6 — Remove / Deprecate
+## Part 6 - Remove / Deprecate
 
 | Component / Code | Action |
 |-----------------|--------|
-| `subjectGroupingRules` store key | Remove — grouping behavior is now implicit in AND/OR group structure |
-| `sectionStrengths` store key | Remove — strength is now embedded in `strengthMatrix` inside each group |
+| `subjectGroupingRules` store key | Remove - grouping behavior is now implicit in AND/OR group structure |
+| `sectionStrengths` store key | Remove - strength is now embedded in `strengthMatrix` inside each group |
 | `dynamicLearningGroups` store key | Replace with `andComboGroups[].generatedGroups` + `electiveSlots[].generatedGroups` |
 | `GroupingBehavior` type + `BEHAVIORS` + `BEHAVIOR_META` | Remove from Step 4 UI (keep in solver internally) |
 | Existing `handleRegenerate` | Replace with `handleGenerateAll` |
@@ -728,17 +728,17 @@ function electiveSlotsToOptionalBlocks(slots: ElectiveSlot[]): OptionalBlock[] {
 
 ---
 
-## Part 7 — Implementation Order
+## Part 7 - Implementation Order
 
-1. **`types/index.ts`** — Add `SubjectBundle`, `AndComboGroup`, `AndTeachingGroup`, `ElectiveSlot`, `ElectiveTeachingGroup`. Keep existing types for backward compat during transition (add `@deprecated` JSDoc).
-2. **`store/timetableStore.ts`** — Add `andComboGroups`, `electiveSlots`, `setAndComboGroups`, `setElectiveSlots`. Add to `TT_SNAPSHOT_FIELDS`.
-3. **`step-student-groups.tsx`** — Full replacement with AND/OR tab architecture. Start with AND Groups tab (card UI + mini-table + generation). OR Groups tab can reuse cleaned-up `ElectiveSlotsSection`.
-4. **`step6-generate.tsx`** — Add `andGroupsToOptionalBlocks` and `electiveSlotsToOptionalBlocks`. Wire into the existing solver call.
-5. **`lib/schedulingEngine.ts`** — Add bundle-subjects-must-not-overlap constraint and slot-parallel constraint.
+1. **`types/index.ts`** - Add `SubjectBundle`, `AndComboGroup`, `AndTeachingGroup`, `ElectiveSlot`, `ElectiveTeachingGroup`. Keep existing types for backward compat during transition (add `@deprecated` JSDoc).
+2. **`store/timetableStore.ts`** - Add `andComboGroups`, `electiveSlots`, `setAndComboGroups`, `setElectiveSlots`. Add to `TT_SNAPSHOT_FIELDS`.
+3. **`step-student-groups.tsx`** - Full replacement with AND/OR tab architecture. Start with AND Groups tab (card UI + mini-table + generation). OR Groups tab can reuse cleaned-up `ElectiveSlotsSection`.
+4. **`step6-generate.tsx`** - Add `andGroupsToOptionalBlocks` and `electiveSlotsToOptionalBlocks`. Wire into the existing solver call.
+5. **`lib/schedulingEngine.ts`** - Add bundle-subjects-must-not-overlap constraint and slot-parallel constraint.
 
 ---
 
-## Part 8 — What the End User Sees
+## Part 8 - What the End User Sees
 
 ### Setting up "Science XI-XII: PCM vs PCB"
 

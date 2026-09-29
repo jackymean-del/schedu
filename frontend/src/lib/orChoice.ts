@@ -1,19 +1,19 @@
 /**
  * WHICH SUBJECT AN "OR" PERIOD ACTUALLY RUNS.
  *
- * An OR group is a subject CHOICE for a whole class — "Physics OR Chemistry" —
+ * An OR group is a subject CHOICE for a whole class - "Physics OR Chemistry" -
  * not a student split. Every student in the room takes whichever one runs, so
  * an OR group may only contain subjects the entire class takes; optional and
  * elective subjects belong in AND groups, which is where student groups live.
  *
  * The choice is decided by SYLLABUS COVERAGE: the subject further behind gets
- * the period. That makes an OR slot a self-correcting catch-up mechanism —
+ * the period. That makes an OR slot a self-correcting catch-up mechanism -
  * whichever subject has fallen behind quietly claims the next one, without
  * anybody having to notice and intervene.
  *
  * The solver cannot make this call. It runs before term, and coverage is a
  * fact about what has actually been taught since. So the slot is reserved at
- * generation time — both teachers held, the period kept free — and the subject
+ * generation time - both teachers held, the period kept free - and the subject
  * is resolved here, from live coverage, whenever the day is displayed.
  *
  * WHAT THIS REFUSES TO GUESS. A subject with no coverage signal at all is not
@@ -36,7 +36,7 @@ export interface OrOption {
 /**
  * A decision recorded by a person, for one date.
  *
- * Dated, not permanent — exactly like a substitution, and for the same reason.
+ * Dated, not permanent - exactly like a substitution, and for the same reason.
  * "We are doing Physics this Tuesday because I have the lab" is a fact about
  * Tuesday; writing it into the timetable would make it true every Tuesday until
  * somebody noticed. The base timetable keeps holding the CHOICE; only the
@@ -51,16 +51,16 @@ export interface OrDecision {
   at?: string
 }
 
-/** The key an OR decision is stored under — same shape as a substitution. */
+/** The key an OR decision is stored under - same shape as a substitution. */
 export const orDecisionKey = (section: string, isoDate: string, periodId: string) =>
   `${section}|${isoDate}|${periodId}`
 
 export type OrReason =
-  /** A person chose, for this date. Beats coverage — they know something it does not. */
+  /** A person chose, for this date. Beats coverage - they know something it does not. */
   | 'manual'
   /** Both tracked, and one is genuinely further behind. */
   | 'behind'
-  /** Both tracked and level — settled by a stable order, not a coin toss. */
+  /** Both tracked and level - settled by a stable order, not a coin toss. */
   | 'tied'
   /** One or both untracked, so coverage cannot decide it. */
   | 'untracked'
@@ -83,7 +83,7 @@ const pct = (f: number) => `${Math.round(f * 100)}%`
 /**
  * Resolve an OR period for one section.
  *
- * `plans` is the syllabus store's map, keyed by planKey(subject, section) —
+ * `plans` is the syllabus store's map, keyed by planKey(subject, section) -
  * the same map every other coverage surface reads.
  */
 export function resolveOrChoice(
@@ -93,7 +93,7 @@ export function resolveOrChoice(
   /**
    * What a person decided for THIS date, if they did. It wins outright:
    * coverage is a good default, not an instruction, and the teacher standing
-   * in front of the class knows things the syllabus percentages do not — a lab
+   * in front of the class knows things the syllabus percentages do not - a lab
    * free this morning, an exam next week, a topic half-finished.
    */
   manual?: OrDecision | string,
@@ -113,7 +113,7 @@ export function resolveOrChoice(
           fraction: hasContentSignal(plans?.[planKey(o.subject, section)])
             ? contentFraction(plans?.[planKey(o.subject, section)]) : undefined,
         })),
-        explain: `${chosen.subject} — chosen${who} for this day.`,
+        explain: `${chosen.subject} - chosen${who} for this day.`,
       }
     }
     // A decision naming a subject that is not in the group is stale (the group
@@ -131,7 +131,7 @@ export function resolveOrChoice(
   if (live.length === 1) {
     return {
       subject: live[0].subject, option: live[0], reason: 'only-option', coverage,
-      explain: `${live[0].subject} — the only subject in this group.`,
+      explain: `${live[0].subject} - the only subject in this group.`,
     }
   }
 
@@ -142,8 +142,8 @@ export function resolveOrChoice(
     return {
       subject: pick.option.subject, option: pick.option, reason: 'untracked', coverage,
       explain: tracked.length === 0
-        ? `${pick.option.subject} by default — no syllabus coverage recorded for either subject yet.`
-        : `${pick.option.subject} by default — ${measured.find(m => !m.tracked)!.option.subject} has no coverage recorded, so the two cannot be compared.`,
+        ? `${pick.option.subject} by default - no syllabus coverage recorded for either subject yet.`
+        : `${pick.option.subject} by default - ${measured.find(m => !m.tracked)!.option.subject} has no coverage recorded, so the two cannot be compared.`,
     }
   }
 
@@ -155,20 +155,20 @@ export function resolveOrChoice(
   if (Math.abs(first.fraction! - second.fraction!) < 0.005) {
     return {
       subject: first.option.subject, option: first.option, reason: 'tied', coverage,
-      explain: `${first.option.subject} — level with ${second.option.subject} at ${pct(first.fraction!)}, so the first by name takes it.`,
+      explain: `${first.option.subject} - level with ${second.option.subject} at ${pct(first.fraction!)}, so the first by name takes it.`,
     }
   }
 
   return {
     subject: first.option.subject, option: first.option, reason: 'behind', coverage,
-    explain: `${first.option.subject} — ${pct(first.fraction!)} covered against ${second.option.subject}'s ${pct(second.fraction!)}, so it is further behind.`,
+    explain: `${first.option.subject} - ${pct(first.fraction!)} covered against ${second.option.subject}'s ${pct(second.fraction!)}, so it is further behind.`,
   }
 }
 
 /**
  * The OR teachers who are NOT taking this period, and are therefore free.
  *
- * The solver reserves every option's teacher when it places an OR slot — it
+ * The solver reserves every option's teacher when it places an OR slot - it
  * has to, since it cannot know in advance which subject will run. But only one
  * of them ends up teaching, and the rest are then free: free to cover an
  * absence, free to be offered as a substitute, free to be counted as free.
@@ -184,7 +184,7 @@ export function freedTeachers(options: OrOption[], chosenSubject: string): strin
     if (o.subject === chosenSubject) chosen.add(t)
     else others.add(t)
   }
-  // Somebody teaching BOTH options is still busy — releasing them would be
+  // Somebody teaching BOTH options is still busy - releasing them would be
   // wrong in the one case it matters.
   return [...others].filter(t => !chosen.has(t))
 }
@@ -194,7 +194,7 @@ export function freedTeachers(options: OrOption[], chosenSubject: string): strin
  *
  * Optional and elective subjects split a class into groups, which is what AND
  * groups are for. Putting one in an OR group would schedule a period that only
- * some of the room can attend, and the rest would have nowhere to be — a
+ * some of the room can attend, and the rest would have nowhere to be - a
  * validation the editor should run before anyone generates.
  */
 export function invalidOrSubjects(
@@ -213,8 +213,8 @@ export function invalidOrSubjects(
 /**
  * The OR options in a cell, or null if it is not an OR choice.
  *
- * OR and AND look identical in the data — both are parallel `groupAssignments`
- * — and are told apart only by the joiner in the cell's subject string,
+ * OR and AND look identical in the data - both are parallel `groupAssignments`
+ * - and are told apart only by the joiner in the cell's subject string,
  * "Physics OR Chemistry" against "Physics AND Chemistry". That parsing already
  * existed inline in the cell renderer, where it decides a chip colour. It must
  * not be re-derived anywhere that decides who is TEACHING, because getting it
@@ -246,14 +246,14 @@ export function orOptionsInCell(cell: {
  * answer this. Identical to it for ordinary cells and for AND groups, where
  * every parallel teacher is genuinely in the room. It differs only for an OR
  * choice, where the day resolves to a single subject and the other options'
- * teachers are free — free to cover an absence, free to be OFFERED as a
+ * teachers are free - free to cover an absence, free to be OFFERED as a
  * substitute, free to be counted as free.
  *
  * Only a decisive choice releases anybody. resolveOrChoice still names a
  * subject when it has nothing to compare, falling back to a stable order so
  * callers get a deterministic answer, and says so with reason 'untracked'.
  * Treating that as a decision would free a teacher on a coin toss and leave a
- * class with nobody — worse than the double-booking this path prevents.
+ * class with nobody - worse than the double-booking this path prevents.
  */
 export function teachingPairsOnDate(
   cell: any, section: string, isoDate: string, periodId: string,
@@ -284,12 +284,12 @@ export function cellHasTeacherOnDate(
 }
 
 /**
- * What a cell is actually RUNNING on one date — subject, teacher and room.
+ * What a cell is actually RUNNING on one date - subject, teacher and room.
  *
  * For an ordinary cell, or an AND split, or an OR choice nobody can resolve,
  * this is the cell's own values: "Physics OR Chemistry" and the first group's
  * teacher, which is all anyone honestly knows. Once the choice IS decisive it
- * is the chosen group's — the subject that will actually be taught, by the
+ * is the chosen group's - the subject that will actually be taught, by the
  * person who will actually teach it, in the room they will actually be in.
  *
  * A corridor board reading the raw cell announces "Physics OR Chemistry" to a

@@ -5,17 +5,17 @@
  * bell-schedule modal: no role, no aria-modal, focus left behind on the page,
  * and Escape did nothing. So a screen reader never announced that a dialog had
  * opened, and a keyboard user could tab straight out of it into the page
- * underneath — still visible through the backdrop, still focusable, with no
+ * underneath - still visible through the backdrop, still focusable, with no
  * way to tell they had left.
  *
  * This gives one place to fix all of them:
  *
- *   1. SEMANTICS — role="dialog" and aria-modal, so it is announced as a
+ *   1. SEMANTICS - role="dialog" and aria-modal, so it is announced as a
  *      dialog and the page behind it is treated as inert.
- *   2. FOCUS IN — focus moves to the dialog when it opens, or the caller's
+ *   2. FOCUS IN - focus moves to the dialog when it opens, or the caller's
  *      chosen element. Without this, "close" is an unknown number of tabs away.
- *   3. FOCUS TRAPPED — Tab and Shift+Tab cycle within the dialog.
- *   4. ESCAPE — closes, which is what every user already expects, and
+ *   3. FOCUS TRAPPED - Tab and Shift+Tab cycle within the dialog.
+ *   4. ESCAPE - closes, which is what every user already expects, and
  *      RESTORES focus to whatever opened it so you are not dumped at the top
  *      of the document.
  */
@@ -39,7 +39,7 @@ export interface DialogOptions {
 }
 
 /**
- * Spread the returned `dialogProps` onto the dialog's own panel — the box with
+ * Spread the returned `dialogProps` onto the dialog's own panel - the box with
  * the content, NOT the full-screen backdrop. The backdrop is decorative; giving
  * it the role would tell a screen reader the dialog covers the whole viewport.
  */

@@ -1,4 +1,4 @@
-# Beat 9 · Task management — assigned fairly, automatically
+# Beat 9 · Task management - assigned fairly, automatically
 
 **Caption:** "Assigned fairly. Automatically."
 
@@ -13,14 +13,14 @@ number Beat 10's chart visualizes historically.
 
 A small stack of teacher name-chips (reusing the Free/In-session chip
 language from Beat 8) with workload counts. A single task card ("Cover
-P4 — Room 4, Grade 8B") slides in and settles onto the least-loaded free
+P4 - Room 4, Grade 8B") slides in and settles onto the least-loaded free
 teacher's chip, with a one-line fairness note appearing beside it.
 
 ```
   Mr. Rao · 18       Ms. Iyer · 14  ← task card lands here
   Mr. Das · 20       Mrs. Paul · 16
                                      "Ms. Iyer has the lightest
-                                      load this week — assigned."
+                                      load this week - assigned."
 ```
 
 ## Scroll-progress storyboard
@@ -37,7 +37,7 @@ teacher's chip, with a one-line fairness note appearing beside it.
 ## Interaction (bonus layer)
 
 **Hovering any name chip** reveals that teacher's current workload count as
-a small pill (even chips the task *wasn't* assigned to) — pure CSS, count
+a small pill (even chips the task *wasn't* assigned to) - pure CSS, count
 already present in the DOM via a `data-load` attribute, revealed via
 `::after` on `:hover`. This lets a visitor manually verify "yes, Iyer really
 did have the lightest load" by checking the others themselves.

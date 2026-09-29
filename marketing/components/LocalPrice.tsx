@@ -23,7 +23,7 @@ export function LocalPrice({ children }: { children: string }) {
   return <>{text}</>
 }
 
-/** Localise every ₹-amount inside a sentence, e.g. "or ₹3,333/yr — save 17%". */
+/** Localise every ₹-amount inside a sentence, e.g. "or ₹3,333/yr - save 17%". */
 export function LocalMoney({ children }: { children: string }) {
   const [text, setText] = useState(children)
   useEffect(() => {

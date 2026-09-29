@@ -1,22 +1,22 @@
 /**
- * Country-wise hours reference — Blueprint v5, Step 0
+ * Country-wise hours reference - Blueprint v5, Step 0
  * ("Country-wise Allocation Automation").
  *
  * Generated from Country_Education_Hours_Reference.xlsx (OECD *Education at a
  * Glance* plus country-specific norms for India, China, Singapore, Indonesia).
  * ~40 systems where comparable, current, officially-sourced figures actually
- * exist — deliberately NOT all 190+ countries, because inventing numbers for
+ * exist - deliberately NOT all 190+ countries, because inventing numbers for
  * systems with no public data would be worse than admitting the gap.
  *
  * Two things to understand before using these numbers:
  *
  * 1. WEEKLY MEANS TERM-TIME. Student hrs/wk are annual hours ÷ that country's
- *    weeks actually in session (OECD average 38), NOT ÷ 52 — dividing by 52
+ *    weeks actually in session (OECD average 38), NOT ÷ 52 - dividing by 52
  *    would understate the real weekly load by roughly a quarter.
  *
  * 2. TEACHER HOURS ARE NOT ALL THE SAME MEASURE. The OECD columns are net
  *    TEACHING (contact) hours. India's figure (~1,600 h/yr per RTE) is TOTAL
- *    working time including preparation. Mixing them would be a serious error —
+ *    working time including preparation. Mixing them would be a serious error -
  *    1,600 h/yr ÷ 40 weeks = 40 h/wk, which as a *teaching* cap would imply ~60
  *    periods/week. So each row carries `teacherBasis`, and callers must not use
  *    a 'total' figure as a teaching cap (see effectiveTeacherHoursWeek below).
@@ -37,12 +37,12 @@ export interface CountryHours {
   iso3: string
   name: string
   daysPerWeek: number
-  /** Weeks actually in session per year — the divisor behind hrs/wk. */
+  /** Weeks actually in session per year - the divisor behind hrs/wk. */
   weeksPerYear: number
   prePrimaryStudentHoursYear: number
   /** Student instructional hours per TERM-TIME week. */
   studentHoursWeek: Record<RefLevel, number>
-  /** Teacher hours per year — see teacherBasis before using. */
+  /** Teacher hours per year - see teacherBasis before using. */
   teacherHoursYear: Record<RefLevel, number>
   teacherBasis: TeacherBasis
   confidence: Confidence
@@ -265,7 +265,7 @@ export const COUNTRY_HOURS: CountryHours[] = [
 
 const BY_CODE = new Map(COUNTRY_HOURS.map(c => [c.code.toUpperCase(), c]))
 
-/** The OECD average row — the documented fallback for uncovered systems. */
+/** The OECD average row - the documented fallback for uncovered systems. */
 export const OECD_AVERAGE = BY_CODE.get('OECD')!
 
 /** Reference row for a country, or undefined when it isn't in the dataset. */
@@ -315,7 +315,7 @@ export function studentHoursWeekFor(
 }
 
 /**
- * Teacher hours per term-time week — but ONLY when the country's figure is net
+ * Teacher hours per term-time week - but ONLY when the country's figure is net
  * teaching time. Where the published figure is total working hours including
  * preparation (India), returning it as a teaching cap would roughly double the
  * real load, so `usable` is false and callers must keep their own teaching norm
@@ -384,7 +384,7 @@ export function resolveCountryInput(input: string | null | undefined): string | 
   if (BY_CODE.has(up)) return up                                    // ISO2 / 'OECD'
   const byIso3 = COUNTRY_HOURS.find(c => c.iso3.toUpperCase() === up)
   if (byIso3) return byIso3.code
-  // Name match — exact first, then a contained match ("India (CBSE norms)").
+  // Name match - exact first, then a contained match ("India (CBSE norms)").
   const norm = (s: string) => s.toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim()
   const target = norm(raw)
   const exact = COUNTRY_HOURS.find(c => norm(c.name) === target)
@@ -422,7 +422,7 @@ const TZ_COUNTRY: Record<string, string> = {
  * the browser's timezone first, then its locale region. Returns undefined when
  * the result isn't a system we hold figures for.
  *
- * Deliberately local-only — this needs no third-party geo service, sends no
+ * Deliberately local-only - this needs no third-party geo service, sends no
  * address anywhere, and works offline. It is a *suggestion*: the admin always
  * confirms it in Settings.
  */

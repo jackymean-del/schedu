@@ -1,5 +1,5 @@
 /**
- * Profile — user account details. Uses Clerk's hosted profile management.
+ * Profile - user account details. Uses Clerk's hosted profile management.
  */
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -31,7 +31,7 @@ export function ProfilePage() {
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#13111E' }}>
-                {user?.email ?? '—'}
+                {user?.email ?? '-'}
               </div>
               {orgName && (
                 <div style={{ fontSize: 12.5, color: '#6D6A8A', marginTop: 2 }}>{orgName}</div>
@@ -40,8 +40,8 @@ export function ProfilePage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Row icon={<Mail size={14} />} label="Email" value={user?.email ?? '—'} />
-            <Row icon={<User size={14} />} label="User ID" value={user?.id ? user.id.slice(0, 18) + '…' : '—'} mono />
+            <Row icon={<Mail size={14} />} label="Email" value={user?.email ?? '-'} />
+            <Row icon={<User size={14} />} label="User ID" value={user?.id ? user.id.slice(0, 18) + '…' : '-'} mono />
             <Row icon={<Shield size={14} />} label="Auth provider" value="Clerk" />
           </div>
         </div>
