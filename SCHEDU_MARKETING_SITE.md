@@ -1,8 +1,8 @@
-# SmartSched Marketing Site - Claude Code Prompt
+# SmartSched Marketing Site - SCHEDU Prompt
 
 ---
 
-## Prompt (copy-paste into Claude Code)
+## Prompt (copy-paste into your coding assistant)
 
 ```
 Build a production-ready Next.js 15 marketing site for SmartSched - an AI-powered school timetable scheduling SaaS for K–12 institutions.

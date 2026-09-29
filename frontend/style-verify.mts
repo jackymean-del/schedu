@@ -18,14 +18,18 @@
  * without containing one.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { basename, join, relative, resolve } from 'node:path'
 
 const EM_DASH = String.fromCharCode(8212)
+/** The assistant vendor's name, by code point, for the same reason as above:
+ *  this file checks for the word and must not itself be a hit. */
+const VENDOR = String.fromCharCode(67, 108, 97, 117, 100, 101)
+const NEWLINE = String.fromCharCode(10)
 const ROOT = resolve('..')
 
 const SKIP_DIRS = new Set([
   'node_modules', '.git', '.next', 'out', 'dist', 'build', 'coverage',
-  '.vercel', '.claude', 'tmp',
+  '.vercel', '.' + VENDOR.toLowerCase(), 'tmp',
 ])
 const EXTS = /\.(ts|tsx|mts|js|jsx|go|md|css|html|sql)$/
 
@@ -103,6 +107,40 @@ for (const file of walk(ROOT)) {
   } catch { /* unreadable */ }
 }
 console.log(`  (en dashes, U+2013, allowed on purpose: ${enCount})`)
+
+
+// ── The vendor name belongs in tooling filenames, not in the project ──────
+//
+// The repo should not read as though a particular assistant wrote it. The
+// word survives in exactly three places, each because a tool LOOKS FOR that
+// exact name and renaming it breaks the thing:
+//
+//   the project-instructions markdown at the repo root, which the coding
+//     assistant loads. Rename it and the house rules inside stop being read.
+//   the .gitignore entry for the tooling directory. Rename it and that
+//     directory starts getting committed.
+//   the tooling directory itself, which holds launch.json.
+//
+// Those names are built from VENDOR below rather than written out, so this
+// file enforces the rule without breaking it. Everything else is prose, and
+// prose says SCHEDU.
+const VENDOR_ALLOWED = new Set(['.gitignore', VENDOR.toUpperCase() + '.md'])
+const vendorHits: string[] = []
+for (const file of walk(ROOT)) {
+  const rel = relative(ROOT, file)
+  if (VENDOR_ALLOWED.has(basename(rel))) continue
+  let src: string
+  try { src = readFileSync(file, 'utf8') } catch { continue }
+  src.split(NEWLINE).forEach((line, i) => {
+    if (line.toLowerCase().includes(VENDOR.toLowerCase())) {
+      vendorHits.push(`${rel}:${i + 1}  ${line.trim().slice(0, 80)}`)
+    }
+  })
+}
+ok(vendorHits.length === 0,
+  'the vendor name appears only where tooling requires it',
+  vendorHits.length ? `${vendorHits.length} found` : 'clean')
+for (const h of vendorHits.slice(0, 15)) console.log(`    ${h}`)
 
 console.log(fail === 0 ? '\nALL STYLE CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

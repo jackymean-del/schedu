@@ -435,7 +435,8 @@ v2 exists. Key ones:
 10. **Build + typecheck before commit:** `npm run build` and `npx tsc --noEmit` from
     `frontend/`.
 11. **Commit message footer:**
-    `Co-Authored-By: Claude <noreply@anthropic.com>` (model name as appropriate).
+    An AI co-author trailer is appended automatically by the coding assistant
+    that made the change. It is required by that tool and is not ours to set.
 12. **Windows line endings:** git will warn `LF will be replaced by CRLF` - harmless.
 
 ---

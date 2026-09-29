@@ -1,4 +1,4 @@
-# Claude Code Instructions - AND Groups + OR Groups (Step 4 Redesign)
+# SCHEDU Instructions - AND Groups + OR Groups (Step 4 Redesign)
 
 > Replaces the old "Student Groups + Subject Combos" two-tab design.  
 > **Key files:** `types/index.ts`, `routes/wizard/step-student-groups.tsx`,

@@ -1,5 +1,5 @@
 # schedU - Full UX/UI & Feature Audit
-**Date:** June 2026 | **Auditor:** Claude (Anthropic)
+**Date:** June 2026 | **Auditor:** SCHEDU
 
 ---
 

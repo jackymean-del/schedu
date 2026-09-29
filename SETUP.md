@@ -1,7 +1,7 @@
 # SmartSched - GitHub Sync Setup Guide
 
 ## The Problem (and why it happens)
-Claude's sandbox resets between sessions - the project folder disappears.
+The assistant's sandbox resets between sessions - the project folder disappears.
 The sandbox also has no GitHub credentials, so it can't push directly.
 
 ## The Permanent Solution (one-time setup, ~10 minutes)
@@ -20,7 +20,7 @@ The sandbox also has no GitHub credentials, so it can't push directly.
 6. COPY the token - it starts with `ghp_...` - you only see it once!
 
 ### STEP 3: One-time push from your computer
-1. Download `smart-sched-git.bundle` from this Claude chat
+1. Download `smart-sched-git.bundle` from this chat
 2. Put it in a folder (e.g. your Desktop)
 3. Open Terminal / Git Bash in that folder
 4. Run these commands:
@@ -46,8 +46,8 @@ When asked:
 
 ## After setup - how future sessions work
 
-Every time Claude makes changes:
-1. Claude updates the files and creates a new `.bundle`
+Every time the assistant makes changes:
+1. The assistant updates the files and creates a new `.bundle`
 2. You download the new bundle
 3. You run ONE command in your `smart-sched` folder:
 
