@@ -7,11 +7,11 @@ import tseslint from 'typescript-eslint'
 /**
  * The `lint` script had no config file, so it errored out instead of linting.
  * The rules that earn their place here are the ones that catch bugs this repo
- * has actually shipped — `react-hooks/rules-of-hooks` is the one that would
+ * has actually shipped - `react-hooks/rules-of-hooks` is the one that would
  * have caught the sign-in crash (a hook below an early return).
  *
  * Type-checking is tsc's job (`npm run typecheck`), so the type-aware
- * lint presets are deliberately not enabled — no duplicate reporting.
+ * lint presets are deliberately not enabled - no duplicate reporting.
  */
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'src/routeTree.gen.ts'] },
