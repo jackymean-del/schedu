@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/jackymean-del/smart-sched/internal/mailer"
 )
 
 // SubmitContact accepts a public contact-form submission from the marketing
@@ -58,5 +59,7 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 	}
 
 	slog.Info("contact: message received", "email", email, "source", source)
+	// Stored already; the email is a best-effort heads-up, so do not block on SMTP.
+	go mailer.SendContactNotification(name, email, message, source)
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"ok": true})
 }
