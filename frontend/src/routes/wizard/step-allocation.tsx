@@ -58,6 +58,24 @@ const BANDS = [
  *  happened. */
 const NO_ROWS: any[] = []
 
+/**
+ * A hard conflict, with the two things a plain message never carried: what the
+ * school should DO about it, and whether the app can do it for them.
+ *
+ * Both were missing. The wizard listed "Teacher 1: 41 periods > max 30" eight
+ * times, offered an Auto-fix that could not help, and disabled Continue with no
+ * explanation - so a school with more classes than staff, which is a common
+ * school, could not get a timetable at all. The engine handles that case well;
+ * only this screen stood in the way.
+ */
+interface HardConflict {
+  message: string
+  /** The next action, in the school's terms, not the app's. */
+  suggestion: string
+  /** True when the app can resolve it without anybody deciding anything. */
+  fixable: boolean
+}
+
 export function StepAllocation() {
   const store = useTimetableStore() as any
   const {
@@ -151,7 +169,7 @@ export function StepAllocation() {
 
   // Validation checks
   const { hardConflicts, softWarnings } = useMemo(() => {
-    const hard: string[] = []
+    const hard: HardConflict[] = []
     const soft: string[] = []
 
     // Period allocation checks
@@ -159,11 +177,17 @@ export function StepAllocation() {
       const c = capFor(sec.name)
       const u = sectionTotals[sec.name] ?? 0
       const status = utilisationStatus(u, c)
-      if (status === 'over')   hard.push(`${sec.name}: allocated ${u} > capacity ${c}`)
+      if (status === 'over') hard.push({
+        message: `${sec.name}: allocated ${u} > capacity ${c}`,
+        suggestion: `Trim ${u - c} period${u - c !== 1 ? 's' : ''} from this class, or add a period to the day in Shift & timing.`,
+        fixable: true,
+      })
       if (status === 'light' && c > 0) soft.push(`${sec.name}: only ${u}/${c} periods used - under board minimum`)
     })
 
-    // Teacher load checks
+    // Teacher load checks. Whether an overload is FIXABLE depends on a number
+    // that is only known after the totals below, so they are collected first.
+    const overloaded: Array<{ name: string; total: number; max: number }> = []
     ;(staff as Staff[]).forEach(t => {
       const max = teacherWeeklyCap(t as any)
       let total = 0
@@ -171,7 +195,7 @@ export function StepAllocation() {
       Object.values(tMap).forEach((sMap: any) =>
         Object.values(sMap ?? {}).forEach((p: any) => { if (typeof p === 'number') total += p })
       )
-      if (total > max) hard.push(`${t.name}: ${total} periods assigned > max ${max}`)
+      if (total > max) overloaded.push({ name: t.name, total, max })
     })
 
     // Resource-level: subjects with no teacher assigned in period-allocated cells
@@ -353,14 +377,41 @@ export function StepAllocation() {
     })
     const totalTeacherCapacity = (staff as Staff[]).reduce((sum, t) =>
       sum + (teacherWeeklyCap(t as any)), 0)
-    if (totalTeacherCapacity > 0 && totalPeriodDemand > totalTeacherCapacity) {
-      const deficit = totalPeriodDemand - totalTeacherCapacity
-      const approx  = Math.ceil(deficit / 30)
-      soft.push(`Period demand (${totalPeriodDemand}p/wk) exceeds total teacher capacity (${totalTeacherCapacity}p/wk) by ${deficit} - consider adding ~${approx} more teacher${approx > 1 ? 's' : ''}`)
+    const shortBy = Math.max(0, totalPeriodDemand - totalTeacherCapacity)
+    const needTeachers = Math.ceil(shortBy / 30)
+    if (totalTeacherCapacity > 0 && shortBy > 0) {
+      soft.push(`Period demand (${totalPeriodDemand}p/wk) exceeds total teacher capacity (${totalTeacherCapacity}p/wk) by ${shortBy} - consider adding ~${needTeachers} more teacher${needTeachers > 1 ? 's' : ''}`)
     }
+
+    // An overloaded teacher is only the app's to fix when the work can go
+    // SOMEWHERE ELSE. If the school as a whole is short of capacity, no
+    // shuffling helps: the periods have to come off, the cap has to go up, or
+    // somebody has to be hired. Saying "auto-fix" to that is a button that
+    // does nothing, which is what this one did.
+    const canRebalance = shortBy === 0
+    overloaded.forEach(o => hard.push({
+      message: `${o.name}: ${o.total} periods assigned > max ${o.max}`,
+      suggestion: canRebalance
+        ? `Other staff have room for these ${o.total - o.max} period${o.total - o.max !== 1 ? 's' : ''} - rebalancing moves them across.`
+        : `The school is short ${shortBy} periods a week overall, so this cannot be shuffled away. Add ~${needTeachers} teacher${needTeachers > 1 ? 's' : ''}, raise the cap under "Set custom loads", or cut ${shortBy} periods from the allocation.`,
+      fixable: canRebalance,
+    }))
 
     return { hardConflicts: hard, softWarnings: soft }
   }, [sections, sectionTotals, capFor, staff, teacherAllocations, subjects, subjectAllocations, storeRooms])
+
+  // How many of these the app can actually resolve on its own.
+  const fixableCount = hardConflicts.filter(c => c.fixable).length
+  const blockingCount = hardConflicts.length - fixableCount
+
+  // Proceeding with a conflict is the school's call to make, not ours, but it
+  // has to be a CHOICE: the acknowledgement resets whenever a fixable conflict
+  // appears, so nobody sails past something the app could have sorted out.
+  const [acceptedConflicts, setAcceptedConflicts] = useState(false)
+  useEffect(() => {
+    if (fixableCount > 0) setAcceptedConflicts(false)
+  }, [fixableCount])
+  const canContinue = hardConflicts.length === 0 || acceptedConflicts
 
   // Teacher allocation summary stats
   const teacherStats = useMemo(() => {
@@ -686,7 +737,7 @@ export function StepAllocation() {
 
   // Safety net: any time an over-capacity hard conflict exists, clamp it away.
   useEffect(() => {
-    if (hardConflicts.some(c => c.includes('> capacity'))) clampToCapacity()
+    if (hardConflicts.some(c => c.message.includes('> capacity'))) clampToCapacity()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hardConflicts])
 
@@ -902,21 +953,31 @@ export function StepAllocation() {
                   {hardConflicts.length} hard conflict{hardConflicts.length > 1 ? 's' : ''}
                 </span>
                 <span style={{ fontSize: 11, color: '#B91C1C', marginLeft: 6 }}>
-                  {hardConflicts.slice(0, 2).join(' · ')}{hardConflicts.length > 2 ? ` +${hardConflicts.length - 2} more` : ''}
+                  {hardConflicts.slice(0, 2).map(c => c.message).join(' · ')}{hardConflicts.length > 2 ? ` +${hardConflicts.length - 2} more` : ''}
                 </span>
               </div>
+              {/* Says what it can do, rather than "Auto-fix" over a button that
+                  cannot help. An overload nobody can shuffle away needs a
+                  decision, not a retry. */}
               <button
-                onClick={handleSyncFromResources}
+                onClick={() => { clampToCapacity(); handleSyncFromResources() }}
+                disabled={fixableCount === 0}
+                title={fixableCount > 0
+                  ? `Resolves ${fixableCount} conflict${fixableCount !== 1 ? 's' : ''} by trimming over-full classes and spreading load across staff who have room.`
+                  : 'Nothing here can be fixed by rearranging - the school is short of teaching capacity. See the suggestion on each conflict.'}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                  padding: '3px 10px', borderRadius: 5, border: '1px solid #FCA5A5',
-                  background: '#DC2626', color: '#fff', fontSize: 10.5, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
+                  padding: '3px 10px', borderRadius: 5,
+                  border: `1px solid ${fixableCount > 0 ? '#FCA5A5' : '#E5E7EB'}`,
+                  background: fixableCount > 0 ? '#DC2626' : '#F3F4F6',
+                  color: fixableCount > 0 ? '#fff' : '#9CA3AF',
+                  fontSize: 10.5, fontWeight: 700,
+                  cursor: fixableCount > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#B91C1C' }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#DC2626' }}
+                onMouseEnter={e => { if (fixableCount > 0) e.currentTarget.style.background = '#B91C1C' }}
+                onMouseLeave={e => { if (fixableCount > 0) e.currentTarget.style.background = '#DC2626' }}
               >
-                <Sparkles size={9} /> Auto-fix
+                <Sparkles size={9} /> {fixableCount > 0 ? `Fix ${fixableCount} automatically` : 'Cannot auto-fix'}
               </button>
             </div>
           )}
@@ -1096,13 +1157,45 @@ export function StepAllocation() {
         </button>
         <span style={{ fontSize: 10, color: '#B8B4D4', textAlign: 'center' as const, lineHeight: 1.5 }}>
           Step 4 of 5 · Period allocation → Teacher allocation → Validation
-          {hardConflicts.length > 0 && (
+          {fixableCount > 0 && (
             <span style={{ display: 'block', color: '#DC2626', fontWeight: 700, marginTop: 2 }}>
-              Fix {hardConflicts.length} conflict{hardConflicts.length !== 1 ? 's' : ''} before proceeding
+              {fixableCount} conflict{fixableCount !== 1 ? 's' : ''} can be fixed here - use "Fix {fixableCount} automatically" first
+            </span>
+          )}
+          {fixableCount === 0 && blockingCount > 0 && !acceptedConflicts && (
+            <span style={{ display: 'block', color: '#92400E', fontWeight: 700, marginTop: 2 }}>
+              {blockingCount} conflict{blockingCount !== 1 ? 's' : ''} need a decision - see each suggestion, or continue anyway
+            </span>
+          )}
+          {acceptedConflicts && blockingCount > 0 && (
+            <span style={{ display: 'block', color: '#92400E', fontWeight: 700, marginTop: 2 }}>
+              Continuing with {blockingCount} unresolved conflict{blockingCount !== 1 ? 's' : ''} - the timetable will be short of those periods
             </span>
           )}
         </span>
-        <button onClick={() => setStep(5)} disabled={hardConflicts.length > 0} style={btnPrimary(hardConflicts.length === 0)}>
+
+        {/* Proceeding is the school's decision. A school with more classes than
+            staff cannot fix that from this screen, and the engine still builds
+            them a real timetable: it places every hour it can and spreads the
+            shortfall across classes rather than emptying the last one. Refusing
+            to continue left them with nothing at all, which is worse than a
+            timetable that is honestly 80% full. */}
+        {fixableCount === 0 && blockingCount > 0 && !acceptedConflicts && (
+          <button
+            onClick={() => setAcceptedConflicts(true)}
+            title="Generate a timetable that places every period it can and reports what it could not."
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '9px 16px', borderRadius: 8, border: '1px solid #FDE68A',
+              background: '#FFFBEB', color: '#92400E', fontSize: 12.5, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Continue anyway
+          </button>
+        )}
+
+        <button onClick={() => setStep(5)} disabled={!canContinue} style={btnPrimary(canContinue)}>
           Save & Continue <ChevronRight size={14} />
         </button>
       </div>
@@ -1496,7 +1589,7 @@ function AllocationSummaryPanel({
   softWarnings,
 }: {
   teacherStats: { total: number; fullyAllocated: number; overloaded: number; light: number; unassigned: number }
-  hardConflicts: string[]
+  hardConflicts: HardConflict[]
   softWarnings: string[]
 }) {
   return (
@@ -1543,7 +1636,7 @@ function SumRow({ label, value, color }: { label: string; value: number; color?:
 function ValidationSidebarPanel({
   hardConflicts, softWarnings, teacherStats,
 }: {
-  hardConflicts: string[]
+  hardConflicts: HardConflict[]
   softWarnings: string[]
   teacherStats: { total: number; fullyAllocated: number; overloaded: number; light: number; unassigned: number }
 }) {
@@ -1567,7 +1660,15 @@ function ValidationSidebarPanel({
             </div>
           )}
           {hardConflicts.map((c, i) => (
-            <NoteItem key={`h${i}`} kind="warn" text={c} />
+            <div key={`h${i}`}>
+              <NoteItem kind="warn" text={c.message} />
+              <div style={{
+                fontSize: 10.5, color: '#6D6A8A', lineHeight: 1.5,
+                margin: '2px 0 4px 18px',
+              }}>
+                {c.fixable ? 'Fixable here: ' : 'Needs a decision: '}{c.suggestion}
+              </div>
+            </div>
           ))}
           {softWarnings.length > 0 && (
             <div style={{ fontSize: 10, fontWeight: 800, color: '#D97706', letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginTop: 4, marginBottom: 2 }}>
@@ -1590,7 +1691,7 @@ function ValidationSidebarPanel({
 function ValidationView({
   hardConflicts, softWarnings, teacherStats, hasAllocations,
 }: {
-  hardConflicts: string[]
+  hardConflicts: HardConflict[]
   softWarnings: string[]
   teacherStats: { total: number; fullyAllocated: number; overloaded: number; light: number; unassigned: number }
   hasAllocations: boolean
@@ -1640,7 +1741,7 @@ function ValidationView({
       {hardConflicts.length > 0 && (
         <IssueList
           title="Hard Conflicts"
-          items={hardConflicts}
+          items={hardConflicts.map(c => `${c.message} - ${c.suggestion}`)}
           color="#DC2626"
           bg="#FEF2F2"
           border="#FECACA"
