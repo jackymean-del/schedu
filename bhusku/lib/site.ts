@@ -39,9 +39,13 @@ export const BUSINESS = {
 export const PRODUCTS = [
   {
     name: 'schedU',
-    tagline: 'AI timetable scheduling for any institution',
+    // Not "AI timetable scheduling". This line is why Google described the
+    // product as AI-powered long after the product site stopped saying so: the
+    // parent site is a separate deployment, it links to schedU, and the search
+    // result took its wording almost verbatim.
+    tagline: 'Timetable scheduling built on Human Intelligence',
     blurb:
-      'Auto-generate conflict-free timetables for schools, colleges, and universities - any board, any curriculum. Live operations, substitutions, and workload analytics included.',
+      'Conflict-free timetables for schools, colleges, and universities on any board, built by applying the rules a timetable in-charge applies rather than guessing at them. Live operations, substitutions, and workload analytics included.',
     href: SCHEDU_URL,
     status: 'live' as const,
     markColor: '#7C6FE0',
