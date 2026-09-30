@@ -1,4 +1,4 @@
-# SCHEDU Instructions - Elective Grouping & Subjects Panel Enhancements
+# Bhusku Instructions - Elective Grouping & Subjects Panel Enhancements
 
 > **Scope:** `frontend/src/` only (no backend changes required for these features).  
 > **Key files:** `types/index.ts`, `components/resources/SubjectsPanel.tsx`,

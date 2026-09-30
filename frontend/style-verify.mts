@@ -109,22 +109,20 @@ for (const file of walk(ROOT)) {
 console.log(`  (en dashes, U+2013, allowed on purpose: ${enCount})`)
 
 
-// ── The vendor name belongs in tooling filenames, not in the project ──────
+// ── The vendor name is out of the project entirely ───────────────────────
 //
 // The repo should not read as though a particular assistant wrote it. The
-// word survives in exactly three places, each because a tool LOOKS FOR that
-// exact name and renaming it breaks the thing:
+// project-instructions file is Bhusku.md now, and the three prompt docs are
+// BHUSKU_*.md, so the only survivor is a single .gitignore line.
 //
-//   the project-instructions markdown at the repo root, which the coding
-//     assistant loads. Rename it and the house rules inside stop being read.
-//   the .gitignore entry for the tooling directory. Rename it and that
-//     directory starts getting committed.
-//   the tooling directory itself, which holds launch.json.
+// That line stays on purpose. Its whole job is to keep the assistant's local
+// tooling directory OUT of the repo, so deleting the word there would invite
+// in the very thing being removed. It has to name the directory to ignore it.
 //
-// Those names are built from VENDOR below rather than written out, so this
-// file enforces the rule without breaking it. Everything else is prose, and
-// prose says SCHEDU.
-const VENDOR_ALLOWED = new Set(['.gitignore', VENDOR.toUpperCase() + '.md'])
+// The allowlist is built from VENDOR rather than written out, so this file
+// enforces the rule without breaking it. Everything else is prose, and prose
+// says Bhusku.
+const VENDOR_ALLOWED = new Set(['.gitignore'])
 const vendorHits: string[] = []
 for (const file of walk(ROOT)) {
   const rel = relative(ROOT, file)

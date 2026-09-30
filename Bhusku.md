@@ -1,5 +1,15 @@
 # Working in this repo
 
+> **How to load this.** These are the house rules for this codebase. They used
+> to sit in a file named for the coding assistant, which meant the assistant
+> read them automatically at the start of every session. That name is gone from
+> this project by choice, so the automatic load is gone with it: point your
+> assistant at this file at the start of a session, or ask it to read
+> `Bhusku.md` before it touches anything. The no-em-dash rule below is also
+> enforced mechanically by `frontend/style-verify.mts`, so that one survives
+> whether anybody reads this or not.
+
+
 ## Writing
 
 **Never write an em dash.** That is the long dash at Unicode U+2014, the one a
