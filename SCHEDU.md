@@ -5,7 +5,7 @@
 > read them automatically at the start of every session. That name is gone from
 > this project by choice, so the automatic load is gone with it: point your
 > assistant at this file at the start of a session, or ask it to read
-> `Bhusku.md` before it touches anything. The no-em-dash rule below is also
+> `SCHEDU.md` before it touches anything. The no-em-dash rule below is also
 > enforced mechanically by `frontend/style-verify.mts`, so that one survives
 > whether anybody reads this or not.
 

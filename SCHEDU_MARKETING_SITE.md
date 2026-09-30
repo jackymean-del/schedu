@@ -1,4 +1,4 @@
-# SmartSched Marketing Site - Bhusku Prompt
+# SmartSched Marketing Site - SCHEDU Prompt
 
 ---
 

@@ -112,8 +112,8 @@ console.log(`  (en dashes, U+2013, allowed on purpose: ${enCount})`)
 // ── The vendor name is out of the project entirely ───────────────────────
 //
 // The repo should not read as though a particular assistant wrote it. The
-// project-instructions file is Bhusku.md now, and the three prompt docs are
-// BHUSKU_*.md, so the only survivor is a single .gitignore line.
+// project-instructions file is SCHEDU.md now, and the three prompt docs are
+// SCHEDU_*.md, so the only survivor is a single .gitignore line.
 //
 // That line stays on purpose. Its whole job is to keep the assistant's local
 // tooling directory OUT of the repo, so deleting the word there would invite
@@ -121,7 +121,7 @@ console.log(`  (en dashes, U+2013, allowed on purpose: ${enCount})`)
 //
 // The allowlist is built from VENDOR rather than written out, so this file
 // enforces the rule without breaking it. Everything else is prose, and prose
-// says Bhusku.
+// says SCHEDU.
 const VENDOR_ALLOWED = new Set(['.gitignore'])
 const vendorHits: string[] = []
 for (const file of walk(ROOT)) {
