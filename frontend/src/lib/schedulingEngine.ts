@@ -13,7 +13,7 @@
  * before entering the constraint engine.
  */
 
-import { teachersInCell } from './cellTeachers'
+import { teachersInCell, teachingPairsInCell, roomsInCell } from './cellTeachers'
 import type { Section, Staff, Subject, Period, ClassTimetable, TeacherSchedule, Conflict, Suggestion, SchedulingRequirement } from '@/types'
 import { parseAllocation } from './allocationSyntax'
 import { atDailyLimit, perDayFromPerWeek } from './facultyWorkload'
@@ -1168,13 +1168,16 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     }
     return subs.includes(subName)
   }
-  sections.forEach((sec, si) => {
-    // Get subjects for this section.
-    // Explicit assignments (sections[] from the Resources picker, plus
-    // classConfigs[].sectionName for legacy data) restrict a subject to those
-    // sections. Subjects with NO assignments are only universal when they also
-    // carry a target quota here - targetPeriods already encodes "allocation
-    // row is authoritative", so a 0-target subject never gets placed.
+  // Subjects each section actually takes, sorted heaviest first. Hoisted out
+  // of the fill loop because the loop below is no longer section-major.
+  //
+  // Explicit assignments (sections[] from the Resources picker, plus
+  // classConfigs[].sectionName for legacy data) restrict a subject to those
+  // sections. Subjects with NO assignments are only universal when they also
+  // carry a target quota here - targetPeriods already encodes "allocation
+  // row is authoritative", so a 0-target subject never gets placed.
+  const subjectsFor = new Map<string, Subject[]>()
+  sections.forEach(sec => {
     const sectionSubjects = subjects.filter(sub => {
       const fromConfigs = ((sub as any).classConfigs ?? [])
         .map((c: any) => c.sectionName).filter(Boolean) as string[]
@@ -1182,12 +1185,35 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       if (explicit.length > 0 && !explicit.includes(sec.name)) return false
       return (targetPeriods[sec.name]?.[sub.name] ?? 0) > 0
     })
-    if (!sectionSubjects.length) return
-
     // Sort subjects by weekly periods (highest first - greedy)
-    const sorted = [...sectionSubjects].sort((a, b) => b.periodsPerWeek - a.periodsPerWeek)
+    subjectsFor.set(sec.name, [...sectionSubjects].sort((a, b) => b.periodsPerWeek - a.periodsPerWeek))
+  })
 
-    workDays.forEach((day, di) => {
+  // DAY-MAJOR, WITH THE SECTION ORDER ROTATING EACH DAY.
+  //
+  // This used to be section-major: a section filled its whole week before the
+  // next one began. That is optimal on TOTAL lessons placed and indefensible
+  // in their distribution. Given ten sections and only enough staff for eight,
+  // the first four classes got 100% of what they asked for and Class X got
+  // five periods out of thirty - a board-exam year with an all but empty
+  // timetable, while Class VI had a full one. The teacher-periods were all
+  // used, so nothing looked wrong by any total.
+  //
+  // A human building this by hand spreads a shortage: everybody loses a little
+  // and nobody loses a week. Rotating who goes first each day does that,
+  // because the section that goes last on Monday goes first on Tuesday. The
+  // stride is chosen so that over a full week every section leads at least
+  // once rather than the same few always leading.
+  const leadStride = Math.max(1, Math.round(sections.length / Math.max(1, workDays.length)))
+  workDays.forEach((day, di) => {
+    const offset = (di * leadStride) % Math.max(1, sections.length)
+    const order = sections.map((_, i) => (i + offset) % sections.length)
+
+    order.forEach(si => {
+      const sec = sections[si]
+      const sorted = subjectsFor.get(sec.name) ?? []
+      if (!sorted.length) return
+
       // ── Day-off rule: skip this section on its off-days ─────────────────
       if (sectionOffDays.get(sec.name)?.has(day)) return
 
@@ -1972,20 +1998,41 @@ export function buildTeacherTT(
   Object.entries(classTT).forEach(([secName, secData]) => {
     Object.entries(secData).forEach(([day, dayData]) => {
       Object.entries(dayData).forEach(([periodId, cell]) => {
-        if (!cell?.teacher) return
-        if (!teacherTT[cell.teacher]) {
-          teacherTT[cell.teacher] = { classes: [], subjects: [], schedule: Object.fromEntries(workDays.map(d => [d, {}])) }
-        }
-        const existing = teacherTT[cell.teacher].schedule[day]?.[periodId]
-        if (existing) {
-          existing.subject += ` / ${cell.subject}(${secName})`
-          existing.conflict = true
-        } else {
-          teacherTT[cell.teacher].schedule[day][periodId] = {
-            subject: `${cell.subject} (${secName})`,
-            room: cell.room,
-            sectionName: secName,
-            isClassTeacher: cell.isClassTeacher,
+        if (!cell?.subject) return
+        // EVERY teacher in the cell, each with their OWN subject and room.
+        //
+        // This read `cell.teacher` and nothing else, which on a parallel cell
+        // is only the first group's teacher. So the second group's teacher had
+        // an EMPTY timetable for a period they were actually teaching, and the
+        // first was told the cell label ("Physics OR Chemistry") and the first
+        // group's room rather than their own. The teacher view is the thing
+        // teachers are handed; being wrong there is being wrong where it is
+        // read most.
+        for (const who of teachingPairsInCell(cell)) {
+          if (!teacherTT[who.teacher]) {
+            teacherTT[who.teacher] = {
+              classes: [], subjects: [],
+              schedule: Object.fromEntries(workDays.map(d => [d, {}])),
+            }
+          }
+          // A day held in classTT but no longer a work day - a school that
+          // drops Saturday keeps its Saturday cells - had no bucket here, and
+          // the write below threw where the read above was already guarded.
+          // One missing day took down the whole teacher view.
+          const sched = teacherTT[who.teacher].schedule
+          if (!sched[day]) sched[day] = {}
+
+          const existing = sched[day][periodId]
+          if (existing) {
+            existing.subject += ` / ${who.subject}(${secName})`
+            existing.conflict = true
+          } else {
+            sched[day][periodId] = {
+              subject: `${who.subject} (${secName})`,
+              room: who.room || cell.room,
+              sectionName: secName,
+              isClassTeacher: cell.isClassTeacher,
+            }
           }
         }
       })
@@ -2637,8 +2684,14 @@ export function detectConflicts(
         // is a scheduling problem of its own and the solver does not attempt
         // it yet. But an unflagged clash is one a timetabler discovers when
         // two classes arrive at the same door.
-        if (cell?.room) {
-          const holder = roomMap[cell.room]
+        // EVERY room the cell occupies, not just the cell-level one. An AND
+        // split puts each group in a different room at once, and a collision
+        // on the second group's room was invisible here: the solver's own
+        // fallback puts a class in its home room when nothing free is big
+        // enough, on the stated condition that the result gets FLAGGED, and
+        // this is where the flagging happens.
+        for (const cellRoom of roomsInCell(cell)) {
+          const holder = roomMap[cellRoom]
           if (holder && holder !== sec) {
             // Sections pooled into one optional block are MEANT to share a
             // room - same exemption the teacher check above makes.
@@ -2647,13 +2700,13 @@ export function detectConflicts(
             if (!pooled) {
               conflicts.push({
                 type: 'room-clash',
-                message: `${cell.room} double-booked: ${holder} & ${sec} on ${day} ${p.name}`,
+                message: `${cellRoom} double-booked: ${holder} & ${sec} on ${day} ${p.name}`,
                 day,
                 period: p.name,
               })
             }
           } else if (!holder) {
-            roomMap[cell.room] = sec
+            roomMap[cellRoom] = sec
           }
         }
       })

@@ -166,5 +166,67 @@ for (const perGrade of [2, 4]) {
   ok(ms < 5000, 'and it solves in seconds', `${ms.toFixed(0)} ms`)
 }
 
+
+// ── A SHORTAGE MUST BE SHARED ────────────────────────────────────────────
+//
+// Ten sections, eight teachers: the school has asked for more teaching than
+// it employs people to deliver, and roughly a fifth of it cannot happen.
+// Which fifth is the whole question.
+//
+// Filling section by section is optimal on the total and indefensible in the
+// distribution: the first four classes got everything they asked for and
+// Class X got five periods out of thirty. Every teacher-period was used, so
+// no total looked wrong, and a board-exam year had an all but empty week.
+// A human doing this by hand spreads a shortage; nobody loses a week so that
+// somebody else can have a perfect one.
+{
+  const DAYS5 = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+  const P6: Any[] = [1, 2, 3, 4, 5, 6].map(i =>
+    ({ id: 'q' + i, name: 'P' + i, duration: 40, type: 'class', shiftable: true }))
+  const secs: Any[] = []
+  for (const g of ['VI', 'VII', 'VIII', 'IX', 'X']) {
+    for (const l of ['A', 'B']) {
+      secs.push({ id: g + '-' + l, name: g + '-' + l, room: 'RM' + secs.length,
+        grade: g, classTeacher: '', strength: 34 })
+    }
+  }
+  const SUBS: Record<string, number> = {
+    English: 6, Mathematics: 6, Science: 5, 'Social Studies': 5, Hindi: 5, Computer: 3 }
+  const st: Any[] = [
+    ['A', ['English']], ['B', ['Mathematics']], ['C', ['Science']],
+    ['D', ['Social Studies']], ['E', ['Hindi']], ['F', ['Computer']],
+    ['G', ['English', 'Social Studies']], ['H', ['Mathematics', 'Science']],
+  ].map(([n, subs]: Any) => ({ id: 't' + n, name: 'T' + n, shortName: 'T' + n,
+    role: 'teacher', subjects: subs, classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30 }))
+  const alloc: Any = {}
+  for (const s of secs) { alloc[s.name] = {}; for (const k in SUBS) alloc[s.name][k] = String(SUBS[k]) }
+
+  const res: Any = solveTimetable({
+    sections: secs, staff: st,
+    subjects: Object.keys(SUBS).map((n, i) => ({ id: 'z' + i, name: n, periodsPerWeek: SUBS[n] })),
+    periods: P6, workDays: DAYS5, requirements: [], subjectAllocations: alloc,
+    rooms: secs.map((s: Any, i: number) => ({ id: 'r' + i, name: s.room, capacity: 40 })),
+    defaultTeacherMaxPeriods: 30,
+  } as Any)
+
+  const fill = secs.map((s: Any) => {
+    let n = 0
+    for (const d of DAYS5) for (const p of P6) if (res.classTT?.[s.name]?.[d]?.[p.id]?.subject) n++
+    return { name: s.name, n }
+  })
+  const total = fill.reduce((a: number, f: Any) => a + f.n, 0)
+  const lo = Math.min(...fill.map((f: Any) => f.n))
+  const hi = Math.max(...fill.map((f: Any) => f.n))
+
+  // The total must still be at the ceiling: fairness is not an excuse to do
+  // less work. 8 teachers x 30 = 240 teacher-periods, all of them usable.
+  ok(total >= 235, 'an understaffed school still places every hour it can',
+    total + ' of 240 possible')
+  // And no class may be starved to pay for another's full week.
+  ok(lo >= 18, 'no section is starved', 'worst section has ' + lo + ' of 30')
+  ok(hi - lo <= 10, 'the shortage is shared, not dumped on the last sections',
+    'best ' + hi + ', worst ' + lo + ', spread ' + (hi - lo))
+}
+
 console.log(fail === 0 ? '\nALL QUALITY CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

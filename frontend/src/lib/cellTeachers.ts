@@ -30,7 +30,7 @@
 interface TeachingCell {
   teacher?: string
   subject?: string
-  groupAssignments?: Array<{ subject?: string; teacher?: string }>
+  groupAssignments?: Array<{ subject?: string; teacher?: string; room?: string }>
   /**
    * The OTHER parallel shape. An optional block ("PE / Art / Painting in one
    * slot") keeps its real teachers in `options[]` rather than
@@ -43,7 +43,8 @@ interface TeachingCell {
    * `groupAssignments`, so a teacher in a later GROUP vanished from their own
    * timetable and from every load count on the page.
    */
-  options?: Array<{ subject?: string; teacher?: string }>
+  options?: Array<{ subject?: string; teacher?: string; room?: string }>
+  room?: string
 }
 
 /**
@@ -71,11 +72,13 @@ export function teachersInCell(cell: TeachingCell | undefined | null): string[] 
   return solo ? [solo] : []
 }
 
-/** Every (teacher, subject) pair in the cell - for surfaces that must say
- *  WHICH group a teacher is with, such as a cover list. */
+/** Every (teacher, subject, room) triple in the cell - for surfaces that must
+ *  say WHICH group a teacher is with, such as a cover list or a teacher's own
+ *  timetable. The room is per group: on a parallel cell each group is in a
+ *  different place, and the cell-level room is only the first group's. */
 export function teachingPairsInCell(
   cell: TeachingCell | undefined | null,
-): Array<{ teacher: string; subject: string }> {
+): Array<{ teacher: string; subject: string; room: string }> {
   if (!cell) return []
   const parallel = [...(cell.groupAssignments ?? []), ...(cell.options ?? [])]
   if (parallel.length) {
@@ -86,10 +89,16 @@ export function teachingPairsInCell(
         if (!t || seen.has(t)) return false
         seen.add(t); return true
       })
-      .map(g => ({ teacher: g.teacher!.trim(), subject: (g.subject ?? cell.subject ?? '').trim() }))
+      .map(g => ({
+        teacher: g.teacher!.trim(),
+        subject: (g.subject ?? cell.subject ?? '').trim(),
+        room: (g.room ?? cell.room ?? '').trim(),
+      }))
   }
   const solo = (cell.teacher ?? '').trim()
-  return solo ? [{ teacher: solo, subject: (cell.subject ?? '').trim() }] : []
+  return solo
+    ? [{ teacher: solo, subject: (cell.subject ?? '').trim(), room: (cell.room ?? '').trim() }]
+    : []
 }
 
 /**
@@ -125,4 +134,28 @@ export function teachersActuallyIn(
 export function cellHasTeacher(cell: TeachingCell | undefined | null, name: string): boolean {
   if (!name) return false
   return teachersInCell(cell).includes(name.trim())
+}
+
+/**
+ * Every room this cell occupies.
+ *
+ * An AND split puts each group in a DIFFERENT room at the same moment, so a
+ * parallel cell holds several. The cell-level `room` is only the first group's,
+ * which is why the room-clash check could not see a collision on the second:
+ * a class was booked into a room another class's later option already had, and
+ * nothing said so.
+ */
+export function roomsInCell(cell: TeachingCell | undefined | null): string[] {
+  if (!cell) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  const push = (r: unknown) => {
+    const name = String(r ?? '').trim()
+    if (name && !seen.has(name)) { seen.add(name); out.push(name) }
+  }
+  for (const g of [...(cell.groupAssignments ?? []), ...(cell.options ?? [])]) push(g.room)
+  // The cell-level room counts too: on a single-subject cell it is the only
+  // one, and on a parallel cell it is where the block as a whole is listed.
+  push(cell.room)
+  return out
 }

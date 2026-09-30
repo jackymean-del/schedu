@@ -550,6 +550,31 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
+  // ...and the other way. The comment above has always said BOTH directions
+  // and only one was implemented, which is why buildTeacherTT could drop a
+  // parallel cell's later teachers for months: every entry it DID write
+  // matched classTT, so the check passed while half the entries were never
+  // written at all. A teacher whose own timetable is silently empty for a
+  // period they teach is the worst version of this bug, because the teacher
+  // view is the thing teachers are handed.
+  if (Object.keys(teacherTT).length) {
+    for (const [section, days] of Object.entries(classTT)) {
+      for (const [day, slots] of Object.entries(days as Any)) {
+        for (const [pid, cell] of Object.entries(slots as Any)) {
+          const c = cell as Any
+          if (!c?.subject) continue
+          for (const o of occupantsOf(c)) {
+            const entry = (teacherTT as Any)[o.teacher]?.schedule?.[day]?.[pid]
+            if (!entry) {
+              add('V7-mirror-missing',
+                `${o.teacher} teaches ${section} ${day} ${pid} but their own timetable is empty there`)
+            }
+          }
+        }
+      }
+    }
+  }
+
   // V12 - a multi-period block must not straddle a break.
   const adjacency = new Set(g.sectionAdjacency?.[g.sections[0]?.name] ?? [])
   const orderedClassIds = g.periods.filter(p => p.type === 'class').map(p => p.id)
