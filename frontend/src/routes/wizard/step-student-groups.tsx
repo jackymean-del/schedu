@@ -1075,8 +1075,8 @@ export function StepStudentGroups() {
         <div style={{ flex: 1 }}>
           <h2 style={{ fontFamily: "'Plus Jakarta Sans', serif", fontSize: 22, color: '#13111E', margin: 0, lineHeight: 1.1 }}>Groups &amp; Combos</h2>
           <div style={{ fontSize: 12, color: '#4B5275', marginTop: 3 }}>
-            Define <em style={{ color: '#685DBC' }}>AND combinations</em> (each optional group splits a section in parallel) and{' '}
-            <em style={{ color: '#D97706' }}>OR elective slots</em> (pick one of many).
+            Define <em style={{ color: '#685DBC' }}>AND groups</em> (the class splits, each group takes its own subject at the same time) and{' '}
+            <em style={{ color: '#D97706' }}>OR choices</em> (the whole class does one subject, whichever is further behind).
           </div>
         </div>
       </div>
@@ -1231,10 +1231,14 @@ export function StepStudentGroups() {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', marginBottom: 20, borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
             <Shuffle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>OR Elective Slots</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>OR Choices</div>
               <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.65 }}>
-                <strong>OR slot</strong> - one of the listed subjects runs per slot; each student picks one and whichever teacher is free takes that period (e.g. a Third-Language slot: Hindi / French / German).<br />
-                Parallel splits where a section divides simultaneously belong in the <strong>AND Groups</strong> tab.
+                {/* This used to say "each student picks one", with a third-language
+                    slot as the example. That is the opposite of what an OR group
+                    is: an optional subject only part of the class takes cannot
+                    run for the whole class. Choices students make belong in AND. */}
+                <strong>OR choice</strong> - the <strong>whole class</strong> does one of these subjects in the period, and it is whichever is <strong>further behind on its syllabus</strong> that day (e.g. Physics OR Chemistry). A teacher can also take the period for their own subject.<br />
+                Only subjects <strong>every student</strong> in the class takes belong here. When students choose different subjects (a third language, an activity, an elective), the class splits: use the <strong>AND Groups</strong> tab.
               </div>
             </div>
           </div>

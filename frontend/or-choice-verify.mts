@@ -127,6 +127,45 @@ console.log('── the rule is ENFORCED, not merely documented ──')
 }
 
 console.log('')
+console.log('-- the wizard teaches the same rule the engine enforces --')
+{
+  // The engine and validation implemented OR as a whole-class choice decided
+  // by syllabus coverage, and the wizard went on explaining it as "each
+  // student picks one", with a third-language slot as the worked example.
+  // A school following the screen would build exactly the groups the rule
+  // forbids. The screen is the rule as far as most users are concerned.
+  // Comments stripped: a note recording what the screen USED to say is not
+  // the screen saying it, and flagging it would punish documenting the bug.
+  const noComments = (s: string) => s
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+  const WIZARD = noComments(readFileSync('src/routes/wizard/step-student-groups.tsx', 'utf8'))
+  const STEP = noComments(readFileSync('src/pages/wizard.tsx', 'utf8'))
+  const EDITOR = readFileSync('src/components/resources/SubjectGroupsSection.tsx', 'utf8')
+
+  const studentChoice = /each student picks|students pick one option|pick one of many|chosen activity|choose one optional language/i
+  ok(!studentChoice.test(WIZARD), 'the OR tab no longer says students pick')
+  ok(!studentChoice.test(STEP), 'nor does the step 3 introduction')
+  ok(/whole class/i.test(WIZARD) && /further behind/i.test(WIZARD),
+    'and it says what OR actually means: the whole class, whichever is behind')
+
+  const editorVisible = noComments(EDITOR)
+  ok(!/Elective Rotation|Rotation<\/strong> - one subject per slot/.test(editorVisible),
+    'and the OR section is not titled as an elective rotation')
+
+  // Suggestion clusters may only offer OR for subjects every student takes.
+  // Pinned by name, so adding an OR cluster is a decision someone has to make
+  // here rather than something that slips in.
+  const OR_CLUSTERS_ALLOWED = ['Science Whole-Class Choice']
+  const offered = [...EDITOR.matchAll(/orLabel:\s*'([^']+)'/g)].map(m => m[1])
+  const strays = offered.filter(l => !OR_CLUSTERS_ALLOWED.includes(l))
+  ok(strays.length === 0, 'no elective or activity cluster is offered as an OR group',
+    strays.join(', ') || 'only ' + OR_CLUSTERS_ALLOWED.join(', '))
+  ok(!/teacher availability/i.test(EDITOR.split('Science Whole-Class Choice')[1]?.slice(0, 400) ?? ''),
+    'and the science OR reason names coverage, not teacher availability')
+}
+
+console.log('')
 console.log('── a person can decide, and their choice wins ──')
 {
   // Coverage is a good default, not an instruction. The teacher in front of

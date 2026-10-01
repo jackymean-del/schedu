@@ -55,60 +55,70 @@ const PATTERN_CLUSTERS: Array<{
   {
     keywords:  ['physics', 'chemistry', 'biology', 'botany', 'zoology'],
     logic:     'BOTH',
-    orLabel:   'Science Elective Rotation',
+    orLabel:   'Science Whole-Class Choice',
     andLabel:  'Science Lab Parallel Split',
-    orReason:  'Science electives rotate - one subject runs per slot based on teacher availability',
+    // The ONE cluster that is a genuine OR: core sciences every student in the
+    // class takes. The reason used to say the slot went by "teacher
+    // availability", which is not how it is decided - it goes to whichever
+    // subject is further behind on its syllabus (lib/orChoice).
+    orReason:  'Whole-class choice - the slot runs whichever of these is further behind on syllabus coverage',
     andReason: 'Students divide into groups - physics, chemistry, and biology labs run simultaneously in the same period',
   },
   // ── Arts subjects → OR rotation + AND activity split ─────────────────────
   {
     keywords:  ['music', 'art', 'dance', 'craft', 'drawing', 'painting', 'sculpture', 'theatre', 'drama', 'film'],
-    logic:     'BOTH',
-    orLabel:   'Arts & Co-curricular Rotation',
+    // AND only. Students CHOOSE an activity here, so the class splits; an OR
+    // group must hold subjects every student takes.
+    logic:     'AND',
     andLabel:  'Arts Activity Parallel Split',
-    orReason:  'Co-curricular subjects rotate - students attend their chosen activity in a shared slot',
+    orReason:  '',
     andReason: 'Students are pre-divided into arts groups (music/art/dance) that run simultaneously',
   },
   // ── PE / activity subjects → OR rotation + AND parallel groups ────────────
   {
     keywords:  ['physical education', 'yoga', 'ncc', 'nss', 'sports', 'games', 'gym', 'scouts', 'band'],
-    logic:     'BOTH',
-    orLabel:   'Physical Activity Rotation',
+    // AND only: NCC, NSS and a chosen sport divide the class.
+    logic:     'AND',
     andLabel:  'Activity Group Parallel Split',
-    orReason:  'Physical activities rotate in a shared P.E. period',
+    orReason:  '',
     andReason: 'Students are pre-divided into activity groups (NCC / NSS / Sports / Yoga) that run in parallel',
   },
-  // ── Languages → OR only (students choose one) ────────────────────────────
+  // ── Languages → AND (students each take one) ─────────────────────────────
+  // This was offered as an OR group - "students choose one optional language"
+  // - which is precisely what OR may NOT be. When students each take a
+  // different language, the class splits into parallel groups.
   {
     keywords:  ['french', 'german', 'spanish', 'japanese', 'arabic', 'persian', 'sanskrit', 'chinese', 'mandarin'],
-    logic:     'OR',
-    orLabel:   'Foreign / Classical Language Options',
-    orReason:  'Students choose one optional language - subjects rotate in the same language period',
+    logic:     'AND',
+    andLabel:  'Language Groups Parallel Split',
+    orReason:  '',
+    andReason: 'Students take different languages - the class splits and each group has its own language in the same period',
   },
   // ── Commerce → OR rotation + AND parallel split ───────────────────────────
   {
     keywords:  ['economics', 'business studies', 'accountancy', 'commerce', 'entrepreneurship', 'taxation'],
-    logic:     'BOTH',
-    orLabel:   'Commerce Elective Rotation',
+    // AND only: these are chosen electives, so the class divides.
+    logic:     'AND',
     andLabel:  'Commerce Parallel Split',
-    orReason:  'Commerce optional subjects rotate in a shared slot',
+    orReason:  '',
     andReason: 'Students divide into commerce groups - accountancy, economics, and business studies run simultaneously',
   },
   // ── Humanities → OR rotation + AND parallel split ─────────────────────────
   {
     keywords:  ['psychology', 'sociology', 'political science', 'philosophy', 'legal studies', 'history', 'geography'],
-    logic:     'BOTH',
-    orLabel:   'Humanities Elective Rotation',
+    // AND only: chosen humanities electives divide the class.
+    logic:     'AND',
     andLabel:  'Humanities Parallel Split',
-    orReason:  'Humanities optional subjects rotate in a shared elective period',
+    orReason:  '',
     andReason: 'Students divide into humanities groups that run simultaneously in the same elective period',
   },
-  // ── Computing → OR only ──────────────────────────────────────────────────
+  // ── Computing → AND (a student takes one variant) ────────────────────────
   {
     keywords:  ['computer science', 'information technology', 'informatics', 'computer application', 'artificial intelligence', 'data science'],
-    logic:     'OR',
-    orLabel:   'Computing Options',
-    orReason:  'Computing variants share the same slot - one runs per period',
+    logic:     'AND',
+    andLabel:  'Computing Variants Parallel Split',
+    orReason:  '',
+    andReason: 'Students take different computing subjects - each group has its own in the same period',
   },
 ]
 
@@ -164,7 +174,7 @@ function generateSuggestions(
     if (cluster.logic === 'OR' || cluster.logic === 'BOTH') {
       pushOr({
         id:       `sug_or_${base}`,
-        label:    cluster.orLabel ?? 'Elective Rotation',
+        label:    cluster.orLabel ?? 'Whole-Class Choice',
         logic:    'OR',
         subjects: matched,
         reason:   cluster.orReason,
@@ -804,7 +814,7 @@ export function SubjectGroupsSection({
           }}
         >
           <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', flex: 1, textAlign: 'left' }}>
-            {orOnly ? 'Elective Rotation Slots (OR)' : 'Subject OR / AND Combos'}
+            {orOnly ? 'OR choices for the whole class' : 'Subject OR / AND Combos'}
           </span>
           {groups.length > 0 && (
             <span style={{
@@ -825,7 +835,7 @@ export function SubjectGroupsSection({
                 border: `1px solid ${OR_BDR}`, borderRadius: 6, padding: '3px 9px',
               }}>
                 <span style={{ fontSize: 8, fontWeight: 900, background: OR_TAG, color: '#fff', borderRadius: 2, padding: '0 3px' }}>OR</span>
-                <strong>Rotation</strong> - one subject per slot
+                <strong>Whole-class choice</strong> - the subject further behind runs
               </span>
               {!orOnly && (
                 <span style={{

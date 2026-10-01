@@ -42,7 +42,7 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
     'Set the working days and any shifts; this becomes the grid every class is scheduled into.',
   ] },
   { title: 'Step 3 · Groups & Combos', tips: [
-    'Set up electives and combined groups (students pick one option, or classes merge for a subject).',
+    'Set up AND groups (the class splits into parallel groups) and OR choices (the whole class does whichever subject is behind).',
     'Skip this step if your classes don’t share subjects across sections.',
     'These rules come first because Mapping allocates around them.',
   ] },

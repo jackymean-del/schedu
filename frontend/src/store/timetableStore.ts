@@ -255,7 +255,7 @@ interface ScheduState {
 
   // ── Step 4 - AND Combo Groups (bundle-based split, e.g. PCM vs PCB) ──
   andComboGroups: AndComboGroup[]
-  // ── Step 4 - Elective Slots (OR groups - students pick one per slot) ──
+  // ── Step 4 - OR groups (a whole-class subject choice, decided by syllabus coverage; see lib/orChoice) ──
   electiveSlots: ElectiveSlot[]
 
   // ── Step 4 - Subject Grouping Rules (per-subject cross-class behavior) ──
