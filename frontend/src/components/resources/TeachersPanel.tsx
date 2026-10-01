@@ -32,6 +32,7 @@ import { calcTeacherSlots, slotLoadLevel, seedStandardStaff } from './aiEngine'
 import { normalizeBoardType, type CurriculumBoard } from './curriculum'
 import { useDirectoryStore, linkOrRegisterStaff } from '@/store/directoryStore'
 import { useTimetableStore } from '@/store/timetableStore'
+import { classTeacherOf, assignClassTeacher } from '@/lib/classTeacher'
 import { effectiveTeacherMaxPeriods } from '@/lib/educationNorms'
 import { effectiveCaps, perDayFromPerWeek } from '@/lib/facultyWorkload'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
@@ -469,7 +470,7 @@ function RoleHeaderRow({ role, count, collapsed, onToggle }: {
 }
 
 // ─── Teacher row ──────────────────────────────────────────────────────────────
-function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, normCap, workDayCount, onUpdate, onDelete, onScopeClick }: {
+function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOpts, normCap, workDayCount, onUpdate, onDelete, onScopeClick, classTeacherOfValue, onSetClassTeacher }: {
   t: StaffExt
   subjects: Subject[]
   classOpts: ChipOption[]
@@ -481,6 +482,9 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
   onUpdate: (p: Partial<StaffExt>) => void
   onDelete: () => void
   onScopeClick?: (t: StaffExt, rect: DOMRect) => void
+  /** Read from the classes, which own this fact - see lib/classTeacher. */
+  classTeacherOfValue: string
+  onSetClassTeacher: (sectionName: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const mappings = getMappings(t)
@@ -493,7 +497,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
     } as Partial<StaffExt>)
   }
 
-  const isClassTeacherOf = t.isClassTeacher || ''
+  const isClassTeacherOf = classTeacherOfValue
   const slots = calcTeacherSlots(t as any, subjects)
   const capsEff = effectiveCaps(t as any, { perWeek: normCap, perDay: perDayFromPerWeek(normCap, workDayCount) }, workDayCount)
   const cap = capsEff.perWeek
@@ -558,7 +562,7 @@ function TeacherRow({ t, subjects, classOpts, classTeacherOpts, coClassTeacherOp
           <InlineChipSelect
             selected={isClassTeacherOf ? [isClassTeacherOf] : []}
             options={classTeacherOpts}
-            onChange={v => onUpdate({ isClassTeacher: v[0] ?? '' })}
+            onChange={v => onSetClassTeacher(v[0] ?? '')}
             singleSelect
             placeholder="- none -"
             maxChips={1}
@@ -640,6 +644,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   // The workload norm a teacher falls back to when no per-person override has
   // been set on Mapping. Read-only here - see the Slots/Wk cell.
   const config = useTimetableStore(s => (s as any).config)
+  const setSectionsInStore = useTimetableStore(s => s.setSections)
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const workDayCount = config?.workDays?.length || 5
   const normCap = effectiveTeacherMaxPeriods(
@@ -938,6 +943,12 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
                       normCap={normCap}
                       workDayCount={workDayCount}
                       onUpdate={p => update(t.id, p)}
+                      classTeacherOfValue={classTeacherOf(t, sections)}
+                      onSetClassTeacher={sec => {
+                        const r = assignClassTeacher(sections, staff, t, sec)
+                        setSectionsInStore(r.sections)
+                        setStaff(r.staff as any)
+                      }}
                       onDelete={() => remove(t.id)}
                       onScopeClick={onScopeClick
                         ? (st, rect) => onScopeClick(st as Staff, rect)

@@ -247,7 +247,7 @@ export function MasterDataPage() {
         {/* Tab content */}
         {tab === 'classes'   && <ClassesGrid  sections={sections}  setSections={setSections}  staff={staff} onScope={(s) => setScopeTarget({ kind: 'Section', entity: s })} onBulkScope={() => setScopeTarget({ kind: 'BulkSection', entity: { id: '__bulk__', name: 'All Classes' } })} />}
         {tab === 'subjects'  && <SubjectsGrid subjects={subjects}  setSubjects={setSubjects}                onScope={(s) => setScopeTarget({ kind: 'Subject', entity: s })} onBulkScope={() => setScopeTarget({ kind: 'BulkSubject', entity: { id: '__bulk__', name: 'All Subjects' } })} />}
-        {tab === 'teachers'  && <TeachersGrid staff={staff}        setStaff={setStaff}        sections={sections} onScope={(t) => setScopeTarget({ kind: 'Teacher', entity: t })} onBulkScope={() => setScopeTarget({ kind: 'BulkTeacher', entity: { id: '__bulk__', name: 'All Teachers' } })} />}
+        {tab === 'teachers'  && <TeachersGrid staff={staff}        setStaff={setStaff}        sections={sections} setSections={setSections} onScope={(t) => setScopeTarget({ kind: 'Teacher', entity: t })} onBulkScope={() => setScopeTarget({ kind: 'BulkTeacher', entity: { id: '__bulk__', name: 'All Teachers' } })} />}
         {tab === 'rooms'     && <RoomsGrid    rooms={rooms}        setRooms={setRooms}                       onScope={(r) => setScopeTarget({ kind: 'Room', entity: r })} onBulkScope={() => setScopeTarget({ kind: 'BulkRoom', entity: { id: '__bulk__', name: 'All Rooms' } })} />}
         {tab === 'strengths' && <StrengthsGrid sections={sections} subjects={subjects} sectionStrengths={sectionStrengths ?? []} setSectionStrengths={setSectionStrengths} />}
         {tab === 'directory' && <DirectoryPanel />}

@@ -20,6 +20,7 @@ import { findOrphans, orphanWarning, type OrphanKind } from '@/lib/rosterOrphans
 import { applyRename } from '@/lib/renameCascade'
 import { findNameConflicts, conflictWarning } from '@/lib/nameConflicts'
 import type { RenameKind } from '@/lib/resourceRename'
+import { classTeacherOf, assignClassTeacher } from '@/lib/classTeacher'
 
 // ── Auto-fill helpers ────────────────────────────────────────────────────────
 
@@ -516,11 +517,13 @@ function useDirectoryAutoRegister<T extends { id: string; name?: string; directo
 // TEACHERS GRID
 // ═════════════════════════════════════════════════════════════
 export function TeachersGrid({
-  staff, setStaff, sections, onScope, onBulkScope,
+  staff, setStaff, sections, setSections, onScope, onBulkScope,
 }: {
   staff: Staff[]
   setStaff: (s: Staff[]) => void
   sections: Section[]
+  /** Lets a "Class Teacher of" edit update the class itself. */
+  setSections?: (s: Section[]) => void
   onScope: (t: Staff, rect?: DOMRect) => void
   onBulkScope?: (rect?: DOMRect) => void
 }) {
@@ -567,7 +570,9 @@ export function TeachersGrid({
     {
       key: 'isClassTeacher', label: 'Class Teacher of', type: 'select', options: sectionOptions, width: 160,
       placeholder: 'None',
-      getValue: (r) => r.isClassTeacher ?? '',
+      // Read from the classes, which own this fact (lib/classTeacher); the
+      // change is carried across to them in onChange below.
+      getValue: (r) => classTeacherOf(r, sections),
       setValue: (r, v) => ({ ...r, isClassTeacher: v ?? '' }),
     },
   ]
@@ -586,7 +591,22 @@ export function TeachersGrid({
         columns={columns}
         rows={staff}
         rowKey={(r) => r.id}
-        onChange={setStaff}
+        onChange={(next) => {
+          // A "Class Teacher of" edit is a statement about the CLASS. Carry it
+          // there, or the Classes grid and the engine go on naming whoever the
+          // class said before.
+          const moved = next.find(n => {
+            const was = staff.find(o => o.id === n.id)
+            return was && (n.isClassTeacher ?? '') !== classTeacherOf(was, sections)
+          })
+          if (moved && setSections) {
+            const r = assignClassTeacher(sections, next, moved, moved.isClassTeacher ?? '')
+            setSections(r.sections)
+            setStaff(r.staff)
+          } else {
+            setStaff(next)
+          }
+        }}
         onScope={onScope}
         onBulkScope={onBulkScope}
         newRow={() => ({

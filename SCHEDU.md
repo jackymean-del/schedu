@@ -49,7 +49,7 @@ blueprint-verify        snapshot-fields-verify  combo-verify
 derive-alloc-verify     dispersal-verify        norms-verify
 reopt-verify            bell-verify             bell-ringer-verify
 mps-test                style-verify            alloc-verify
-preflight-verify        orphan-repair-verify
+preflight-verify        orphan-repair-verify    class-teacher-verify
 ```
 
 **Measure correctness against what the school decided, not against the
