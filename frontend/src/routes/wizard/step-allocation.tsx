@@ -1650,7 +1650,7 @@ function ValidationSidebarPanel({
     >
       {hardConflicts.length === 0 && softWarnings.length === 0 ? (
         <p style={{ fontSize: 11, color: '#0A8136', margin: 0 }}>
-          All allocation rules satisfied. Ready to proceed to Student Groups.
+          All allocation rules satisfied. Ready for Review &amp; generate.
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
@@ -1768,7 +1768,7 @@ function ValidationView({
           border: '1px solid #BBF7D0', color: '#15803D', fontSize: 13, fontWeight: 600,
         }}>
           <CheckCircle2 size={20} style={{ marginBottom: 8, display: 'block', margin: '0 auto 8px' }} />
-          All checks passed. Ready to proceed to Student Groups.
+          All checks passed. Ready for Review &amp; generate.
         </div>
       )}
     </div>

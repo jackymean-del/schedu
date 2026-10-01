@@ -494,7 +494,7 @@ export function Step6Generate() {
                     <span>
                       <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
                       ({listClasses(preflight.overCap)}) -
-                      extra lessons will be dropped. Trim in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
+                      the extra lessons will wait on the Bench. Trim them in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Mapping</button>.
                     </span>
                   </div>
                 ) : preflight.unallocated.length > 0 ? (
@@ -644,9 +644,9 @@ export function Step6Generate() {
                       style={{ padding:"7px 14px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:11.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
                       Cancel
                     </button>
-                  : <button className="g6-ghost" onClick={() => setStep(3)}
+                  : <button className="g6-ghost" onClick={() => setStep(4)}
                       style={{ padding:"7px 14px", borderRadius:9, border:"1px solid #E8E4FF", background:"#fff", fontSize:11.5, color:"#4B5275", cursor:"pointer", fontFamily:"inherit" }}>
-                      ← Student Groups
+                      ← Mapping
                     </button>
                 }
               </div>

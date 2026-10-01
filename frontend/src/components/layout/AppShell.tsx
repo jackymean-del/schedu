@@ -76,6 +76,9 @@ function activeHref(path: string): string {
   return best
 }
 
+/** Height of the phone-width top bar that carries the menu button. */
+const MOBILE_BAR = 54
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const billingLive = useBillingLive()
   const { user, logout } = useAuthStore()
@@ -245,20 +248,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Without this a phone has NO navigation at all once the rail is
           hidden. Floats over the page rather than pushing content, so it costs
           no layout width. */}
-      {narrow && !open && (
-        <button onClick={() => setOpen(true)} aria-label="Open menu" style={{
-          position: 'fixed', top: 10, left: 10, zIndex: 45,
-          width: 40, height: 40, borderRadius: 11,
-          background: '#fff', border: '1px solid #ECE9FB',
-          boxShadow: '0 4px 14px rgba(19,17,30,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: '#4B5275',
+      {/* A slim bar rather than a floating button: floating, it sat on top
+          of whatever each page put in its top-left corner - on the timetable,
+          the schedule's own name. */}
+      {narrow && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: MOBILE_BAR, zIndex: 45,
+          background: '#fff', borderBottom: '1px solid #ECE9FB',
+          display: 'flex', alignItems: 'center', gap: 10, padding: '0 10px',
         }}>
-          <Menu size={19} />
-        </button>
+          <button onClick={() => setOpen(true)} aria-label="Open menu" style={{
+            width: 38, height: 38, borderRadius: 10,
+            background: '#fff', border: '1px solid #ECE9FB',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: '#4B5275',
+          }}>
+            <Menu size={19} />
+          </button>
+          <span style={{ fontWeight: 800, fontSize: 16, color: '#13111E' }}>sched<span style={{ color: '#685DBC' }}>U</span></span>
+        </div>
       )}
 
-      <main style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto' }}>
+      <main style={{
+        flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto',
+        boxSizing: 'border-box', paddingTop: narrow ? MOBILE_BAR : 0,
+      }}>
         {children}
       </main>
     </div>

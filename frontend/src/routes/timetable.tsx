@@ -441,14 +441,40 @@ function buildClassPeriods(
   // Order columns by the section's REAL bell times - the store's abstract
   // sequence distributes breaks evenly (e.g. Short Break after P2) which can
   // disagree with where the bell actually placed them (after P3).
-  const bellOrder = (list: Period[]): Period[] => {
-    const bell = bellScheduleForSection(sectionName, bellSchedules, classwiseBreaks as CwBreakLite[] | undefined, list.filter(p => p.type === 'class'))
-    if (!bell) return list
-    return [...list].sort((a, b) => {
-      const sa = bell.get(a.id)?.startMin ?? (a.type === 'fixed-start' ? -1 : Number.MAX_SAFE_INTEGER)
-      const sb = bell.get(b.id)?.startMin ?? (b.type === 'fixed-start' ? -1 : Number.MAX_SAFE_INTEGER)
-      return sa - sb
+  const bellOrder = (input: Period[]): Period[] => {
+    const bell = bellScheduleForSection(sectionName, bellSchedules, classwiseBreaks as CwBreakLite[] | undefined, input.filter(p => p.type === 'class'))
+    if (!bell) return input
+    // A break saved by an earlier generation can carry an id the bell no
+    // longer uses: editing the bell after generating re-issues its break ids.
+    // Unmatched, every break sorted to the END of the row with no time - a
+    // timetable reading Period 1..8, then Short Break, then Lunch. Matching by
+    // name to this class's own bell row recovers both its place and its time;
+    // break columns hold no lessons, so the id is safe to adopt.
+    const key = getSectionClassKey(sectionName)
+    const bellBreakIdByName = new Map<string, string>()
+    for (const b of bellSchedules ?? []) {
+      for (const r of b.rows ?? []) {
+        if (r.type === 'teaching') continue
+        if ((r.classes ?? []).length && !r.classes!.includes(key)) continue
+        const n = (r.name ?? '').trim().toLowerCase()
+        if (n && !bellBreakIdByName.has(n)) bellBreakIdByName.set(n, r.id)
+      }
+    }
+    const list = input.map(p => {
+      if (p.type === 'class' || bell.has(p.id)) return p
+      const alias = bellBreakIdByName.get((p.name ?? '').trim().toLowerCase())
+      return alias && bell.has(alias) ? { ...p, id: alias } : p
     })
+    // Anything still unknown keeps its place in the stored sequence rather
+    // than falling to the end: it inherits the time of what precedes it.
+    const keyOf = new Map<string, number>()
+    let last = -1
+    for (const p of list) {
+      const t = bell.get(p.id)?.startMin
+      if (t != null) { keyOf.set(p.id, t); last = t }
+      else keyOf.set(p.id, p.type === 'fixed-start' ? -1 : last + 0.5)
+    }
+    return [...list].sort((a, b) => (keyOf.get(a.id) ?? 0) - (keyOf.get(b.id) ?? 0))
   }
 
   if (!classwiseBreaks?.length) return bellOrder(truncate(allPeriods, true))
@@ -1258,6 +1284,15 @@ export function TimetablePage() {
 
   const [editTarget, setEditTarget] = useState<{section:string;day:string;periodId:string}|null>(null)
   const [benchNotice, setBenchNotice] = useState<{ text: string; undo: boolean }|null>(null)
+  // On a phone the toolbars alone are most of the screen, so a fixed-height
+  // page left the timetable a 131px window to scroll inside. There the whole
+  // page scrolls instead and the grid takes its natural height.
+  const [narrowLayout, setNarrowLayout] = useState(() => typeof window !== "undefined" && window.innerWidth < 768)
+  useEffect(() => {
+    const onResize = () => setNarrowLayout(window.innerWidth < 768)
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
   useEffect(() => {
     if (!benchNotice) return
     const t = setTimeout(() => setBenchNotice(null), 7000)
@@ -2244,7 +2279,7 @@ export function TimetablePage() {
       <div>
         <SectionHeader name={sn} classTeacher={ctName} meta={`${config.workDays.length} days/week · ${classPeriods.length} periods/day`} />
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", tableLayout:"fixed" as const }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720, tableLayout:"fixed" as const }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", width:70, minWidth:60, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Day</th>
               {sectionPeriods.map(p => {
@@ -2350,7 +2385,7 @@ export function TimetablePage() {
       <div>
         <SectionHeader name={sn} classTeacher={ctName} meta="Transposed view" />
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:100, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Period</th>
               {usedDays.map(day => {
@@ -2552,7 +2587,7 @@ export function TimetablePage() {
           <InsightBanner message={swapInsight} onClose={clearSwapInsight} />
         )}
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:70, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Day</th>
               {ttCols.map(col => {
@@ -2741,7 +2776,7 @@ export function TimetablePage() {
           <InsightBanner message={swapInsight} onClose={clearSwapInsight} />
         )}
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:100, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Period</th>
               {usedDays.map(day => (
@@ -2890,7 +2925,7 @@ export function TimetablePage() {
           <div style={{ fontSize:11, color:"#6D6A8A" }}>Which class has this subject · when</div>
         </div>
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:70, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Day</th>
               {unifiedAllCols.columns.map(col => {
@@ -2990,7 +3025,7 @@ export function TimetablePage() {
           <div style={{ fontSize:11, color:"#6D6A8A" }}>Rows = periods · Columns = days</div>
         </div>
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:100, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Period</th>
               {usedDays.map(day => (
@@ -3107,7 +3142,7 @@ export function TimetablePage() {
           <div style={{ fontSize:11, color:"#4B5275", marginTop:2 }}>{roomSubjectSummary(roomName) || "Room occupancy schedule"}</div>
         </div>
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:70, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Day</th>
               {rmCols.map(col => {
@@ -3197,7 +3232,7 @@ export function TimetablePage() {
           <div style={{ fontSize:11, color:"#4B5275" }}>Room occupancy schedule · Transposed view</div>
         </div>
         <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%" }}>
+          <table style={{ borderCollapse:"collapse", fontSize:11, width:"100%", minWidth:720 }}>
             <thead><tr>
               <th style={{ background:"#1e293b", color:"#fff", padding:"8px 12px", textAlign:"left", minWidth:100, fontSize:11, fontWeight:700, border:"1px solid #1e293b" }}>Period</th>
               {usedDays.map(day => (
@@ -3750,7 +3785,7 @@ export function TimetablePage() {
 
   // ── No timetable guard ───────────────────────────────────
   if (!periods.length) return (
-    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"calc(100vh - 52px)", flexDirection:"column" as const, gap:16 }}>
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", flexDirection:"column" as const, gap:16 }}>
       <div style={{ fontSize:48 }}>📅</div>
       <div style={{ fontSize:18, color:"#4B5275", fontFamily:"'Plus Jakarta Sans',Georgia,serif" }}>No schedule generated yet</div>
       <button onClick={() => window.location.href="/wizard"} style={{ padding:"10px 24px", borderRadius:8, border:"none", background:"#685DBC", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>✨ Go to Wizard</button>
@@ -3787,10 +3822,13 @@ export function TimetablePage() {
     : undefined
 
   return (
-    <div style={{ display:"flex", height:"calc(100vh - 52px)", background:"#F8FAFC", position:"relative" as const }}>
+    // The page fills the app shell's content area. It used to subtract a 52px
+    // top bar that no longer exists, leaving a dead strip under every
+    // timetable.
+    <div style={{ display:"flex", height: narrowLayout ? "auto" : "100%", minHeight:"100%", background:"#F8FAFC", position:"relative" as const }}>
 
       {/* ── Main area (full width) ────────────────────────── */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column" as const, overflow:"hidden" }}>
+      <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" as const, overflow: narrowLayout ? "visible" : "hidden" }}>
 
         {/* ══ Main Navigation Bar ══════════════════════════════════════ */}
         {/* Wraps rather than overflowing: at laptop width a fixed single row
@@ -4224,7 +4262,7 @@ export function TimetablePage() {
         </div>
 
         {/* ══ Content area ═════════════════════════════════════════════ */}
-        <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" as const, position:"relative" as const }}
+        <div style={{ flex:1, overflow: narrowLayout ? "visible" : "hidden", display:"flex", flexDirection:"column" as const, position:"relative" as const }}
           onClick={() => { if (showExportMenu) setShowExportMenu(false) }}
         >
 
@@ -4236,7 +4274,7 @@ export function TimetablePage() {
 
           {/* ═══ Traditional mode ═══ */}
           {mainMode === "traditional" && (
-            <div style={{ flex:1, overflowY:"auto", padding:16 }}>
+            <div style={{ flex:1, overflowY: narrowLayout ? "visible" : "auto", padding:16 }}>
             <>
               {/* Warm-cell style override */}
               <style>{`
