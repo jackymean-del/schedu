@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 )
 
 func getenv(k, fallback string) string {
@@ -144,4 +145,60 @@ func SendContactNotification(name, email, message, source string) {
 	default:
 		slog.Info("contact notification sent", "email", email, "source", source)
 	}
+}
+
+// SendContactAcknowledgement thanks the sender of a contact-form message.
+// Replies go to the team inbox. The sender's message is deliberately not
+// echoed back, so the form can't be used to relay arbitrary text to a
+// third-party address.
+func SendContactAcknowledgement(name, email, source string) {
+	inbox := getenv("CONTACT_NOTIFY_TO", "hello@bhusku.com")
+	greeting := "Hi there,"
+	if first := strings.Fields(name); len(first) > 0 && isPlainName(first[0]) {
+		greeting = "Hi " + first[0] + ","
+	}
+
+	fromName, subject, body := "bhusku", "Thanks for getting in touch",
+		"Thanks for reaching out to bhusku. Your message has reached us, and a real person will read it and reply within 1-2 working days.\n\n"+
+			"In the meantime, you can see what we're building at https://bhusku.com.\n"
+	switch source {
+	case "marketing-contact":
+		fromName, subject = "schedU", "Thanks for contacting schedU"
+		body = "Thanks for reaching out about schedU. Your message has reached us, and we'll reply within 1-2 working days.\n\n" +
+			"If it's about a timetable you're working on, feel free to reply with any extra details.\n"
+	case "pro-waitlist":
+		fromName, subject = "schedU", "You're on the schedU Pro list"
+		body = "Thanks for your interest in schedU Pro. You're on the list, and we'll email you as soon as it launches.\n"
+	}
+
+	err := send(mail{
+		fromName: fromName,
+		to:       email,
+		replyTo:  inbox,
+		subject:  subject,
+		body: greeting + "\n\n" + body + "\n" +
+			"If you need to add anything, just reply to this email.\n\n" +
+			"Warm regards,\nJugal\nbhusku - Sambalpur, Odisha\n",
+	})
+	switch {
+	case errors.Is(err, errNotConfigured):
+		slog.Info("contact acknowledgement (DEV - email not configured)", "email", email, "source", source)
+	case err != nil:
+		slog.Error("contact acknowledgement email failed", "err", err, "email", email)
+	}
+}
+
+// isPlainName reports whether s looks like an ordinary first name, so that a
+// link or address typed into the name field never ends up in our email.
+func isPlainName(s string) bool {
+	if len(s) > 30 {
+		return false
+	}
+	for _, r := range s {
+		// Marks cover vowel signs in Indic scripts (e.g. the ु in जुगल).
+		if !unicode.IsLetter(r) && !unicode.IsMark(r) && r != '-' && r != '\'' {
+			return false
+		}
+	}
+	return true
 }

@@ -9,6 +9,10 @@ import (
 	"github.com/jackymean-del/smart-sched/internal/mailer"
 )
 
+// contactAckDailyCap stops auto-replies once this many messages arrive in 24
+// hours, keeping a flood of fake submissions from burning the email quota.
+const contactAckDailyCap = 50
+
 // SubmitContact accepts a public contact-form submission from the marketing
 // site and stores it. Registered WITHOUT auth (see main.go).
 func (h *Handler) SubmitContact(c fiber.Ctx) error {
@@ -61,5 +65,24 @@ func (h *Handler) SubmitContact(c fiber.Ctx) error {
 	slog.Info("contact: message received", "email", email, "source", source)
 	// Stored already; the email is a best-effort heads-up, so do not block on SMTP.
 	go mailer.SendContactNotification(name, email, message, source)
+
+	// Auto-reply to the sender, throttled because the endpoint is public and
+	// anyone can type someone else's address: at most one per address per
+	// day, and none once the day's volume suggests abuse. The client IP can't
+	// be used here - behind the Vercel rewrite every request shares one.
+	var sameSender, total int
+	err = h.db.QueryRow(c.Context(), `
+		SELECT count(*) FILTER (WHERE lower(email) = lower($1)), count(*)
+		FROM contact_messages WHERE created_at > NOW() - INTERVAL '24 hours'`,
+		email,
+	).Scan(&sameSender, &total)
+	switch {
+	case err != nil:
+		slog.Error("contact: acknowledgement check failed", "err", err)
+	case sameSender <= 1 && total <= contactAckDailyCap:
+		go mailer.SendContactAcknowledgement(name, email, source)
+	default:
+		slog.Info("contact: acknowledgement skipped (throttled)", "email", email, "sameSender", sameSender, "total", total)
+	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"ok": true})
 }
