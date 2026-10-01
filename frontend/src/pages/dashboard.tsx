@@ -1235,10 +1235,22 @@ export function DashboardPage() {
           if (raw) snap = JSON.parse(raw)
         } catch { /* ignore */ }
       }
+      // Nothing to open. Switching anyway used to reset the store and land on
+      // "No schedule generated yet" for a schedule whose card said Generated,
+      // and it made THIS the active schedule - so the wizard the user was in
+      // the middle of quietly stopped being the one that opens. Stay put and
+      // say what happened instead.
+      if (!snap) {
+        alert(
+          `"${t.name}" has no saved copy on this device or in your account, so there is nothing to open.\n\n` +
+          `Use "Restore data" on its card to look again, or Continue to rebuild it. ` +
+          `The schedule you have open now is unchanged.`
+        )
+        return
+      }
       if (currentId) saveTTSnapshot(currentId)
       setActiveTTId(t.id)
-      if (snap) applySnapshot(snap)
-      else useTimetableStore.getState().resetWizard()
+      applySnapshot(snap)
     }
     window.location.href = '/timetable'
   }
@@ -1257,24 +1269,48 @@ export function DashboardPage() {
   }
 
   // ── Snapshot repair ───────────────────────────────────────────
-  // Called when user clicks "Restore Data" on a timetable card.
-  // Saves the CURRENT store state (which still contains the classTT/staff/
-  // sections/periods from the timetable that was last open) as a snapshot
-  // for this timetable ID. This lets users recover if a new timetable's
-  // config overwrote the active timetable's settings.
-  const handleRepairSnapshot = (t: TTEntry) => {
-    // Snap whatever is currently in the store as this timetable's data
-    saveTTSnapshot(t.id)
-    // Mark it as the active timetable
-    setActiveTTId(t.id)
+  // Called when user clicks "Restore data" on a schedule whose saved copy is
+  // missing from this browser.
+  //
+  // This used to save WHATEVER WAS OPEN as this schedule's data - and push it
+  // to the server. With a different schedule open, that copied it wholesale
+  // into this one, and if this schedule's real copy lived on the server (the
+  // ordinary case after signing in on a new device) it overwrote that real
+  // copy. Then it said "data has been secured ... preserved". A button labelled
+  // Restore was the most reliable way to destroy a schedule.
+  //
+  // Now it only ever restores data that belongs to THIS schedule:
+  //   1. the server's copy, which is the source of truth when there is one
+  //   2. the open store, but only when the open schedule IS this one - the
+  //      narrow case the old code was written for
+  // and when neither exists it says so and writes nothing.
+  const handleRepairSnapshot = async (t: TTEntry) => {
+    let restored: Record<string, unknown> | null = null
+    if (SERVER_BACKED) {
+      try { restored = (await ttRepo.fetchTimetableSnapshot(t.id)) ?? null } catch { /* offline */ }
+    }
+    if (restored) {
+      try { localStorage.setItem(snapKey(t.id), JSON.stringify(restored)) } catch { /* quota */ }
+      setTTList(prev => [...prev])
+      alert(`"${t.name}" was restored from your account.`)
+      return
+    }
+
+    if (getActiveTTId() === t.id) {
+      // The open store is this schedule's own data, just never saved. Safe.
+      saveTTSnapshot(t.id)
+      setTTList(prev => [...prev])
+      alert(`"${t.name}" has been saved from the copy you currently have open.`)
+      return
+    }
+
+    // Nothing that belongs to this schedule exists anywhere we can reach.
+    // Saying "secured" here would be a lie, and writing the open schedule into
+    // it would be the original bug.
     alert(
-      `✅ "${t.name}" data has been secured.\n\n` +
-      `Your generated schedule, staff, classes and subjects are preserved.\n\n` +
-      `Please open the schedule and go through Step 2 (Bell Timing) and ` +
-      `Step 3 (Class-wise Breaks) to restore the correct lunch break configuration.`
+      `No saved copy of "${t.name}" could be found, on this device or in your account.\n\n` +
+      `Nothing has been changed. You can rebuild it with Continue, or delete it if it is no longer needed.`
     )
-    // Refresh list UI
-    setTTList(prev => [...prev])
   }
 
   const handleDelete = (id: string) => {
@@ -1740,12 +1776,16 @@ export function DashboardPage() {
                     {tt.status === 'archived' && (
                       <TtBtn onClick={() => handleViewTimetable(tt)}>View</TtBtn>
                     )}
-                    {/* Restore Data - only when this timetable genuinely has NO saved
-                        snapshot (data may have been overwritten by another timetable's
-                        config). Active/generated timetables always have one, so this
-                        never shows for them. Uses snapKey() - the namespaced key the
-                        snapshot is actually stored under. */}
-                    {tt.status !== 'active' && !localStorage.getItem(snapKey(tt.id)) && (
+                    {/* Restore data - whenever this schedule has no saved copy in this
+                        browser. That includes ACTIVE schedules: the old comment here
+                        said "active/generated timetables always have one, so this
+                        never shows for them", and it was false. An active schedule
+                        opened on a new device, after cleared storage, or from seeded
+                        data has no local copy, so it opened to "No schedule generated
+                        yet" with no way to recover - while the card still said
+                        Generated. Safe to show everywhere now that Restore only ever
+                        restores data belonging to this schedule. */}
+                    {!localStorage.getItem(snapKey(tt.id)) && (
                       <TtBtn onClick={() => handleRepairSnapshot(tt)}>
                         🔧 Restore data
                       </TtBtn>

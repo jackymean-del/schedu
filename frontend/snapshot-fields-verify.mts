@@ -112,5 +112,56 @@ for (const f of DERIVED_NOT_PERSISTED) {
       : `recomputed on all ${SCREENS.length} screens that show it`)
 }
 
+
+// ── RESTORE MUST NEVER COPY ONE SCHEDULE INTO ANOTHER ─────────────────────
+//
+// The dashboard's "Restore data" button used to call saveTTSnapshot(t.id)
+// unconditionally. saveTTSnapshot builds its snapshot from the CURRENT store
+// and pushes it to the server, so with a different schedule open, Restore
+// copied that schedule wholesale into this one - and overwrote this one's
+// real server copy, in the ordinary case of opening it on a new device.
+// Then it said the data had been "secured" and "preserved".
+//
+// Saving the open store under t.id is only correct when the open schedule IS
+// t.id. This checks that every such save inside the handler is guarded by
+// exactly that comparison, so the fix cannot be simplified away.
+console.log('')
+console.log('-- restore never copies one schedule into another --')
+{
+  const src = read('src/pages/dashboard.tsx')
+  const start = src.indexOf('const handleRepairSnapshot')
+  const end = src.indexOf('const handleDelete', start)
+  const body = start >= 0 && end > start ? src.slice(start, end) : ''
+  ok(body.length > 0, 'the restore handler can be found', body ? 'found' : 'MISSING')
+
+  // Every call that writes the open store under this schedule's id.
+  const saves: number[] = []
+  let at = body.indexOf('saveTTSnapshot(t.id)')
+  while (at >= 0) { saves.push(at); at = body.indexOf('saveTTSnapshot(t.id)', at + 1) }
+
+  // Each must sit inside a block opened by the same-schedule check.
+  const guard = 'getActiveTTId() === t.id'
+  const unguarded = saves.filter(pos => {
+    const g = body.lastIndexOf(guard, pos)
+    if (g < 0) return true
+    // The guard's block must still be open at the save: no closing brace at
+    // the guard's own indentation between them.
+    const between = body.slice(g, pos)
+    const opens = (between.match(/{/g) || []).length
+    const closes = (between.match(/}/g) || []).length
+    return opens <= closes
+  })
+  ok(unguarded.length === 0,
+    'the open schedule is saved under this id only when it IS this schedule',
+    unguarded.length ? `${unguarded.length} unguarded save(s)` : `${saves.length} save(s), all guarded`)
+
+  // And it must look for the schedule's OWN copy before falling back at all.
+  ok(body.includes('fetchTimetableSnapshot(t.id)'),
+    'and it looks for the server copy of THIS schedule first')
+
+  // The old message claimed success it had not earned.
+  ok(!/data has been secured/.test(body),
+    'and it no longer claims data was "secured" when nothing was found')
+}
 console.log(fail === 0 ? '\nALL SNAPSHOT-FIELD CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)
