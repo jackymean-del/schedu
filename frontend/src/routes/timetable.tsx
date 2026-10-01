@@ -15,6 +15,7 @@ import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { rebuildTeacherTT } from "@/lib/aiEngine"
 import { schedulePeriodTimes } from "@/lib/bellTimes"
 import { detectConflicts, weeklyTargets } from "@/lib/schedulingEngine"
+import { atDailyLimit, perDayFromPerWeek } from "@/lib/facultyWorkload"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
@@ -1275,6 +1276,7 @@ export function TimetablePage() {
   const [shortNames, setShortNames] = useState(false)
   const [showInsights, setShowInsights] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   // Share-by-link state
   const [shareOpen, setShareOpen] = useState(false)
   const [shareVisibility, setShareVisibility] = useState<"public" | "restricted">("public")
@@ -1381,6 +1383,9 @@ export function TimetablePage() {
   const subAbsentDay = weekdayOf(subAbsentDate)
   const [subReason, setSubReason] = useState("")
   const [subAssignments, setSubAssignments] = useState<Record<string, string>>({}) // periodId → staffName
+  // How many of the absent teacher's periods Auto-fill could NOT cover, so they
+  // are named rather than left looking forgotten.
+  const [autoFillShort, setAutoFillShort] = useState(0)
   const [subActiveTab, setSubActiveTab] = useState<"assign"|"active">("assign")
 
   const { exportXLSX } = useExport()
@@ -1820,10 +1825,12 @@ export function TimetablePage() {
   const kbRef = useRef({ classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
+    setShowLegend, setShowMoreMenu,
   })
   kbRef.current = { classTT, classTTHistory, classTTFuture, teacherTT, workDays: config.workDays,
     setDragItem, setPoolDragItem, setDragOverCell, setEditTarget,
     setClassTT, setTeacherTT, setClassTTHistory, setClassTTFuture,
+    setShowLegend, setShowMoreMenu,
   }
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1831,6 +1838,7 @@ export function TimetablePage() {
       // Escape - dismiss drag, modals, and undo/redo pill
       if (e.key === 'Escape') {
         r.setDragItem(null); r.setPoolDragItem(null); r.setDragOverCell(null); r.setEditTarget(null)
+        r.setShowLegend(false); r.setShowMoreMenu(false)
         return
       }
       const ctrl = e.ctrlKey || e.metaKey
@@ -2125,26 +2133,46 @@ export function TimetablePage() {
     return classPeriods.flatMap(p => {
       const hit = sections.flatMap(sec => {
         const cell = classTT[sec.name]?.[subAbsentDay]?.[p.id]
-        return cell?.teacher === subAbsentTeacher ? [{ sectionName: sec.name, periodId: p.id, periodName: p.name, subject: cell.subject ?? "" }] : []
+        // Any lesson they are IN, including the second group of a parallel one.
+        return cellHasTeacher(cell as any, subAbsentTeacher) ? [{ sectionName: sec.name, periodId: p.id, periodName: p.name, subject: cell?.subject ?? "" }] : []
       })
       return hit
     })
   })()
 
   // ── Score substitute candidates for a slot ───────────────
-  const scoreCandidates = (slot: { sectionName:string; periodId:string; subject:string }) => {
+  // Covers already booked on the absence date, per teacher, and per period.
+  const coversOnDate = (() => {
+    const byTeacher: Record<string, number> = {}
+    const atPeriod: Record<string, Set<string>> = {}
+    for (const [k, who] of Object.entries(substitutions)) {
+      const [, d, pid] = k.split('|')
+      if (d !== subAbsentDate || !who) continue
+      byTeacher[who] = (byTeacher[who] ?? 0) + 1
+      ;(atPeriod[pid] ??= new Set()).add(who)
+    }
+    return { byTeacher, atPeriod }
+  })()
+
+  const scoreCandidates = (slot: { sectionName:string; periodId:string; subject:string }, extraToday: Record<string, number> = {}) => {
     return staff
       .filter(st => st.name !== subAbsentTeacher)
       .map(st => {
         const workloadToday = Object.values((teacherTT[st.name]?.schedule ?? {})[subAbsentDay] ?? {}).filter((x:any) => x?.subject).length
+          + (coversOnDate.byTeacher[st.name] ?? 0) + (extraToday[st.name] ?? 0)
         const workloadWeek = Object.values(teacherTT[st.name]?.schedule ?? {}).reduce((a:number, d:any) => a + Object.values(d).filter((x:any) => x?.subject).length, 0)
         const maxW = (st as any).maxPeriodsPerWeek ?? 30
         const subFreq = Object.values(substitutions).filter(v => v === st.name).length
         const subs: string[] = (st as any).subjects ?? []
         const subjectMatch = subs.some((s:string) => s === `${slot.sectionName}::${slot.subject}` || s.endsWith(`::${slot.subject}`) || (!s.includes("::") && s === slot.subject))
-        const isBusy = Object.entries(classTT).some(([sec, sd]:any) => sec !== slot.sectionName && sd[subAbsentDay]?.[slot.periodId]?.teacher === st.name)
-        const score = (subjectMatch ? 10 : 0) + (isBusy ? -20 : 0) - workloadToday * 2 - subFreq
-        return { st, workloadToday, workloadWeek, maxW, subFreq, subjectMatch, isBusy, score }
+        // Teaching anywhere at that moment - any group of a parallel lesson -
+        // or already booked as cover for it.
+        const isBusy = Object.entries(classTT).some(([sec, sd]:any) => sec !== slot.sectionName && cellHasTeacher(sd[subAbsentDay]?.[slot.periodId], st.name))
+          || !!coversOnDate.atPeriod[slot.periodId]?.has(st.name)
+        // Their own daily limit, from their weekly one.
+        const atCap = atDailyLimit(workloadToday, perDayFromPerWeek(maxW, config.workDays.length || 5))
+        const score = (subjectMatch ? 10 : 0) + (isBusy ? -20 : 0) + (atCap ? -15 : 0) - workloadToday * 2 - subFreq
+        return { st, workloadToday, workloadWeek, maxW, subFreq, subjectMatch, isBusy, atCap, score }
       })
       .sort((a, b) => b.score - a.score)
   }
@@ -2165,12 +2193,20 @@ export function TimetablePage() {
   // ── Auto-fill best candidates ────────────────────────────
   const autoFillBest = () => {
     const assignments: Record<string, string> = {}
-    absentSlots.forEach(slot => {
-      const candidates = scoreCandidates(slot)
-      const best = candidates.find(c => !c.isBusy)
-      if (best) assignments[slot.periodId] = best.st.name
+    // Counted as we go: ranking on the saved load alone gave every slot to the
+    // same least-busy teacher - three covers on one person, past their limit.
+    const given: Record<string, number> = {}
+    // A period that already has cover is done, not "still needing" it.
+    const open = absentSlots.filter(slot => !substitutions[subKey(slot.sectionName, subAbsentDate, slot.periodId)])
+    open.forEach(slot => {
+      const best = scoreCandidates(slot, given).find(c => !c.isBusy && !c.atCap)
+      if (best) {
+        assignments[slot.periodId] = best.st.name
+        given[best.st.name] = (given[best.st.name] ?? 0) + 1
+      }
     })
     setSubAssignments(assignments)
+    setAutoFillShort(open.length - Object.keys(assignments).length)
   }
 
   // Active substitutions count
@@ -3743,10 +3779,13 @@ export function TimetablePage() {
       <div style={{ flex:1, display:"flex", flexDirection:"column" as const, overflow:"hidden" }}>
 
         {/* ══ Main Navigation Bar ══════════════════════════════════════ */}
+        {/* Wraps rather than overflowing: at laptop width a fixed single row
+            pushed Undo, Export and even Publish - the page's main action -
+            off the right edge, where nothing said they existed. */}
         <div style={{
           background:"#fff", borderBottom:"1px solid #E5EBF5",
-          display:"flex", alignItems:"stretch", height:50, flexShrink:0,
-          padding:"0 12px", gap:0,
+          display:"flex", alignItems:"stretch", minHeight:50, flexShrink:0,
+          padding:"0 12px", gap:0, flexWrap:"wrap" as const, rowGap:0,
         }}>
           {/* ── Left: schedule identity (navigation lives in the app shell) ── */}
           <div style={{ display:"flex", alignItems:"center", gap:8, paddingRight:12, borderRight:"1px solid #E5EBF5", flexShrink:0 }}>
@@ -3781,7 +3820,7 @@ export function TimetablePage() {
               <button key={v.key}
                 onClick={() => startViewTransition(() => { setViewMode(v.key as ViewMode); setSelectedEntity("ALL"); setTransposed(false) })}
                 style={{
-                  padding:"0 16px", height:"100%", border:"none", background:"none",
+                  padding:"0 12px", minHeight:50, border:"none", background:"none",
                   cursor:"pointer", fontSize:12.5,
                   fontWeight: viewMode===v.key ? 700 : 400,
                   color: viewMode===v.key ? "#1e293b" : "#64748b",
@@ -3811,31 +3850,9 @@ export function TimetablePage() {
 
           <div style={{ flex:1 }} />
 
-          {/* ── Global Edit mode toggle ── */}
-          <div style={{ display:"flex", alignItems:"center", paddingRight:8, borderRight:"1px solid #E5EBF5" }}>
-            {TBtn(editMode, () => setEditMode(!editMode), editMode ? "✏️ Editing" : "✏️ Edit")}
-          </div>
-
-          {/* ── Traditional / Calendar toggle ── */}
-          <div style={{ display:"flex", alignItems:"center", gap:4, paddingRight:8, borderRight:"1px solid #E5EBF5" }}>
-            <div style={{ display:"flex", border:"1px solid #E5EBF5", borderRadius:6, overflow:"hidden" }}>
-              <button onClick={() => startViewTransition(() => setMainMode("traditional"))}
-                style={{ padding:"5px 12px", border:"none", cursor:"pointer", fontSize:11, fontWeight:500,
-                  background: mainMode==="traditional" ? "#1e293b" : "#fff",
-                  color:      mainMode==="traditional" ? "#fff"    : "#64748b",
-                  opacity:    isViewPending && mainMode!=="traditional" ? 0.6 : 1 }}>
-                ⊞ Grid
-              </button>
-              <button onClick={() => startViewTransition(() => setMainMode("calendar"))}
-                style={{ padding:"5px 12px", border:"none", cursor:"pointer", fontSize:11, fontWeight:500,
-                  background: mainMode==="calendar" ? "#1e293b" : "#fff",
-                  color:      mainMode==="calendar" ? "#fff"    : "#64748b",
-                  opacity:    isViewPending && mainMode!=="calendar" ? 0.6 : 1 }}>
-                📅 Timeline
-              </button>
-            </div>
-          </div>
-
+          {/* Actions travel as one group: when the bar wraps they stay together
+              and right-aligned, rather than Publish landing alone at the left. */}
+          <div style={{ display:"flex", alignItems:"stretch", marginLeft:"auto", minHeight:50 }}>
           {/* ── Undo / Redo ── */}
           <div style={{ display:"flex", alignItems:"center", gap:2, padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
             <button
@@ -3858,15 +3875,6 @@ export function TimetablePage() {
               title="Redo (Ctrl+Y)"
               style={{ width:30, height:30, border:"1px solid #E5EBF5", borderRadius:6, background:"#fff", cursor:classTTFuture.length?"pointer":"default", fontSize:14, color:classTTFuture.length?"#374151":"#CBD5E1", display:"flex", alignItems:"center", justifyContent:"center" }}>
               ↪
-            </button>
-          </div>
-
-          {/* ── Backward Sync (opt-in: push timetable → allocation, print reports) ── */}
-          <div style={{ display:"flex", alignItems:"center", padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
-            <button onClick={() => setBackSyncOpen(true)}
-              title="Push the current timetable back to your Allocation plan, and print/download the Class & Faculty allocation"
-              style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", border:"1px solid #E4E0FF", borderRadius:6, background:"#F8F7FF", color:"#685DBC", fontSize:11.5, fontWeight:600, cursor:"pointer" }}>
-              ⇄ Backward Sync
             </button>
           </div>
 
@@ -4012,24 +4020,47 @@ export function TimetablePage() {
             </div>
           )}
 
-          {/* ── Insights + Legend ── */}
-          <div style={{ display:"flex", alignItems:"center", gap:6, padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
-            <button onClick={() => setShowInsights(v=>!v)}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showInsights?"#685DBC":"#E5EBF5"}`, borderRadius:6,
-                background:showInsights?"#EDE9FF":"#fff", color:showInsights?"#685DBC":"#64748b", fontSize:11, fontWeight:showInsights?700:400, cursor:"pointer" }}>
-              📊 Insights
-            </button>
+          {/* ── More: the occasional tools, one click away instead of three
+               buttons wide. ── */}
+          <div style={{ display:"flex", alignItems:"center", padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
             <div style={{ position:"relative" as const }}>
-              <button onClick={() => setShowLegend(v=>!v)} title="What the colours & symbols mean"
-                style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", border:`1px solid ${showLegend?"#685DBC":"#E5EBF5"}`, borderRadius:6,
-                  background:showLegend?"#EDE9FF":"#fff", color:showLegend?"#685DBC":"#64748b", fontSize:11, fontWeight:showLegend?700:400, cursor:"pointer" }}>
-                ⓘ Legend
+              <button onClick={() => setShowMoreMenu(m => !m)} title="More tools" aria-label="More tools"
+                aria-expanded={showMoreMenu}
+                style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 10px", border:`1px solid ${showMoreMenu || showInsights || showLegend ?"#685DBC":"#E5EBF5"}`, borderRadius:6,
+                  background: showMoreMenu ? "#EDE9FF" : "#fff", color:"#4B5275", fontSize:11.5, fontWeight:600, cursor:"pointer" }}>
+                ⋯ More
               </button>
+              {showMoreMenu && (
+                <div onMouseLeave={() => setShowMoreMenu(false)} role="menu"
+                  style={{ position:"absolute" as const, top:"calc(100% + 4px)", right:0, zIndex:210, width:260,
+                    background:"#fff", border:"1px solid #E5EBF5", borderRadius:10, boxShadow:"0 8px 30px rgba(0,0,0,0.12)", padding:6 }}>
+                  {([
+                    [showInsights ? "Hide insights panel" : "Show insights panel", "Load, coverage and quality at a glance", () => setShowInsights(v => !v)],
+                    [showLegend ? "Hide legend" : "Legend", "What the colours and symbols mean", () => setShowLegend(v => !v)],
+                    ["Update allocation from timetable…", "Copy the timetable's periods and teachers back into the Mapping step, or print them", () => setBackSyncOpen(true)],
+                  ] as Array<[string, string, () => void]>).map(([label, hint, act]) => (
+                    <button key={hint} role="menuitem" onClick={() => { act(); setShowMoreMenu(false) }}
+                      style={{ display:"block", width:"100%", textAlign:"left" as const, padding:"8px 10px", border:"none", borderRadius:7, background:"transparent", cursor:"pointer", fontFamily:"inherit" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#F5F3FF")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#1e293b" }}>{label}</div>
+                      <div style={{ fontSize:10.5, color:"#64748b", marginTop:1 }}>{hint}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
               {showLegend && (
-                <div onMouseLeave={() => setShowLegend(false)}
+                <div
                   style={{ position:"absolute" as const, top:"calc(100% + 4px)", right:0, zIndex:200, width:280,
                     background:"#fff", border:"1px solid #E5EBF5", borderRadius:10, boxShadow:"0 8px 30px rgba(0,0,0,0.12)", padding:"12px 14px" }}>
-                  <div style={{ fontSize:10, fontWeight:800, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:8 }}>Legend</div>
+                  {/* Closed by its own ×, Escape, or the menu - not by the mouse
+                      drifting off it, which closed it before it could be read and
+                      left it open over the timetable if it never drifted on. */}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                    <span style={{ fontSize:10, fontWeight:800, color:"#94A3B8", textTransform:"uppercase" as const, letterSpacing:"0.08em" }}>Legend</span>
+                    <button onClick={() => setShowLegend(false)} aria-label="Close legend"
+                      style={{ border:"none", background:"transparent", color:"#94A3B8", fontSize:15, cursor:"pointer", lineHeight:1, padding:0 }}>×</button>
+                  </div>
                   {([
                     ["▌", "Parallel groups - students share one slot", "#685DBC"],
                     ["AND", "Parallel split - students divide into groups", "#685DBC"],
@@ -4081,6 +4112,7 @@ export function TimetablePage() {
               </button>
             )}
           </div>
+          </div>
         </div>
 
         {/* Names the timetable still uses that the roster has dropped. Shown
@@ -4103,6 +4135,19 @@ export function TimetablePage() {
           padding:"6px 14px", display:"flex", alignItems:"center", gap:6, flexShrink:0, flexWrap:"wrap" as const,
         }}>
           <span style={TBGROUP}>View</span>
+          <div style={{ display:"flex", gap:2, padding:2, background:"#F1EEFB", borderRadius:8 }}>
+            {([["traditional", "⊞ Grid"], ["calendar", "📅 Timeline"]] as const).map(([key, label]) => (
+              <button key={key} onClick={() => startViewTransition(() => setMainMode(key))}
+                aria-pressed={mainMode === key}
+                style={{ padding:"4px 11px", borderRadius:6, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit",
+                  background: mainMode === key ? "#fff" : "transparent",
+                  color: mainMode === key ? "#685DBC" : "#6D6A8A",
+                  opacity: isViewPending && mainMode !== key ? 0.6 : 1,
+                  boxShadow: mainMode === key ? "0 1px 4px rgba(124,111,224,0.18)" : "none" }}>
+                {label}
+              </button>
+            ))}
+          </div>
           <div style={{ display:"flex", gap:2, padding:2, background:"#F1EEFB", borderRadius:8 }}>
             {([
               ["normal", "☰ Normal"],
@@ -4133,6 +4178,7 @@ export function TimetablePage() {
           {TBtn(shortNames,  () => setShortNames(!shortNames),   "Short",   "⇥")}
           <div style={{ width:1, height:18, background:"#CBD5E1" }} />
           <span style={TBGROUP}>Tools</span>
+          {TBtn(editMode, () => setEditMode(!editMode), editMode ? "Editing" : "Edit", "✏️")}
           <button onClick={() => setSubPanelOpen(o => !o)}
             style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${subPanelOpen?"#f59e0b":"#E5EBF5"}`, background:subPanelOpen?"#fff7ed":"#fff", color:"#92400e", fontSize:11, fontWeight:500, cursor:"pointer" }}>
             🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
@@ -4156,13 +4202,10 @@ export function TimetablePage() {
         {/* ══ Inline guide ═════════════════════════════════════════════ */}
         <div style={{ padding:"0 16px", flexShrink:0 }}>
           <StepGuide title="Schedule View" tips={[
-            'Switch between Section, Faculty, Room and Subject tabs to see the schedule from each perspective.',
-            'Toggle Faculty and Room labels on/off using the Show buttons in the toolbar.',
-            'Click any cell to edit it, drag between cells to swap, or drag a lesson onto the Bench to take it off the grid.',
-            'The Bench holds every unplaced lesson - create one with + Lesson, then drag it onto a free cell to send it on.',
-            'The View pills (Normal / Transposed) work the same in Grid and Timeline; Timeline adds a Month planner.',
-            'Use the Short toggle for compact abbreviations - useful when printing.',
-            'Click Publish to lock the schedule and make it visible on the Calendar page.',
+            'Class, Teacher, Venue and Subject show the same timetable from each side; Grid and Timeline lay it out two ways.',
+            'Turn on Edit, then click a lesson to change it, drag one onto another to swap, or use its ✕ to move it to the Bench. Undo brings anything back.',
+            'The Bench lists what each class still needs. Drag a lesson from it onto a free period and the right teacher is picked for you.',
+            'Publish locks the schedule and puts it on the Calendar and the corridor board.',
           ]} />
         </div>
 
@@ -4292,6 +4335,12 @@ export function TimetablePage() {
                         ⚡ Auto-fill best
                       </button>
                     </div>
+                    {autoFillShort > 0 && (
+                      <div role="status" style={{ fontSize:10.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:6, padding:"6px 8px", marginBottom:8, lineHeight:1.45 }}>
+                        {autoFillShort} period{autoFillShort === 1 ? "" : "s"} still need{autoFillShort === 1 ? "s" : ""} cover: everyone free then is at their daily limit.
+                        Pick someone below to go over it, or leave the class supervised.
+                      </div>
+                    )}
 
                     {absentSlots.length === 0 && (
                       <div style={{ padding:16, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>No periods for this teacher on {DAY_SHORT[subAbsentDay]??subAbsentDay}</div>
@@ -4325,7 +4374,8 @@ export function TimetablePage() {
                                     {cand.st.role && <div style={{ fontSize:9, color:"#4B5275" }}>{cand.st.role}</div>}
                                     <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginTop:2 }}>
                                       {cand.subjectMatch && <span style={{ padding:"1px 5px", borderRadius:4, background:"#f0fdf4", color:"#685DBC", fontSize:8, fontWeight:600 }}>★ Subject match</span>}
-                                      {cand.isBusy && <span style={{ padding:"1px 5px", borderRadius:4, background:"#fff7ed", color:"#D4920E", fontSize:8, fontWeight:600 }}>⚠️ Busy</span>}
+                                      {cand.isBusy && <span title="Teaching or covering another class at this time" style={{ padding:"1px 5px", borderRadius:4, background:"#fff7ed", color:"#D4920E", fontSize:8, fontWeight:600 }}>⚠️ Teaching then</span>}
+                                      {!cand.isBusy && cand.atCap && <span title="Already at their periods-per-day limit" style={{ padding:"1px 5px", borderRadius:4, background:"#FEF2F2", color:"#B91C1C", fontSize:8, fontWeight:600 }}>At daily limit</span>}
                                     </div>
                                     {/* Workload bar */}
                                     <div style={{ marginTop:3 }}>

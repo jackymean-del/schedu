@@ -18,6 +18,22 @@ import { useOrgProfile, isOrgProfileComplete } from '@/store/orgProfile'
 
 const ACCENT = '#685DBC'
 
+// "Later" used to live in component state, and most navigation here is a full
+// page load, so it came back on nearly every page - over the wizard's Save &
+// Continue button among other things. A nudge that will not take no for an
+// answer stops being read. Remembered per user in this browser: "Later" snoozes
+// it for a week, the × puts it away for good. Storage can be unavailable
+// (private windows, blocked site data), in which case it simply behaves as
+// before rather than throwing.
+const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000
+const keyFor = (email: string) => `schedu-onboarding-snooze:${email.toLowerCase()}`
+function readSnooze(email: string): number {
+  try { return Number(localStorage.getItem(keyFor(email)) ?? 0) || 0 } catch { return 0 }
+}
+function writeSnooze(email: string, until: number) {
+  try { localStorage.setItem(keyFor(email), String(until)) } catch { /* not persisted */ }
+}
+
 /** Routes that are public or part of signing in - never nudge on these. */
 const PUBLIC_PREFIXES = [
   '/login', '/register', '/sso-callback', '/share', '/demo',
@@ -40,7 +56,11 @@ export function OnboardingGuide() {
   // Wait for auth to resolve, require a real session, and stay off public pages.
   if (!authReady || !isAuthenticated || !user) return null
   if (onPublicRoute()) return null
-  if (complete || dismissed) return null
+  const email = user.email ?? ''
+  if (complete || dismissed || (email && readSnooze(email) > Date.now())) return null
+
+  const later = () => { if (email) writeSnooze(email, Date.now() + SNOOZE_MS); setDismissed(true) }
+  const never = () => { if (email) writeSnooze(email, Number.MAX_SAFE_INTEGER); setDismissed(true) }
 
   return (
     <div style={{
@@ -57,7 +77,7 @@ export function OnboardingGuide() {
             Add your name, type and academic period so schedU can tailor everything to you.
           </div>
         </div>
-        <button onClick={() => setDismissed(true)} aria-label="Close"
+        <button onClick={never} aria-label="Don't show again" title="Don't show again"
           style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', fontSize: 15, lineHeight: 1, flexShrink: 0 }}>×</button>
       </div>
 
@@ -70,7 +90,7 @@ export function OnboardingGuide() {
             Go to Settings
           </button>
         </a>
-        <button onClick={() => setDismissed(true)}
+        <button onClick={later} title="Remind me in a week"
           style={{ padding: '10px 14px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', color: '#69707E', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
           Later
         </button>

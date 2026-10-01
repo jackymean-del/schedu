@@ -8,7 +8,7 @@
  * Phase 1 of the premium calendar: foundation + Add Event. Leave/Substitution
  * and Auto-Assign layer on top of this in later phases.
  */
-import { cellHasTeacherOnDate } from '@/lib/orChoice'
+import { cellHasTeacherOnDate, teachingPairsOnDate } from '@/lib/orChoice'
 import { useSyllabus } from '@/lib/syllabusTracking'
 import { useOrDecisionSync } from '@/lib/orSync'
 import { useState, useMemo, useEffect, useRef } from 'react'
@@ -555,7 +555,9 @@ export function CalendarPage() {
           if (!c?.subject) continue
           const covered = b.substitutions[subKey(s.name, dateOfWeekday(day), p.id)]
           if (covered) { if (covered === teacher) sub++ }
-          else if (c.teacher === teacher) reg++
+          // Every teacher the lesson really has that day, not just the first
+          // one listed: a parallel group's second teacher was counted as idle.
+          else if (cellHasTeacherOnDate(c, teacher, s.name, dateOfWeekday(day), p.id, b.orDecisions, syllabusPlans)) reg++
         }
       }
     }
@@ -628,7 +630,11 @@ export function CalendarPage() {
     const busy = new Set<string>()
     for (const s of tb.sections) {
       const c = tb.classTT[s.name]?.[dayKey]?.[periodId]
-      if (c?.teacher && c.teacher !== absent) busy.add(c.teacher)
+      // All of them: on a parallel lesson `c.teacher` is only the first group's,
+      // so the others were offered as free cover while standing in a classroom.
+      for (const p of teachingPairsOnDate(c, s.name, isoDate, periodId, tb.orDecisions, syllabusPlans)) {
+        if (p.teacher !== absent) busy.add(p.teacher)
+      }
     }
     Object.entries(tb.substitutions).forEach(([k, v]) => {
       // The middle segment is a DATE now, not a weekday. Compared against
@@ -777,6 +783,10 @@ export function CalendarPage() {
   const autoAssign = (teacher: string) => {
     const bySid: Record<string, Record<string, string>> = {}
     const usedAtClock: Record<string, Set<string>> = {}   // startMin → names taken, blocks overlap double-book
+    // Covers handed out IN THIS RUN. Candidates are ranked on today's load as
+    // saved, which does not yet include them, so the least-busy teacher won
+    // every slot: three covers on one person, past their daily limit.
+    const givenNow: Record<string, number> = {}
     for (const slot of slotsOf(teacher)) {
       const map = (bySid[slot.sid] ??= { ...bundleById(slot.sid).substitutions })
       const key = subKey(slot.section, isoDate, slot.periodId)
@@ -785,9 +795,17 @@ export function CalendarPage() {
       const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
         .filter(c => overrideFor(substitutionSettings, c.staffId).autoAssign)
         .filter(c => !usedAtClock[clock]?.has(c.name))
+        .filter(c => {
+          const extra = givenNow[c.name] ?? 0
+          return c.todayReg + c.todaySub + extra < substitutionSettings.defaults.maxPeriodsPerDay
+            && c.todaySub + extra < effectiveMaxPerDay(substitutionSettings, c.staffId)
+        })
+        // Spread the work: fewest covers given this run first, ranking kept within.
+        .sort((a, b) => (givenNow[a.name] ?? 0) - (givenNow[b.name] ?? 0))
       const best = cands[0]
       if (best) {
         map[key] = best.name
+        givenNow[best.name] = (givenNow[best.name] ?? 0) + 1
         ;(usedAtClock[clock] ??= new Set()).add(best.name)
         // Auto-assigned cover gets the same syllabus record as a manual one -
         // it starts as "continues the syllabus" and is still unconfirmed, so it
