@@ -226,6 +226,26 @@ for (const perGrade of [2, 4]) {
   ok(lo >= 18, 'no section is starved', 'worst section has ' + lo + ' of 30')
   ok(hi - lo <= 10, 'the shortage is shared, not dumped on the last sections',
     'best ' + hi + ', worst ' + lo + ', spread ' + (hi - lo))
+
+  // ...and shared across the DAYS, not only across the week. Fixing the
+  // weekly starvation by rotating which section goes first each day just
+  // moved it: within a day sections still filled one after another, so
+  // whoever went last that day met every teacher's daily cap and got almost
+  // nothing. Every class ended up with one wrecked day - one came in on a
+  // Friday with no lessons at all - and the weekly totals above still looked
+  // perfectly fair. A child does not experience a weekly total.
+  let worstDay = Infinity, worstWhere = ''
+  for (const s of secs) {
+    for (const d of DAYS5) {
+      let n = 0
+      for (const p of P6) if (res.classTT?.[s.name]?.[d]?.[p.id]?.subject) n++
+      if (n < worstDay) { worstDay = n; worstWhere = s.name + ' ' + d }
+    }
+  }
+  // 6 periods a day at roughly 80% coverage is about 5; 3 is a bad day, 1 is
+  // a school day with nothing in it.
+  ok(worstDay >= 3, 'no class gets a near-empty day',
+    'worst day: ' + worstWhere + ' with ' + worstDay + ' of 6')
 }
 
 console.log(fail === 0 ? '\nALL QUALITY CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)

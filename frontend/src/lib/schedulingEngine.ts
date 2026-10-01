@@ -1189,25 +1189,33 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     subjectsFor.set(sec.name, [...sectionSubjects].sort((a, b) => b.periodsPerWeek - a.periodsPerWeek))
   })
 
-  // DAY-MAJOR, WITH THE SECTION ORDER ROTATING EACH DAY.
+  // SLOT-MAJOR: each period of each day gives every section a turn before any
+  // section gets its next period, and the order rotates every slot.
   //
-  // This used to be section-major: a section filled its whole week before the
-  // next one began. That is optimal on TOTAL lessons placed and indefensible
-  // in their distribution. Given ten sections and only enough staff for eight,
-  // the first four classes got 100% of what they asked for and Class X got
-  // five periods out of thirty - a board-exam year with an all but empty
-  // timetable, while Class VI had a full one. The teacher-periods were all
-  // used, so nothing looked wrong by any total.
+  // History, because both earlier orders failed the same way one level apart:
   //
-  // A human building this by hand spreads a shortage: everybody loses a little
-  // and nobody loses a week. Rotating who goes first each day does that,
-  // because the section that goes last on Monday goes first on Tuesday. The
-  // stride is chosen so that over a full week every section leads at least
-  // once rather than the same few always leading.
+  // Section-major (a section filled its whole week, then the next) was optimal
+  // on total lessons and indefensible in their distribution. Ten sections, staff
+  // for eight: the first four classes got 100% and Class X got five periods out
+  // of thirty, while every total looked right.
+  //
+  // Day-major with a rotating lead fixed the WEEK and broke the DAY. Within a
+  // day sections still filled one after another, so whoever went last met
+  // every teacher's daily cap and got almost nothing: each class ended up with
+  // one wrecked day, one came in on a Friday with no lessons at all, and the
+  // weekly fairness check still passed because a child's week totalled fine.
+  //
+  // A timetabler working by hand staffs period 1 for every class, then period
+  // 2. When a slot is short of teachers, somebody goes without THAT period -
+  // and rotating who goes first per slot means it is a different somebody each
+  // time, so the shortfall lands as an odd free period scattered across the
+  // week rather than a lost day.
+  const n = Math.max(1, sections.length)
   const leadStride = Math.max(1, Math.round(sections.length / Math.max(1, workDays.length)))
   workDays.forEach((day, di) => {
-    const offset = (di * leadStride) % Math.max(1, sections.length)
-    const order = sections.map((_, i) => (i + offset) % sections.length)
+   classPeriods.forEach((period, pi) => {
+    const offset = (di * leadStride + pi) % n
+    const order = sections.map((_, i) => (i + offset) % n)
 
     order.forEach(si => {
       const sec = sections[si]
@@ -1217,7 +1225,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       // ── Day-off rule: skip this section on its off-days ─────────────────
       if (sectionOffDays.get(sec.name)?.has(day)) return
 
-      classPeriods.forEach((period, pi) => {
+      {
         // Skip if already filled (by class teacher pass, Pass 0 optional block, etc.)
         // NOTE: do NOT blanket-skip pi===0 - sections without a class teacher still
         // need Period 1 to be filled here, otherwise it is always blank.
@@ -1584,8 +1592,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           recordBlock(sec.name, day, period.id, 'no-eligible-teachers',
             `No candidate subject could be placed - each remaining subject's teachers are busy or scope-locked at this slot`, firstSub?.name)
         }
-      })
+      }
     })
+   })
   })
 
   // ── Pass 3: shortfall repair ──────────────────────────────────────────
