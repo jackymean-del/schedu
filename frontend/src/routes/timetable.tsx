@@ -5,7 +5,7 @@ import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { TimetableOrphanBanner } from '@/components/TimetableOrphanBanner'
 import { useNamingTerms, plural } from "@/lib/terms"
-import { cellHasTeacher } from '@/lib/cellTeachers'
+import { cellHasTeacher, teachingPairsInCell } from '@/lib/cellTeachers'
 import { useTimetableStore } from "@/store/timetableStore"
 import { useAuthStore } from "@/store/authStore"
 import { PrintPreview } from "@/components/PrintDoc"
@@ -14,7 +14,7 @@ import { CalendarView } from "@/components/CalendarView"
 import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { rebuildTeacherTT } from "@/lib/aiEngine"
 import { schedulePeriodTimes } from "@/lib/bellTimes"
-import { detectConflicts } from "@/lib/schedulingEngine"
+import { detectConflicts, weeklyTargets } from "@/lib/schedulingEngine"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
@@ -1580,17 +1580,25 @@ export function TimetablePage() {
   // Class view + specific class     → only that class.
   // All other modes                 → all sections.
   const poolData = useMemo(() => {
+    // What each class is MISSING has to be measured against what it was
+    // generated FOR. This used each subject's default periods/week and every
+    // subject without a class list, ignoring the Mapping step the engine
+    // actually schedules from - so a five-class school's Bench showed 51
+    // missing lessons when one was, including two periods of Drawing for a
+    // class that does not take Drawing.
+    const targets = weeklyTargets(sections, subjects, (store as any).subjectAllocations)
     // Helper: compute subject stats for one section
     const sectionStats = (sec: typeof sections[0]) => {
-      const sectionSubjects = subjects.filter(sub => {
-        const secs = (sub as any).sections ?? []
-        return secs.length === 0 || secs.includes(sec.name)
-      })
-      const subjectStats = sectionSubjects.map(sub => {
-        const target = (sub as any).periodsPerWeek ?? 0
+      const subjectStats = subjects.map(sub => {
+        const target = targets[sec.name]?.[sub.name] ?? 0
         if (!target) return null
+        // A parallel lesson teaches every subject in it, not only the one
+        // its label happens to start with.
         const scheduled = config.workDays.reduce((total, day) =>
-          total + classPeriods.filter(p => classTT[sec.name]?.[day]?.[p.id]?.subject === sub.name).length, 0)
+          total + classPeriods.filter(p => {
+            const c: any = classTT[sec.name]?.[day]?.[p.id]
+            return c?.subject === sub.name || teachingPairsInCell(c).some(pr => pr.subject === sub.name)
+          }).length, 0)
         const deficit = Math.max(0, target - scheduled)
         return deficit > 0 ? { name: sub.name, target, scheduled, deficit } : null
       }).filter((s): s is {name:string; target:number; scheduled:number; deficit:number} => s !== null)
@@ -1607,7 +1615,7 @@ export function TimetablePage() {
         sections.forEach(sec => {
           config.workDays.forEach(day => {
             classPeriods.forEach(p => {
-              if (classTT[sec.name]?.[day]?.[p.id]?.teacher === selectedEntity)
+              if (cellHasTeacher(classTT[sec.name]?.[day]?.[p.id] as any, selectedEntity))
                 teacherSectionNames.add(sec.name)
             })
           })
@@ -1627,7 +1635,8 @@ export function TimetablePage() {
     return filteredSections
       .map(sec => ({ section: sec.name, subjects: sectionStats(sec) }))
       .filter(s => s.subjects.length > 0)
-  }, [sections, subjects, classTT, config.workDays, classPeriods, viewMode, selectedEntity, teacherTT])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections, subjects, classTT, config.workDays, classPeriods, viewMode, selectedEntity, teacherTT, (store as any).subjectAllocations])
 
   const poolTotalDeficit = poolData.reduce((t, s) => t + s.subjects.reduce((ts, ss) => ts + ss.deficit, 0), 0)
 

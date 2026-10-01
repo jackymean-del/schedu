@@ -336,6 +336,25 @@ export function teachCountFromRows(secName: string, rows: any[] | undefined): nu
   }).length
 }
 
+/** Teaching periods a section has per day by these bell rows, whatever its
+ *  day's length: rows with no class filter, plus rows naming this class.
+ *  Null only when no teaching row applies to it at all.
+ *
+ *  Not teachCountFromRows, which answers a narrower question (does this class
+ *  leave EARLY?) and is null for every full-day class. The generate briefing
+ *  used that one to count periods, so in a school where every class stays all
+ *  day it counted none, checked nothing, and said every class fitted. */
+export function teachingPeriodsFor(secName: string, rows: any[] | undefined): number | null {
+  if (!rows?.length) return null
+  const key = sectionKey(secName)
+  const n = rows.filter((r: any) => {
+    if (r.type !== 'teaching') return false
+    const cls: string[] = r.classes ?? []
+    return cls.length === 0 || cls.includes(key)
+  }).length
+  return n > 0 ? n : null
+}
+
 /**
  * Bell-true adjacency for one section: ids of class periods whose SUCCESSOR
  * teaching period is back-to-back in the bell (no break row between the Nth

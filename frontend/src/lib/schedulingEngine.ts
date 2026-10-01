@@ -566,6 +566,42 @@ function dailyCapFor(st: any, workDayCount: number): number {
 
 // ─── Main Solver (JS CSP implementation) ─────────────────
 /**
+ * Periods a week each class should get of each subject - the solver's own
+ * target, exported so every screen that says "missing" or "fits" measures
+ * against the same number the timetable was built from.
+ *
+ * The Mapping step's row is AUTHORITATIVE for a class once it has one: a
+ * subject with no cell in that row is not taught there (0). The subject's
+ * default periods/week only applies to a class with no row at all.
+ */
+export function weeklyTargets(
+  sections: Array<{ name: string }>,
+  subjects: Array<{ name: string; periodsPerWeek?: number }>,
+  subjectAllocations?: Record<string, Record<string, string>>,
+): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {}
+  for (const sec of sections) {
+    out[sec.name] = {}
+    const row = subjectAllocations?.[sec.name]
+    const hasRow = !!row && Object.keys(row).length > 0
+    for (const sub of subjects) {
+      const cell = row?.[sub.name]
+      if (cell) {
+        const p = parseAllocation(cell)
+        // Invalid syntax = user wrote something unparseable - treat as 0
+        // (grid marks the cell red) rather than resurrecting the default.
+        out[sec.name][sub.name] = p.valid ? p.weeklyTotal : 0
+      } else if (hasRow) {
+        out[sec.name][sub.name] = 0
+      } else {
+        out[sec.name][sub.name] = sub.periodsPerWeek ?? 0
+      }
+    }
+  }
+  return out
+}
+
+/**
  * The Allocation step's "who teaches what where", as a running ledger.
  *
  * Shared by the solver and the re-optimiser so the two cannot disagree about
@@ -774,26 +810,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   //   global Subject.periodsPerWeek default only applies when the section has
   //   no allocation data at all (user skipped the Allocation step entirely).
   //   This is what keeps unassigned/unallocated subjects out of the timetable.
-  const subjectAllocations = input.subjectAllocations ?? {}
-  const targetPeriods: Record<string, Record<string, number>> = {}
-  sections.forEach(sec => {
-    targetPeriods[sec.name] = {}
-    const row = subjectAllocations[sec.name]
-    const hasRow = !!row && Object.keys(row).length > 0
-    subjects.forEach(sub => {
-      const cell = row?.[sub.name]
-      if (cell) {
-        const p = parseAllocation(cell)
-        // Invalid syntax = user wrote something unparseable - treat as 0
-        // (grid marks the cell red) rather than resurrecting the default.
-        targetPeriods[sec.name][sub.name] = p.valid ? p.weeklyTotal : 0
-      } else if (hasRow) {
-        targetPeriods[sec.name][sub.name] = 0
-      } else {
-        targetPeriods[sec.name][sub.name] = sub.periodsPerWeek ?? 0
-      }
-    })
-  })
+  const targetPeriods = weeklyTargets(sections, subjects, input.subjectAllocations)
 
   // ── Day-distribution quota: spread each subject evenly across days ──────
   //   For each (section, subject), pre-budget how many times it should appear

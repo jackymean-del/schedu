@@ -1,18 +1,19 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useTimetableStore } from "@/store/timetableStore"
 import { useTerminology } from "@/hooks/useTerminology"
-import { parseAllocation } from "@/lib/allocationSyntax"
 import {
-  runGenerationPipeline, sectionKey, teachCountFromRows,
+  runGenerationPipeline,
   type GenerationPayload, type GenerationResult,
 } from "@/lib/generationPipeline"
-import {
-  bandForSection, checkBellCompliance, computeTeacherRequirement, type GradeBand,
-} from "@/lib/educationNorms"
+import { buildPreflight } from "@/lib/preflight"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import type { ClassTimetable } from "@/types"
 import { GraduationCap, Users, BookOpen, Building2, CalendarDays, Clock } from "lucide-react"
 import { P, P_L, P_B } from "@/components/resources/shared"
+
+/** "I-A, II-A, III-A +2" */
+const listClasses = (xs: string[]) =>
+  `${xs.slice(0, 3).join(", ")}${xs.length > 3 ? ` +${xs.length - 3}` : ""}`
 
 type JobStatus = "idle" | "running" | "completed" | "failed"
 
@@ -116,99 +117,18 @@ export function Step6Generate() {
   // ── Pre-flight summary - what WILL be generated, judged before clicking ──
   // All derived from the ground-truth bell schedules + the allocation matrix,
   // so the user can sanity-check day shape, workload and capacity in one look.
-  const preflight = useMemo(() => {
-    const bellSchedules = (config as any).bellSchedules as Array<{ startTime: string; rows: any[] }> | undefined
-    if (!bellSchedules?.length || !sections.length) return null
-    const subjectAllocations: Record<string, Record<string, string>> = (store as any).subjectAllocations ?? {}
-    const workDayCount = config.workDays?.length || 5
-    const toMin = (s: string) => { const [h, m] = (s || '08:00').split(':').map(Number); return h * 60 + m }
-    const fmt = (m: number) => `${(Math.floor(m / 60) % 12) || 12}:${String(m % 60).padStart(2, '0')} ${Math.floor(m / 60) >= 12 ? 'PM' : 'AM'}`
-
-    // Bucket sections by (periods/day, end time) - one line per distinct day shape
-    type Bucket = { count: number; endMin: number; secs: string[] }
-    const buckets = new Map<string, Bucket>()
-    const overCap: string[] = []
-    const unallocated: string[] = []
-    let totalWeekly = 0, doubleSubjects = 0
-
-    // Per grade band: the LOWEST weekly teaching minutes seen (worst case for
-    // the national instructional-hours norm check).
-    const bandWeeklyMins = new Map<GradeBand, number>()
-
-    for (const sec of sections as any[]) {
-      let count: number | null = null, endMin = 0, teachMins = 0
-      for (const bs of bellSchedules) {
-        const c = teachCountFromRows(sec.name, bs.rows)
-        if (c == null) continue
-        count = c
-        const key = sectionKey(sec.name)
-        endMin = toMin(bs.startTime) + bs.rows
-          .filter((r: any) => r.type !== 'dispersal' && (!(r.classes ?? []).length || r.classes.includes(key)))
-          .reduce((s: number, r: any) => s + r.duration, 0)
-        teachMins = bs.rows
-          .filter((r: any) => r.type === 'teaching' && (!(r.classes ?? []).length || r.classes.includes(key)))
-          .reduce((s: number, r: any) => s + r.duration, 0)
-        break
-      }
-      if (count == null) continue
-      const band = bandForSection(sec.name)
-      const weekly = teachMins * workDayCount
-      if (weekly > 0 && (!bandWeeklyMins.has(band) || weekly < bandWeeklyMins.get(band)!)) {
-        bandWeeklyMins.set(band, weekly)
-      }
-      const bk = `${count}@${endMin}`
-      if (!buckets.has(bk)) buckets.set(bk, { count, endMin, secs: [] })
-      buckets.get(bk)!.secs.push(sec.name)
-
-      // Workload + capacity (bell-true: this section's real periods × days)
-      const row = subjectAllocations[sec.name] ?? {}
-      let used = 0
-      for (const raw of Object.values(row)) {
-        const p = parseAllocation(raw)
-        if (!p.valid) continue
-        used += p.weeklyTotal
-        if (p.doublePeriods > 0) doubleSubjects++
-      }
-      totalWeekly += used
-      if (used === 0) unallocated.push(sec.name)
-      else if (used > count * workDayCount) overCap.push(sec.name)
-    }
-
-    // Display label for a bucket: unique grade names, capped
-    const gradeLabel = (secs: string[]) => {
-      const grades = [...new Set(secs.map(s => {
-        const parts = s.split(/[-\s]+/)
-        const last = parts[parts.length - 1]
-        return (parts.length > 1 && (/^[A-Za-z]$/.test(last) || /^\d{1,2}$/.test(last))) ? parts.slice(0, -1).join('-') : s
-      }))]
-      return grades.length <= 4 ? grades.join(', ') : `${grades.slice(0, 3).join(', ')} +${grades.length - 3}`
-    }
-
-    const shapes = [...buckets.values()]
-      .sort((a, b) => a.endMin - b.endMin)
-      .map(b => ({ label: gradeLabel(b.secs), count: b.count, end: fmt(b.endMin), nSecs: b.secs.length }))
-
-    const parallelGroups =
+  const preflight = useMemo(() => buildPreflight({
+    config, sections, subjects,
+    subjectAllocations: (store as any).subjectAllocations ?? {},
+    teacherAllocations: (store as any).teacherAllocations ?? {},
+    staff: store.staff,
+  }, {
+    parallelGroups:
       (((store as any).dynamicLearningGroups ?? []).length +
        ((store as any).subjectGroups ?? []).length) ||
-      ((store as any).optionalBlocks ?? []).length
-    const dayOffRules = ((config as any).dayOffRules ?? []).length
-
-    // ── National-norms brain: staffing requirement + bell compliance ──────
-    // Human-Intelligence check built from published policy (RTE/NCTE, STPCD,
-    // US state hours, AU face-to-face caps - see lib/educationNorms.ts).
-    const country = (config as any).countryCode || 'IN'
-    const board = (config as any).board || (config as any).boardName
-    const staffing = totalWeekly > 0
-      ? computeTeacherRequirement(totalWeekly, store.staff.length, country)
-      : null
-    const bellChecks = [...bandWeeklyMins.entries()]
-      .map(([band, mins]) => checkBellCompliance(country, board, band, mins))
-      .filter(c => c.status !== 'ok')
-
-    return { shapes, totalWeekly, doubleSubjects, parallelGroups, dayOffRules, overCap, unallocated, staffing, bellChecks }
+      ((store as any).optionalBlocks ?? []).length,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, sections, (store as any).subjectAllocations, store.staff.length])
+  }), [config, sections, subjects, (store as any).subjectAllocations, (store as any).teacherAllocations, store.staff])
 
   // ── Start generation ─────────────────────────────────────────
   const startGenerate = () => {
@@ -573,7 +493,7 @@ export function Step6Generate() {
                     <span>⚠</span>
                     <span>
                       <strong>{preflight.overCap.length} class{preflight.overCap.length !== 1 ? "es" : ""}</strong> allocated more lessons than the bell allows
-                      ({preflight.overCap.slice(0, 3).join(", ")}{preflight.overCap.length > 3 ? ` +${preflight.overCap.length - 3}` : ""}) -
+                      ({listClasses(preflight.overCap)}) -
                       extra lessons will be dropped. Trim in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Allocation</button>.
                     </span>
                   </div>
@@ -582,12 +502,34 @@ export function Step6Generate() {
                     <span>ℹ</span>
                     <span>
                       {preflight.unallocated.length} class{preflight.unallocated.length !== 1 ? "es have" : " has"} no period allocation yet
-                      ({preflight.unallocated.slice(0, 3).join(", ")}{preflight.unallocated.length > 3 ? ` +${preflight.unallocated.length - 3}` : ""}) - they'll come out empty.
+                      ({listClasses(preflight.unallocated)}) - {preflight.noRowEmpty ? "they'll come out empty" : "they'll get each subject's default periods"}.
                     </span>
                   </div>
-                ) : (
+                ) : (preflight.shortOfTeachers.periods === 0 && preflight.noTeacherChosen.periods === 0) ? (
                   <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, fontWeight:600, color:"#15803D", background:"#F0FDF4", border:"1px solid #BBF7D0", borderRadius:10, padding:"9px 12px" }}>
-                    <span>✓</span><span>Every class fits its weekly capacity - ready to generate.</span>
+                    <span>✓</span><span>Every class fits its weekly capacity and every period has a teacher - ready to generate.</span>
+                  </div>
+                ) : null}
+
+                {/* Who teaches it: periods the teacher allocation does not cover */}
+                {preflight.shortOfTeachers.periods > 0 && (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:10, padding:"9px 12px" }}>
+                    <span>⚠</span>
+                    <span>
+                      <strong>{preflight.shortOfTeachers.periods} period{preflight.shortOfTeachers.periods !== 1 ? "s" : ""}</strong> a week
+                      ({listClasses(preflight.shortOfTeachers.classes)}) are allocated to fewer teacher periods than the class needs.
+                      They'll wait on the Bench. Give them a teacher in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Mapping</button>, or generate and place them by hand.
+                    </span>
+                  </div>
+                )}
+                {preflight.noTeacherChosen.periods > 0 && (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:10, padding:"9px 12px" }}>
+                    <span>ℹ</span>
+                    <span>
+                      <strong>{preflight.noTeacherChosen.periods} period{preflight.noTeacherChosen.periods !== 1 ? "s" : ""}</strong> a week
+                      ({listClasses(preflight.noTeacherChosen.classes)}) have no teacher allocated, so the engine will choose from teachers who list the subject.
+                      To decide it yourself, allocate them in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:P, fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Mapping</button>.
+                    </span>
                   </div>
                 )}
 
