@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const inputClass =
   'w-full rounded-lg border border-[#E8E4FF] bg-white px-3.5 py-[11px] text-sm text-[#13111E] outline-none focus:border-[#7C6FE0]'
@@ -12,6 +12,11 @@ export function ContactForm() {
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [error, setError] = useState('')
+  // Spam guards checked by the backend: a field only bots fill in, and how
+  // long the form was open before sending (bots submit instantly).
+  const [website, setWebsite] = useState('')
+  const openedAt = useRef(0)
+  useEffect(() => { openedAt.current = Date.now() }, [])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,7 +26,7 @@ export function ContactForm() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, message, website, elapsed_ms: Date.now() - openedAt.current }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -49,6 +54,10 @@ export function ContactForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-[14px] border border-[#E8E4FF] bg-[#FAFAFE] px-[26px] py-7">
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor="c-website">Website</label>
+        <input id="c-website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={e => setWebsite(e.target.value)} />
+      </div>
       <div>
         <label className={labelClass} htmlFor="c-name">Name</label>
         <input id="c-name" className={inputClass} value={name} onChange={e => setName(e.target.value)} placeholder="Your name" required />
