@@ -48,8 +48,16 @@ or-choice-verify        or-day-verify           roster-verify
 blueprint-verify        snapshot-fields-verify  combo-verify
 derive-alloc-verify     dispersal-verify        norms-verify
 reopt-verify            bell-verify             bell-ringer-verify
-mps-test                style-verify
+mps-test                style-verify            alloc-verify
 ```
+
+**Measure correctness against what the school decided, not against the
+engine's own inputs.** The wrong-teacher check passed for months while 55 of
+a school's 165 lessons went to teachers the Allocation step had not chosen,
+because it compared the output with the same flat subject list the solver
+read. `alloc-verify` checks against the allocation matrix, and checks the
+plumbing that delivers it: an engine comment promising "teacher assigned via
+matrix" meant nothing while no caller passed the matrix in.
 
 Plus `npx tsc -b`, `npx eslint src` (0 errors; ~97 advisory warnings are
 expected), `npx vite build`, and in `backend/`, `go build ./... && go vet ./...
