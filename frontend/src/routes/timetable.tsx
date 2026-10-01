@@ -16,6 +16,7 @@ import { rebuildTeacherTT } from "@/lib/aiEngine"
 import { schedulePeriodTimes } from "@/lib/bellTimes"
 import { detectConflicts, weeklyTargets } from "@/lib/schedulingEngine"
 import { atDailyLimit, perDayFromPerWeek } from "@/lib/facultyWorkload"
+import { useLeaves, isOnLeaveOn } from "@/lib/leaveUtils"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
@@ -1386,6 +1387,8 @@ export function TimetablePage() {
   // How many of the absent teacher's periods Auto-fill could NOT cover, so they
   // are named rather than left looking forgotten.
   const [autoFillShort, setAutoFillShort] = useState(0)
+  const leaves = useLeaves(s => s.leaves)
+  const addLeave = useLeaves(s => s.addLeave)
   const [subActiveTab, setSubActiveTab] = useState<"assign"|"active">("assign")
 
   const { exportXLSX } = useExport()
@@ -2156,7 +2159,8 @@ export function TimetablePage() {
 
   const scoreCandidates = (slot: { sectionName:string; periodId:string; subject:string }, extraToday: Record<string, number> = {}) => {
     return staff
-      .filter(st => st.name !== subAbsentTeacher)
+      // Nobody who is themselves away that day.
+      .filter(st => st.name !== subAbsentTeacher && !isOnLeaveOn(leaves, st.name, subAbsentDate))
       .map(st => {
         const workloadToday = Object.values((teacherTT[st.name]?.schedule ?? {})[subAbsentDay] ?? {}).filter((x:any) => x?.subject).length
           + (coversOnDate.byTeacher[st.name] ?? 0) + (extraToday[st.name] ?? 0)
@@ -2179,6 +2183,16 @@ export function TimetablePage() {
 
   // ── Apply substitutions ───────────────────────────────────
   const applySubstitutions = () => {
+    // The absence itself is a fact the rest of the school needs: without a
+    // leave record the Calendar went on showing the teacher in every period
+    // nobody covered, the Dashboard said nobody was absent, and Insights
+    // counted no leave at all. Recorded once per teacher per date.
+    if (subAbsentTeacher && subAbsentDate && !isOnLeaveOn(leaves, subAbsentTeacher, subAbsentDate)) {
+      addLeave({
+        id: `sub-${Date.now().toString(36)}`, teacher: subAbsentTeacher, date: subAbsentDate,
+        duration: 'full', type: 'Other', reason: subReason.trim() || undefined,
+      })
+    }
     const newSubs = { ...substitutions }
     Object.entries(subAssignments).forEach(([periodId, staffName]) => {
       const slot = absentSlots.find(s => s.periodId === periodId)
