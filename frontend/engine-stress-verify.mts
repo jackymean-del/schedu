@@ -64,6 +64,8 @@ interface Gen {
   defaultTeacherMaxPeriods?: number
   optionalBlocks: Any[]
   sectionStrengths: Any[]
+  /** The Allocation step's who-teaches matrix, on about half the schools. */
+  teacherAllocations: Record<string, Record<string, Record<string, number>>>
 }
 
 function generate(seed: number): Gen {
@@ -263,7 +265,48 @@ function generate(seed: number): Gen {
     }
   }
 
+  // Who teaches what where, as the Allocation step records it. Drawn from its
+  // OWN random stream so adding it changed none of the schools above: every
+  // replay seed printed before this existed still builds the same school.
+  const teacherAllocations: Record<string, Record<string, Record<string, number>>> = {}
+  const ra = rng(seed ^ 0x0a110c)
+  if (ra() < 0.5) {
+    const give = (t: string, sec: string, sub: string, n: number) => {
+      if (n <= 0) return
+      const bySec = (teacherAllocations[t] ??= {})
+      const bySub = (bySec[sec] ??= {})
+      bySub[sub] = (bySub[sub] ?? 0) + n
+    }
+    for (const sec of sections) {
+      for (const [sub, spec] of Object.entries(subjectAllocations[sec.name] ?? {})) {
+        let n = String(spec).split('+').reduce((a, b) => a + (parseInt(b, 10) || 0), 0)
+        if (n <= 0) continue
+        // Sometimes the plan covers less than the class needs.
+        if (ra() < 0.15) n = Math.max(1, n - 1 - Math.floor(ra() * 2))
+        // Usually someone who lists the subject; sometimes anyone on staff,
+        // because the allocation is what a school DECIDED, not a lookup.
+        const listing = staff.filter((st: Any) => (st.subjects ?? []).includes(sub))
+        const pool = listing.length && ra() > 0.12 ? listing : staff
+        const first = pool[Math.floor(ra() * pool.length)]
+        if (ra() < 0.06) {
+          // A row for someone who has since left - alone, or beside a real one.
+          give('Former Teacher', sec.name, sub, n)
+          if (ra() < 0.5) continue
+        }
+        if (n >= 2 && pool.length > 1 && ra() < 0.3) {
+          const second = pool.find((x: Any) => x.name !== first.name)!
+          const half = Math.floor(n / 2)
+          give(first.name, sec.name, sub, n - half)
+          give(second.name, sec.name, sub, half)
+        } else {
+          give(first.name, sec.name, sub, n)
+        }
+      }
+    }
+  }
+
   return {
+    teacherAllocations,
     sectionStrengths,
     optionalBlocks,
     label: `${nSections}sec ${classPeriodIds.length}p×${workDays.length}d fill=${fillRatio} supply=${supply}${optionalBlocks.length ? ` blocks=${optionalBlocks.length}` : ''}`,
@@ -314,6 +357,24 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     reportedRoomClashes.add(`${m[1]}|${m[2]}|${pid}`)
   }
   const add = (rule: string, detail: string) => { if (v.length < 40) v.push({ rule, detail }) }
+
+  // The allocation as the school stated it, minus rows for people no longer on
+  // staff (those cannot teach, and must not fence a subject off). Rebuilt here
+  // from the raw input, not borrowed from the engine's ledger.
+  const allocRows = new Map<string, Map<string, number>>()
+  for (const [t, secs] of Object.entries(g.teacherAllocations ?? {})) {
+    if (!g.staff.some((st: Any) => st.name === t)) continue
+    for (const [sec, subs] of Object.entries(secs)) {
+      for (const [sub, n] of Object.entries(subs)) {
+        if (!(Number(n) > 0)) continue
+        const k = `${sec}|${sub}`
+        const m = allocRows.get(k) ?? new Map<string, number>()
+        m.set(t, (m.get(t) ?? 0) + Number(n))
+        allocRows.set(k, m)
+      }
+    }
+  }
+  const allocTaught = new Map<string, number>()   // section|subject|teacher → plain lessons
 
   const classTT = out.classTT ?? {}
   const periodById = new Map(g.periods.map(p => [p.id, p]))
@@ -455,7 +516,18 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
           // V3 - the teacher must exist and actually teach the subject.
           const st = staffByName.get(o.teacher)
           if (!st) { add('V9-ghost-teacher', `${section} ${day} ${pid}: unknown teacher ${o.teacher}`); continue }
-          if (o.subject && !(st.subjects ?? []).includes(o.subject)) {
+          // V13 - where the school allocated this class's subject, only those
+          // teachers may take it. A parallel group's teachers are authored on
+          // the group itself, so the allocation does not speak for them.
+          const rows = !parallel.length ? allocRows.get(`${section}|${o.subject}`) : undefined
+          if (rows) {
+            if (!rows.has(o.teacher)) {
+              add('V13-unallocated-teacher',
+                `${section} ${o.subject} given to ${o.teacher}; allocated to ${[...rows.keys()].join(', ')}`)
+            }
+            const k = `${section}|${o.subject}|${o.teacher}`
+            allocTaught.set(k, (allocTaught.get(k) ?? 0) + 1)
+          } else if (o.subject && !(st.subjects ?? []).includes(o.subject)) {
             add('V3-eligibility', `${o.teacher} assigned ${o.subject} in ${section} but teaches ${JSON.stringify(st.subjects)}`)
           }
           // V6 - a blocked slot is a slot the teacher cannot work.
@@ -524,6 +596,13 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
         }
       }
     }
+  }
+
+  // V14 - nobody teaches a class more of a subject than they were allocated.
+  for (const [k, n] of allocTaught) {
+    const [sec, sub, t] = k.split('|')
+    const quota = allocRows.get(`${sec}|${sub}`)?.get(t) ?? 0
+    if (n > quota) add('V14-over-allocation', `${t} teaches ${sec} ${sub} ${n}x, allocated ${quota}`)
   }
 
   // V11 - never schedule MORE of a subject than was asked for. Under is a
@@ -608,7 +687,9 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
 // solver's placement paths produced no violations at all, and only this told
 // me whether the fault or the checker was at fault.
 function selfTest(): void {
-  const g = generate(424242)
+  // Without an allocation: the subject-list rules are what is under test here,
+  // and the allocation rules get their own case below.
+  const g: Gen = { ...generate(424242), teacherAllocations: {} }
   const sec = g.sections[0].name
   const sec2 = g.sections[1]?.name
   const day = g.workDays[0]
@@ -736,6 +817,27 @@ function selfTest(): void {
     }
   }
 
+  {
+    // Allocation rules: a teacher the plan did not choose, and one past their count.
+    const t2 = g.staff.find((x: Any) => x.name !== t1)?.name
+    if (t2) {
+      const ga: Gen = { ...g, teacherAllocations: { [t1]: { [sec]: { [sub]: 1 } } } }
+      const wrong = base()
+      wrong.classTT[sec][day][pids[0]] = { subject: sub, teacher: t2, room: 'RA' }
+      if (!verify(ga, wrong).some(x => x.rule.startsWith('V13'))) {
+        console.log('✗ VERIFIER BROKEN: V13 did not fire - an allocated lesson given to someone else'); process.exit(2)
+      }
+      if (pids[1]) {
+        const over = base()
+        over.classTT[sec][day][pids[0]] = { subject: sub, teacher: t1, room: 'RA' }
+        over.classTT[sec][day][pids[1]] = { subject: sub, teacher: t1, room: 'RA' }
+        if (!verify(ga, over).some(x => x.rule.startsWith('V14'))) {
+          console.log('✗ VERIFIER BROKEN: V14 did not fire - two lessons against an allocation of one'); process.exit(2)
+        }
+      }
+    }
+  }
+
   console.log('verifier self-check: every rule fires on output it must reject')
 }
 
@@ -781,6 +883,7 @@ for (let i = 0; i < RUNS; i++) {
       defaultTeacherMaxPeriods: g.defaultTeacherMaxPeriods,
       optionalBlocks: g.optionalBlocks,
       sectionStrengths: g.sectionStrengths,
+      teacherAllocations: g.teacherAllocations,
     } as Any)
   } catch (e: Any) {
     console.log(`✗ seed ${seed} (${g.label}): SOLVER THREW - ${e?.message}`)
@@ -833,6 +936,32 @@ for (let i = 0; i < RUNS; i++) {
       return got < want
     }))
   if (shortfall) cover('a school that could not be fully staffed')
+  {
+    const ta = g.teacherAllocations
+    if (Object.keys(ta).length) cover('teacher allocation given')
+    const bySecSub = new Map<string, string[]>()
+    for (const [t, secs] of Object.entries(ta)) {
+      for (const [sec, subs] of Object.entries(secs)) {
+        for (const sub of Object.keys(subs)) {
+          const k = `${sec}|${sub}`
+          bySecSub.set(k, [...(bySecSub.get(k) ?? []), t])
+        }
+      }
+    }
+    if ([...bySecSub.values()].some(ts => ts.filter(t => t !== 'Former Teacher').length > 1)) cover('a subject split between two teachers')
+    if ('Former Teacher' in ta) cover('an allocation naming someone who left')
+    if (Object.entries(ta).some(([t, secs]) => {
+      const st = g.staff.find((x: Any) => x.name === t)
+      return !!st && Object.values(secs).some(subs => Object.keys(subs).some(sub => !(st.subjects ?? []).includes(sub)))
+    })) cover('an allocated teacher who does not list the subject')
+    if ([...bySecSub.keys()].some(k => {
+      const [sec, sub] = k.split('|')
+      const want = String(g.subjectAllocations[sec]?.[sub] ?? '0').split('+').reduce((a, b) => a + (parseInt(b, 10) || 0), 0)
+      let have = 0
+      for (const [t, secs] of Object.entries(ta)) if (t !== 'Former Teacher') have += secs[sec]?.[sub] ?? 0
+      return have > 0 && have < want
+    })) cover('an under-allocated subject')
+  }
 
   // ── The re-optimiser, on the timetable just produced ────────────────────
   //
@@ -849,6 +978,7 @@ for (let i = 0; i < RUNS; i++) {
         defaultTeacherMaxPeriods: g.defaultTeacherMaxPeriods,
         subjectAllocations: g.subjectAllocations,
         teacherAvailability: g.teacherAvailability,
+        teacherAllocations: g.teacherAllocations,
       } as Any)
       cover('a re-optimised timetable')
       let reReported: Any[] = []
@@ -902,6 +1032,9 @@ const WANTED = [
   'a school that could not be fully staffed', 'parallel groups (OR/AND blocks)',
   'a block pooled across sections', 'an OR choice block', 'an AND split block',
   'blocks inferred from section strengths', 'a re-optimised timetable',
+  'teacher allocation given', 'a subject split between two teachers',
+  'an allocation naming someone who left', 'an allocated teacher who does not list the subject',
+  'an under-allocated subject',
 ]
 console.log('')
 console.log('situations exercised:')

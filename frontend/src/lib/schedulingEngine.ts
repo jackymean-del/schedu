@@ -1189,14 +1189,20 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     // ...and a subject it gave to THEM here is, even if their list omits it.
     const allocatedHere = subjects.map(s => s.name)
       .filter(n => isAllocated(sec.name, n) && allocQuota(sec.name, n, ctName) > 0)
+    // Only what they may teach in THIS class: scoped to it or its grade, or
+    // unscoped. An entry scoped to another class ("X-B::Maths") is not a
+    // licence to teach Maths here, though stripping its prefix made it one.
     const eligible = [...allocatedHere, ...ctRawSubs.filter(s =>
-      s === `${sec.name}::${s.replace(/.*::/, '')}` ||   // section-specific
-      (!s.includes('::'))                                  // or global
+      s === `${sec.name}::${s.replace(/.*::/, '')}` ||                    // section-specific
+      (!!sec.grade && s === `${sec.grade}::${s.replace(/.*::/, '')}`) ||  // grade-specific
+      (!s.includes('::'))                                                   // or global
     )].filter(mayTake)
-    const ctSubjectRaw =
-      eligible.find(taughtHere) ?? ctRawSubs.filter(mayTake).find(taughtHere) ??
-      eligible[0] ?? ctRawSubs.filter(mayTake)[0] ??
-      (subjects[0] && mayTake(subjects[0].name) ? subjects[0].name : '')
+    // No last resort. This used to fall back to the school's FIRST subject,
+    // whoever the class teacher was: a Science teacher whose only subject was
+    // allocated to a colleague took English, every morning, for a class whose
+    // English belonged to someone else. A class teacher with nothing of theirs
+    // to teach here gets no fixed period; Pass 2 fills the slot properly.
+    const ctSubjectRaw = eligible.find(taughtHere) ?? eligible[0] ?? ''
     const ctSubject = ctSubjectRaw.replace(/.*::/, '')
 
     // The allocation row is authoritative - the same rule Pass 2 follows - so
@@ -2617,9 +2623,14 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       if (!prevTeacher) return   // had no teacher going in; nothing is lost
       const incumbent = (prevTeacherId && staff.find(st => st.id === prevTeacherId)) ||
         staff.find(st => st.name === prevTeacher)
-      // No allocation check on the incumbent: keeping what was already there
-      // cannot make the lesson worse, and refusing it would lose the teacher.
-      if (incumbent && isAvailable(incumbent)) {
+      // An incumbent the allocation never named keeps the lesson: that is how
+      // it arrived, and refusing would lose its teacher. One the allocation
+      // DID name must still fit their count - this pass may already have
+      // handed them the rest of it elsewhere, and restoring on top of that
+      // put them past what they were given.
+      const fits = allocQuota(secName, subject, incumbent?.name ?? '') === 0 ||
+        allocRoom(secName, subject, incumbent!.name)
+      if (incumbent && isAvailable(incumbent) && fits) {
         eligible = [incumbent]
       } else {
         stranded = true

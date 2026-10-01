@@ -198,6 +198,22 @@ const countOf = (classTT: any, sec: string, subject: string, teacher?: string) =
     "the class teacher's Period 1 is a subject they were allocated here, not the first on their list",
     ctLessons.map(l => l.subject).join(',') || 'none placed')
   ok(unallocated(r.classTT, A).length === 0, 'and nothing else in the class breaks the allocation')
+
+  // Found by the stress run: a class teacher with NOTHING of theirs to teach
+  // here fell back to the school's first subject. A Science teacher whose
+  // Science was allocated to a colleague took English every morning.
+  const staff2 = [
+    { id: 'ct', name: 'Dev', subjects: ['Science'], maxPeriodsPerWeek: 30 },
+    { id: 'o', name: 'Esha', subjects: ['English', 'Science'], maxPeriodsPerWeek: 30 },
+  ] as any[]
+  const subjects2 = [{ id: 'e', name: 'English', periodsPerWeek: 5 }, { id: 's', name: 'Science', periodsPerWeek: 5 }] as any[]
+  const r2 = solveTimetable({ sections, staff: staff2, subjects: subjects2, periods, workDays, requirements: [],
+    subjectAllocations: { 'VII-A': { English: '5', Science: '5' } },
+    teacherAllocations: { Esha: { 'VII-A': { Science: 5 } } } } as any)
+  const devLessons = lessons(r2.classTT).filter(l => l.teacher === 'Dev')
+  ok(devLessons.every(l => l.subject === 'Science') && devLessons.length === 0,
+    'a class teacher with nothing of theirs to teach in the class is given nothing, not the first subject on the list',
+    devLessons.map(l => l.subject).join(',') || 'none')
 }
 
 // ── 6. Re-optimise: never strips a teacher, never breaks the allocation ───
