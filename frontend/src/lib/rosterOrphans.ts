@@ -26,6 +26,8 @@
  * routine that rewrites a published schedule.
  */
 
+import { teachersInCell, roomsInCell } from './cellTeachers'
+
 export type OrphanKind = 'teacher' | 'subject' | 'room' | 'section'
 
 export interface Orphan {
@@ -43,28 +45,24 @@ export interface Orphan {
  *  fixed it - a false alarm is how a warning gets ignored. */
 const key = (s: string | undefined) => (s ?? '').trim().toLowerCase()
 
-/** Subjects a cell carries - an OR/AND slot can hold several at once. */
+/** Subjects a cell carries - an OR/AND slot can hold several at once, in
+ *  either of the two shapes the app stores parallel groups in. */
 function cellSubjects(cell: any): string[] {
   if (!cell) return []
-  return cell.groupAssignments?.length
-    ? cell.groupAssignments.map((g: any) => g.subject ?? cell.subject).filter(Boolean)
+  const groups = [...(cell.groupAssignments ?? []), ...(cell.options ?? [])]
+  return groups.length
+    ? groups.map((g: any) => g.subject ?? cell.subject).filter(Boolean)
     : (cell.subject ? [cell.subject] : [])
-}
-
-/** Teachers a cell carries - likewise, one per parallel group. */
-function cellTeachers(cell: any): string[] {
-  if (!cell) return []
-  const fromGroups = cell.groupAssignments?.length
-    ? cell.groupAssignments.map((g: any) => g.teacher ?? cell.teacher).filter(Boolean)
-    : []
-  return fromGroups.length ? fromGroups : (cell.teacher ? [cell.teacher] : [])
 }
 
 function namesInCell(cell: any, kind: OrphanKind): string[] {
   switch (kind) {
-    case 'teacher': return cellTeachers(cell)
+    // lib/cellTeachers reads BOTH parallel shapes. The private helper this
+    // used read only groupAssignments, so a departed teacher in a block's
+    // options[] was never reported - the lossy-teacher bug in a new place.
+    case 'teacher': return teachersInCell(cell)
     case 'subject': return cellSubjects(cell)
-    case 'room': return cell?.room ? [cell.room] : []
+    case 'room': return roomsInCell(cell)
     default: return []
   }
 }

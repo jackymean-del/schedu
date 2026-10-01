@@ -1255,7 +1255,7 @@ export function TimetablePage() {
   const periods = activeBlock ? activeBlock.periods : storePeriods
 
   const [editTarget, setEditTarget] = useState<{section:string;day:string;periodId:string}|null>(null)
-  const [benchNotice, setBenchNotice] = useState<string|null>(null)
+  const [benchNotice, setBenchNotice] = useState<{ text: string; undo: boolean }|null>(null)
   useEffect(() => {
     if (!benchNotice) return
     const t = setTimeout(() => setBenchNotice(null), 7000)
@@ -1812,7 +1812,7 @@ export function TimetablePage() {
     commitTT(newTT)
     const periodName = periods.find(pp => pp.id === periodId)?.name ?? periodId
     const dayShort = day.charAt(0) + day.slice(1, 3).toLowerCase()
-    setBenchNotice(`${cell.subject} (${sectionName}, ${dayShort} ${periodName}) moved to the Bench`)
+    setBenchNotice({ text: `${cell.subject} (${sectionName}, ${dayShort} ${periodName}) moved to the Bench`, undo: true })
   }
 
   // ── Keyboard shortcuts (Esc, Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo) ──
@@ -4087,7 +4087,12 @@ export function TimetablePage() {
             here as well as in Master Data: this is where the ghost is
             actually visible - a lesson that looks staffed by somebody who
             left. */}
-        <TimetableOrphanBanner classTT={classTT} sections={sections} staff={staff} subjects={subjects} rooms={store.rooms} />
+        <TimetableOrphanBanner classTT={classTT} sections={sections} staff={staff} subjects={subjects} rooms={store.rooms}
+          onRepair={(tt, msg) => {
+            const changed = tt !== classTT
+            if (changed) commitTT(tt)
+            setBenchNotice({ text: msg, undo: changed })
+          }} />
 
         {/* ══ Unified toolbar - identical in Grid AND Timeline ══════════
             One control surface for both modes: the same View pills (Normal /
@@ -4468,12 +4473,12 @@ export function TimetablePage() {
             display:"flex", alignItems:"center", gap:12, maxWidth:"calc(100vw - 32px)",
             padding:"10px 14px", borderRadius:10, background:"#1e293b", color:"#fff",
             fontSize:12.5, boxShadow:"0 8px 24px rgba(15,23,42,0.25)" }}>
-          <span>{benchNotice}</span>
-          <button onClick={undoLast}
+          <span>{benchNotice.text}</span>
+          {benchNotice.undo && <button onClick={undoLast}
             style={{ border:"none", background:"transparent", color:"#C4B5FD", fontWeight:700,
               fontSize:12.5, cursor:"pointer", padding:0 }}>
             Undo
-          </button>
+          </button>}
           <button onClick={() => setBenchNotice(null)} aria-label="Dismiss"
             style={{ border:"none", background:"transparent", color:"#94a3b8", fontSize:14, cursor:"pointer", padding:0, lineHeight:1 }}>
             ×
