@@ -1136,6 +1136,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         {editMode && onDelete && (
           <button onClick={e => { e.stopPropagation(); onDelete() }}
             className="tt-cell-actions"
+            title="Move to the Bench (Undo restores it)"
             style={{ position:"absolute" as const, top:3, right:3, width:16, height:16, borderRadius:"50%", border:"none", background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, lineHeight:1 }}>✕</button>
         )}
       </td>
@@ -1168,7 +1169,7 @@ function SubjectCell({ subject, teacher, room, isClassTeacher, isSub, subTeacher
         <div className="tt-cell-actions" style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
           {onDelete && (
             <button onClick={e => { e.stopPropagation(); onDelete() }}
-              title="Clear period"
+              title="Move to the Bench (Undo restores it)"
               style={{ width:16, height:16, borderRadius:"50%", border:"none", background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>✕</button>
           )}
           {isDraggable && (
@@ -1210,7 +1211,7 @@ function TeacherCell({ colorClass, cell, showRoom, editMode, dragOver, isDropTar
         <div className="tt-cell-actions" style={{ position:"absolute" as const, top:3, right:3, display:"flex", gap:2, zIndex:10 }}>
           {onDelete && (
             <button onClick={e => { e.stopPropagation(); onDelete() }}
-              title="Clear period"
+              title="Move to the Bench (Undo restores it)"
               style={{ width:16, height:16, borderRadius:"50%", border:"none", background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>✕</button>
           )}
           {onDragStart && (
@@ -1254,6 +1255,12 @@ export function TimetablePage() {
   const periods = activeBlock ? activeBlock.periods : storePeriods
 
   const [editTarget, setEditTarget] = useState<{section:string;day:string;periodId:string}|null>(null)
+  const [benchNotice, setBenchNotice] = useState<string|null>(null)
+  useEffect(() => {
+    if (!benchNotice) return
+    const t = setTimeout(() => setBenchNotice(null), 7000)
+    return () => clearTimeout(t)
+  }, [benchNotice])
   const [swapPreview, setSwapPreview] = useState<{
     idxA:number; idxB:number; pA:Period; pB:Period;
     bothClass:boolean; allConflicts:Set<string>;
@@ -1720,9 +1727,26 @@ export function TimetablePage() {
       return subs.includes(subjectName)
     }
 
-    // Exclude the current section's slot - we may be replacing it
+    // Exclude the current section's slot - we may be replacing it. Every
+    // teacher in a parallel lesson is busy, not only the first one listed.
     const isBusy = (name: string): boolean =>
-      sections.some(s => s.name !== sectionName && classTT[s.name]?.[day]?.[periodId]?.teacher === name)
+      sections.some(s => s.name !== sectionName && cellHasTeacher(classTT[s.name]?.[day]?.[periodId] as any, name))
+
+    // The Allocation step's answer first, as the generator does: a lesson
+    // dragged back from the Bench goes to whoever this class's subject was
+    // allocated to, preferring one with allocated periods still unplaced.
+    const allocTA: Record<string, Record<string, Record<string, number | string>>> =
+      (store as any).teacherAllocations ?? {}
+    const allocatedFor = (st: typeof staff[0]) => Number(allocTA[st.name]?.[sectionName]?.[subjectName] ?? 0)
+    const allocated = staff.filter(st => allocatedFor(st) > 0)
+    if (allocated.length) {
+      const free = allocated.filter(st => !isBusy(st.name))
+      if (!free.length) return ""
+      const placedHere = (st: typeof staff[0]) =>
+        Object.values(classTT[sectionName] ?? {}).reduce((n, dd: any) =>
+          n + Object.values(dd ?? {}).filter((c: any) => c?.subject === subjectName && cellHasTeacher(c, st.name)).length, 0)
+      return (free.find(st => placedHere(st) < allocatedFor(st)) ?? free[0]).name
+    }
 
     let candidates = staff.filter(st => isEligible(st) && !isBusy(st.name))
     if (!candidates.length)
@@ -1732,7 +1756,7 @@ export function TimetablePage() {
     const loadToday = (st: typeof staff[0]) =>
       sections.reduce((n, s) =>
         n + Object.values(classTT[s.name]?.[day] ?? {})
-          .filter((c: any) => c?.teacher === st.name).length, 0)
+          .filter((c: any) => cellHasTeacher(c, st.name)).length, 0)
     return candidates.reduce((best, st) => loadToday(st) < loadToday(best) ? st : best).name
   }
 
@@ -1751,6 +1775,35 @@ export function TimetablePage() {
     // NOTE: the allocation matrix is deliberately NOT auto-synced here - grid
     // edits only change the timetable. The user pushes changes back to the
     // Allocation plan on demand via the "Backward Sync" button (handleBackwardSync).
+  }
+
+  const undoLast = () => {
+    if (!classTTHistory.length) return
+    const prev = classTTHistory[classTTHistory.length-1]
+    setClassTTFuture(f=>[classTT,...f.slice(0,49)])
+    setClassTTHistory(h=>h.slice(0,-1))
+    setClassTT(prev)
+    const ntt={...teacherTT}; rebuildTeacherTT(prev,ntt,config.workDays); setTeacherTT(ntt)
+    setBenchNotice(null)
+  }
+
+  // ── Take a lesson off the grid ──
+  // It is not destroyed: anything the class still needs and does not have is
+  // what the Bench lists, so the lesson reappears there and can be dragged back.
+  // The ✕ used to do this silently, a 16px target sitting on the lesson's own
+  // corner, so a click aimed at the lesson removed it with nothing on screen
+  // to say so. Now it says where it went, with an Undo.
+  const sendToBench = (sectionName: string, day: string, periodId: string) => {
+    const cell: any = classTT[sectionName]?.[day]?.[periodId]
+    if (!cell?.subject) return
+    const newTT = { ...classTT }
+    newTT[sectionName] = { ...newTT[sectionName] }
+    newTT[sectionName][day] = { ...newTT[sectionName][day] }
+    delete (newTT[sectionName][day] as any)[periodId]
+    commitTT(newTT)
+    const periodName = periods.find(pp => pp.id === periodId)?.name ?? periodId
+    const dayShort = day.charAt(0) + day.slice(1, 3).toLowerCase()
+    setBenchNotice(`${cell.subject} (${sectionName}, ${dayShort} ${periodName}) moved to the Bench`)
   }
 
   // ── Keyboard shortcuts (Esc, Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo) ──
@@ -2202,17 +2255,11 @@ export function TimetablePage() {
                             handleDrop(e, sn, day, p.id)
                           }}
                           onDragLeave={() => setDragOverCell(null)}
-                          onClick={() => editMode && !cell?.subject ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
+                          onClick={() => editMode ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
                           isDraggable={editMode && !!cell?.subject}
                           isSrc={!!(dragItem?.section===sn && dragItem?.day===day && dragItem?.periodId===p.id)}
                           onDragStart={e => handleDragStart(e, {section:sn, day, periodId:p.id})}
-                          onDelete={() => {
-                            const newTT = { ...classTT }
-                            newTT[sn] = { ...newTT[sn] }
-                            newTT[sn][day] = { ...newTT[sn][day] }
-                            delete (newTT[sn][day] as any)[p.id]
-                            commitTT(newTT)
-                          }}
+                          onDelete={() => { sendToBench(sn, day, p.id) }}
                           editMode={editMode}
                         />
                       )
@@ -2318,17 +2365,11 @@ export function TimetablePage() {
                             handleDrop(e, sn, day, p.id)
                           }}
                           onDragLeave={() => setDragOverCell(null)}
-                          onClick={() => editMode && !cell?.subject ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
+                          onClick={() => editMode ? setEditTarget({section:sn, day, periodId:p.id}) : undefined}
                           isDraggable={editMode && !!cell?.subject}
                           isSrc={!!(dragItem?.section===sn && dragItem?.day===day && dragItem?.periodId===p.id)}
                           onDragStart={e => handleDragStart(e, {section:sn, day, periodId:p.id})}
-                          onDelete={() => {
-                            const newTT = { ...classTT }
-                            newTT[sn] = { ...newTT[sn] }
-                            newTT[sn][day] = { ...newTT[sn][day] }
-                            delete (newTT[sn][day] as any)[p.id]
-                            commitTT(newTT)
-                          }}
+                          onDelete={() => { sendToBench(sn, day, p.id) }}
                           editMode={editMode}
                         />
                       )
@@ -2570,13 +2611,7 @@ export function TimetablePage() {
                           shortNames={shortNames} subjectsList={subjects}
                           isSrc={!!(dragItem?.section===taughtSec && dragItem?.day===day && dragItem?.periodId===col.periodId)}
                           onDragStart={editMode ? e => handleDragStart(e, {section:taughtSec, day, periodId:col.periodId}) : undefined}
-                          onDelete={editMode ? () => {
-                            const newTT = { ...classTT }
-                            newTT[taughtSec] = { ...newTT[taughtSec] }
-                            newTT[taughtSec][day] = { ...newTT[taughtSec][day] }
-                            delete (newTT[taughtSec][day] as any)[col.periodId]
-                            commitTT(newTT)
-                          } : undefined}
+                          onDelete={editMode ? () => { sendToBench(taughtSec, day, col.periodId) } : undefined}
                         />
                       )
                     }
@@ -2744,13 +2779,7 @@ export function TimetablePage() {
                             shortNames={shortNames} subjectsList={subjects}
                             isSrc={!!(dragItem?.section===taughtSec && dragItem?.day===day && dragItem?.periodId===col.periodId)}
                             onDragStart={editMode ? e => handleDragStart(e, {section:taughtSec, day, periodId:col.periodId}) : undefined}
-                            onDelete={editMode ? () => {
-                              const newTT = { ...classTT }
-                              newTT[taughtSec] = { ...newTT[taughtSec] }
-                              newTT[taughtSec][day] = { ...newTT[taughtSec][day] }
-                              delete (newTT[taughtSec][day] as any)[col.periodId]
-                              commitTT(newTT)
-                            } : undefined}
+                            onDelete={editMode ? () => { sendToBench(taughtSec, day, col.periodId) } : undefined}
                           />
                         )
                       }
@@ -3244,20 +3273,9 @@ export function TimetablePage() {
           setEditTarget({ section, day, periodId })
         }}
         onCellDelete={(section, day, periodId) => {
-          // Show confirmation dialog before deleting
-          const cellContent = classTT[section]?.[day]?.[periodId]
-          if (!cellContent?.subject) return
-
-          if (confirm(`Clear "${cellContent.subject}" from ${section} on ${day}?`)) {
-            const newTT = { ...classTT }
-            newTT[section] = { ...newTT[section] }
-            newTT[section][day] = { ...newTT[section][day] }
-            newTT[section][day][periodId] = {
-              subject: "", teacher: "", room: "",
-              subjectId: "", teacherId: "", roomId: "",
-            }
-            commitTT(newTT)
-          }
+          // Same as the grid's: the lesson goes to the Bench with an Undo,
+          // rather than a blocking confirm in one view and nothing in the other.
+          sendToBench(section, day, periodId)
         }}
         onCellFill={(section, day, periodId, suggestedSubject) => {
           // Allow replacing occupied cells - only reject on teacher clash
@@ -3813,14 +3831,7 @@ export function TimetablePage() {
           <div style={{ display:"flex", alignItems:"center", gap:2, padding:"0 8px", borderRight:"1px solid #E5EBF5" }}>
             <button
               disabled={!classTTHistory.length}
-              onClick={() => {
-                if (!classTTHistory.length) return
-                const prev = classTTHistory[classTTHistory.length-1]
-                setClassTTFuture(f=>[classTT,...f.slice(0,49)])
-                setClassTTHistory(h=>h.slice(0,-1))
-                setClassTT(prev)
-                const ntt={...teacherTT}; rebuildTeacherTT(prev,ntt,config.workDays); setTeacherTT(ntt)
-              }}
+              onClick={undoLast}
               title="Undo (Ctrl+Z)"
               style={{ width:30, height:30, border:"1px solid #E5EBF5", borderRadius:6, background:"#fff", cursor:classTTHistory.length?"pointer":"default", fontSize:14, color:classTTHistory.length?"#374151":"#CBD5E1", display:"flex", alignItems:"center", justifyContent:"center" }}>
               ↩
@@ -4439,6 +4450,25 @@ export function TimetablePage() {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {benchNotice && (
+        <div role="status" aria-live="polite"
+          style={{ position:"fixed", left:"50%", bottom:24, transform:"translateX(-50%)", zIndex:60,
+            display:"flex", alignItems:"center", gap:12, maxWidth:"calc(100vw - 32px)",
+            padding:"10px 14px", borderRadius:10, background:"#1e293b", color:"#fff",
+            fontSize:12.5, boxShadow:"0 8px 24px rgba(15,23,42,0.25)" }}>
+          <span>{benchNotice}</span>
+          <button onClick={undoLast}
+            style={{ border:"none", background:"transparent", color:"#C4B5FD", fontWeight:700,
+              fontSize:12.5, cursor:"pointer", padding:0 }}>
+            Undo
+          </button>
+          <button onClick={() => setBenchNotice(null)} aria-label="Dismiss"
+            style={{ border:"none", background:"transparent", color:"#94a3b8", fontSize:14, cursor:"pointer", padding:0, lineHeight:1 }}>
+            ×
+          </button>
         </div>
       )}
 

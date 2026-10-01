@@ -4,6 +4,7 @@ import { ORG_CONFIGS } from "@/lib/orgData"
 import { rebuildTeacherTT } from "@/lib/aiEngine"
 import { detectConflicts } from "@/lib/schedulingEngine"
 import { parseCellSubject } from "@/components/timetable/TimetableCell"
+import { cellHasTeacher } from "@/lib/cellTeachers"
 
 interface Props {
   target: { section: string; day: string; periodId: string }
@@ -44,6 +45,9 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
   const {
     config, classTT, staff, subjects, sections, periods, facilities,
     updateCell, setTeacherTT, setConflicts,
+    // Who the Allocation step gave each class's subjects to - the same matrix
+    // the generator honours, so the editor recommends what generation would do.
+    teacherAllocations,
   } = useTimetableStore()
   const org = ORG_CONFIGS[config.orgType ?? "school"]
 
@@ -116,25 +120,39 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
     [subjects, target.section]
   )
 
+  /** The other class this teacher is already in at this slot, if any.
+   *  Every teacher in the cell counts: on a parallel OR/AND lesson
+   *  `cell.teacher` is only the first group's, and checking that alone said
+   *  the others were free. */
+  const busyIn = (name: string): string | null =>
+    Object.keys(classTT).find(sec =>
+      sec !== target.section && cellHasTeacher(classTT[sec]?.[target.day]?.[target.periodId] as any, name)
+    ) ?? null
+
   // ── Teacher eligibility helper ────────────────────────────────────────────
   const getEligibleTeachers = (subjectName: string) => {
     const sectionKey = `${target.section}::${subjectName}`
+    // When the Allocation step answered "who teaches this subject in this
+    // class", that answer is the eligibility, exactly as for the generator.
+    // The subject list is only consulted for pairs it never allocated.
+    const allocatedHere = new Set(
+      Object.entries(teacherAllocations ?? {})
+        .filter(([, secs]) => Number(secs?.[target.section]?.[subjectName] ?? 0) > 0)
+        .map(([name]) => name)
+    )
     return staff
       .map(st => {
         const subs: string[] = st.subjects ?? []
         const hasSectionSpecific = subs.some(s => s.includes("::"))
         let match = false
-        if (hasSectionSpecific) {
+        if (allocatedHere.size > 0) {
+          match = allocatedHere.has(st.name)
+        } else if (hasSectionSpecific) {
           match = subs.some(s => s === sectionKey || s.endsWith(`::${subjectName}`))
         } else {
           match = subjectName ? subs.includes(subjectName) : false
         }
-        const conflictSection =
-          Object.keys(classTT).find(sec => {
-            if (sec === target.section) return false
-            return classTT[sec]?.[target.day]?.[target.periodId]?.teacher === st.name
-          }) ?? null
-        return { ...st, match, conflictSection }
+        return { ...st, match, allocated: allocatedHere.has(st.name), conflictSection: busyIn(st.name) }
       })
       .sort((a, b) => {
         if (a.match !== b.match)                         return a.match ? -1 : 1
@@ -147,18 +165,14 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
   const eligibleTeachers = useMemo(
     () => getEligibleTeachers(selectedSubject),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedSubject, staff, classTT, target.section, target.day, target.periodId]
+    [selectedSubject, staff, classTT, teacherAllocations, target.section, target.day, target.periodId]
   )
 
   // ── Conflict detection for single mode ────────────────────────────────────
   const conflictWith = useMemo(() => {
     if (!selectedTeacher) return null
-    return (
-      Object.keys(classTT).find(sec => {
-        if (sec === target.section) return false
-        return classTT[sec]?.[target.day]?.[target.periodId]?.teacher === selectedTeacher
-      }) ?? null
-    )
+    return busyIn(selectedTeacher)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeacher, classTT, target])
 
   // ── Conflict detection for group mode (per subject) ───────────────────────
@@ -167,11 +181,10 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
     for (const sub of activeGroupSubjects) {
       const t = groupAsgn[sub]?.teacher
       if (!t) { result[sub] = null; continue }
-      result[sub] = Object.keys(classTT).find(sec =>
-        sec !== target.section && classTT[sec]?.[target.day]?.[target.periodId]?.teacher === t
-      ) ?? null
+      result[sub] = busyIn(t)
     }
     return result
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGroupSubjects, groupAsgn, classTT, target])
 
   const hasGroupConflict = useMemo(
@@ -600,7 +613,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                   })}
                 </div>
                 <div style={{ display: "flex", gap: 14, marginTop: 6 }}>
-                  <span style={{ fontSize: 10, color: "#94a3b8" }}>★ = eligible for this subject</span>
+                  <span style={{ fontSize: 10, color: "#94a3b8" }}>★ = allocated or eligible for this subject</span>
                   <span style={{ fontSize: 10, color: "#f59e0b" }}>⚠ = already booked this period</span>
                 </div>
               </div>
@@ -715,7 +728,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                     {t.match ? "★ " : "  "}
                     {t.name}
                     {t.role ? ` (${t.role})` : ""}
-                    {t.match ? " - eligible" : ""}
+                    {t.allocated ? " - allocated to this class" : t.match ? " - eligible" : ""}
                     {t.conflictSection ? ` ⚠ busy in ${t.conflictSection}` : ""}
                   </option>
                 ))}
@@ -724,7 +737,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
                 )}
               </select>
               <div style={{ display: "flex", gap: 14, marginTop: 5 }}>
-                <span style={{ fontSize: 10, color: "#94a3b8" }}>★ = eligible for this subject</span>
+                <span style={{ fontSize: 10, color: "#94a3b8" }}>★ = allocated or eligible for this subject</span>
                 <span style={{ fontSize: 10, color: "#f59e0b" }}>⚠ = already booked this period</span>
               </div>
             </div>
