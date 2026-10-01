@@ -147,7 +147,9 @@ export function UsersPage() {
             const lastAdmin = !canDemote(members, m.id)
             return (
               <div key={m.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0',
+                // Wraps on a phone: on one line the role picker and remove
+                // button ran 34px past the edge of the screen.
+                display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', flexWrap: 'wrap',
                 borderTop: '1px solid #F3F1FB',
               }}>
                 <div style={{
@@ -158,7 +160,7 @@ export function UsersPage() {
                 }}>
                   {(m.name ?? m.email)[0].toUpperCase()}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: '1 1 160px', minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: '#13111E' }}>
                     {m.name ?? m.email.split('@')[0]}
                     {isSelf(m) && <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, marginLeft: 7 }}>you</span>}

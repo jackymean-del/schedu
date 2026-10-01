@@ -138,7 +138,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
                 .filter(([, v]) => v.dates.includes(h.date))
                 .reduce((a, [, v]) => a + v.hours, 0)
               return (
-                <div key={h.id} style={{ display: 'grid', gridTemplateColumns: '110px 90px 1fr 90px 30px', gap: 8, alignItems: 'center', padding: '6px 9px', borderRadius: 8, border: '1px solid #ECE9FB' }}>
+                <div key={h.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(84px,110px) minmax(56px,90px) minmax(0,1fr) auto 26px', gap: 8, alignItems: 'center', padding: '6px 9px', borderRadius: 8, border: '1px solid #ECE9FB' }}>
                   <span style={{ fontSize: 11.5, fontFamily: "'DM Mono', monospace", color: '#4B5275' }}>{h.date}</span>
                   <span style={{ fontSize: 11, color: '#6D6A8A' }}>{wd ? wd[0] + wd.slice(1).toLowerCase() : '-'}</span>
                   <span style={{ fontSize: 12, color: '#13111E', fontWeight: 600 }}>
@@ -162,17 +162,18 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
 
         {/* Add one */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 130px', gap: 8, alignItems: 'end' }}>
-            <label style={{ display: 'block' }}>
+          {/* Wraps on a phone instead of pushing the button off the edge. */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
+            <label style={{ display: 'block', flex: '0 1 150px', minWidth: 130 }}>
               <div style={lbl}>Date</div>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
             </label>
-            <label style={{ display: 'block' }}>
+            <label style={{ display: 'block', flex: '1 1 160px', minWidth: 0 }}>
               <div style={lbl}>Name</div>
               <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Independence Day"
                 onKeyDown={e => { if (e.key === 'Enter') add() }} style={inputStyle} />
             </label>
-            <button onClick={add} disabled={!date} style={{ ...btnPrimary, opacity: date ? 1 : 0.5 }}>
+            <button onClick={add} disabled={!date} style={{ ...btnPrimary, opacity: date ? 1 : 0.5, flex: '0 0 auto' }}>
               <Plus size={13} /> Add holiday
             </button>
           </div>
