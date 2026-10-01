@@ -466,6 +466,9 @@ export interface GenerationPayload {
   subjectCombinations: any[]
   sectionStrengths: any[]
   subjectAllocations: Record<string, Record<string, string>>
+  /** Who teaches what where, from the Allocation step. Optional so a payload
+   *  built before it existed still solves (subject-list matching only). */
+  teacherAllocations?: Record<string, Record<string, Record<string, number | string>>>
   rooms: any[]
   teacherAvailability: any
   subjectGroups: any[]
@@ -607,6 +610,7 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
         defaultTeacherMaxPeriods: schoolTeacherCap(),
         requirements: [], optionalBlocks, subjectCombinations, sectionStrengths,
         subjectAllocations, rooms, teacherAvailability: avail,
+        teacherAllocations: p.teacherAllocations ?? {},
         dayOffRules: config.dayOffRules ?? [],
         sectionAdjacency: blockAdjacency,
       })
@@ -672,6 +676,7 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
     subjectAllocations,
     rooms,
     teacherAvailability: p.teacherAvailability ?? {},
+    teacherAllocations: p.teacherAllocations ?? {},
     // Class-specific day-off rules from bell schedule step (e.g. Sat off for Nursery/LKG)
     dayOffRules: config.dayOffRules ?? [],
     sectionAdjacency,

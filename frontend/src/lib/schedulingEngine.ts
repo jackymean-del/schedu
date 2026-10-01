@@ -84,6 +84,11 @@ export interface SolverInput {
    *  Shape: { [sectionName]: { [subjectName]: "5+1" | "3(2X)" | ... } }
    *  Empty/missing → fall back to Subject.periodsPerWeek. */
   subjectAllocations?: Record<string, Record<string, string>>
+  /** The Allocation step's answer to WHO teaches: teacher name → section
+   *  name → subject → periods a week. Where a (section, subject) has rows
+   *  here, only those teachers may take its lessons, each up to their own
+   *  count. Pairs with no rows keep the subject-list matching. */
+  teacherAllocations?: Record<string, Record<string, Record<string, number | string>>>
   /** Doc Part 3: rooms with capacities. When provided, DLG splitter
    *  enforces "∑ students ≤ room capacity" by bin-packing sections into
    *  multiple pools when a single pool exceeds a subject's room cap. */
@@ -560,6 +565,54 @@ function dailyCapFor(st: any, workDayCount: number): number {
 }
 
 // ─── Main Solver (JS CSP implementation) ─────────────────
+/**
+ * The Allocation step's "who teaches what where", as a running ledger.
+ *
+ * Shared by the solver and the re-optimiser so the two cannot disagree about
+ * who may take a lesson: an allocated (section, subject) pair belongs to its
+ * allocated teachers, each up to their own count. Pairs with no rows are
+ * unconstrained here and fall back to subject-list matching at the call site.
+ */
+export function allocationLedger(
+  teacherAllocations: SolverInput['teacherAllocations'],
+  staff: Array<{ name: string }>,
+) {
+  const SEP = String.fromCharCode(1)
+  const rows = new Map<string, Map<string, number>>()
+  const onStaff = new Set(staff.map(st => st.name))
+  for (const [tName, secs] of Object.entries(teacherAllocations ?? {})) {
+    // A row for someone no longer on staff cannot hold a lesson, and must not
+    // fence the subject off from the people who can.
+    if (!onStaff.has(tName)) continue
+    for (const [secName, subs] of Object.entries(secs ?? {})) {
+      for (const [subName, raw] of Object.entries(subs ?? {})) {
+        const n = Math.floor(Number(raw))
+        if (!(n > 0)) continue
+        const k = secName + SEP + subName
+        if (!rows.has(k)) rows.set(k, new Map())
+        const r = rows.get(k)!
+        r.set(tName, (r.get(tName) ?? 0) + n)
+      }
+    }
+  }
+  const used = new Map<string, number>()
+  const isAllocated = (secName: string, subName: string): boolean => rows.has(secName + SEP + subName)
+  /** This teacher's allocated count here; 0 when the pair is allocated to others. */
+  const allocQuota = (secName: string, subName: string, tName: string): number =>
+    rows.get(secName + SEP + subName)?.get(tName) ?? 0
+  /** Room for `n` more without passing their allocation. True for unallocated pairs. */
+  const allocRoom = (secName: string, subName: string, tName: string, n = 1): boolean => {
+    if (!isAllocated(secName, subName)) return true
+    return (used.get(secName + SEP + subName + SEP + tName) ?? 0) + n <= allocQuota(secName, subName, tName)
+  }
+  const allocCount = (secName: string, subName: string, tName: string, by: number) => {
+    if (!isAllocated(secName, subName)) return
+    const k = secName + SEP + subName + SEP + tName
+    used.set(k, Math.max(0, (used.get(k) ?? 0) + by))
+  }
+  return { isAllocated, allocQuota, allocRoom, allocCount }
+}
+
 export function solveTimetable(input: SolverInput): SolverOutput {
   const { sections, staff, subjects, periods, workDays } = input
   // School default cap from the norms database, passed in so the solver stays
@@ -872,6 +925,26 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     }
   }
 
+  // ── The Allocation step decides WHO teaches ──
+  //
+  // The school spends a whole wizard step saying "Teacher 1 takes I-A's Music,
+  // Teacher 5 takes II-A's". The solver never received that answer. It matched
+  // teachers on their flat subject list alone, and a subject nobody listed went
+  // to whichever teacher was free, so a five-class school got 55 of 165 lessons
+  // from a teacher the plan had not given that class: I-A's Music went to the
+  // Hindi teacher while the Maths teacher, allocated Music there, taught EVS.
+  // The "no wrong-teacher lessons" check passed throughout, because it measured
+  // against the same flat list.
+  //
+  // So where a (section, subject) has allocation rows, those rows ARE the
+  // eligible set, and each teacher is held to their own count: two teachers
+  // splitting Maths 2 + 2 get two each, not whatever the scoring prefers. A
+  // lesson nobody allocated stays unplaced and goes to the Bench; it is never
+  // handed to an unallocated teacher. Pairs with no rows at all keep the old
+  // subject-list matching, so a school that skipped the step still generates.
+  const { isAllocated, allocQuota, allocRoom, allocCount } =
+    allocationLedger(input.teacherAllocations, staff)
+
   // ── Day-off rules: build per-section off-day set ──────────────────────────
   // DayOffRule.day is short format ('Sat') → map to full uppercase ('SATURDAY')
   // DayOffRule.classes are class-key prefixes - match section names by prefix.
@@ -1069,6 +1142,15 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     })
   })
 
+  // Optional blocks placed in Pass 0 already spend some teachers' allocation.
+  for (const [secName, days] of Object.entries(classTT)) {
+    for (const dayData of Object.values(days ?? {})) {
+      for (const cell of Object.values(dayData ?? {})) {
+        for (const pr of teachingPairsInCell(cell as any)) allocCount(secName, pr.subject, pr.teacher, +1)
+      }
+    }
+  }
+
   // ── Pass 1: Place class teachers in Period 1 (hard constraint) ──
   sections.forEach((sec) => {
     const ctName = classTeacherMap[sec.name]
@@ -1081,13 +1163,23 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     const ctRawSubs: string[] = ctStaff?.subjects ?? []
     const taughtHere = (raw: string) =>
       (targetPeriods[sec.name]?.[raw.replace(/.*::/, '')] ?? 0) > 0
-    const eligible = ctRawSubs.filter(s =>
+    // A subject the Allocation step gave to somebody else is not the class
+    // teacher's to take, however their subject list reads.
+    const mayTake = (raw: string) => {
+      const sub = raw.replace(/.*::/, '')
+      return !isAllocated(sec.name, sub) || allocQuota(sec.name, sub, ctName) > 0
+    }
+    // ...and a subject it gave to THEM here is, even if their list omits it.
+    const allocatedHere = subjects.map(s => s.name)
+      .filter(n => isAllocated(sec.name, n) && allocQuota(sec.name, n, ctName) > 0)
+    const eligible = [...allocatedHere, ...ctRawSubs.filter(s =>
       s === `${sec.name}::${s.replace(/.*::/, '')}` ||   // section-specific
       (!s.includes('::'))                                  // or global
-    )
+    )].filter(mayTake)
     const ctSubjectRaw =
-      eligible.find(taughtHere) ?? ctRawSubs.find(taughtHere) ??
-      eligible[0] ?? ctRawSubs[0] ?? subjects[0]?.name ?? ''
+      eligible.find(taughtHere) ?? ctRawSubs.filter(mayTake).find(taughtHere) ??
+      eligible[0] ?? ctRawSubs.filter(mayTake)[0] ??
+      (subjects[0] && mayTake(subjects[0].name) ? subjects[0].name : '')
     const ctSubject = ctSubjectRaw.replace(/.*::/, '')
 
     // The allocation row is authoritative - the same rule Pass 2 follows - so
@@ -1118,6 +1210,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       if (!ctDays.has(day)) return
       // Belt and braces: another pass may have placed this subject since.
       if ((subjectCount[sec.name][ctSubject] ?? 0) >= ctTarget) return
+      // Allocated three of a five-period subject: three, not five.
+      if (!allocRoom(sec.name, ctSubject, ctName)) return
       // Day-off rule: skip class-teacher assignment on off-days too
       if (sectionOffDays.get(sec.name)?.has(day)) return
       const p = classPeriods[0]
@@ -1139,6 +1233,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         holdRoom(day, [p.id], ctRoom)
         ctKeys.forEach(k => teacherBusy[k][day].add(p.id))
         subjectCount[sec.name][ctSubject] = (subjectCount[sec.name][ctSubject] ?? 0) + 1
+        allocCount(sec.name, ctSubject, ctName, +1)
       }
     })
   })
@@ -1388,12 +1483,19 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           const matchesSub = (st: any): boolean =>
             teachesSubject(st, sec.name, sec.grade, chosenSub.name)
 
+          // An allocated pair takes ONLY its allocated teachers, each while
+          // they still have allocation left, and none of the fallbacks below:
+          // they exist for schools that never said who teaches, and this one did.
+          const allocated = isAllocated(sec.name, chosenSub.name)
+
           // Build candidate list: section-specific first, then global fallback
-          let eligibleTeachers = staff.filter(st => matchesSub(st) && isAvailable(st))
+          let eligibleTeachers = allocated
+            ? staff.filter(st => allocRoom(sec.name, chosenSub.name, st.name) && isAvailable(st))
+            : staff.filter(st => matchesSub(st) && isAvailable(st))
 
           // Fallback: if no section-specific teacher available, use any teacher
           // who knows this subject globally and isn't busy
-          if (!eligibleTeachers.length) {
+          if (!allocated && !eligibleTeachers.length) {
             eligibleTeachers = staff.filter(st =>
               (st.subjects ?? []).includes(simpleKey) && isAvailable(st)
             )
@@ -1402,7 +1504,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           // (incomplete teacher-subject links): any non-busy teacher, so the
           // subject isn't permanently blank. When specialists exist but are
           // busy, we skip to the next subject instead.
-          if (!eligibleTeachers.length && !taughtSubjectNames.has(simpleKey)) {
+          if (!allocated && !eligibleTeachers.length && !taughtSubjectNames.has(simpleKey)) {
             eligibleTeachers = staff.filter(st => isAvailable(st))
           }
           if (!eligibleTeachers.length) continue
@@ -1544,7 +1646,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               spanPeriods.slice(0, -1).every(cp => adjList.includes(cp.id))
             const allFree = spanPeriods.length === span && adjOk &&
               spanPeriods.every(cp => !classTT[sec.name][day][cp.id]) &&
-              spanPeriods.every(cp => !teacherBusy[tKey(teacher)][day].has(cp.id))
+              spanPeriods.every(cp => !teacherBusy[tKey(teacher)][day].has(cp.id)) &&
+              allocRoom(sec.name, chosenSub.name, teacher.name, span)
             if (allFree) {
               // One room for the whole block - a class does not move mid-double.
               const spanIds = spanPeriods.map(cp => cp.id)
@@ -1555,6 +1658,12 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               })
               holdRoom(day, spanIds, spanRoom)
               subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + span
+              allocCount(sec.name, chosenSub.name, teacher.name, +span)
+              // A double is two periods of somebody's week. Counting it as none
+              // let a teacher's weekly cap be passed by every double they took.
+              teacherWeeklyLoad[tKey(teacher)] = (teacherWeeklyLoad[tKey(teacher)] ?? 0) + span
+              teacherSubjectSet[tKey(teacher)]?.add(chosenSub.name)
+              teacherSectionSet[tKey(teacher)]?.add(sec.name)
               placed = true
               break
             }
@@ -1571,6 +1680,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           holdRoom(day, [period.id], cellRoom)
           teacherBusy[tKey(teacher)][day].add(period.id)
           subjectCount[sec.name][chosenSub.name] = (subjectCount[sec.name][chosenSub.name] ?? 0) + 1
+          allocCount(sec.name, chosenSub.name, teacher.name, +1)
           // ── AI trackers: bump load + record subject/section pairing ──
           teacherWeeklyLoad[tKey(teacher)] = (teacherWeeklyLoad[tKey(teacher)] ?? 0) + 1
           teacherSubjectSet[tKey(teacher)]?.add(chosenSub.name)
@@ -1677,9 +1787,18 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     /** Specialists for a subject in a section. No any-teacher fallback: a
      *  repair must never invent the wrong-teacher lesson Pass 2 refuses. */
     const specialistsFor = (sec: any, subName: string): any[] => {
+      // Pass 2's rule, for the same reason: the allocated teachers or nobody.
+      if (isAllocated(sec.name, subName)) {
+        return staff.filter(st => allocQuota(sec.name, subName, st.name) > 0)
+      }
       const own = staff.filter(st => teachesSubject(st, sec.name, sec.grade, subName))
       return own.length ? own : staff.filter(st => (st.subjects ?? []).includes(subName))
     }
+    /** Room left in this teacher's allocation for one more lesson. `freedBy`
+     *  is the teacher of a lesson being moved in the same step: moving their
+     *  own lesson spends nothing new, so it must not be refused for it. */
+    const allocFits = (sec: any, sub: any, st: any, freedBy?: string): boolean =>
+      st.name === freedBy || allocRoom(sec.name, sub.name, st.name)
 
     const put = (sec: any, sub: any, day: string, pid: string, st: any) => {
       ensureBusy(tKey(st))
@@ -1691,6 +1810,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       teacherBusy[tKey(st)][day].add(pid)
       bumpDayLoad(day, [tKey(st)], +1)
       subjectCount[sec.name][sub.name] = (subjectCount[sec.name][sub.name] ?? 0) + 1
+      allocCount(sec.name, sub.name, st.name, +1)
       teacherWeeklyLoad[tKey(st)] = (teacherWeeklyLoad[tKey(st)] ?? 0) + 1
       teacherSubjectSet[tKey(st)]?.add(sub.name)
       teacherSectionSet[tKey(st)]?.add(sec.name)
@@ -1712,6 +1832,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       // classes were moved into spare rooms while their own sat empty.
       if (cell?.room) roomBusy[day]?.[pid]?.delete(cell.room)
       subjectCount[secName][cell.subject] = Math.max(0, (subjectCount[secName][cell.subject] ?? 0) - 1)
+      for (const pr of teachingPairsInCell(cell)) allocCount(secName, pr.subject, pr.teacher, -1)
       return cell
     }
 
@@ -1747,7 +1868,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             if (!slotOpenFor(sec, sub, day, period.id)) continue
 
             // 1. Direct
-            const free = specialists.find(st => canTeachAt(st, day, period.id, dayLoad(day)))
+            const free = specialists.find(st =>
+              allocFits(sec, sub, st) && canTeachAt(st, day, period.id, dayLoad(day)))
             if (free) {
               put(sec, sub, day, period.id, free)
               penalties.push({
@@ -1765,6 +1887,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             //    weekly capacity, but every day they could use it on is full).
             //    Either way, exactly one lesson has to move.
             for (const st of specialists) {
+              // Moving a lesson out of their way is wasted if they have no
+              // allocation left to take ours with.
+              if (!allocFits(sec, sub, st)) continue
               const k = tKey(st)
               const holdsSlot = !!teacherBusy[k]?.[day]?.has(period.id)
               const dayFull = atDailyLimit(dayLoad(day)[k] ?? 0, dailyCapFor(st, workDays.length))
@@ -1784,13 +1909,16 @@ export function solveTimetable(input: SolverInput): SolverOutput {
                 if (!victim) continue
 
                 const cover = specialistsFor(victim.sec, victim.sub.name)
+                const victimTeacher = classTT[victim.sec.name]?.[day]?.[vpid]?.teacher
                 let moved = false
                 for (const d2 of workDays) {
                   if (mustChangeDay && d2 === day) continue
                   for (const p2 of classPeriods) {
                     if (d2 === day && p2.id === vpid) continue
                     if (!slotOpenFor(victim.sec, victim.sub, d2, p2.id)) continue
-                    const t2 = cover.find(t => canTeachAt(t, d2, p2.id, dayLoad(d2)))
+                    const t2 = cover.find(t =>
+                      allocFits(victim.sec, victim.sub, t, victimTeacher) &&
+                      canTeachAt(t, d2, p2.id, dayLoad(d2)))
                     if (!t2) continue
                     lift(victim.sec.name, day, vpid)
                     put(victim.sec, victim.sub, d2, p2.id, t2)
@@ -1846,6 +1974,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               const taker = specialists.find(st => {
                 const k = tKey(st)
                 if (holder.includes(k)) return false      // they are the one sitting here
+                if (!allocFits(sec, sub, st)) return false
                 const load = dayLoad(day1)
                 if (teacherBusy[k]?.[day1]?.has(period1.id)) return false
                 if (atDailyLimit(load[k] ?? 0, dailyCapFor(st, workDays.length))) return false
@@ -1862,7 +1991,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
                 for (const p2 of classPeriods) {
                   if (d2 === day1 && p2.id === period1.id) continue
                   if (!slotOpenFor(sec, sittingSub, d2, p2.id)) continue
-                  const t2 = cover.find(t => canTeachAt(t, d2, p2.id, dayLoad(d2)))
+                  const t2 = cover.find(t =>
+                    allocFits(sec, sittingSub, t, sitting.teacher) &&
+                    canTeachAt(t, d2, p2.id, dayLoad(d2)))
                   if (!t2) continue
                   lift(sec.name, day1, period1.id)
                   put(sec, sittingSub, d2, p2.id, t2)
@@ -2219,6 +2350,9 @@ export interface ReoptimizeInput {
    * being ignorant of it.
    */
   teacherAvailability?: import('@/types').TeacherAvailability
+  /** The Allocation step's who-teaches matrix - see SolverInput. Without it
+   *  re-optimising would hand allocated lessons to whoever balances the chart. */
+  teacherAllocations?: SolverInput['teacherAllocations']
 }
 
 export interface ReoptimizeResult {
@@ -2295,10 +2429,31 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   }
   staff.forEach(st => ensureBusy(tKey(st)))
 
+  const { isAllocated, allocQuota, allocRoom, allocCount } =
+    allocationLedger(input.teacherAllocations, staff)
+
+  /** Teaches this subject in this section, by the subject list. */
+  const matchesSub = (st: Staff, secName: string, grade: string | undefined, subject: string): boolean => {
+    const subs: string[] = (st as any).subjects ?? []
+    if (!subs.length) return false
+    if (subs.some((s: string) => s.includes('::'))) {
+      return subs.some((s: string) =>
+        s === `${secName}::${subject}` || (!!grade && s === `${grade}::${subject}`))
+    }
+    return subs.includes(subject)
+  }
+  /** Everyone who may teach this lesson at all, ignoring the clock. */
+  const qualifiedFor = (secName: string, grade: string | undefined, subject: string): Staff[] => {
+    if (isAllocated(secName, subject)) return staff.filter(st => allocQuota(secName, subject, st.name) > 0)
+    const own = staff.filter(st => matchesSub(st, secName, grade, subject))
+    return own.length ? own : staff.filter(st => ((st as any).subjects ?? []).includes(subject))
+  }
+
   type WorkItem = {
     secName: string; day: string; periodId: string
     subject: string; periodIdx: number
     prevTeacher: string   // incumbent - "reassigned" means it actually changed
+    prevTeacherId?: string
   }
   const workItems: WorkItem[] = []
 
@@ -2308,7 +2463,16 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       classPeriods.forEach((period, pi) => {
         const cell: any = secData[day]?.[period.id]
         if (!cell?.subject) return
-        if (cell.optionalBlockId || cell.isClassTeacher) {
+        // A lesson nobody on staff is qualified for cannot be redistributed,
+        // only taken away. It keeps its teacher and counts as pinned. Clearing
+        // it first and finding no one afterwards is how 27 of a school's 165
+        // lessons came back with no teacher - and the result was ACCEPTED,
+        // because a lesson with no teacher adds no load and the chart looked
+        // more even for it.
+        const pinned = cell.optionalBlockId || cell.isClassTeacher ||
+          qualifiedFor(sec.name, (sec as any).grade, cell.subject).length === 0
+        if (pinned) {
+          for (const pr of teachingPairsInCell(cell)) allocCount(sec.name, pr.subject, pr.teacher, +1)
           // EVERY teacher in the cell, not just the cell-level one.
           //
           // An optional block runs parallel subjects and names a teacher per
@@ -2326,8 +2490,12 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
           for (const k of keys) { ensureBusy(k); teacherBusy[k]?.[day]?.add(period.id) }
         } else {
           const prevTeacher = cell.teacher ?? ''
-          cell.teacher = ''   // clear - will be re-assigned below
-          workItems.push({ secName: sec.name, day, periodId: period.id, subject: cell.subject, periodIdx: pi, prevTeacher })
+          const prevTeacherId = cell.teacherId
+          // Clear both - will be re-assigned below. Leaving the id behind
+          // kept counting the lesson against its old teacher's day.
+          cell.teacher = ''
+          delete cell.teacherId
+          workItems.push({ secName: sec.name, day, periodId: period.id, subject: cell.subject, periodIdx: pi, prevTeacher, prevTeacherId })
         }
       })
     })
@@ -2340,6 +2508,17 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   staff.forEach(t => { teacherSubjectSet[tKey(t)] = new Set() })
   const teacherSectionSet: Record<string, Set<string>> = {}
   staff.forEach(t => { teacherSectionSet[tKey(t)] = new Set() })
+  // Pinned lessons are still somebody's week. Starting every load at zero let
+  // the weekly cap below be passed by exactly what was pinned.
+  for (const sd of Object.values(classTT)) {
+    for (const dd of Object.values(sd ?? {})) {
+      for (const c of Object.values(dd ?? {}) as any[]) {
+        const names = teachersInCell(c)
+        const keys = names.length ? names.flatMap(n => keysFor(n)) : cellKeys(c)
+        for (const k of keys) teacherWeeklyLoad[k] = (teacherWeeklyLoad[k] ?? 0) + 1
+      }
+    }
+  }
 
   // Target weekly load per teacher (mirrors the main solver formula)
   const subjectAllocations = input.subjectAllocations ?? {}
@@ -2354,12 +2533,14 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   const targetWeeklyLoadPerTeacher = Math.ceil(totalRequired / Math.max(1, staff.length))
 
   let reassignedCount = 0
+  // Set when a lesson could be given neither a new teacher nor its own back.
+  // A pass that loses a lesson's teacher is never "better", however even the
+  // load chart looks afterwards.
+  let stranded = false
 
   // ── Phase 3: re-assign teachers using composite scoring ──
-  workItems.forEach(({ secName, day, periodId, subject, periodIdx, prevTeacher }) => {
+  workItems.forEach(({ secName, day, periodId, subject, periodIdx, prevTeacher, prevTeacherId }) => {
     const sec   = sections.find(s => s.name === secName)
-    const sectionKey = `${secName}::${subject}`
-    const gradeKey   = sec?.grade ? `${(sec as any).grade}::${subject}` : ''
 
     // Today's load, needed before availability because the per-day cap decides
     // availability (see the Phase-2 site above for the same reasoning).
@@ -2384,17 +2565,6 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       return true
     }
 
-    const matchesSub = (st: Staff): boolean => {
-      const subs: string[] = (st as any).subjects ?? []
-      if (!subs.length) return false
-      if (subs.some((s: string) => s.includes('::'))) {
-        return subs.some((s: string) =>
-          s === sectionKey || (gradeKey !== '' && s === gradeKey)
-        )
-      }
-      return subs.includes(subject)
-    }
-
     // Weekly cap is a HARD constraint here: a teacher already at their max
     // must not win another slot just because they score well on subject
     // match. Only if a tier has no under-cap candidate do we relax within
@@ -2408,8 +2578,12 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
       const capped = pool.filter(underCap)
       return capped.length ? capped : pool
     }
-    let eligible = staff.filter(st => matchesSub(st) && isAvailable(st))
-    if (!eligible.length) eligible = staff.filter(st =>
+    // Allocated lessons go only to their allocated teachers, within each one's
+    // count; the subject-list tiers are for pairs the school never allocated.
+    let eligible = isAllocated(secName, subject)
+      ? staff.filter(st => allocRoom(secName, subject, st.name) && isAvailable(st))
+      : staff.filter(st => matchesSub(st, secName, (sec as any)?.grade, subject) && isAvailable(st))
+    if (!eligible.length && !isAllocated(secName, subject)) eligible = staff.filter(st =>
       ((st as any).subjects ?? []).includes(subject) && isAvailable(st)
     )
     // There is deliberately NO third tier handing the lesson to whoever is
@@ -2418,10 +2592,23 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     // the Art teacher - re-optimisation inventing a qualification in order to
     // even out a load chart.
     //
-    // Returning here leaves the cell exactly as it was, which is the honest
-    // outcome: this function redistributes work among people who can do it,
-    // and when nobody can, the existing assignment stands.
-    if (!eligible.length) return
+    // When nobody can, the existing assignment stands: this function
+    // redistributes work among people who can do it. That has to be DONE, not
+    // assumed - the teacher was cleared above, so a bare return here used to
+    // leave the lesson with nobody at all.
+    if (!eligible.length) {
+      if (!prevTeacher) return   // had no teacher going in; nothing is lost
+      const incumbent = (prevTeacherId && staff.find(st => st.id === prevTeacherId)) ||
+        staff.find(st => st.name === prevTeacher)
+      // No allocation check on the incumbent: keeping what was already there
+      // cannot make the lesson worse, and refusing it would lose the teacher.
+      if (incumbent && isAvailable(incumbent)) {
+        eligible = [incumbent]
+      } else {
+        stranded = true
+        return
+      }
+    }
     eligible = pickTier(eligible)
 
     // Today's load snapshot (for exhaustion penalty)
@@ -2479,6 +2666,7 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
     teacherWeeklyLoad[tKey(teacher)] = (teacherWeeklyLoad[tKey(teacher)] ?? 0) + 1
     teacherSubjectSet[tKey(teacher)]?.add(subject)
     teacherSectionSet[tKey(teacher)]?.add(secName)
+    allocCount(secName, subject, teacher.name, +1)
     // "Reassigned" = the teacher actually changed. Re-picking the incumbent
     // is not a change - counting it made the banner claim absurd numbers.
     if (teacher.name !== prevTeacher) reassignedCount++
@@ -2518,8 +2706,8 @@ export function reoptimizeTeachers(input: ReoptimizeInput): ReoptimizeResult {
   // Otherwise keep the incumbent untouched and say so - re-optimise must
   // never be able to make a schedule worse.
   const after = measureLoads(classTT, sections, staff, workDays, classPeriods, normCap)
-  const improved = after.overCap < before.overCap ||
-    (after.overCap === before.overCap && after.stddev < before.stddev - 1e-9)
+  const improved = !stranded && (after.overCap < before.overCap ||
+    (after.overCap === before.overCap && after.stddev < before.stddev - 1e-9))
   if (!improved) {
     // Report the incumbent's own penalties so the score history stays honest.
     const keptPenalties: ReoptimizeResult['penalties'] = []

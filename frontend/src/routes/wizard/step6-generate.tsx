@@ -235,6 +235,7 @@ export function Step6Generate() {
       subjectCombinations: (store as any).subjectCombinations ?? [],
       sectionStrengths: (store as any).sectionStrengths ?? [],
       subjectAllocations: (store as any).subjectAllocations ?? {},
+      teacherAllocations: (store as any).teacherAllocations ?? {},
       rooms: (store as any).rooms ?? [],
       teacherAvailability: (store as any).teacherAvailability ?? {},
       subjectGroups: (store as any).subjectGroups ?? [],

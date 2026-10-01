@@ -236,6 +236,9 @@ export function ReviewDashboard({
         // see that somebody is unavailable and moves lessons into slots the
         // first pass kept deliberately clear.
         teacherAvailability: liveStore.teacherAvailability ?? {},
+        // ...and the Allocation step's who-teaches-where, so evening out the
+        // load chart cannot hand a class's Music to someone it wasn't given to.
+        teacherAllocations: liveStore.teacherAllocations ?? {},
       })
       const stddevBefore = loadStats.stddev
       // PERSIST the improved assignment - previously only the load bars were
