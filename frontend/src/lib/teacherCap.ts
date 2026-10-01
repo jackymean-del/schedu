@@ -49,3 +49,29 @@ export function teacherWeeklyCap(staff: { maxPeriodsPerWeek?: number } | undefin
   if (own && own > 0) return own
   return schoolTeacherCap()
 }
+
+/**
+ * Move the teachers who were FOLLOWING the school norm onto a new one.
+ *
+ * Generating resources stamps the norm in force at that moment onto every
+ * teacher as their own maxPeriodsPerWeek, and a teacher's own figure always
+ * outranks the school's (teacherWeeklyCap above). So changing the school-wide
+ * workload afterwards reached nobody: the stamped figure sat on every teacher
+ * and the new setting was written and never read.
+ *
+ * A teacher whose cap equals the OLD norm was following it, and moves. Any
+ * other figure was given on purpose - a part-timer, a head of department -
+ * and is left exactly as it is. Returns null when nothing changes, so the
+ * caller can skip a write.
+ */
+export function carryStaffToNorm<T extends { maxPeriodsPerWeek?: number }>(
+  staff: T[], before: number, after: number,
+): T[] | null {
+  if (!staff.length || before === after) return null
+  let moved = 0
+  const next = staff.map(t => {
+    if (t?.maxPeriodsPerWeek === before) { moved++; return { ...t, maxPeriodsPerWeek: after } }
+    return t
+  })
+  return moved ? next : null
+}

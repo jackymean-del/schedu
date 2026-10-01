@@ -8,6 +8,7 @@ import {
   NORM_COUNTRIES,
 } from './src/lib/educationNorms.ts'
 import { countryOptions } from './src/lib/countryHours.ts'
+import { carryStaffToNorm } from './src/lib/teacherCap.ts'
 
 let failures = 0
 const check = (ok: boolean, label: string, extra = '') => {
@@ -124,5 +125,35 @@ check(studentNorms('NG').label.includes('Sub-Saharan'), 'Nigeria → Sub-Saharan
 check(studentNorms('BR').label.includes('Latin'), 'Brazil → Latin America region norm')
 check(teacherNorms('SA').safeMaxPeriodsWeek === 24, 'Saudi Arabia safe load = Gulf 24/wk')
 
+
+// ── A school-wide workload change must actually reach the teachers ────────
+//
+// Generating resources stamps the norm onto every teacher as their own cap,
+// and a teacher's own cap always wins. So raising the school's load in the
+// custom-workload dialog changed nothing: eight teachers still read 'max 30'.
+// Found in the live walkthrough; the setting was written and never read.
+console.log('')
+console.log('-- a workload change reaches the teachers following it --')
+{
+  const staff = [
+    { name: 'A', maxPeriodsPerWeek: 30 },
+    { name: 'B', maxPeriodsPerWeek: 30 },
+    { name: 'PartTime', maxPeriodsPerWeek: 15 },
+    { name: 'HoD', maxPeriodsPerWeek: 24 },
+  ]
+  const next = carryStaffToNorm(staff, 30, 48)
+  check(!!next, 'raising the norm produces a change')
+  check(next?.[0].maxPeriodsPerWeek === 48 && next?.[1].maxPeriodsPerWeek === 48,
+    'teachers on the old norm move to the new one', JSON.stringify(next?.map(t => t.maxPeriodsPerWeek)))
+  // The half that matters as much: a figure given on purpose is not a default.
+  check(next?.[2].maxPeriodsPerWeek === 15, 'a part-timer keeps their own cap')
+  check(next?.[3].maxPeriodsPerWeek === 24, 'and so does a head of department')
+  check(staff[0].maxPeriodsPerWeek === 30, 'and the input is not mutated')
+
+  check(carryStaffToNorm(staff, 30, 30) === null, 'an unchanged norm writes nothing')
+  check(carryStaffToNorm([], 30, 48) === null, 'nor does an empty staff list')
+  check(carryStaffToNorm([{ maxPeriodsPerWeek: 15 }], 30, 48) === null,
+    'nor a school where nobody was on the default')
+}
 console.log(failures === 0 ? '\nALL NORMS CHECKS PASSED' : `\n${failures} FAILURES`)
 process.exit(failures === 0 ? 0 : 1)

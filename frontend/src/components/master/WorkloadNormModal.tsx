@@ -20,12 +20,14 @@ import { useMemo, useState } from 'react'
 import { useDialog } from '@/hooks/useDialog'
 import { X, RotateCcw, ShieldCheck } from 'lucide-react'
 import type { Section } from '@/types'
-import { bandForSection, BAND_LABELS, normTeacherHoursWeek, type GradeBand } from '@/lib/educationNorms'
+import { bandForSection, BAND_LABELS, normTeacherHoursWeek, effectiveTeacherMaxPeriods, type GradeBand } from '@/lib/educationNorms'
 import { studentHoursWeekFor, countryHours } from '@/lib/countryHours'
 import { classOfSection } from '@/lib/syllabusTracking'
 import { compareSection } from '@/lib/scheduleAllocation'
 import { suggestSlotsPerWeek, getGrade, getGradeGroup, normalizeBoardType } from '@/components/resources/curriculum'
 import { useWorkloadLimits } from '@/store/workloadLimits'
+import { useTimetableStore } from '@/store/timetableStore'
+import { carryStaffToNorm } from '@/lib/teacherCap'
 import {
   periodsFromHours, hoursFromPeriods, perDayFromPerWeek,
   type WorkloadUnit, type WorkloadSpan,
@@ -215,11 +217,25 @@ export function WorkloadNormModal({
         continue
       }
       const hours = toHoursWeek(typed)
-      if (r.isTeacher) setTeacherMaxHoursWeek(hours)
+      if (r.isTeacher) {
+        carryTeachersToNewNorm(hours)
+        setTeacherMaxHoursWeek(hours)
+      }
       else if (r.cls) setStudentMaxHoursWeekForClass(r.cls, hours)
       else if (r.band) setStudentMaxHoursWeek(r.band, hours)
     }
     onClose()
+  }
+
+  /** Carry teachers on the school norm to the new one - see carryStaffToNorm. */
+  function carryTeachersToNewNorm(newHours: number | undefined) {
+    const st = useTimetableStore.getState() as any
+    const next = carryStaffToNorm(
+      st.staff ?? [],
+      effectiveTeacherMaxPeriods(country, periodMinutes, teacherMaxHoursWeek),
+      effectiveTeacherMaxPeriods(country, periodMinutes, newHours),
+    )
+    if (next) st.setStaff(next)
   }
 
   const dirty = Object.keys(draft).length > 0
