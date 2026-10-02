@@ -1165,6 +1165,11 @@ export function DashboardPage() {
     useTimetableStore.getState().resetWizard()
     useTimetableStore.getState().setConfig({
       timetableName: saved.name,
+      // The dates entered in the dialog. Without them the generate step put
+      // its own default in, and the schedule ran "1 Jun - 31 Mar" while the
+      // list said it started on 1 April.
+      timetableStartDate: (saved as any).startDate,
+      timetableEndDate:   (saved as any).endDate,
       fromGrade:   saved.fromGrade   ?? 'Nursery',
       toGrade:     saved.toGrade     ?? 'Class XII',
       numSections: saved.approxClasses,

@@ -8,6 +8,7 @@
  * Tabs: Period allocation · Teacher allocation · Validation
  */
 
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 // xlsx is loaded on demand (export click) - keeps it out of the main bundle
@@ -106,7 +107,7 @@ export function StepAllocation() {
 
   // Capacity engine
   const cap = useMemo(() => computeCapacity(workDays, periodsArr), [workDays, periodsArr])
-  const periodMinutes = config?.periodMinutes ?? 40
+  const periodMinutes = lessonMinutes(config)
 
   // Step 0's workload norms - the country reference plus any custom override.
   // Blueprint v6 requires these both to SEED the allocation engine and to be

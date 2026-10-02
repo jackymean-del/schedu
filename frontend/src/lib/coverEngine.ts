@@ -26,7 +26,7 @@ import { schedulePeriodTimes } from './bellTimes'
 import { subKey } from './substitutionKeys'
 import { cellHasTeacherOnDate, teachingPairsOnDate } from './orChoice'
 import { teachingSuspendedOn, type SchoolEvent } from './schoolEvents'
-import { leaveCoversDate, type CalLeave } from './leaveUtils'
+import { absenceCovers, type CalLeave } from './leaveUtils'
 import {
   overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate,
   type SubstitutionSettings, type MatchTier,
@@ -87,21 +87,9 @@ function wallTimes(b: ScheduleBundle): Record<string, { s: number; e: number }> 
   return m
 }
 
-/** Is this absence in force for a lesson at [startMin, endMin) on `iso`?
- *  A half day takes the half of THIS schedule's day the lesson falls in; a
- *  time window takes the lessons it overlaps. Older half-day records that do
- *  not say which half are treated as the whole day, as they always were. */
-export function absenceCovers(l: CalLeave, iso: string, startMin: number, endMin: number, dayStart: number, dayEnd: number): boolean {
-  if (!leaveCoversDate(l, iso)) return false
-  if (l.duration === 'half' && l.part) {
-    const mid = (dayStart + dayEnd) / 2
-    return l.part === 'first' ? startMin < mid : startMin >= mid
-  }
-  if (l.duration === 'hours' && l.fromMin != null && l.toMin != null) {
-    return startMin < l.toMin && l.fromMin < endMin
-  }
-  return true
-}
+// absenceCovers lives with the absence record (leaveUtils), so modules the
+// engine depends on can use it too without an import cycle.
+export { absenceCovers } from './leaveUtils'
 
 export function makeCoverEngine(ctx: CoverContext) {
   const { bundles, isoDate, dayKey, settings } = ctx

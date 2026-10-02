@@ -14,6 +14,8 @@
  * no alert. So the composition lives here and both consume it, instead of each
  * assembling its own and drifting the first time a fifth source appears.
  */
+import { lessonMinutes } from './lessonLength'
+import { schedulePeriodTimes } from './bellTimes'
 import { useMemo } from 'react'
 import { localISO } from './days'
 import { useSyllabus, withHolidayImpact, withLostImpact, withAllocatedHours, type SyllabusPlan } from './syllabusTracking'
@@ -80,11 +82,12 @@ export function composeEffectivePlans(input: {
   // has its own period length - merging the timetables and applying a single
   // figure would mis-price every schedule but one.
   for (const b of bundles) {
-    const periodMinutes = b.config?.periodMinutes ?? 40
+    const periodMinutes = lessonMinutes(b.config)
     out = withHolidayImpact(out, holidayImpact(b.classTT ?? {}, holidays, periodMinutes))
     out = withLostImpact(
       out,
-      uncoveredAbsenceLoss(leaves, b.classTT ?? {}, subRecords, periodMinutes, holidayPredicate(holidays)),
+      uncoveredAbsenceLoss(leaves, b.classTT ?? {}, subRecords, periodMinutes, holidayPredicate(holidays),
+        schedulePeriodTimes(b.config ?? {}, b.periods ?? [], b.sections ?? [])),
       { reason: 'absence', idPrefix: `uncovered:${b.id}`, note: NOTE.absence },
     )
   }

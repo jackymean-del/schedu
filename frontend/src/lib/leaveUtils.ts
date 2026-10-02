@@ -136,3 +136,19 @@ export const legacyLeaveKeys = (storage: Storage) => legacyKeysFor(LEAVE_KEY, st
 /** Merge leave lists, collapsing the same absence recorded twice. */
 export const mergeLeaves = (...lists: CalLeave[][]) =>
   mergeById(leaveIdentity, undefined, ...lists).sort((a, b) => a.date.localeCompare(b.date))
+
+/** Is this absence in force for a lesson at [startMin, endMin) on `iso`?
+ *  A half day takes the half of THIS schedule's day the lesson falls in; a
+ *  time window takes the lessons it overlaps. Older half-day records that do
+ *  not say which half are treated as the whole day, as they always were. */
+export function absenceCovers(l: CalLeave, iso: string, startMin: number, endMin: number, dayStart: number, dayEnd: number): boolean {
+  if (!leaveCoversDate(l, iso)) return false
+  if (l.duration === 'half' && l.part) {
+    const mid = (dayStart + dayEnd) / 2
+    return l.part === 'first' ? startMin < mid : startMin >= mid
+  }
+  if (l.duration === 'hours' && l.fromMin != null && l.toMin != null) {
+    return startMin < l.toMin && l.fromMin < endMin
+  }
+  return true
+}

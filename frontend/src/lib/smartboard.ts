@@ -18,7 +18,7 @@ import type { Period } from '@/types'
 import { subKey } from './substitutionKeys'
 import { runningOnDate, teachingPairsOnDate } from './orChoice'
 import { sectionPeriodTimes } from './bellTimes'
-import { ringsForSection, nextRing, describeRing, type Ring } from './bellSchedule'
+import { ringsForSection, describeRing, type Ring } from './bellSchedule'
 
 export type BoardState =
   /** Term-time, working day, but the first bell hasn't gone. */
@@ -66,7 +66,11 @@ export function boardNow(rings: Ring[], nowMin: number, opts: {
 
   const firstBellAt = rings[0].at
   const lastBellAt = rings[rings.length - 1].at
-  const upcoming = nextRing(rings, nowMin)
+  // Strictly after now. nextRing counts the current minute as due, which is
+  // right for the ringer (it has to ring on that minute) and wrong for a
+  // countdown: from 12:55:00 to 12:55:59 the board said "Next bell in 0 min,
+  // Period 5" about a bell that had already rung.
+  const upcoming = rings.find(r => r.at > nowMin)
 
   if (nowMin < firstBellAt) {
     return {

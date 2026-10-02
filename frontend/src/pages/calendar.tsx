@@ -8,6 +8,7 @@
  * Phase 1 of the premium calendar: foundation + Add Event. Leave/Substitution
  * and Auto-Assign layer on top of this in later phases.
  */
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useSyllabus } from '@/lib/syllabusTracking'
 import { useOrDecisionSync } from '@/lib/orSync'
 import { useState, useMemo, useEffect, useRef } from 'react'
@@ -297,7 +298,7 @@ export function CalendarPage() {
   // timetable (lib/holidays), so a holiday added here updates lost classes and
   // remaining-hours everywhere without anyone logging anything per subject.
   const { holidays, addHoliday, removeHoliday } = useHolidays()
-  const periodMinutes = config.periodMinutes ?? 40
+  const periodMinutes = lessonMinutes(config)
   // Blueprint v6 splits these rights (see lib/permissions): declaring a holiday
   // removes teaching time from the whole school, so it is an admin action -
   // unlike a teacher logging one missed period of their own.

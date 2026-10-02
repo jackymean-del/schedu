@@ -49,6 +49,7 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
     // the generator honours, so the editor recommends what generation would do.
     teacherAllocations,
   } = useTimetableStore()
+  const rooms = useTimetableStore(st => (st as any).rooms) as Array<{ actualName?: string; name?: string; generatedName?: string }> | undefined
   const org = ORG_CONFIGS[config.orgType ?? "school"]
 
   // Memoised: the `?? {}` minted a new object whenever the slot was empty,
@@ -198,10 +199,14 @@ export function EditCellModal({ target, onClose, initialSubject }: Props) {
     const opts: string[] = []
     const add = (r?: string) => { if (r && !seen.has(r)) { seen.add(r); opts.push(r) } }
     add(section?.room)
+    // The school's venues as entered on Resources. Reading only the older
+    // `facilities` list (often empty) and each class's home room meant a lab
+    // or a hall was never offered here at all.
+    ;((rooms ?? []) as any[]).forEach(r => add(r.actualName || r.name || r.generatedName))
     facilities.forEach(f => add(f.actualName || f.generatedName))
     sections.forEach(s => add(s.room))
     return opts
-  }, [section, facilities, sections])
+  }, [section, facilities, sections, rooms])
 
   // ── Add subject to group + auto-fill teacher ──────────────────────────────
   const addToGroup = (subName: string) => {

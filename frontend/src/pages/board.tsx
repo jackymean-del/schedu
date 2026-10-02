@@ -127,6 +127,19 @@ export function BoardPage() {
     [bundles, dayKey, now, nowMin, awayNow, syllabusPlans, orNonce],
   )
   const uncovered = useMemo(() => uncoveredRows(rows), [rows])
+  // A break or lunch in force right now, named from the bell. "Nothing
+  // scheduled" in the middle of lunch reads as if the school had stopped.
+  const breakNow = useMemo(() => {
+    for (const b of bundles) {
+      const names = new Map<string, string>((b.periods ?? []).map((p: any) => [p.id, p.name ?? '']))
+      for (const [pid, t] of schedulePeriodTimes(b.config ?? {}, b.periods ?? [], b.sections ?? [])) {
+        if (t.type !== 'class' && t.startMin <= nowMin && nowMin < t.endMin) {
+          return { name: names.get(pid) || (t.type === 'lunch' ? 'Lunch' : 'Break'), endMin: t.endMin }
+        }
+      }
+    }
+    return null
+  }, [bundles, nowMin])
   const teaching = rows.filter(r => r.subject)
   const multi = bundles.length > 1
 
@@ -189,7 +202,9 @@ export function BoardPage() {
       {/* Now */}
       {state.state === 'during' && (
         teaching.length === 0 ? (
-          <Empty text="Nothing scheduled at this moment." />
+          <Empty text={breakNow
+            ? `${breakNow.name} until ${fmtRingTime(breakNow.endMin)}.`
+            : 'Nothing scheduled at this moment.'} />
         ) : (
           <div style={{
             display: 'grid', gap: 'clamp(8px, 0.9vw, 14px)',

@@ -17,6 +17,7 @@
  *     pure function that can be tested deterministically and moved to a worker
  *     without dragging localStorage-backed stores in behind it.
  */
+import { lessonMinutes } from './lessonLength'
 import { effectiveTeacherMaxPeriods } from './educationNorms'
 import { useWorkloadLimits, schoolCountry } from '@/store/workloadLimits'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -33,7 +34,7 @@ export function schoolTeacherCap(): number {
     const cfg = (useTimetableStore.getState() as any)?.config
     const limits = useWorkloadLimits.getState()
     const country = schoolCountry(cfg?.countryCode)
-    const periodMinutes = cfg?.periodMinutes ?? 40
+    const periodMinutes = lessonMinutes(cfg)
     return effectiveTeacherMaxPeriods(country, periodMinutes, limits?.teacherMaxHoursWeek)
   } catch {
     return HARD_FALLBACK_CAP

@@ -48,7 +48,7 @@ import { persist } from 'zustand/middleware'
 import type { ClassTimetable } from '@/types'
 import { teachingPairsInCell } from './cellTeachers'
 import { planKey } from './syllabusTracking'
-import { leaveCoversDate, type CalLeave } from './leaveUtils'
+import { leaveCoversDate, absenceCovers, type CalLeave } from './leaveUtils'
 
 export type SubIntent = 'skip' | 'continue' | 'occupy' | 'other-subject'
 
@@ -235,10 +235,12 @@ const isoOf = (d: Date) =>
  * rather than per weekday - a Monday covered on the 6th says nothing about the
  * 13th.
  *
- * Honest limitation: HALF-day leave is deliberately excluded. We know half the
- * day was missed but not which half, and guessing which periods to charge would
- * be inventing data. Those show as uncovered periods on the Calendar, where a
- * human can see which they were, and can be logged explicitly.
+ * Part-day absences are charged only for the lessons they cover, and only
+ * when the schedule's period times are given to say which those are. A half
+ * day that does not record WHICH half (older records) still charges nothing:
+ * guessing would be inventing data. Without times, a part-day absence is not
+ * charged either - charging the whole day is how a teacher out for a 10:00
+ * meeting had her 12:55 lesson written off as lost.
  */
 export function uncoveredAbsenceLoss(
   leaves: CalLeave[],
@@ -247,14 +249,22 @@ export function uncoveredAbsenceLoss(
   periodMinutes: number,
   /** Dates a section wasn't in school anyway - already counted as holidays. */
   isHoliday?: (date: string, section: string) => boolean,
+  /** This schedule's period times, so a part-day absence is charged only for
+   *  the lessons it covers. */
+  times?: Map<string, { startMin: number; endMin: number }>,
 ): Record<string, HoursByPlan> {
   const hoursPerPeriod = Math.max(0, periodMinutes) / 60
   // Accumulate whole periods and convert once - rounding each one drifts.
   const periods: Record<string, { count: number; dates: string[] }> = {}
   const covered = new Set(records.map(r => `${r.date}|${r.section}|${r.periodId}`))
 
+  const spans = times ? [...times.values()] : []
+  const dayStart = spans.length ? Math.min(...spans.map(t => t.startMin)) : 0
+  const dayEnd = spans.length ? Math.max(...spans.map(t => t.endMin)) : 24 * 60
   for (const leave of leaves) {
-    if (leave.duration === 'half') continue          // see the note above
+    const partDay = leave.duration === 'half' || leave.duration === 'hours'
+    if (leave.duration === 'half' && !leave.part) continue   // which half is unknown - see above
+    if (partDay && !times) continue                          // cannot tell which lessons - see above
     for (const date of datesOf(leave)) {
       const wd = DAY_NAMES[new Date(`${date}T00:00:00`).getDay()]
       if (!wd) continue
@@ -282,6 +292,10 @@ export function uncoveredAbsenceLoss(
             // the wrong subject.
             const mine = teachingPairsInCell(cell).find(x => x.teacher === leave.teacher)
             if (!mine) continue
+            if (partDay) {
+              const t = times!.get(periodId)
+              if (!t || !absenceCovers(leave, date, t.startMin, t.endMin, dayStart, dayEnd)) continue
+            }
             if (covered.has(`${date}|${section}|${periodId}`)) continue   // someone stood in
             const k = planKey(mine.subject || cell.subject, section)
             const cur = periods[k] ?? { count: 0, dates: [] }

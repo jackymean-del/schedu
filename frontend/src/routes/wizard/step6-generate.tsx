@@ -6,6 +6,7 @@ import {
   type GenerationPayload, type GenerationResult,
 } from "@/lib/generationPipeline"
 import { buildPreflight } from "@/lib/preflight"
+import { getActiveTimetableId, listTimetables } from "@/lib/ttRegistry"
 import { ReviewDashboard } from "@/components/master/ReviewDashboard"
 import type { ClassTimetable } from "@/types"
 import { GraduationCap, Users, BookOpen, Building2, CalendarDays, Clock } from "lucide-react"
@@ -69,7 +70,8 @@ function flattenAssignments(classTT: ClassTimetable): string[] {
 function defaultStartDate(): string {
   const now = new Date()
   const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1
-  return `${year}-06-01`
+  // 1 April, the same default the New schedule dialog offers.
+  return `${year}-04-01`
 }
 function defaultEndDate(): string {
   const now = new Date()
@@ -97,8 +99,17 @@ export function Step6Generate() {
 
   // Timetable identity - pre-filled with sensible defaults
   const [ttName, setTtName]         = useState(config.timetableName       || `${config.schoolName || "School"} Timetable`)
-  const [ttStart, setTtStart]       = useState(config.timetableStartDate  || defaultStartDate())
-  const [ttEnd, setTtEnd]           = useState(config.timetableEndDate    || defaultEndDate())
+  // The schedule's own dates come first: those typed into the New schedule
+  // dialog live on its list entry, and a schedule made before they were also
+  // copied into the config would otherwise get this step's defaults instead.
+  const listEntry = (() => {
+    try {
+      const id = getActiveTimetableId()
+      return listTimetables().find(t => t.id === id)
+    } catch { return undefined }
+  })()
+  const [ttStart, setTtStart]       = useState(config.timetableStartDate  || listEntry?.startDate || defaultStartDate())
+  const [ttEnd, setTtEnd]           = useState(config.timetableEndDate    || listEntry?.endDate   || defaultEndDate())
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
 
@@ -109,7 +120,10 @@ export function Step6Generate() {
     { icon: GraduationCap, label:"Classes",  value: sections.length },
     { icon: Users,         label:"Teachers", value: store.staff.length },
     { icon: BookOpen,      label:"Subjects",  value: subjects.length },
-    { icon: Building2,     label:"Venues",    value: facilities.length || sections.length },
+    // The venues the school entered (store.rooms, as the Resources tab counts
+    // them). `facilities` is an older list that is often empty, and falling
+    // back to the class count reported 5 venues for a school with 6.
+    { icon: Building2,     label:"Venues",    value: ((store as any).rooms ?? []).length || facilities.length || sections.length },
     { icon: CalendarDays,  label:"Days/week", value: config.workDays?.length ?? 5 },
     { icon: Clock,         label:"Periods/day",value: config.periodsPerDay ?? 8 },
   ]

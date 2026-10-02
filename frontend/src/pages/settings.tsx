@@ -2,6 +2,7 @@
  * Settings - organization profile + account. This is the permanent home for
  * editing the organization details first captured by the onboarding guide.
  */
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useOrgProfile } from '@/store/orgProfile'
@@ -182,7 +183,7 @@ function WorkloadCard({ onSaved }: { onSaved: () => void }) {
   const subjects = useTimetableStore(s => (s as any).subjects) ?? []
   const [workloadOpen, setWorkloadOpen] = useState(false)
   const board = config?.board
-  const periodMinutes = config?.periodMinutes ?? 40
+  const periodMinutes = lessonMinutes(config)
   const daysPerWeek = (config?.workDays?.length) || 6
   const {
     country: schoolCountryCode, teacherMaxHoursWeek, studentMaxHoursWeek,

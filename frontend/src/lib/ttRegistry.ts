@@ -124,11 +124,11 @@ export function loadActiveTimetableIntoStore(): void {
 
 /** Schedules available to switch between: id + name + status, newest first,
  *  read from the same list the dashboard maintains. */
-export function listTimetables(): { id: string; name: string; status?: string }[] {
+export function listTimetables(): { id: string; name: string; status?: string; startDate?: string; endDate?: string }[] {
   try {
     const raw = localStorage.getItem(ttListKey()) ?? localStorage.getItem(TTLIST_KEY)
     const list: any[] = raw ? JSON.parse(raw) : []
-    return list.map(t => ({ id: t.id, name: t.name ?? 'Untitled', status: t.status }))
+    return list.map(t => ({ id: t.id, name: t.name ?? 'Untitled', status: t.status, startDate: t.startDate, endDate: t.endDate }))
   } catch { return [] }
 }
 

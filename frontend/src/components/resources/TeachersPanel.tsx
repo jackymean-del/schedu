@@ -16,6 +16,7 @@
  * Data model: Staff extended with `subjectMappings?: { subject, classes }[]`
  */
 
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useState, useRef, useMemo, useEffect, useCallback, Fragment, type KeyboardEvent as RKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { Staff, Section, Subject } from '@/types'
@@ -648,7 +649,7 @@ export function TeachersPanel({ staff, setStaff, sections, subjects, onScopeClic
   const teacherMaxHoursWeek = useWorkloadLimits(s => s.teacherMaxHoursWeek)
   const workDayCount = config?.workDays?.length || 5
   const normCap = effectiveTeacherMaxPeriods(
-    schoolCountry(config?.countryCode), config?.periodMinutes ?? 40, teacherMaxHoursWeek,
+    schoolCountry(config?.countryCode), lessonMinutes(config), teacherMaxHoursWeek,
   )
 
   const [search, setSearch]         = useState('')

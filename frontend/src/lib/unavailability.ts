@@ -13,6 +13,7 @@
  * teacher's own report arrives (the sync polls), so a teacher who reports
  * themselves ill at 6am is covered by the time anyone opens the school's app.
  */
+import { lessonMinutes } from './lessonLength'
 import { useEffect, useState } from 'react'
 import { collabApi } from '@/api/client'
 import { useTimetableStore } from '@/store/timetableStore'
@@ -73,7 +74,7 @@ function writeCover(bundles: ScheduleBundle[], touched: Set<string>) {
 
 function periodHours(b: ScheduleBundle, periodId: string): number {
   const t = schedulePeriodTimes(b.config, b.periods, b.sections).get(periodId)
-  if (!t) return (b.config?.periodMinutes ?? 40) / 60
+  if (!t) return lessonMinutes(b.config) / 60
   return Math.round(((t.endMin - t.startMin) / 60) * 10) / 10
 }
 

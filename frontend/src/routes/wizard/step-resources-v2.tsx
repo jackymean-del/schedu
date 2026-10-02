@@ -15,6 +15,7 @@
  * Tab order: Classes → Subjects → Teachers → Rooms
  */
 
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { generateStaff, generateBreaks } from '@/lib/orgData'
@@ -486,7 +487,7 @@ export function StepResourcesV2() {
     // national SAFE teaching load from the norms brain (India 30 · GB 22 · …).
     // IB/Cambridge stay capped lower for their lighter contact time.
     const safe = effectiveTeacherMaxPeriods(
-      schoolCountry(config.countryCode), (config as any).periodMinutes ?? 40,
+      schoolCountry(config.countryCode), lessonMinutes(config as any),
       useWorkloadLimits.getState().teacherMaxHoursWeek,
     )
     const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
@@ -586,7 +587,7 @@ export function StepResourcesV2() {
     const board = normalizeBoardType(config.board ?? 'CBSE')
     // Global custom cap (Settings) if set, else the national safe teaching load.
     const safe = effectiveTeacherMaxPeriods(
-      country, (config as any).periodMinutes ?? 40,
+      country, lessonMinutes(config as any),
       useWorkloadLimits.getState().teacherMaxHoursWeek,
     )
     const boardCap: Record<string, number> = { IB: 24, Cambridge: 24 }
@@ -743,7 +744,7 @@ export function StepResourcesV2() {
     // Apply the effective per-teacher cap: the user's global custom max (Settings
     // → Workload limits) if set, else the national safe teaching-period norm.
     const teacherCap = effectiveTeacherMaxPeriods(
-      schoolCountry(config.countryCode), (config as any).periodMinutes ?? 40,
+      schoolCountry(config.countryCode), lessonMinutes(config as any),
       useWorkloadLimits.getState().teacherMaxHoursWeek,
     )
     const newStaff = buildDefaultStaff(targetStaff).map((t: any) => ({ ...t, maxPeriodsPerWeek: teacherCap }))

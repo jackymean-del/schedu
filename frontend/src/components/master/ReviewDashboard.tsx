@@ -12,6 +12,7 @@
  * Consumes the SolverOutput plus raw store data. Pure display component.
  */
 
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { teacherWeeklyCap, schoolTeacherCap } from '@/lib/teacherCap'
 import type { Section, Subject, Staff, Period, OptionalBlock, Conflict, ClassTimetable } from '@/types'
@@ -170,7 +171,7 @@ export function ReviewDashboard({
   // without requiring a full solver re-run.
   const liveStore = useTimetableStore() as any
   const { studentMaxHoursWeek } = useWorkloadLimits()
-  const periodMinutes = (liveStore.config?.periodMinutes) ?? 40
+  const periodMinutes = lessonMinutes(liveStore.config)
   const liveWorkloadPenalties = useMemo(
     () => recomputeWorkloadPenalties({
       staff: liveStore.staff ?? staff,
@@ -844,7 +845,7 @@ export function ReviewDashboard({
             classTT={classTT}
             sections={sections}
             staff={staff}
-            periodMinutes={cfg.periodMinutes ?? 40}
+            periodMinutes={lessonMinutes(cfg)}
             countryCode={schoolCountry(cfg.countryCode)}
             onClose={() => setBackSyncOpen(false)}
           />

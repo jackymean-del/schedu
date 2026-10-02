@@ -50,7 +50,7 @@ derive-alloc-verify     dispersal-verify        norms-verify
 reopt-verify            bell-verify             bell-ringer-verify
 mps-test                style-verify            alloc-verify
 preflight-verify        orphan-repair-verify    class-teacher-verify
-unavailability-verify
+unavailability-verify   export-verify
 ```
 
 **Measure correctness against what the school decided, not against the

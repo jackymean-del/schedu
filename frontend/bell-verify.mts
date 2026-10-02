@@ -144,4 +144,35 @@ const fmt = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '
   if (!ok) fails++
 }
 
+// ── A lesson's length is read in one place ───────────────────────────────
+//
+// Every hours figure in the app read `config.periodMinutes ?? 40`, and nothing
+// ever wrote periodMinutes, so every school was priced at 40-minute lessons
+// whatever its bell said. lib/lessonLength reads it, then the bell step's
+// saved period length. Guard the pattern, not the instance: no file may grow
+// its own fallback again.
+{
+  const { readdirSync, readFileSync, statSync } = await import('node:fs')
+  const { join } = await import('node:path')
+  const walk = (d: string, out: string[] = []): string[] => {
+    for (const e of readdirSync(d)) {
+      const p = join(d, e)
+      if (statSync(p).isDirectory()) walk(p, out)
+      else if (/\.(ts|tsx)$/.test(e)) out.push(p)
+    }
+    return out
+  }
+  const offenders = walk('src').filter(f => !f.endsWith('lessonLength.ts')).filter(f => {
+    const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+    return /\.periodMinutes\)?\s*(\?\?|\|\|)\s*\d/.test(src)
+  })
+  const ok = offenders.length === 0
+  console.log(`${ok ? '✓' : '✗'} lesson length is read through lib/lessonLength everywhere${ok ? '' : ` - own fallback in: ${offenders.join(', ')}`}`)
+  if (!ok) fails++
+  const { lessonMinutes } = await import('./src/lib/lessonLength.ts')
+  const fromBell = lessonMinutes({ defaultSessionDuration: 45 })
+  console.log(`${fromBell === 45 ? '✓' : '✗'} a school with 45-minute lessons is priced at 45, not 40 - ${fromBell}`)
+  if (fromBell !== 45) fails++
+}
+
 process.exit(fails ? 1 : 0)

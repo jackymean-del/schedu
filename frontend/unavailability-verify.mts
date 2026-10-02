@@ -15,6 +15,8 @@ import { makeCoverEngine, absenceCovers, weekDatesOf } from './src/lib/coverEngi
 import { mergeServerLeaves, rowToLeave, leaveToBody, SERVER_PREFIX } from './src/lib/unavailabilityRules.ts'
 import { withSubstitutionDefaults } from './src/lib/substitutionSettings.ts'
 import { computeReports } from './src/lib/reportsData.ts'
+import { uncoveredAbsenceLoss } from './src/lib/substitutionCoverage.ts'
+import { planKey } from './src/lib/syllabusTracking.ts'
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
@@ -139,6 +141,21 @@ console.log('insights')
   })
   ok(r.totals.cancelled === 2, 'a second-half absence costs only the afternoon lessons', `${r.totals.cancelled} cancelled`)
   ok(r.totals.leaveDays === 0.5, 'and counts as half a day away', `${r.totals.leaveDays}`)
+}
+
+// ── 4b. The syllabus is charged only for what an absence missed ──────────
+console.log('syllabus loss')
+{
+  const times = new Map(periods.map((p, i) => [p.id, { startMin: 540 + i * 60, endMin: 600 + i * 60 }]))
+  // T1 at a 10:00-12:00 meeting: misses p2 (10:00) and p3 (11:00) - p3 is the
+  // parallel lesson in B. p1, p4, p5 were taught as normal.
+  const meeting = { ...fullDay, duration: 'hours', fromMin: 600, toMin: 720 }
+  const lost = uncoveredAbsenceLoss([meeting], bundle.classTT, [], 60, undefined, times)
+  const total = Object.values(lost).reduce((a: number, x: any) => a + x.hours, 0)
+  ok(total === 2 && !!lost[planKey('Maths', 'A')] && !!lost[planKey('Music', 'B')],
+    'a two-hour meeting writes off the two lessons it covered, not the day', JSON.stringify(lost))
+  ok(Object.keys(uncoveredAbsenceLoss([meeting], bundle.classTT, [], 60)).length === 0,
+    'without lesson times a part-day absence charges nothing rather than the whole day')
 }
 
 // ── 5. The screens use it ────────────────────────────────────────────────

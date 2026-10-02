@@ -1,3 +1,4 @@
+import { lessonMinutes } from '@/lib/lessonLength'
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
@@ -1331,7 +1332,9 @@ export function TimetablePage() {
     setSharing(true)
     setShareError("")
     try {
-      const snapshot = buildShareSnapshot((config as any).name)
+      // The schedule's own name; `config.name` does not exist, so links went out
+      // titled with the school or just "Timetable".
+      const snapshot = buildShareSnapshot(config.timetableName)
       const emails = shareEmails.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean)
       if (shareVisibility === "restricted" && emails.length === 0) {
         throw new Error("Add at least one email, or choose “Anyone with the link”.")
@@ -4298,7 +4301,7 @@ export function TimetablePage() {
           classTT={classTT}
           sections={sections}
           staff={store.staff ?? []}
-          periodMinutes={(config as any).periodMinutes ?? 40}
+          periodMinutes={lessonMinutes(config as any)}
           countryCode={config.countryCode ?? "IN"}
           onClose={() => setBackSyncOpen(false)}
         />
@@ -4431,7 +4434,7 @@ export function TimetablePage() {
             </div>
 
             <div style={{ fontSize:12, color:"#4B5275", marginBottom:20, lineHeight:1.5 }}>
-              Publishing makes this schedule the active one. You can still edit individual cells after publishing. This action can be reversed by regenerating.
+              Publishing puts this schedule live: the Calendar, Dashboard and corridor board follow it, alongside any other active schedule. You can keep editing lessons afterwards, and Unpublish takes it off again.
             </div>
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
               <button onClick={() => setPublishConfirm(false)}

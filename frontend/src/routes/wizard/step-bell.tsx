@@ -3554,6 +3554,9 @@ export function StepBell() {
     setConfig({
       workDays: workDays.map(d => DAY_TO_FULL[d] ?? d.toUpperCase()),
       startTime, endTime, periodsPerDay: maxPeriods, defaultSessionDuration: periodDur,
+      // Every hours figure reads this (through lib/lessonLength); it was never
+      // written, so all of them assumed 40-minute lessons.
+      periodMinutes: periodDur,
       // Persist class-specific day-off rules so the scheduling engine can honour them
       dayOffRules: dayOffRules.length > 0 ? dayOffRules : undefined,
       // Persist class-wise break config so the timetable display shows correct per-class times

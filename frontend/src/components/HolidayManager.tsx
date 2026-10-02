@@ -14,6 +14,7 @@
  * timetable - see lib/holidays.ts - so one entry here updates coverage
  * everywhere without anyone logging it per subject.
  */
+import { lessonMinutes } from '@/lib/lessonLength'
 import { useMemo, useState } from 'react'
 import { localISO } from '@/lib/days'
 import { useHolidays, holidayImpact, totalHolidayHours, weekdayOf } from '@/lib/holidays'
@@ -27,7 +28,7 @@ export function HolidayManager({ onSaved }: { onSaved?: () => void }) {
   const { holidays, addHoliday, removeHoliday } = useHolidays()
   const store = useTimetableStore() as any
   const sections: any[] = store.sections ?? []
-  const periodMinutes = store.config?.periodMinutes ?? 40
+  const periodMinutes = lessonMinutes(store.config)
 
   const sectionNames: string[] = sections.map((s: any) => s.name).filter(Boolean)
 

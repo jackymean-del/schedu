@@ -18,6 +18,7 @@
  * summed by (subject, section). Merging the timetables first and applying one
  * period length would quietly mis-price every schedule but one.
  */
+import { lessonMinutes } from './lessonLength'
 import { planKey } from './syllabusTracking'
 import { localISO } from './days'
 import { scheduledHoursBetween } from './syllabusPace'
@@ -100,7 +101,7 @@ export function allocatedHoursByPlan(bundles: ScheduleBundle[], term?: AcademicT
   for (const b of bundles) {
     const win = windowFor(b, term)
     if (!win) continue
-    const periodMinutes = b.config?.periodMinutes ?? 40
+    const periodMinutes = lessonMinutes(b.config)
     for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
         const h = scheduledHoursBetween(b.classTT, subject, section, win.start, win.end, periodMinutes, [])
@@ -133,7 +134,7 @@ export function elapsedHoursByPlan(
     // Nothing has run before the term, and it stops accruing once it ends.
     if (todayISO < win.start) continue
     const upto = todayISO > win.end ? win.end : todayISO
-    const periodMinutes = b.config?.periodMinutes ?? 40
+    const periodMinutes = lessonMinutes(b.config)
     for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
         const h = scheduledHoursBetween(
@@ -170,7 +171,7 @@ export function futureHoursByPlan(
     if (todayISO >= win.end) continue                       // the term is over
     // From TOMORROW, so today is never counted as both spent and still to come.
     const from = todayISO < win.start ? win.start : nextDay(todayISO)
-    const periodMinutes = b.config?.periodMinutes ?? 40
+    const periodMinutes = lessonMinutes(b.config)
     for (const section of liveSections(b)) {
       for (const subject of subjectsIn(b.classTT, section)) {
         const h = scheduledHoursBetween(
@@ -307,7 +308,7 @@ export function contextForSection(
   const win = windowFor(b, term)
   return {
     classTT: b.classTT,
-    periodMinutes: b.config?.periodMinutes ?? 40,
+    periodMinutes: lessonMinutes(b.config),
     termStart: win?.start, termEnd: win?.end,
     scheduleName: b.name,
   }

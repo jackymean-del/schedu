@@ -10,6 +10,8 @@
  * shared service, because the same numbers also answer the Step 4 OR question
  * and drive Live Mode.
  */
+import { lessonMinutes } from '@/lib/lessonLength'
+import { useTimetableStore } from '@/store/timetableStore'
 import { useMemo, useState } from 'react'
 import { localISO } from '@/lib/days'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -143,7 +145,9 @@ export function SyllabusPage() {
   const left = future[key] ?? 0
   const method = effectiveMethod(plan)
   const ctx = contextFor(section)
-  const periodMinutes = ctx?.periodMinutes ?? 40
+  // The owning schedule's lesson length; with no schedule for this section,
+  // the open one's (lib/lessonLength), never a bare 40.
+  const periodMinutes = ctx ? ctx.periodMinutes : lessonMinutes(useTimetableStore.getState().config as any)
 
   const bonus = useMemo(() => bonusSessions(subRecords), [subRecords])
   // Syllabus data is global and outlives any one schedule, so plans recorded for
@@ -553,7 +557,7 @@ export function SyllabusPage() {
 
             {/* Lost sessions - one-off events / absences for THIS subject */}
             <LostSessionsCard
-              subject={subject} section={section} plan={plan}
+              subject={subject} section={section} plan={plan} lessonHours={Math.round((periodMinutes / 60) * 100) / 100}
               onAdd={(s) => logLostSession(subject, section, s)}
               onRemove={(id) => removeLostSession(subject, section, id)}
             />
@@ -850,6 +854,19 @@ function PaceCard({
   )
 
   const { pace, contentCovered, timeSpent, contentRemaining, timeRemaining, projectedHoursNeeded, willFinish, shortfallHours } = report
+
+  // Nothing ticked yet: a pace of zero projects an infinite need, and the card
+  // announced "Will not finish - about 11,601 h short" on the first day anyone
+  // looked. What is true is that class has run and no progress is recorded.
+  if (contentCovered <= 0) return (
+    <Card title="Pace - will this syllabus finish?" subtitle="Compares syllabus actually covered against class time actually used.">
+      <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: 0 }}>
+        Nothing is marked as covered yet{timeSpent > 0 ? <>, though <strong>{timeSpent} h</strong> of class has run</> : ''}.
+        Tick the chapters already taught and the pace appears: {contentRemaining} h of syllabus, {timeRemaining} h of class left this term.
+      </p>
+    </Card>
+  )
+
   const tone = willFinish ? '#067647' : '#B45309'
   const paceLabel = pace >= 1.15 ? 'Ahead of plan' : pace <= 0.85 ? 'Slower than planned' : 'On plan'
 
@@ -977,14 +994,18 @@ function BorrowReplaceCard({ onPick }: { onPick: (subject: string, section: stri
  * turns "75% covered, looks fine" into "this can't land without rescheduling".
  */
 function LostSessionsCard({
-  subject, section, plan, onAdd, onRemove,
+  subject, section, plan, onAdd, onRemove, lessonHours = 1,
 }: {
   subject: string; section: string; plan: SyllabusPlan | undefined
+  /** One lesson's length - the usual thing lost, so the form starts there. */
+  lessonHours?: number
   onAdd: (s: Omit<LostSession, 'id'>) => void
   onRemove: (id: string) => void
 }) {
   const [date, setDate] = useState(() => localISO(new Date()))
-  const [hours, setHours] = useState<number | ''>('')
+  // Starts at one lesson. It used to start empty with a grey "1" placeholder
+  // that read as a value, so Log loss sat disabled with no visible reason.
+  const [hours, setHours] = useState<number | ''>(lessonHours)
   const [reason, setReason] = useState<LostSession['reason']>('holiday')
   const [note, setNote] = useState('')
 
@@ -995,7 +1016,7 @@ function LostSessionsCard({
   const add = () => {
     if (!Number(hours)) return
     onAdd({ date, hours: Number(hours), reason, note: note.trim() || undefined })
-    setHours(''); setNote('')
+    setHours(lessonHours); setNote('')
   }
 
   return (
