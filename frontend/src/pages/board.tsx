@@ -16,6 +16,8 @@ import { useOrgProfile } from '@/store/orgProfile'
 import { useTimetableStore } from '@/store/timetableStore'
 import { loadActiveBundles } from '@/lib/activeSchedules'
 import { useLeaves, teachersOnLeaveOn } from '@/lib/leaveUtils'
+import { absenceCovers } from '@/lib/coverEngine'
+import { schedulePeriodTimes } from '@/lib/bellTimes'
 import { useHolidays } from '@/lib/holidays'
 import { useSyllabus } from '@/lib/syllabusTracking'
 import { useOrDecisionSync } from '@/lib/orSync'
@@ -106,13 +108,23 @@ export function BoardPage() {
   )
   const state = boardNow(rings, nowMin, { isWorkDay: workDays.includes(dayKey), closedReason })
 
+  // Everyone with any absence today, for the "Out today" line...
   const absent = useMemo(() => new Set(teachersOnLeaveOn(leaves, isoDate)), [leaves, isoDate])
+  // ...but a lesson is uncovered only if its teacher is away NOW: somebody
+  // out for the afternoon is teaching period 1, and calling that lesson
+  // uncovered on a corridor screen is a false alarm with an audience.
+  const awayNow = useMemo(() => {
+    const spans = bundles.flatMap(b => [...schedulePeriodTimes(b.config ?? {}, b.periods ?? [], b.sections ?? []).values()])
+    const start = spans.length ? Math.min(...spans.map(t => t.startMin)) : 0
+    const end = spans.length ? Math.max(...spans.map(t => t.endMin)) : 24 * 60
+    return new Set(leaves.filter(l => absenceCovers(l, isoDate, nowMin, nowMin + 1, start, end)).map(l => l.teacher))
+  }, [leaves, isoDate, nowMin, bundles])
   const rows = useMemo(
-    () => boardRows(bundles as any, dayKey, localISO(now), nowMin, absent, syllabusPlans),
+    () => boardRows(bundles as any, dayKey, localISO(now), nowMin, awayNow, syllabusPlans),
     // orNonce is not read here: it is the signal that a pull changed what is
     // in local storage, so the rows are rebuilt from it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bundles, dayKey, now, nowMin, absent, syllabusPlans, orNonce],
+    [bundles, dayKey, now, nowMin, awayNow, syllabusPlans, orNonce],
   )
   const uncovered = useMemo(() => uncoveredRows(rows), [rows])
   const teaching = rows.filter(r => r.subject)

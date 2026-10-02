@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs'
 import { makeCoverEngine, absenceCovers, weekDatesOf } from './src/lib/coverEngine.ts'
 import { mergeServerLeaves, rowToLeave, leaveToBody, SERVER_PREFIX } from './src/lib/unavailabilityRules.ts'
 import { withSubstitutionDefaults } from './src/lib/substitutionSettings.ts'
+import { computeReports } from './src/lib/reportsData.ts'
 
 let fail = 0
 const ok = (cond: boolean, label: string, extra = '') => {
@@ -126,7 +127,21 @@ const fullDay = { id: 'l1', teacher: 'T1', date: DATE, duration: 'full', type: '
     p2.assigned.map(a => a.substitute).join(','))
 }
 
-// ── 4. The screens use it ────────────────────────────────────────────────
+// ── 4. Insights counts what an absence actually cost ─────────────────────
+console.log('insights')
+{
+  // T1 away for the second half only: their two afternoon lessons (p4, p5)
+  // were missed; the morning ones were taught as normal.
+  const secondHalf = { ...fullDay, duration: 'half', part: 'second' }
+  const r = computeReports({
+    leaves: [secondHalf], range: { start: DATE, end: DATE },
+    sources: [{ sections: bundle.sections, periods, classTT: bundle.classTT, substitutions: {}, config: bundle.config }],
+  })
+  ok(r.totals.cancelled === 2, 'a second-half absence costs only the afternoon lessons', `${r.totals.cancelled} cancelled`)
+  ok(r.totals.leaveDays === 0.5, 'and counts as half a day away', `${r.totals.leaveDays}`)
+}
+
+// ── 5. The screens use it ────────────────────────────────────────────────
 console.log('wiring')
 {
   const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1')

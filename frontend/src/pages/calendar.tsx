@@ -19,7 +19,7 @@ import {
   loadActiveTimetableIntoStore, saveActiveTimetableSnapshot, getActiveTimetableId,
 } from '@/lib/ttRegistry'
 import { useLeaves, isOnLeaveOn, leaveCoversDate, reasonLabel } from '@/lib/leaveUtils'
-import { recordUnavailable } from '@/lib/unavailability'
+import { recordUnavailable, withdrawUnavailable } from '@/lib/unavailability'
 import { UnavailableModal } from '@/components/UnavailableModal'
 import { makeCoverEngine, type SubCandidate } from '@/lib/coverEngine'
 import { useSchoolEvents, eventCoversDate, eventDates, teachingSuspendedOn, type SchoolEvent as CalEvent } from '@/lib/schoolEvents'
@@ -517,6 +517,21 @@ export function CalendarPage() {
     return `Away: ${reasonLabel(l.type)}${when}`
   }
   const [coverNotice, setCoverNotice] = useState<string | null>(null)
+  /** Undo an absence for this date: withdraw it (server and here) and release
+   *  the cover it caused. A refusal - say, a teacher's own report held by the
+   *  server - is shown rather than swallowed. */
+  const markAvailable = async (teacher: string) => {
+    const l = leaves.find(x => x.teacher === teacher && leaveCoversDate(x, isoDate))
+    if (!l) return
+    const span = l.duration === 'long' && l.endDate ? ` (${l.date} to ${l.endDate})` : ''
+    if (!window.confirm(`Mark ${teacher} available again${span}? Any cover arranged for them is released.`)) return
+    try {
+      await withdrawUnavailable(l)
+      setCoverNotice(`${teacher} is available again. Their cover has been released.`)
+    } catch (e: any) {
+      setCoverNotice(e?.response?.data?.error || e?.message || 'Could not change that.')
+    }
+  }
   /** How much of the day an absence takes, in words, when it is not all of it. */
   const partialAwayOf = (teacher: string): string | undefined => {
     const l = leaves.find(x => x.teacher === teacher && leaveCoversDate(x, isoDate))
@@ -1215,7 +1230,7 @@ export function CalendarPage() {
                             </div>
                             <div style={{ fontSize: 11.5, color: '#777391', marginTop: 2 }}>{lessons} {(lessons === 1 ? terms.period : plural(terms.period)).toLowerCase()}</div>
                           </div>
-                          {mode === 'teacher' && ((canMarkAbsence && !onLeave(ent.id)) || (canArrangeCover && onLeave(ent.id))) ? (
+                          {mode === 'teacher' && (canMarkAbsence || (canArrangeCover && onLeave(ent.id))) ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
                               {canMarkAbsence && !onLeave(ent.id) && (
                                 <button onClick={() => setLeaveFor(ent.id)} title="Mark unavailable - leave, duty, training…"
@@ -1230,6 +1245,12 @@ export function CalendarPage() {
                                 <button onClick={() => setSubFor(ent.id)} title="Arrange cover for their lessons"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#E8F0FF', color: '#2563EB' }}>
                                   <Repeat size={11} /> Cover
+                                </button>
+                              )}
+                              {canMarkAbsence && onLeave(ent.id) && (
+                                <button onClick={() => markAvailable(ent.id)} title="No longer unavailable - releases any cover arranged for them"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#ECFDF5', color: '#047857' }}>
+                                  <Check size={11} /> Available
                                 </button>
                               )}
                             </div>

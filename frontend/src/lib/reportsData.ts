@@ -9,6 +9,7 @@
 import { cellHasTeacherOnDate } from './orChoice'
 import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, leaveCoversDate } from './leaveUtils'
+import { absenceCovers } from './coverEngine'
 import { subKey } from './substitutionKeys'
 import { DAY_KEY, toISODate } from './scheduleToday'
 
@@ -121,6 +122,23 @@ export function computeReports(params: {
   })
 
   const dates = eachDate(range)
+  // Each schedule's teaching day, which decides where its "first half" ends.
+  const spanOf = srcTimes.map(m => {
+    const v = Object.values(m)
+    return v.length
+      ? { start: Math.min(...v.map(x => x.startMin)), end: Math.max(...v.map(x => x.endMin)) }
+      : { start: 0, end: 24 * 60 }
+  })
+  /** How much of a day an absence takes: half for a half day, the share of
+   *  the teaching day for specific hours, all of it otherwise. */
+  const dayShare = (l: CalLeave): number => {
+    if (l.duration === 'half') return 0.5
+    if (l.duration === 'hours' && l.fromMin != null && l.toMin != null) {
+      const len = Math.max(1, spanOf[0].end - spanOf[0].start)
+      return Math.min(1, Math.round(((l.toMin - l.fromMin) / len) * 10) / 10)
+    }
+    return 1
+  }
 
   // Days the school actually teaches. "Leave days" sits beside "Periods
   // Missed", which counts teaching only, so counting calendar days made the
@@ -149,7 +167,7 @@ export function computeReports(params: {
     facultyOnLeave.add(l.teacher)
     leaveTypeMap.set(l.type, (leaveTypeMap.get(l.type) ?? 0) + 1)
     const days = schoolDates.filter(d => leaveCoversDate(l, d)).length
-    leaveDays += l.duration === 'half' ? days * 0.5 : days
+    leaveDays += days * dayShare(l)
   }
 
   // Expand every leave into the periods it affects, per date, ACROSS all
@@ -174,8 +192,12 @@ export function computeReports(params: {
             if (!c?.subject) continue
             if (!cellHasTeacherOnDate(c, l.teacher, s.name, date, p.id,
                                       src.orDecisions ?? {}, plans)) continue
-            const sub = src.substitutions[subKey(s.name, date, p.id)]
             const t = times[p.id] ?? { startMin: 0, endMin: 0, name: p.id }
+            // Only the lessons the absence covers: a half day or a two-hour
+            // meeting missed those, not the day - counting the rest called
+            // them cancelled when they were taught as normal.
+            if (!absenceCovers(l, date, t.startMin, t.endMin, spanOf[si].start, spanOf[si].end)) continue
+            const sub = src.substitutions[subKey(s.name, date, p.id)]
             events.push({
               date, day: dayKey, periodId: p.id, periodName: t.name,
               startMin: t.startMin, endMin: t.endMin,
@@ -205,7 +227,7 @@ export function computeReports(params: {
   }
   for (const l of rangedLeaves) {
     const days = schoolDates.filter(d => leaveCoversDate(l, d)).length
-    fac(l.teacher).leaveDays += l.duration === 'half' ? days * 0.5 : days
+    fac(l.teacher).leaveDays += days * dayShare(l)
   }
   for (const e of events) {
     const f = fac(e.faculty)
