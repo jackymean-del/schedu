@@ -1122,14 +1122,55 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     // back to it as a last resort when no other slot is free.
     const period1Id = classPeriods[0]?.id
 
+    // ── A venue for every group, decided for the hour it runs ──
+    // The Groups step plans each group's room before any timetable exists,
+    // so here, at the actual hour, each group keeps its planned room if that
+    // room is free, and otherwise takes the most fitting free one: a home
+    // room of one of the block's own classes, then the smallest room that
+    // holds the group (125% of its stated seats). Another class's home room
+    // counts as free only when that class is not in it: off that day, gone
+    // home, or already placed elsewhere at this hour. With "home venue only"
+    // just the block's own classes' rooms are considered.
+    const poolHomes = block.sectionNames
+      .map(sn => (sections.find(s => s.name === sn)?.room ?? '').trim()).filter(Boolean)
+    const homeFreeAt = (room: string, day: string, pid: string): boolean => {
+      const owner = sections.find(s => (s.room ?? '').trim() === room)
+      if (!owner || block.sectionNames.includes(owner.name)) return true
+      if (sectionOffDays.get(owner.name)?.has(day)) return true
+      if ((owner.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return true
+      const cell: any = classTT[owner.name]?.[day]?.[pid]
+      return !!cell && (cell.room ?? '') !== room
+    }
+    const roomFree = (room: string, day: string, pid: string) =>
+      !roomBusy[day]?.[pid]?.has(room) && homeFreeAt(room, day, pid)
+    const capOfRoom = (room: string) => roomPool.find(r => r.name === room)?.capacity ?? 0
+    const resolveRooms = (day: string, pid: string): string[] | null => {
+      const used = new Set<string>()
+      const out: string[] = []
+      const bySize = [...roomPool].sort((a, b) => a.capacity - b.capacity).map(r => r.name)
+      for (const o of block.options) {
+        const need = Number((o as any).allocatedStrength ?? 0)
+        const fits = (r: string) => need <= 0 || capOfRoom(r) <= 0 || Math.floor(capOfRoom(r) * 1.25) >= need
+        const candidates = block.homeVenueOnly
+          ? [o.room ?? '', ...poolHomes]
+          : [o.room ?? '', ...poolHomes, ...bySize]
+        const pick = candidates.find(r => r && !used.has(r) && roomFree(r, day, pid) && fits(r))
+        if (!pick) {
+          // A group with no room planned at all does not stop the split;
+          // one whose every candidate is taken at this hour does.
+          if (!o.room && !poolHomes.length && !roomPool.length) { out.push(''); continue }
+          return null
+        }
+        used.add(pick)
+        out.push(pick)
+      }
+      return out
+    }
+
     const slotOk = (day: string, pid: string): boolean => {
       if (!block.sectionNames.every(sn => !sectionOffDays.get(sn)?.has(day) && !classTT[sn]?.[day]?.[pid])) return false
       if (!block.options.every(o => !o.teacher || keysFor(o.teacher).every(k => !teacherBusy[k]?.[day]?.has(pid)))) return false
-      if (blockRoom && sections.some(s => classTT[s.name]?.[day]?.[pid]?.room === blockRoom)) return false
-      // Every group's room, not just the first: a split puts each group in
-      // its own venue at the same moment, and an earlier block may hold one.
-      if (block.options.some(o => o.room && roomBusy[day]?.[pid]?.has(o.room))) return false
-      return true
+      return resolveRooms(day, pid) !== null
     }
     const slots: Array<{ day: string; periodId: string }> = []
     const seenSlot = new Set<string>()
@@ -1173,6 +1214,11 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     const cellSubject = block.options.map(o => o.subject).filter(Boolean)
       .join(block.logic === 'AND' ? ' AND ' : ' OR ')
     slots.forEach(({ day, periodId }) => {
+      // Each hour's own venues (see resolveRooms), so a group moved out of a
+      // taken room on Tuesday still keeps its planned room on Monday.
+      const rooms = resolveRooms(day, periodId) ?? block.options.map(o => o.room ?? '')
+      const hourOptions = block.options.map((o, i) => ({ ...o, room: rooms[i] || o.room || '' }))
+      const hourRoom = hourOptions[0]?.room ?? blockRoom
       block.sectionNames.forEach(secName => {
         if (sectionOffDays.get(secName)?.has(day)) return
         if (!classTT[secName]) classTT[secName] = {}
@@ -1180,8 +1226,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         if (classTT[secName][day][periodId]) return
         // teacher blank at section level - real teacher lives in options[]
         classTT[secName][day][periodId] = {
-          subject: cellSubject, teacher: '', room: blockRoom,
-          optionalBlockId: block.id, options: block.options,
+          subject: cellSubject, teacher: '', room: hourRoom,
+          optionalBlockId: block.id, options: hourOptions,
         } as any
       })
       block.options.forEach(opt => {
@@ -1199,8 +1245,8 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       // Every option's room, not only the cell-level one: an AND split puts
       // each group in a different room at the same moment, and all of them are
       // occupied.
-      holdRoom(day, [periodId], blockRoom)
-      block.options.forEach(opt => holdRoom(day, [periodId], opt.room ?? ''))
+      holdRoom(day, [periodId], hourRoom)
+      hourOptions.forEach(opt => holdRoom(day, [periodId], opt.room ?? ''))
       // AND (parallel split) IS the subjects' period → count toward quota and cap
       // the target so Pass 2 won't also schedule them individually.
       // OR is an EXTRA slot → do NOT count, so the individual Physics / Chemistry

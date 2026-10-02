@@ -160,9 +160,17 @@ export function andGroupsToOptionalBlocks(
     // and subject from the headcounts when they were never generated.
     let tgs: TeachingGroupLike[] = (group.generatedGroups ?? []).filter(tg => tg.totalStrength > 0)
     if (!tgs.length) {
-      tgs = group.applicableSections.flatMap(sec => cols.map(sub => {
-        const n = Math.max(0, group.strengthMatrix?.[sec]?.[sub] ?? 0)
-        return { subjects: [sub], bundleName: sub, sectionSlices: [{ sectionName: sec, studentCount: n }], totalStrength: n }
+      // Sections of a class always pool; classes pool too when the group says
+      // Cross-Class. One teaching group per subject per pool.
+      const scope: any = group.groupingScope
+      const crossClass = scope === 'CROSS_GRADE' || scope?.grade === 'cross'
+      const poolOf = (sec: string) => crossClass ? '*' : sec.split(/[-\s]/)[0]
+      const pools = new Map<string, string[]>()
+      for (const sec of group.applicableSections) pools.set(poolOf(sec), [...(pools.get(poolOf(sec)) ?? []), sec])
+      tgs = [...pools.values()].flatMap(secs => cols.map(sub => {
+        const slices = secs.map(sec => ({ sectionName: sec, studentCount: Math.max(0, group.strengthMatrix?.[sec]?.[sub] ?? 0) }))
+          .filter(sl => sl.studentCount > 0)
+        return { subjects: [sub], bundleName: sub, sectionSlices: slices, totalStrength: slices.reduce((a, sl) => a + sl.studentCount, 0) }
       })).filter(tg => tg.totalStrength > 0)
     }
     if (!tgs.length) continue
@@ -185,7 +193,7 @@ export function andGroupsToOptionalBlocks(
         })
       }
     }
-    const assigned = assignStaffAndVenues(tgs, staff, rooms, sections, tg => keepable.get(tg))
+    const assigned = assignStaffAndVenues(tgs, staff, rooms, sections, tg => keepable.get(tg), { homeOnly: !!group.homeVenueOnly })
 
     for (const pool of simultaneousPools(assigned)) {
       if (new Set(pool.map(tg => tg.subjects[0])).size < 2) continue   // no split here
@@ -203,6 +211,7 @@ export function andGroupsToOptionalBlocks(
         })),
         logic: 'AND',
         behavior: scopeToBehavior(group.groupingScope),
+        homeVenueOnly: !!group.homeVenueOnly,
       })
     }
   }

@@ -23,7 +23,7 @@ import {
   Wand2, Info, X, Users, Eye, EyeOff,
 } from 'lucide-react'
 import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSection'
-import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, replaceBlockInPlace, assignStaffAndVenues, reconcileElectiveScope, type ElectiveFamily } from '@/lib/electiveGroups'
+import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, replaceBlockInPlace, assignStaffAndVenues, reconcileElectiveScope, seatsWithStretch, ROOM_STRETCH, type ElectiveFamily } from '@/lib/electiveGroups'
 
 // ── constants & helpers ────────────────────────────────────────────────────────
 
@@ -62,8 +62,15 @@ function shadeFor(baseHex: string, idx: number): { dot: string; headBg: string; 
 
 /** Section name → { grade, stream }. "XI-Sci-A" → { grade:'XI', stream:'Sci' } */
 function parseSection(name: string): { grade: string; stream: string } {
+  // "XI-Sci-A": class XI, stream Sci, section A. "VI-A": A is the SECTION,
+  // not a stream. Reading it as a stream kept VI-A and VI-B apart under
+  // "Stream: Same" (the default), so cross-section pooling never pooled them.
   const parts = (name ?? '').split('-')
-  return { grade: parts[0] ?? name, stream: parts[1] ?? '' }
+  const isSectionId = (x: string) => /^[A-Za-z]$|^\d{1,2}$/.test(x)
+  const stream = parts.length >= 3
+    ? parts.slice(1, -1).join('-')
+    : (parts[1] && !isSectionId(parts[1]) ? parts[1] : '')
+  return { grade: parts[0] ?? name, stream }
 }
 
 function isScienceSenior(secName: string): boolean {
@@ -117,11 +124,17 @@ function blockKey(g: AndComboGroup): string {
 
 // ── grouping scope (4 independent same/cross axes) ──────────────────────────────
 
-const DEFAULT_SCOPE: AndGroupScope = { section: 'same', grade: 'same', stream: 'same', block: 'same' }
+// At least cross-section, always: the sections of a class pool into one group
+// per subject (VI-A's 20 and VI-B's 25 Hindi students are one group of 45,
+// one teacher, one room). Per-section groups doubled the teachers and rooms a
+// split needs for no gain, so "Section: Same" is not offered.
+const DEFAULT_SCOPE: AndGroupScope = { section: 'cross', grade: 'same', stream: 'same', block: 'same' }
+/** Activities like PE usually pool across classes as well (Cross-Class). */
+const ACTIVITY_SCOPE: AndGroupScope = { ...DEFAULT_SCOPE, grade: 'cross' }
 
 const SCOPE_DIMS: { key: keyof AndGroupScope; label: string; desc: string }[] = [
-  { key: 'section', label: 'Section', desc: 'Same: each section keeps its own group. Cross: sections may merge.' },
-  { key: 'grade',   label: 'Grade',   desc: 'Same: only merge sections of the same grade. Cross: merge across grades.' },
+  { key: 'section', label: 'Section', desc: 'Always Cross: the sections of a class pool into one group per subject.' },
+  { key: 'grade',   label: 'Class',   desc: 'Same: pool only the sections of one class (VI-A with VI-B). Cross: pool across classes too (VI, VII, VIII), as for PE.' },
   { key: 'stream',  label: 'Stream',  desc: 'Same: only merge same-stream sections. Cross: merge across streams.' },
   { key: 'block',   label: 'Block',   desc: 'Same: only merge within the same grade-band (Primary/Middle/Secondary/Senior). Cross: merge across bands.' },
 ]
@@ -137,7 +150,8 @@ function getScope(g: AndComboGroup): AndGroupScope {
       default:            return DEFAULT_SCOPE
     }
   }
-  return { section: s.section ?? 'same', grade: s.grade ?? 'same', stream: s.stream ?? 'same', block: s.block ?? 'same' }
+  // Section is always pooled, whatever an older saved group says.
+  return { section: 'cross', grade: s.grade ?? 'same', stream: s.stream ?? 'same', block: s.block ?? 'same' }
 }
 
 // ── group <-> column helpers ─────────────────────────────────────────────────
@@ -231,7 +245,7 @@ export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComb
       blockId: blockIdFor(secs),
       blockName: classGroupName(secs),
       roomCapacitySensitive: true,
-      groupingScope: DEFAULT_SCOPE,
+      groupingScope: family === 'activity' ? ACTIVITY_SCOPE : DEFAULT_SCOPE,
       strengthMatrix,
       aiSuggested: true,
     })
@@ -275,7 +289,7 @@ function tgKey(g: AndTeachingGroup): string {
   return `${g.subjects[0] ?? g.bundleName}|${g.sectionSlices.map(s => s.sectionName).sort().join(',')}`
 }
 
-function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = [], sections: any[] = [], prev: AndTeachingGroup[] = []): AndTeachingGroup[] {
+export function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = [], sections: any[] = [], prev: AndTeachingGroup[] = []): AndTeachingGroup[] {
   const cols = getCols(group)
   const scope = getScope(group)
   const capacitySensitive = group.roomCapacitySensitive !== false
@@ -283,7 +297,7 @@ function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []
   // When capacity sensitivity is OFF, never split a pool - one group per pool.
   const biggest = !capacitySensitive
     ? Infinity
-    : (sorted.length > 0 ? sorted[sorted.length - 1].capacity ?? 0 : Infinity)
+    : (sorted.length > 0 ? seatsWithStretch(sorted[sorted.length - 1].capacity ?? 0) : Infinity)
   const result: AndTeachingGroup[] = []
 
   for (const sub of cols) {
@@ -334,7 +348,7 @@ function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []
     const p = byKey.get(tgKey(g))
     return p ? { teacher: p.teacherByHand ? p.teacher : undefined, room: p.roomByHand ? p.room : undefined } : undefined
   }
-  return assignStaffAndVenues(result, staff, rooms, sections, keep).map(g => {
+  return assignStaffAndVenues(result, staff, rooms, sections, keep, { homeOnly: !!group.homeVenueOnly }).map(g => {
     const p = byKey.get(tgKey(g))
     return { ...g, teacherByHand: p?.teacherByHand, roomByHand: p?.roomByHand }
   })
@@ -489,7 +503,13 @@ function ParallelGroupCard({
         </div>
         <div style={{ fontSize: 10, color: '#6D6A8A', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
           <Users size={9} /> {tg.totalStrength} students
-          {tg.roomCapacity ? <span style={{ color: over ? '#DC2626' : '#15803D', fontWeight: 700 }}>{over ? ` · over cap ${tg.roomCapacity}` : ` · cap ${tg.roomCapacity} ✓`}</span> : null}
+          {tg.roomCapacity ? (
+            over
+              ? <span style={{ color: '#DC2626', fontWeight: 700 }}>{` · room holds ${tg.roomCapacity}, too many`}</span>
+              : tg.totalStrength > tg.roomCapacity
+                ? <span style={{ color: '#B45309', fontWeight: 700 }} title={`Up to ${Math.round((ROOM_STRETCH - 1) * 100)}% over the stated capacity is fine with extra chairs`}>{` · cap ${tg.roomCapacity}, ${tg.totalStrength - tg.roomCapacity} extra chair${tg.totalStrength - tg.roomCapacity === 1 ? '' : 's'}`}</span>
+                : <span style={{ color: '#15803D', fontWeight: 700 }}>{` · cap ${tg.roomCapacity} ✓`}</span>
+          ) : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
           <span style={{ fontSize: 12, flexShrink: 0 }} title="Faculty">👤</span>
@@ -669,6 +689,8 @@ function BlockCard({
   const setScope = (s: AndGroupScope) => commit(combos.map(c => ({ ...c, groupingScope: s })))
   const setComboScope = (comboId: string, s: AndGroupScope) => commit(combos.map(c => c.id === comboId ? { ...c, groupingScope: s } : c))
   const setRoomSensitive = (b: boolean) => commit(combos.map(c => ({ ...c, roomCapacitySensitive: b })))
+  const homeOnly = combos.some(c => c.homeVenueOnly)
+  const setHomeOnly = (b: boolean) => commit(combos.map(c => ({ ...c, homeVenueOnly: b })))
   const renameBlock = (name: string) => commitRaw(combos.map(c => ({ ...c, blockName: name })))
 
   const splitEvenly = () =>
@@ -730,6 +752,18 @@ function BlockCard({
               padding: '2px 8px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               background: roomSensitive === val ? (val ? '#10B981' : '#6B7079') : '#fff',
               color: roomSensitive === val ? '#fff' : '#767384',
+            }}>{lbl === 'on' ? 'On' : 'Off'}</button>
+          ))}
+        </div>
+
+        {/* venue: home rooms only */}
+        <div title="On: groups sit only in the home rooms of the classes they pool. Off: when those are taken or too small, the most fitting free room (library, lab, language room, hall) is used." style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 6px', background: '#fff' }}>Home venue only</span>
+          {([['on', true], ['off', false]] as const).map(([lbl, val]) => (
+            <button key={lbl} onClick={() => setHomeOnly(val)} aria-pressed={homeOnly === val} style={{
+              padding: '2px 8px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              background: homeOnly === val ? (val ? '#10B981' : '#6B7079') : '#fff',
+              color: homeOnly === val ? '#fff' : '#767384',
             }}>{lbl === 'on' ? 'On' : 'Off'}</button>
           ))}
         </div>
@@ -910,7 +944,7 @@ function BlockCard({
                 {SCOPE_DIMS.map(dim => (
                   <div key={dim.key} title={dim.desc} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
                     <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 5px', background: '#F8F7FF' }}>{dim.label}</span>
-                    {(['same', 'cross'] as const).map(v => {
+                    {(dim.key === 'section' ? (['cross'] as const) : (['same', 'cross'] as const)).map(v => {
                       const active = cs[dim.key] === v
                       return (
                         <button key={v} onClick={() => setComboScope(combo.id, { ...cs, [dim.key]: v })} style={{
@@ -1233,7 +1267,7 @@ export function StepStudentGroups() {
               {SCOPE_DIMS.map(dim => (
                 <div key={dim.key} title={dim.desc} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 5, overflow: 'hidden', border: '1.5px solid #E4E0FF' }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: '#6D6A8A', padding: '2px 5px', background: '#fff' }}>{dim.label}</span>
-                  {(['same', 'cross'] as const).map(v => {
+                  {(dim.key === 'section' ? (['cross'] as const) : (['same', 'cross'] as const)).map(v => {
                     const active = globalScope[dim.key] === v
                     return <button key={v} onClick={() => setGlobalScope(s => ({ ...s, [dim.key]: v }))} style={{ padding: '2px 7px', border: 'none', fontSize: 9.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: active ? (v === 'same' ? '#685DBC' : '#F59E0B') : '#fff', color: active ? '#fff' : '#767384' }}>{v === 'same' ? 'Same' : 'Cross'}</button>
                   })}

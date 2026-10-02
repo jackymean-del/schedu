@@ -146,6 +146,12 @@ export function replaceBlockInPlace<T>(groups: T[], blockId: string, next: T[], 
 
 // ── Who teaches each split group, and where ─────────────────────────────
 
+/** A room's stated capacity is a comfortable number, not a fire limit: a
+ *  classroom for 40 takes 50 with extra chairs. Groups are only split, and a
+ *  room only counted as too small, beyond this. */
+export const ROOM_STRETCH = 1.25
+export const seatsWithStretch = (cap: number) => Math.floor(cap * ROOM_STRETCH)
+
 export interface TeachingGroupLike {
   subjects: string[]
   bundleName?: string
@@ -204,6 +210,7 @@ const mappedTo = (t: any, sub: string, secs: string[]): boolean =>
 export function assignStaffAndVenues<T extends TeachingGroupLike>(
   tgs: T[], staff: any[], rooms: any[], sections: any[],
   keep?: (g: T) => { teacher?: string; room?: string } | undefined,
+  opts: { homeOnly?: boolean } = {},
 ): T[] {
   const homeOf = new Map<string, string>()
   for (const s of sections ?? []) if (s?.name && s?.room) homeOf.set(s.name, String(s.room).trim())
@@ -224,7 +231,8 @@ export function assignStaffAndVenues<T extends TeachingGroupLike>(
   const suits = (room: string, sub: string): number => {
     const t = typeOf.get(room) ?? ''
     const s = sub.toLowerCase()
-    if ((/computer|informatics|\bit\b|coding/.test(s) && /computer/.test(t)) ||
+    if ((LANGUAGE_RE.test(s) && /language/.test(t)) ||
+        (/computer|informatics|\bit\b|coding/.test(s) && /computer/.test(t)) ||
         (/physics|chemistry|biology|science/.test(s) && /lab/.test(t) && !/computer/.test(t)) ||
         (/music/.test(s) && /music/.test(t)) || (/art|drawing|painting|craft/.test(s) && /art|studio/.test(t)) ||
         (/physical|sport|games|yoga|p\.?e\b/.test(s) && /gym|ground|court|hall/.test(t))) return 0
@@ -236,7 +244,12 @@ export function assignStaffAndVenues<T extends TeachingGroupLike>(
   for (const pool of simultaneousPools(tgs)) {
     const poolSecs = new Set(pool.flatMap(g => g.sectionSlices.map(s => s.sectionName)))
     const poolHomes = [...poolSecs].map(s => homeOf.get(s)).filter(Boolean) as string[]
-    const spare = [...capOf.keys()].filter(n => !allHomes.has(n))
+    // Home venue only: the pooled classes' own rooms and nothing else.
+    const spare = opts.homeOnly ? [] : [...capOf.keys()].filter(n => !allHomes.has(n))
+    // Another class's home room is a venue too when that class is not in it;
+    // only the timetable knows when that is, so it is planned last here and
+    // the engine confirms it is free at the hour it is used.
+    const otherHomes = opts.homeOnly ? [] : [...allHomes].filter(n => !poolHomes.includes(n) && capOf.has(n))
     const usedT = new Set<string>(), usedR = new Set<string>()
     // Hand-set choices are taken first so automatic ones work around them.
     for (const g of pool) { const k = keep?.(g); if (k?.teacher) usedT.add(k.teacher); if (k?.room) usedR.add(k.room) }
@@ -258,14 +271,22 @@ export function assignStaffAndVenues<T extends TeachingGroupLike>(
       let room = k?.room ?? ''
       if (!room) {
         const own = [...g.sectionSlices].sort((a, b) => b.studentCount - a.studentCount).map(s => homeOf.get(s.sectionName)).filter(Boolean) as string[]
-        const spareForSub = [...spare].sort((a, b) => suits(a, sub) - suits(b, sub))
-        const order = [...new Set([...own, ...poolHomes, ...spareForSub])].filter(n => !usedR.has(n))
-        const fits = (n: string) => (capOf.get(n) ?? 0) === 0 || (capOf.get(n) ?? 0) >= g.totalStrength
+        // A home room of one of the pooled classes first. Failing that, the
+        // most fitting other room: suited to the subject, then the smallest
+        // that holds the group, so a group of 30 is not sent to the hall.
+        const fits = (n: string) => (capOf.get(n) ?? 0) === 0 || seatsWithStretch(capOf.get(n) ?? 0) >= g.totalStrength
+        const spareForSub = [...spare].sort((a, b) =>
+          suits(a, sub) - suits(b, sub) ||
+          (fits(a) === fits(b) ? 0 : fits(a) ? -1 : 1) ||
+          (capOf.get(a) ?? 0) - (capOf.get(b) ?? 0))
+        const bySize = (list: string[]) => [...list].sort((a, b) =>
+          (fits(a) === fits(b) ? 0 : fits(a) ? -1 : 1) || (capOf.get(a) ?? 0) - (capOf.get(b) ?? 0))
+        const order = [...new Set([...own, ...poolHomes, ...spareForSub, ...bySize(otherHomes)])].filter(n => !usedR.has(n))
         room = order.find(fits) ?? [...order].sort((a, b) => (capOf.get(b) ?? 0) - (capOf.get(a) ?? 0))[0] ?? ''
       }
       if (room) usedR.add(room)
       const cap = capOf.get(room) ?? 0
-      out.set(g, { ...g, teacher, room, roomCapacity: cap || undefined, capacityWarning: !!cap && cap < g.totalStrength })
+      out.set(g, { ...g, teacher, room, roomCapacity: cap || undefined, capacityWarning: !!cap && seatsWithStretch(cap) < g.totalStrength })
     }
   }
   return tgs.map(g => out.get(g) ?? g)

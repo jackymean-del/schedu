@@ -216,7 +216,7 @@ for (const c of cards) {
   console.log(`${ok1 ? 'PASS' : 'FAIL'} one class splitting: two teachers, two rooms (${one.map(g => `${g.subjects[0]}=${g.teacher}@${g.room}`).join(', ')})`)
   if (!ok1) fails++
   const ok2 = one.every(g => g.room !== 'Room VI-B' && g.room !== 'Room VII-A')
-  console.log(`${ok2 ? 'PASS' : 'FAIL'} never another class's home room: that class is in a lesson there`)
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} prefers its own and spare rooms to another class's home room`)
   if (!ok2) fails++
   const ok3 = one.find(g => g.subjects[0] === 'Sanskrit')!.room === 'Room VI-A'
   console.log(`${ok3 ? 'PASS' : 'FAIL'} the bigger group stays in the class's own room`)
@@ -238,7 +238,7 @@ for (const c of cards) {
   if (!ok9) fails++
 
   // Too small a room is used only when nothing fits, and flagged.
-  const big = assignStaffAndVenues([tg('Sanskrit', [['VI-A', 45]]), tg('Odia', [['VI-A', 45]])], staff, [{ actualName: 'Room VI-A', capacity: 40 }, { actualName: 'Lab', capacity: 30 }], secs)
+  const big = assignStaffAndVenues([tg('Sanskrit', [['VI-A', 55]]), tg('Odia', [['VI-A', 55]])], staff, [{ actualName: 'Room VI-A', capacity: 40 }, { actualName: 'Lab', capacity: 30 }], secs)
   const ok5 = big.every(g => g.capacityWarning === true)
   console.log(`${ok5 ? 'PASS' : 'FAIL'} a group bigger than every free room is placed and flagged, not dropped`)
   if (!ok5) fails++
@@ -301,6 +301,137 @@ for (const c of cards) {
   const again = reconcileElectiveScope(out, grp)
   console.log(`${!again.changed ? 'PASS' : 'FAIL'} saving the same groups again changes nothing`)
   if (again.changed) fails++
+}
+
+// ── The owner's rules for AND groups (2026-10-03) ──────────────────────
+// 1. at least cross-section; 2. one group per subject holding every pooled
+// section (VI-A 20 + VI-B 25 Hindi = one group of 45, one teacher, one room);
+// 3. a pooled class's home room first, 125% of stated seats is fine, then the
+// most fitting free room, which may be another class's home when that class
+// is not in it; 4. activities pool across classes; 5. "home venue only".
+{
+  const { assignStaffAndVenues, ROOM_STRETCH } = await import('./src/lib/electiveGroups.ts')
+  const { andGroupsToOptionalBlocks } = await import('./src/lib/generationPipeline.ts')
+  const { solveTimetable } = await import('./src/lib/schedulingEngine.ts')
+  const S = ['VI-A', 'VI-B', 'VII-A', 'VII-B']
+  const secs = S.map(n => ({ name: n, room: `Room ${n}`, strength: 40 }))
+  const homes = secs.map(x => ({ actualName: x.room, capacity: 40 }))
+  const staff = ['Hindi', 'Odia', 'Sanskrit', 'Physical Education'].flatMap(sub => [1, 2].map(i => ({ name: `${sub} ${i}`, subjects: [sub] })))
+
+  // Suggestions default to cross-section; activities to cross-class.
+  const el = (name: string, cat = 'Scholastic') => ({ name, category: cat, isOptional: true,
+    classConfigs: S.map(sectionName => ({ sectionName, periodsPerWeek: 2, maxPeriodsPerDay: 1, sessionDuration: 40, isOptional: true })) })
+  const sug = suggestAndComboGroups([el('Hindi'), el('Odia'), el('Physical Education', 'Co-Scholastic'), el('Painting', 'Co-Scholastic')] as any[],
+    S.map(n => ({ id: n, name: n, grade: n.split('-')[0] })) as any[])
+  const lang = sug.find((c: any) => c.subjects.includes('Hindi')) as any
+  const act = sug.find((c: any) => c.subjects.includes('Physical Education')) as any
+  const ok1 = lang?.groupingScope?.section === 'cross' && lang?.groupingScope?.grade === 'same' && act?.groupingScope?.grade === 'cross'
+  console.log(`${ok1 ? 'PASS' : 'FAIL'} languages pool across sections, activities across classes too (${JSON.stringify(lang?.groupingScope)} / ${JSON.stringify(act?.groupingScope)})`)
+  if (!ok1) fails++
+
+  // The owner's example, through the timetable side.
+  const g: any = {
+    id: 'lang', name: 'Language choice', applicableSections: ['VI-A', 'VI-B'], subjects: ['Hindi', 'Odia'],
+    bundles: [{ id: 'Hindi', name: 'Hindi', subjects: ['Hindi'] }, { id: 'Odia', name: 'Odia', subjects: ['Odia'] }],
+    groupingScope: { section: 'cross', grade: 'same', stream: 'same', block: 'same' },
+    strengthMatrix: { 'VI-A': { Hindi: 20, Odia: 20 }, 'VI-B': { Hindi: 25, Odia: 15 } },
+  }
+  const [b] = andGroupsToOptionalBlocks([g], [], staff, secs, [...homes, { actualName: 'Library', capacity: 60 }]) as any[]
+  const hindi = b?.options.find((o: any) => o.subject === 'Hindi')
+  const odia = b?.options.find((o: any) => o.subject === 'Odia')
+  const ok2 = b?.sectionNames.join() === 'VI-A,VI-B' && b.options.length === 2 && hindi?.allocatedStrength === 45 && odia?.allocatedStrength === 35
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} VI-A 20 + VI-B 25 Hindi is ONE group of 45, Odia one of 35, in one block (${b?.options.map((o: any) => `${o.subject} ${o.allocatedStrength}`).join(', ')})`)
+  if (!ok2) fails++
+  const ok3 = ['Room VI-A', 'Room VI-B'].includes(hindi?.room) && ['Room VI-A', 'Room VI-B'].includes(odia?.room) && hindi?.room !== odia?.room && hindi?.teacher && odia?.teacher
+  console.log(`${ok3 ? 'PASS' : 'FAIL'} each group has one teacher and a home room of VI-A or VI-B, 45 in a room for 40 included (${hindi?.teacher}@${hindi?.room}, ${odia?.teacher}@${odia?.room})`)
+  if (!ok3) fails++
+  const ok4 = ROOM_STRETCH === 1.25
+  console.log(`${ok4 ? 'PASS' : 'FAIL'} a room for 40 is counted as holding 50`)
+  if (!ok4) fails++
+
+  // A third subject: no home room left, so the most fitting free room.
+  const three = assignStaffAndVenues([
+    { subjects: ['Hindi'], sectionSlices: [{ sectionName: 'VI-A', studentCount: 15 }, { sectionName: 'VI-B', studentCount: 15 }], totalStrength: 30 },
+    { subjects: ['Odia'], sectionSlices: [{ sectionName: 'VI-A', studentCount: 15 }, { sectionName: 'VI-B', studentCount: 15 }], totalStrength: 30 },
+    { subjects: ['Sanskrit'], sectionSlices: [{ sectionName: 'VI-A', studentCount: 10 }, { sectionName: 'VI-B', studentCount: 10 }], totalStrength: 20 },
+  ] as any[], staff, [...homes, { actualName: 'Hall', capacity: 200 }, { actualName: 'Language Room', roomType: 'Language Room', capacity: 25 }], secs)
+  const ok5 = three[2].room === 'Language Room'
+  console.log(`${ok5 ? 'PASS' : 'FAIL'} the third group goes to the most fitting free room, not the hall (${three[2].room})`)
+  if (!ok5) fails++
+  const onlyHomes = assignStaffAndVenues(three.map((x: any) => ({ ...x, room: undefined })), staff, homes, secs)
+  const ok6 = onlyHomes[2].room === 'Room VII-A' || onlyHomes[2].room === 'Room VII-B'
+  console.log(`${ok6 ? 'PASS' : 'FAIL'} with no other room, another class's home room is planned (the timetable checks it is free) (${onlyHomes[2].room})`)
+  if (!ok6) fails++
+  const homeOnly = assignStaffAndVenues(three.map((x: any) => ({ ...x, room: undefined })), staff, [...homes, { actualName: 'Library', capacity: 60 }], secs, undefined, { homeOnly: true })
+  const ok7 = homeOnly.every((x: any) => ['Room VI-A', 'Room VI-B', ''].includes(x.room ?? '')) && !homeOnly.some((x: any) => x.room === 'Library')
+  console.log(`${ok7 ? 'PASS' : 'FAIL'} "home venue only" never leaves the pooled classes' rooms (${homeOnly.map((x: any) => x.room || '(none)').join(', ')})`)
+  if (!ok7) fails++
+
+  // The timetable: a group planned into another class's home room only sits
+  // there when that class is not using it, and no room is ever double-booked.
+  const block = { id: 'b1', name: 'VI split', sectionNames: ['VI-A', 'VI-B'], logic: 'AND', periodsPerWeek: 2,
+    options: [
+      { subject: 'Hindi', teacher: 'Hindi 1', room: 'Room VI-A', allocatedStrength: 30 },
+      { subject: 'Odia', teacher: 'Odia 1', room: 'Room VI-B', allocatedStrength: 30 },
+      { subject: 'Sanskrit', teacher: 'Sanskrit 1', room: 'Room VII-A', allocatedStrength: 20 },
+    ] }
+  const subs = ['English', 'Mathematics', 'Hindi', 'Odia', 'Sanskrit']
+  const alloc: any = {}
+  for (const sn of S) alloc[sn] = { English: '6', Mathematics: '6', Hindi: '2', Odia: '2', Sanskrit: '2' }
+  const out: any = solveTimetable({
+    sections: secs.map(x => ({ ...x, id: x.name, grade: x.name.split('-')[0], classTeacher: '' })) as any,
+    staff: [...staff, ...['English', 'Mathematics'].flatMap(sub => [1, 2].map(i => ({ name: `${sub} ${i}`, subjects: [sub] })))].map((x: any, i) => ({ id: 's' + i, classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30, ...x })) as any,
+    subjects: subs.map((n, i) => ({ id: 'q' + i, name: n, periodsPerWeek: 2 })) as any,
+    periods: [1, 2, 3, 4, 5, 6].map(i => ({ id: `p${i}`, name: `P${i}`, duration: 40, type: 'class' })) as any,
+    workDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'], requirements: [], subjectAllocations: alloc,
+    rooms: [...homes, { actualName: 'Library', capacity: 60 }] as any, optionalBlocks: [block] as any,
+  } as any)
+  const tt = out.classTT ?? {}
+  let blockCells = 0, badHome = 0, clashes = 0
+  for (const d of ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']) for (const p of ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']) {
+    const used = new Map<string, string>()
+    for (const sn of S) {
+      const c = tt[sn]?.[d]?.[p]
+      if (!c?.subject) continue
+      const rooms: string[] = c.optionalBlockId ? (c.options ?? []).map((o: any) => o.room) : [c.room]
+      if (c.optionalBlockId && sn === 'VI-A') {
+        blockCells++
+        for (const r of rooms) {
+          const owner = S.find(x => `Room ${x}` === r)
+          // Its class may have no lesson at all then: a lesson moved elsewhere
+          // to make room counts as taking the room it was using.
+          if (owner && !['VI-A', 'VI-B'].includes(owner) && tt[owner]?.[d]?.[p]?.subject) badHome++
+        }
+      }
+      if (c.optionalBlockId && sn !== 'VI-A') continue
+      for (const r of rooms) { if (!r) continue; if (used.has(r) && used.get(r) !== sn) clashes++; used.set(r, sn) }
+    }
+  }
+  const ok8 = blockCells >= 2 && badHome === 0 && clashes === 0
+  console.log(`${ok8 ? 'PASS' : 'FAIL'} the split runs, never in a room its class is using, and no room is double-booked (${blockCells} split periods, ${badHome} in an occupied home, ${clashes} clashes)`)
+  if (!ok8) fails++
+}
+
+// ── Sections of a class pool; streams stay apart ─────────────────────────
+// "VI-A" was read as class VI, stream "A", so under "Stream: Same" VI-A and
+// VI-B never pooled, and every section got its own Hindi group.
+{
+  const { generateAndGroups } = await import('./src/routes/wizard/step-student-groups.tsx')
+  const scope = { section: 'cross', grade: 'same', stream: 'same', block: 'same' }
+  const mk = (secs: string[], sm: any) => ({ id: 'g', name: 'g', applicableSections: secs, subjects: ['Hindi', 'Odia'],
+    bundles: [{ id: 'Hindi', name: 'Hindi', subjects: ['Hindi'] }, { id: 'Odia', name: 'Odia', subjects: ['Odia'] }],
+    groupingScope: scope, strengthMatrix: sm, roomCapacitySensitive: true })
+  const rooms = [{ name: 'Room VI-A', capacity: 40 }, { name: 'Room VI-B', capacity: 40 }]
+  const vi = generateAndGroups(mk(['VI-A', 'VI-B'], { 'VI-A': { Hindi: 20, Odia: 20 }, 'VI-B': { Hindi: 25, Odia: 15 } }) as any, rooms, [],
+    [{ name: 'VI-A', room: 'Room VI-A' }, { name: 'VI-B', room: 'Room VI-B' }])
+  const h = vi.find((x: any) => x.subjects[0] === 'Hindi')
+  const ok1 = vi.length === 2 && h?.sectionSlices.map((x: any) => `${x.sectionName} ${x.studentCount}`).join(', ') === 'VI-A 20, VI-B 25' && h?.totalStrength === 45
+  console.log(`${ok1 ? 'PASS' : 'FAIL'} VI-A and VI-B pool: one Hindi group of 45 (VI-A 20, VI-B 25) (${vi.map((x: any) => x.subjects[0] + ' ' + x.totalStrength).join(', ')})`)
+  if (!ok1) fails++
+  const xi = generateAndGroups(mk(['XI-Sci-A', 'XI-Com-A'], { 'XI-Sci-A': { Hindi: 20, Odia: 20 }, 'XI-Com-A': { Hindi: 20, Odia: 20 } }) as any, [{ name: 'R', capacity: 60 }], [], [])
+  const ok2 = xi.length === 4
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} different streams stay apart under "Stream: Same" (${xi.length} groups)`)
+  if (!ok2) fails++
 }
 
 // A removed group stays removed. The pipeline used to turn the LAST run's

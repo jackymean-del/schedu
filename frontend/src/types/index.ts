@@ -580,6 +580,8 @@ export interface OptionalBlock {
   /** Grouping behaviour derived from the Groups-step merge rule (Same/Cross ×
    *  section/grade/stream/block). Overrides the per-subject default when set. */
   behavior?: string
+  /** Groups sit only in the home rooms of the block's own classes. */
+  homeVenueOnly?: boolean
 }
 
 export const OptionalBlockSchema = z.object({
@@ -1284,6 +1286,10 @@ export interface AndComboGroup {
   strengthMatrix: Record<string, Record<string, number>>
   /** AI-suggested? Shows a badge if true, dismissed once user edits */
   aiSuggested?: boolean
+  /** Venue: home rooms only. When on, a group sits only in the home room of
+   *  one of the classes it pools, never in a library, lab or hall. Off by
+   *  default. */
+  homeVenueOnly?: boolean
   /** Per class, the subject whose headcount was filled in automatically as
    *  "the rest of the class" (lib/electiveGroups autoFillRow). Re-filled when
    *  another number in the row changes; typing into it makes it the user's. */
