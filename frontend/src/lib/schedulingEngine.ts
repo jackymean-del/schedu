@@ -1063,7 +1063,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // ── Pass 0: Place Optional Blocks (schedU Phase 3) ────
   // Pinned slots - must run FIRST so other passes skip them.
   // Each block applies across all listed sections (cross-section pooling).
-  effectiveBlocks.forEach(block => {
+  effectiveBlocks.forEach((block, bi) => {
     // Validate: no teacher should appear twice within the same block
     const teacherInBlock = new Map<string, string>()
     block.options.forEach((opt, idx) => {
@@ -1140,16 +1140,20 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     if (block.day && block.periodId && block.periodId !== period1Id && slotOk(block.day, block.periodId)) {
       slots.push({ day: block.day, periodId: block.periodId }); seenSlot.add(`${block.day}|${block.periodId}`)
     }
-    // Primary pass: skip Period 1.
-    for (const p of classPeriods) {
-      if (p.id === period1Id) continue
-      for (const day of workDays) {
-        if (slots.length >= needed) break
+    // Primary pass: skip Period 1, and walk the week diagonally (day d tries
+    // period k+d first) so a block lands at a different hour each day. Walking
+    // period-major put a four-a-week Maths/Computer split in period 2 on
+    // Monday, Tuesday, Wednesday and Thursday - the rut the engine prevents
+    // for every ordinary lesson.
+    const blockPeriods = classPeriods.filter(p => p.id !== period1Id)
+    for (let k = 0; k < blockPeriods.length && slots.length < needed; k++) {
+      for (let di = 0; di < workDays.length && slots.length < needed; di++) {
+        const day = workDays[di]
+        const p = blockPeriods[(k + di + bi) % blockPeriods.length]
         const key = `${day}|${p.id}`
         if (seenSlot.has(key) || !slotOkOnce(day, p.id)) continue
         slots.push({ day, periodId: p.id }); seenSlot.add(key)
       }
-      if (slots.length >= needed) break
     }
     // Last-resort: only if still short, allow Period 1.
     if (slots.length < needed && period1Id) {

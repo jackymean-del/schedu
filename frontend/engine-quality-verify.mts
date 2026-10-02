@@ -334,6 +334,12 @@ for (const perGrade of [2, 4]) {
   }
   ok(total === periodsSpent * secs.length, 'every period the class spends is placed', `${total} of ${periodsSpent * secs.length}`)
   ok(worstSpread <= 1, 'and spread within one lesson a day, block or not', where)
+  // A split runs at a different hour each day. The block search walked the
+  // week period-major, so a four-a-week Maths/Computer split sat in period 2
+  // from Monday to Thursday.
+  const blockRut = Math.max(...secs.map(sec => Math.max(0, ...PERIODS.map(p =>
+    DAYS5.filter(d => res.classTT?.[sec.name]?.[d]?.[p.id]?.optionalBlockId).length))))
+  ok(blockRut <= 1, 'the split does not hold one period all week', `most days in one period: ${blockRut}`)
 }
 
 console.log(fail === 0 ? '\nALL QUALITY CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
