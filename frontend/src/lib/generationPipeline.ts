@@ -190,7 +190,8 @@ export function andGroupsToOptionalBlocks(
         const t = teacherFor(repSubject, group.applicableSections, taken)
         if (t) taken.add(t)
         const strength = group.applicableSections.reduce(
-          (a, sec) => a + (group.strengthMatrix?.[sec]?.[bundle.id] ?? 0), 0)
+          // -1 marks "not offered in this class"; it is no students, not minus one.
+          (a, sec) => a + Math.max(0, group.strengthMatrix?.[sec]?.[bundle.id] ?? 0), 0)
         return { subject: repSubject, teacher: t, room: '', allocatedStrength: strength || undefined }
       })
 

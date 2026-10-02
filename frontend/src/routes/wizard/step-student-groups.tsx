@@ -219,6 +219,16 @@ export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComb
     seen.add(sig)
     const secs = [...new Set(members.flatMap(m => m.sections))]
       .sort((a, b) => gradeNum(parseSection(a).grade) - gradeNum(parseSection(b).grade) || a.localeCompare(b))
+    // A subject a class does not offer is marked not-applicable (-1) from the
+    // start. Left at 0, "Split evenly" put half of class X into Odia, which X
+    // does not teach, and saving the group then switched Odia on for X.
+    const strengthMatrix: Record<string, Record<string, number>> = {}
+    for (const sec of secs) {
+      for (const col of cols) {
+        const offered = members.some(m => m.sub.name === col && m.sections.includes(sec))
+        if (!offered) (strengthMatrix[sec] ??= {})[col] = -1
+      }
+    }
     out.push({
       id: `ai_${key.replace(/[^a-z0-9]/gi, '').slice(0, 18)}_${cols.join('').replace(/[^a-z0-9]/gi, '').slice(0, 10)}`,
       name: autoName(cols),
@@ -229,7 +239,7 @@ export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComb
       blockName: classGroupName(secs),
       roomCapacitySensitive: true,
       groupingScope: DEFAULT_SCOPE,
-      strengthMatrix: {},
+      strengthMatrix,
       aiSuggested: true,
     })
   }
@@ -652,9 +662,13 @@ function BlockCard({
       const sm: Record<string, Record<string, number>> = { ...c.strengthMatrix }
       for (const sec of c.applicableSections) {
         const total = getTotal(sec); if (total <= 0) continue
-        const base = Math.floor(total / cols.length), rem = total - base * cols.length
         const row: Record<string, number> = { ...(sm[sec] ?? {}) }
-        cols.forEach((col, i) => { row[col] = base + (i < rem ? 1 : 0) })
+        // Only among the subjects this class offers; a not-applicable mark
+        // (-1) stays as it is.
+        const open = cols.filter(col => (row[col] ?? 0) >= 0)
+        if (!open.length) continue
+        const base = Math.floor(total / open.length), rem = total - base * open.length
+        open.forEach((col, i) => { row[col] = base + (i < rem ? 1 : 0) })
         sm[sec] = row
       }
       return { ...c, strengthMatrix: sm }
@@ -932,7 +946,7 @@ export function StepStudentGroups() {
     const seen = new Set<string>()
     const out: any[] = []
     for (const r of [...(store.rooms ?? []), ...(store.classrooms ?? []), ...(store.facilities ?? [])]) {
-      const name = r?.name ?? r?.actualName ?? r?.roomName ?? r?.label
+      const name = r?.name || r?.actualName || r?.generatedName || r?.roomName || r?.label
       if (!name || seen.has(name)) continue
       seen.add(name)
       out.push({ ...r, name, capacity: r?.capacity ?? r?.seats ?? r?.size ?? 0 })

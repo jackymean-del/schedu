@@ -26,6 +26,25 @@ for (const c of cards) {
   if (juniors.length) fails++
 }
 
+// A suggested group marks a subject a class does not offer as not-applicable.
+// Left at 0, "Split evenly" sent half of class X to Odia, which X does not
+// teach, and saving the group then switched Odia on for X.
+{
+  const langSecs = ['VI-A', 'IX-A', 'X-A']
+  const lcfg = (sectionName: string) => ({ sectionName, periodsPerWeek: 2, maxPeriodsPerDay: 1, sessionDuration: 40, isOptional: true })
+  const langs = [
+    { id: 'san', name: 'Sanskrit', category: 'Scholastic', isOptional: true, classConfigs: langSecs.map(lcfg) },
+    { id: 'odi', name: 'Odia', category: 'Scholastic', isOptional: true, classConfigs: ['VI-A', 'IX-A'].map(lcfg) },
+  ]
+  const lsections = langSecs.map(name => ({ id: name, name, grade: name.split('-')[0] }))
+  const [card] = suggestAndComboGroups(langs as any[], lsections as any[])
+  const m = card?.strengthMatrix ?? {}
+  const ok = !!card && m['X-A']?.['Odia'] === -1 && m['X-A']?.['Sanskrit'] === undefined &&
+    m['VI-A']?.['Odia'] === undefined
+  console.log(`${ok ? 'PASS' : 'FAIL'} a suggested group marks Odia not-applicable in X, where it is not offered (${JSON.stringify(m)})`)
+  if (!ok) fails++
+}
+
 // Groups are the school's choice. The groups step used to build AND groups
 // from the electives the first time it was opened, so passing through it
 // opted a school in, and its classes were split without anyone asking.
