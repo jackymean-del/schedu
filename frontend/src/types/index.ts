@@ -1308,6 +1308,10 @@ export interface AndTeachingGroup {
   room?: string
   roomCapacity?: number
   capacityWarning?: boolean
+  /** Set by hand on the group card: kept when groups are regenerated. An
+   *  automatic choice is recomputed instead, so a bad one cannot stick. */
+  teacherByHand?: boolean
+  roomByHand?: boolean
 }
 
 /** One OR-group slot: students pick exactly one subject from this slot.

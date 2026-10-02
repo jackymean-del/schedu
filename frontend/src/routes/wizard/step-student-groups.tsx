@@ -23,7 +23,7 @@ import {
   Wand2, Info, X, Users, Eye, EyeOff,
 } from 'lucide-react'
 import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSection'
-import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, replaceBlockInPlace, type ElectiveFamily } from '@/lib/electiveGroups'
+import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, replaceBlockInPlace, assignStaffAndVenues, reconcileElectiveScope, type ElectiveFamily } from '@/lib/electiveGroups'
 
 // ── constants & helpers ────────────────────────────────────────────────────────
 
@@ -269,20 +269,13 @@ function poolKeyFor(scope: AndGroupScope, secName: string): string {
   return parts.join('|') || 'ALL'
 }
 
-/** Best-matching teacher for a subject taught to any of these sections. */
-function teacherForSubject(sub: string, secNames: string[], staff: any[]): string {
-  const secSet = new Set(secNames)
-  const teaches = (t: any) => (t.subjects ?? []).includes(sub) ||
-    (t.subjectMappings ?? []).some((m: any) => m.subject === sub)
-  const inSections = (t: any) => (t.classes ?? []).some((c: string) => secSet.has(c)) ||
-    (t.subjectMappings ?? []).some((m: any) => m.subject === sub && (m.classes ?? []).some((c: string) => secSet.has(c)))
-  const exact = staff.find(t => teaches(t) && inSections(t))
-  if (exact) return exact.name
-  const any = staff.find(t => teaches(t))
-  return any?.name ?? ''
+
+/** A teaching group's identity across regenerations: subject + sections. */
+function tgKey(g: AndTeachingGroup): string {
+  return `${g.subjects[0] ?? g.bundleName}|${g.sectionSlices.map(s => s.sectionName).sort().join(',')}`
 }
 
-function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []): AndTeachingGroup[] {
+function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = [], sections: any[] = [], prev: AndTeachingGroup[] = []): AndTeachingGroup[] {
   const cols = getCols(group)
   const scope = getScope(group)
   const capacitySensitive = group.roomCapacitySensitive !== false
@@ -309,14 +302,13 @@ function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []
     const subKey = sub.replace(/\s/g, '')
     let gIdx = 1
     const emit = (poolSlices: typeof slices, strength: number) => {
-      // Room is intentionally NOT auto-assigned (avoids irrelevant rooms and keeps
-      // the room dropdown unfiltered). The teacher is matched from the faculty list.
+      // Teacher and venue are assigned below, for all groups together, so
+      // groups that run in the same period never share either.
       result.push({
         id: `${group.id}_${subKey}_G${gIdx++}`,
         bundleId: sub, bundleName: sub, subjects: [sub],
         sectionSlices: poolSlices, totalStrength: strength,
-        teacher: teacherForSubject(sub, poolSlices.map(s => s.sectionName), staff),
-        room: '', roomCapacity: undefined, capacityWarning: false,
+        teacher: '', room: '', roomCapacity: undefined, capacityWarning: false,
       })
     }
 
@@ -336,7 +328,16 @@ function generateAndGroups(group: AndComboGroup, rooms: any[], staff: any[] = []
       }
     }
   }
-  return result
+  // Hand-set choices survive; automatic ones are recomputed (lib/electiveGroups).
+  const byKey = new Map(prev.map(p => [tgKey(p), p]))
+  const keep = (g: AndTeachingGroup) => {
+    const p = byKey.get(tgKey(g))
+    return p ? { teacher: p.teacherByHand ? p.teacher : undefined, room: p.roomByHand ? p.room : undefined } : undefined
+  }
+  return assignStaffAndVenues(result, staff, rooms, sections, keep).map(g => {
+    const p = byKey.get(tgKey(g))
+    return { ...g, teacherByHand: p?.teacherByHand, roomByHand: p?.roomByHand }
+  })
 }
 
 // ── table styles ─────────────────────────────────────────────────────────────
@@ -567,16 +568,8 @@ function BlockCard({
   // (no explicit "Generate" press needed). Manually-set rooms are preserved when
   // a group's subject + section composition is unchanged.
   const hasGroups = combos.some(c => (c.generatedGroups?.length ?? 0) > 0)
-  const gKey = (g: AndTeachingGroup) => `${g.subjects[0] ?? g.bundleName}|${g.sectionSlices.map(s => s.sectionName).sort().join(',')}`
-  const regen = (cs: AndComboGroup[]): AndComboGroup[] => cs.map(c => {
-    const prev = new Map((c.generatedGroups ?? []).map(g => [gKey(g), g]))
-    const fresh = generateAndGroups(c, rooms, staff).map(g => {
-      const p = prev.get(gKey(g))
-      // preserve manually-edited room / teacher when composition is unchanged
-      return p ? { ...g, room: p.room || g.room, teacher: p.teacher || g.teacher } : g
-    })
-    return { ...c, generatedGroups: fresh }
-  })
+  const regen = (cs: AndComboGroup[]): AndComboGroup[] => cs.map(c =>
+    ({ ...c, generatedGroups: generateAndGroups(c, rooms, staff, sectionsStore, c.generatedGroups ?? []) }))
   /** auto-regenerating commit - used by all matrix / scope / structure edits */
   const commit = (next: AndComboGroup[]) => onReplace(hasGroups ? regen(next) : next)
   /** raw commit - bypasses regeneration (room edits, group deletes, name edits) */
@@ -696,7 +689,7 @@ function BlockCard({
       return { ...c, strengthMatrix: sm }
     }))
 
-  const generate = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: generateAndGroups(c, rooms, staff) })))
+  const generate = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: generateAndGroups(c, rooms, staff, sectionsStore, c.generatedGroups ?? []) })))
   const clearGroups = () => commitRaw(combos.map(c => ({ ...c, generatedGroups: undefined })))
   const deleteGroup = (comboId: string, groupId: string) =>
     commitRaw(combos.map(c => c.id !== comboId ? c : { ...c, generatedGroups: (c.generatedGroups ?? []).filter(g => g.id !== groupId) }))
@@ -966,8 +959,8 @@ function BlockCard({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 8 }}>
               {combos.flatMap(c => (c.generatedGroups ?? []).map(g => (
                 <ParallelGroupCard key={g.id} tg={g} shade={shadeOf(g)} allRoomNames={roomNamesNearest(g)} allTeacherNames={allTeacherNames}
-                  onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room } : x) }))}
-                  onTeacher={teacher => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, teacher } : x) }))}
+                  onRoom={room => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, room, roomByHand: !!room } : x) }))}
+                  onTeacher={teacher => commitRaw(combos.map(cc => cc.id !== c.id ? cc : { ...cc, generatedGroups: (cc.generatedGroups ?? []).map(x => x.id === g.id ? { ...x, teacher, teacherByHand: !!teacher } : x) }))}
                   onDelete={() => deleteGroup(c.id, g.id)} />
               )))}
             </div>
@@ -1127,42 +1120,11 @@ export function StepStudentGroups() {
   // Write-back link: reflect combo subject↔section assignments into Resources → Subjects.
   // A subject used in a combo becomes Elective and assigned to its applicable sections;
   // a cell marked NA removes that section from the subject. Existing assignments are kept.
+  // Subjects follow the groups: elective in the classes a group covers, not
+  // offered where it is marked not-applicable, untouched everywhere else.
   const reconcileSubjects = (newGroups: AndComboGroup[]) => {
     if (!store.setSubjects) return
-    const applicable = new Map<string, Set<string>>()
-    const naSet = new Map<string, Set<string>>()
-    for (const g of newGroups) {
-      for (const sub of getCols(g)) {
-        if (!applicable.has(sub)) { applicable.set(sub, new Set()); naSet.set(sub, new Set()) }
-        for (const sec of g.applicableSections ?? []) {
-          const v = g.strengthMatrix?.[sec]?.[sub] ?? 0
-          if (v < 0) naSet.get(sub)!.add(sec)
-          else applicable.get(sub)!.add(sec)
-        }
-      }
-    }
-    if (applicable.size === 0) return
-    let changed = false
-    const next = (subjects as any[]).map((s: any) => {
-      if (!applicable.has(s.name)) return s
-      const existing = new Set<string>((s.classConfigs ?? []).map((c: any) => c.sectionName).filter(Boolean))
-      const finalSecs = new Set<string>([...existing, ...applicable.get(s.name)!])
-      for (const x of naSet.get(s.name)!) finalSecs.delete(x)
-      const cfgs = [...finalSecs].map(sec => {
-        const ex = (s.classConfigs ?? []).find((c: any) => c.sectionName === sec)
-        return {
-          sectionName: sec,
-          periodsPerWeek: ex?.periodsPerWeek ?? s.periodsPerWeek ?? 5,
-          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
-          sessionDuration: ex?.sessionDuration ?? s.sessionDuration ?? 45,
-          isOptional: true, electiveSlotId: ex?.electiveSlotId, category: ex?.category, requiresLab: ex?.requiresLab,
-        }
-      })
-      const before = [...existing].sort().join(',') + '|' + (s.isOptional ? 1 : 0)
-      const after = [...finalSecs].sort().join(',') + '|1'
-      if (before !== after) changed = true
-      return { ...s, isOptional: true, sections: [...finalSecs], classConfigs: cfgs }
-    })
+    const { subjects: next, changed } = reconcileElectiveScope(subjects as any[], newGroups)
     if (changed) store.setSubjects(next)
   }
   const commitGroups = (next: AndComboGroup[]) => { setAndComboGroups(next); reconcileSubjects(next) }
@@ -1331,7 +1293,7 @@ export function StepStudentGroups() {
               <span style={{ fontSize: 11, color: '#685DBC', fontWeight: 600, flex: 1 }}>
                 {totalGenerated} teaching group{totalGenerated !== 1 ? 's' : ''} across {blocks.length} block{blocks.length !== 1 ? 's' : ''}
               </span>
-              <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms, staff) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#685DBC', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms, staff, sections as any[], g.generatedGroups ?? []) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#685DBC', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <RefreshCw size={11} /> Generate all
               </button>
               {/* A way back out: groups made earlier, by hand or by the old

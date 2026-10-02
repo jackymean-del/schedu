@@ -1126,6 +1126,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       if (!block.sectionNames.every(sn => !sectionOffDays.get(sn)?.has(day) && !classTT[sn]?.[day]?.[pid])) return false
       if (!block.options.every(o => !o.teacher || keysFor(o.teacher).every(k => !teacherBusy[k]?.[day]?.has(pid)))) return false
       if (blockRoom && sections.some(s => classTT[s.name]?.[day]?.[pid]?.room === blockRoom)) return false
+      // Every group's room, not just the first: a split puts each group in
+      // its own venue at the same moment, and an earlier block may hold one.
+      if (block.options.some(o => o.room && roomBusy[day]?.[pid]?.has(o.room))) return false
       return true
     }
     const slots: Array<{ day: string; periodId: string }> = []

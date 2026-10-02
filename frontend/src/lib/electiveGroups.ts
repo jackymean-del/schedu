@@ -143,3 +143,177 @@ export function replaceBlockInPlace<T>(groups: T[], blockId: string, next: T[], 
   const pos = groups.slice(0, first).filter(g => keyOf(g) !== blockId).length
   return [...rest.slice(0, pos), ...next, ...rest.slice(pos)]
 }
+
+// ── Who teaches each split group, and where ─────────────────────────────
+
+export interface TeachingGroupLike {
+  subjects: string[]
+  bundleName?: string
+  sectionSlices: Array<{ sectionName: string; studentCount: number }>
+  totalStrength: number
+  teacher?: string
+  room?: string
+  roomCapacity?: number
+  capacityWarning?: boolean
+}
+
+/** Teaching groups that share a section run in the SAME period: the class
+ *  splits, and every part of it is somewhere at once. Groups with no section
+ *  in common can run at different times. */
+export function simultaneousPools<T extends TeachingGroupLike>(tgs: T[]): T[][] {
+  const parent = new Map<string, string>()
+  const find = (x: string): string => {
+    while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x)!)!); x = parent.get(x)! }
+    return x
+  }
+  for (const g of tgs) for (const s of g.sectionSlices) if (!parent.has(s.sectionName)) parent.set(s.sectionName, s.sectionName)
+  for (const g of tgs) {
+    const secs = g.sectionSlices.map(s => s.sectionName)
+    for (let i = 1; i < secs.length; i++) parent.set(find(secs[i]), find(secs[0]))
+  }
+  const pools = new Map<string, T[]>()
+  for (const g of tgs) {
+    const root = g.sectionSlices.length ? find(g.sectionSlices[0].sectionName) : `__${pools.size}`
+    pools.set(root, [...(pools.get(root) ?? []), g])
+  }
+  return [...pools.values()]
+}
+
+const roomName = (r: any): string => String(r?.actualName || r?.generatedName || r?.name || '').trim()
+const teachesSubject = (t: any, sub: string): boolean =>
+  (t?.subjects ?? []).includes(sub) || (t?.subjectMappings ?? []).some((m: any) => m?.subject === sub)
+const mappedTo = (t: any, sub: string, secs: string[]): boolean =>
+  (t?.subjectMappings ?? []).some((m: any) => m?.subject === sub && (m?.classes ?? []).some((c: string) => secs.includes(c))) ||
+  (teachesSubject(t, sub) && (t?.classes ?? []).some((c: string) => secs.includes(c)))
+
+/**
+ * Give every split group a teacher and a venue.
+ *
+ * Found live: a VI-X language split gave all ten Sanskrit groups Teacher 14
+ * and no room at all. Groups that run in the same period need different
+ * people in different rooms, so within one pool (simultaneousPools) neither
+ * repeats. Teachers come from those who teach the subject, preferring ones
+ * mapped to these classes, least-used first. Venues: the home room of the
+ * class with most students in the group, then the pool's other home rooms,
+ * then rooms that are nobody's home (labs, library, spare). Never the home
+ * room of a class outside the pool: that class is in a lesson there. A room
+ * that is too small is still used when nothing fits, and flagged.
+ *
+ * `keep` returns a teacher/room the school set by hand, which wins.
+ */
+export function assignStaffAndVenues<T extends TeachingGroupLike>(
+  tgs: T[], staff: any[], rooms: any[], sections: any[],
+  keep?: (g: T) => { teacher?: string; room?: string } | undefined,
+): T[] {
+  const homeOf = new Map<string, string>()
+  for (const s of sections ?? []) if (s?.name && s?.room) homeOf.set(s.name, String(s.room).trim())
+  const allHomes = new Set(homeOf.values())
+  const capOf = new Map<string, number>()
+  const typeOf = new Map<string, string>()
+  for (const r of rooms ?? []) {
+    const n = roomName(r)
+    if (!n) continue
+    capOf.set(n, Number(r?.capacity ?? r?.seats ?? 0) || 0)
+    typeOf.set(n, `${r?.roomType ?? r?.type ?? ''} ${n}`.toLowerCase())
+  }
+  // Which spare room suits a subject: one made for it (Computer Lab for
+  // Computer Science), then ordinary spaces, and other specialist rooms last.
+  // Found live: every Odia group went to the Computer Lab, which Computer
+  // Science needed and nobody teaches a language in.
+  const SPECIAL = /lab|workshop|studio|gym|pool|ground|court|auditorium|music|art room/
+  const suits = (room: string, sub: string): number => {
+    const t = typeOf.get(room) ?? ''
+    const s = sub.toLowerCase()
+    if ((/computer|informatics|\bit\b|coding/.test(s) && /computer/.test(t)) ||
+        (/physics|chemistry|biology|science/.test(s) && /lab/.test(t) && !/computer/.test(t)) ||
+        (/music/.test(s) && /music/.test(t)) || (/art|drawing|painting|craft/.test(s) && /art|studio/.test(t)) ||
+        (/physical|sport|games|yoga|p\.?e\b/.test(s) && /gym|ground|court|hall/.test(t))) return 0
+    return SPECIAL.test(t) ? 2 : 1
+  }
+  const use = new Map<string, number>()
+  const out = new Map<T, T>()
+
+  for (const pool of simultaneousPools(tgs)) {
+    const poolSecs = new Set(pool.flatMap(g => g.sectionSlices.map(s => s.sectionName)))
+    const poolHomes = [...poolSecs].map(s => homeOf.get(s)).filter(Boolean) as string[]
+    const spare = [...capOf.keys()].filter(n => !allHomes.has(n))
+    const usedT = new Set<string>(), usedR = new Set<string>()
+    // Hand-set choices are taken first so automatic ones work around them.
+    for (const g of pool) { const k = keep?.(g); if (k?.teacher) usedT.add(k.teacher); if (k?.room) usedR.add(k.room) }
+
+    for (const g of [...pool].sort((a, b) => b.totalStrength - a.totalStrength)) {
+      const sub = g.subjects[0] ?? g.bundleName ?? ''
+      const secs = g.sectionSlices.map(s => s.sectionName)
+      const k = keep?.(g)
+
+      let teacher = k?.teacher ?? ''
+      if (!teacher) {
+        const pick = staff
+          .filter(t => teachesSubject(t, sub) && !usedT.has(t.name))
+          .sort((a, b) => (mappedTo(b, sub, secs) ? 1 : 0) - (mappedTo(a, sub, secs) ? 1 : 0) || (use.get(a.name) ?? 0) - (use.get(b.name) ?? 0))[0]
+        teacher = pick?.name ?? ''
+      }
+      if (teacher) { usedT.add(teacher); use.set(teacher, (use.get(teacher) ?? 0) + 1) }
+
+      let room = k?.room ?? ''
+      if (!room) {
+        const own = [...g.sectionSlices].sort((a, b) => b.studentCount - a.studentCount).map(s => homeOf.get(s.sectionName)).filter(Boolean) as string[]
+        const spareForSub = [...spare].sort((a, b) => suits(a, sub) - suits(b, sub))
+        const order = [...new Set([...own, ...poolHomes, ...spareForSub])].filter(n => !usedR.has(n))
+        const fits = (n: string) => (capOf.get(n) ?? 0) === 0 || (capOf.get(n) ?? 0) >= g.totalStrength
+        room = order.find(fits) ?? [...order].sort((a, b) => (capOf.get(b) ?? 0) - (capOf.get(a) ?? 0))[0] ?? ''
+      }
+      if (room) usedR.add(room)
+      const cap = capOf.get(room) ?? 0
+      out.set(g, { ...g, teacher, room, roomCapacity: cap || undefined, capacityWarning: !!cap && cap < g.totalStrength })
+    }
+  }
+  return tgs.map(g => out.get(g) ?? g)
+}
+
+/**
+ * Make the Subjects list agree with the AND groups after an edit.
+ *
+ * A class in a group takes the subject as an elective there; a class marked
+ * not-applicable (-1) does not take it at all. Every OTHER class keeps
+ * exactly what it had. This used to mark the subject elective in every class
+ * that teaches it: grouping Maths/Computer Science for class X made them
+ * electives in VI-IX too, and the skip warning then listed eight classes that
+ * had never had an elective.
+ *
+ * Returns the new subjects, and whether anything changed.
+ */
+export function reconcileElectiveScope(subjects: any[], groups: any[]): { subjects: any[]; changed: boolean } {
+  const inGroup = new Map<string, Set<string>>()
+  const notOffered = new Map<string, Set<string>>()
+  for (const g of groups ?? []) {
+    for (const sub of groupColumns(g)) {
+      if (!inGroup.has(sub)) { inGroup.set(sub, new Set()); notOffered.set(sub, new Set()) }
+      for (const sec of g?.applicableSections ?? []) {
+        if ((g?.strengthMatrix?.[sec]?.[sub] ?? 0) < 0) notOffered.get(sub)!.add(sec)
+        else inGroup.get(sub)!.add(sec)
+      }
+    }
+  }
+  let changed = false
+  const next = (subjects ?? []).map((s: any) => {
+    const grouped = inGroup.get(s.name)
+    if (!grouped) return s
+    const drop = notOffered.get(s.name)!
+    const cfgs = (s.classConfigs ?? []) as any[]
+    const have = new Set(cfgs.map(c => c?.sectionName).filter(Boolean))
+    const kept = cfgs
+      .filter(c => !drop.has(c?.sectionName))
+      .map(c => grouped.has(c?.sectionName) ? { ...c, isOptional: true } : c)
+    const added = [...grouped].filter(sec => !have.has(sec) && !drop.has(sec)).map(sec => ({
+      sectionName: sec, periodsPerWeek: s.periodsPerWeek ?? 5, maxPeriodsPerDay: 1,
+      sessionDuration: s.sessionDuration ?? 45, isOptional: true,
+    }))
+    const classConfigs = [...kept, ...added]
+    const sections = [...new Set(classConfigs.map(c => c.sectionName).filter(Boolean))]
+    const out = { ...s, isOptional: true, sections, classConfigs }
+    if (JSON.stringify(out) !== JSON.stringify(s)) changed = true
+    return out
+  })
+  return { subjects: next, changed }
+}

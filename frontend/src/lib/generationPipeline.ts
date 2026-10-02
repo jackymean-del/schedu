@@ -11,10 +11,11 @@
  * early-dispersal locking, block period building) moved here verbatim from
  * step6-generate.tsx - the wizard re-imports the ones it still uses.
  */
+import { simultaneousPools, assignStaffAndVenues, type TeachingGroupLike } from './electiveGroups'
 import { buildPeriodSequence, buildPeriodSequenceFromCw, rebuildTeacherTT } from './aiEngine'
 import { schoolTeacherCap } from './teacherCap'
 import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from './schedulingEngine'
-import type { OptionalBlock, OptionalOption, Period, Suggestion } from '@/types'
+import type { OptionalBlock, Period, Suggestion } from '@/types'
 
 // ── Subject Combos (Step 4, Tab 2) → OptionalBlock bridge ──────────────────
 //
@@ -122,97 +123,90 @@ export function scopeToBehavior(scope: any): string {
   return 'CROSS_GRADE_ALLOWED'
 }
 
+/**
+ * AND groups -> timetable blocks: ONE BLOCK PER SET OF CLASSES THAT SPLIT
+ * TOGETHER, each teaching group its own option with its own teacher and room.
+ *
+ * This used to make one block per AND group covering every class it applies
+ * to, with one option per subject. A VI-X language choice therefore stopped
+ * all ten classes in the same period and sent every Sanskrit student in the
+ * school to one teacher in one room. Classes whose students never mix (scope
+ * "Section: Same") now get a block each, so they run at different times and
+ * can share a teacher; classes that pool ("Cross") share one block.
+ *
+ * Groups saved before teachers and rooms were assigned (or with one teacher
+ * in two groups of the same period) are repaired here, keeping any choice
+ * made by hand.
+ */
 export function andGroupsToOptionalBlocks(
   andGroups: import('@/types').AndComboGroup[],
   subjects: any[],
   staff: any[],
+  sections: any[] = [],
+  rooms: any[] = [],
 ): OptionalBlock[] {
   if (!andGroups?.length) return []
+  void subjects
   const blocks: OptionalBlock[] = []
 
   for (const group of andGroups) {
-    if (!group.bundles?.length || !group.applicableSections?.length) continue
+    if (!group.applicableSections?.length) continue
+    const cols = group.subjects?.length
+      ? group.subjects
+      : [...new Set((group.bundles ?? []).flatMap(b => b.subjects))]
+    if (cols.length < 2) continue
 
-    // Find a teacher for a subject from the staff list
-    const teacherFor = (subName: string, secNames: string[], taken: Set<string>): string => {
-      const found = staff.find((t: any) =>
-        !taken.has(t.name) &&
-        ((t.subjectMappings ?? []) as Array<{ subject: string; classes?: string[] }>)
-          .some(m => m.subject === subName && (m.classes ?? []).some(c => secNames.includes(c))))
-      if (found) return found.name
-      const any = staff.find((t: any) => !taken.has(t.name) &&
-        ((t.subjects ?? []) as string[]).some(s => s === subName))
-      return any?.name ?? ''
+    // The teaching groups: as generated on the Groups step, or one per class
+    // and subject from the headcounts when they were never generated.
+    let tgs: TeachingGroupLike[] = (group.generatedGroups ?? []).filter(tg => tg.totalStrength > 0)
+    if (!tgs.length) {
+      tgs = group.applicableSections.flatMap(sec => cols.map(sub => {
+        const n = Math.max(0, group.strengthMatrix?.[sec]?.[sub] ?? 0)
+        return { subjects: [sub], bundleName: sub, sectionSlices: [{ sectionName: sec, studentCount: n }], totalStrength: n }
+      })).filter(tg => tg.totalStrength > 0)
     }
+    if (!tgs.length) continue
 
-    // If teaching groups have been generated, use them for precise room/section data
-    if (group.generatedGroups && group.generatedGroups.length > 0) {
-      // Group by bundleId - each bundle's groups run in the same slot type
-      const byBundle = new Map<string, typeof group.generatedGroups>()
-      for (const tg of group.generatedGroups) {
-        if (!byBundle.has(tg.bundleId)) byBundle.set(tg.bundleId, [])
-        byBundle.get(tg.bundleId)!.push(tg)
+    // Keep a hand-set teacher/room, and an automatic one only while it is
+    // unique within its period; anything else is assigned afresh.
+    const pools = simultaneousPools(tgs)
+    const keepable = new Map<TeachingGroupLike, { teacher?: string; room?: string }>()
+    for (const pool of pools) {
+      const tCount = new Map<string, number>(), rCount = new Map<string, number>()
+      for (const tg of pool) {
+        if (tg.teacher) tCount.set(tg.teacher, (tCount.get(tg.teacher) ?? 0) + 1)
+        if (tg.room) rCount.set(tg.room, (rCount.get(tg.room) ?? 0) + 1)
       }
-
-      // One OptionalBlock covering all applicable sections, logic=AND
-      const taken = new Set<string>()
-      const options: OptionalOption[] = []
-      for (const bundle of group.bundles) {
-        const tgs = byBundle.get(bundle.id) ?? []
-        const allSecs = tgs.flatMap(tg => tg.sectionSlices.map(s => s.sectionName))
-        const repSubject = bundle.subjects[0] ?? bundle.name
-        const t = teacherFor(repSubject, allSecs, taken)
-        if (t) taken.add(t)
-        options.push({
-          subject: repSubject,
-          teacher: tg_teacher(tgs) || t,
-          room: tgs[0]?.room ?? '',
-          allocatedStrength: tgs.reduce((a, tg) => a + tg.totalStrength, 0),
+      for (const tg of pool) {
+        const byHand = tg as TeachingGroupLike & { teacherByHand?: boolean; roomByHand?: boolean }
+        keepable.set(tg, {
+          teacher: tg.teacher && (byHand.teacherByHand || tCount.get(tg.teacher) === 1) ? tg.teacher : undefined,
+          room: tg.room && (byHand.roomByHand || rCount.get(tg.room) === 1) ? tg.room : undefined,
         })
       }
+    }
+    const assigned = assignStaffAndVenues(tgs, staff, rooms, sections, tg => keepable.get(tg))
 
-      if (options.length >= 2) {
-        blocks.push({
-          id: `and-group-${group.id}`,
-          name: group.name,
-          sectionNames: group.applicableSections,
-          day: '', periodId: '',
-          options,
-          logic: 'AND',
-          behavior: scopeToBehavior(group.groupingScope),
-        })
-      }
-    } else {
-      // Fallback: use the strengthMatrix directly
-      const taken = new Set<string>()
-      const options: OptionalOption[] = group.bundles.map(bundle => {
-        const repSubject = bundle.subjects[0] ?? bundle.name
-        const t = teacherFor(repSubject, group.applicableSections, taken)
-        if (t) taken.add(t)
-        const strength = group.applicableSections.reduce(
-          // -1 marks "not offered in this class"; it is no students, not minus one.
-          (a, sec) => a + Math.max(0, group.strengthMatrix?.[sec]?.[bundle.id] ?? 0), 0)
-        return { subject: repSubject, teacher: t, room: '', allocatedStrength: strength || undefined }
+    for (const pool of simultaneousPools(assigned)) {
+      if (new Set(pool.map(tg => tg.subjects[0])).size < 2) continue   // no split here
+      const secs = [...new Set(pool.flatMap(tg => tg.sectionSlices.map(s => s.sectionName)))]
+      blocks.push({
+        id: `and-group-${group.id}-${secs.join('+')}`,
+        name: `${group.name} · ${secs.join(', ')}`,
+        sectionNames: secs,
+        day: '', periodId: '',
+        options: pool.map(tg => ({
+          subject: tg.subjects[0] ?? tg.bundleName ?? '',
+          teacher: tg.teacher ?? '',
+          room: tg.room ?? '',
+          allocatedStrength: tg.totalStrength,
+        })),
+        logic: 'AND',
+        behavior: scopeToBehavior(group.groupingScope),
       })
-
-      if (options.length >= 2) {
-        blocks.push({
-          id: `and-group-${group.id}`,
-          name: group.name,
-          sectionNames: group.applicableSections,
-          day: '', periodId: '',
-          options,
-          logic: 'AND',
-          behavior: scopeToBehavior(group.groupingScope),
-        })
-      }
     }
   }
   return blocks
-}
-
-function tg_teacher(tgs: Array<{ teacher?: string }>): string {
-  return tgs.find(tg => tg.teacher)?.teacher ?? ''
 }
 
 // ── Block-wise (per-shift) timetable generation helpers ───────────────────────
@@ -476,7 +470,7 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
   // merged in, deduped against blocks covering the same sections+subjects.
   const comboBlocks = comboGroupsToOptionalBlocks(p.subjectGroups ?? [], resolvedSubjects, sections, staff)
   // AND Combo Groups from Step 4 Tab 1 (bundle-based splits like PCM vs PCB)
-  const andComboBlocks = andGroupsToOptionalBlocks(storeAndComboGroups, resolvedSubjects, staff)
+  const andComboBlocks = andGroupsToOptionalBlocks(storeAndComboGroups, resolvedSubjects, staff, sections, rooms)
   const blockSig = (b: OptionalBlock) =>
     (b.slotId ?? '') + '::' +
     [...b.sectionNames].sort().join('|') + '::' +

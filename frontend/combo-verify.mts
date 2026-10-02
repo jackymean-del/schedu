@@ -190,6 +190,119 @@ for (const c of cards) {
   if (!ok2) fails++
 }
 
+// ── Every split group gets its own teacher and venue ─────────────────────
+// Found live: a VI-X language choice gave all ten Sanskrit groups Teacher 14
+// and no room, and the timetable ran all ten classes in one period with one
+// teacher. Groups that run together need different people in different
+// rooms; classes that never mix are separate blocks at separate times.
+{
+  const { assignStaffAndVenues, simultaneousPools } = await import('./src/lib/electiveGroups.ts')
+  const { andGroupsToOptionalBlocks } = await import('./src/lib/generationPipeline.ts')
+  const secs = ['VI-A', 'VI-B', 'VII-A'].map(n => ({ name: n, room: `Room ${n}`, strength: 40 }))
+  const rooms = [...secs.map(s => ({ actualName: s.room, capacity: 40 })), { actualName: 'Library', capacity: 40 }, { actualName: 'Lab', capacity: 30 }]
+  const staff = [
+    { name: 'T14', subjects: ['Sanskrit'], subjectMappings: [{ subject: 'Sanskrit', classes: ['VI-A', 'VI-B'] }] },
+    { name: 'T15', subjects: ['Sanskrit'], subjectMappings: [{ subject: 'Sanskrit', classes: ['VII-A'] }] },
+    { name: 'T16', subjects: ['Odia'] }, { name: 'T17', subjects: ['Odia'] },
+  ]
+  const tg = (sub: string, slices: Array<[string, number]>, extra: any = {}) => ({
+    subjects: [sub], bundleName: sub, totalStrength: slices.reduce((a, [, n]) => a + n, 0),
+    sectionSlices: slices.map(([sectionName, studentCount]) => ({ sectionName, studentCount })), ...extra,
+  })
+
+  // One class splitting: both groups at once.
+  const one = assignStaffAndVenues([tg('Sanskrit', [['VI-A', 22]]), tg('Odia', [['VI-A', 18]])], staff, rooms, secs)
+  const ok1 = one[0].teacher !== one[1].teacher && one[0].room !== one[1].room && !!one[0].room && !!one[1].room
+  console.log(`${ok1 ? 'PASS' : 'FAIL'} one class splitting: two teachers, two rooms (${one.map(g => `${g.subjects[0]}=${g.teacher}@${g.room}`).join(', ')})`)
+  if (!ok1) fails++
+  const ok2 = one.every(g => g.room !== 'Room VI-B' && g.room !== 'Room VII-A')
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} never another class's home room: that class is in a lesson there`)
+  if (!ok2) fails++
+  const ok3 = one.find(g => g.subjects[0] === 'Sanskrit')!.room === 'Room VI-A'
+  console.log(`${ok3 ? 'PASS' : 'FAIL'} the bigger group stays in the class's own room`)
+  if (!ok3) fails++
+
+  // Two classes pooled (Cross): one period for both, rooms and teachers unique.
+  const pooled = assignStaffAndVenues([tg('Sanskrit', [['VI-A', 20], ['VI-B', 20]]), tg('Odia', [['VI-A', 20], ['VI-B', 20]])], staff, rooms, secs)
+  const ok4 = simultaneousPools(pooled).length === 1 && new Set(pooled.map(g => g.room)).size === 2 && new Set(pooled.map(g => g.teacher)).size === 2
+  console.log(`${ok4 ? 'PASS' : 'FAIL'} pooled classes share one period, and still no shared teacher or room (${pooled.map(g => `${g.teacher}@${g.room}`).join(', ')})`)
+  if (!ok4) fails++
+
+  // The spare room suits the subject: a language never takes the Computer
+  // Lab while an ordinary room is free; Computer Science goes to the lab.
+  const labRooms = [{ actualName: 'Room VI-A', capacity: 40 }, { actualName: 'Computer Lab', roomType: 'Computer Lab', capacity: 40 }, { actualName: 'Library', roomType: 'Library', capacity: 40 }]
+  const lang = assignStaffAndVenues([tg('Sanskrit', [['VI-A', 22]]), tg('Odia', [['VI-A', 18]])], staff, labRooms, secs)
+  const cs = assignStaffAndVenues([tg('Mathematics', [['VI-A', 22]]), tg('Computer Science', [['VI-A', 18]])], [...staff, { name: 'T3', subjects: ['Mathematics'] }, { name: 'T11', subjects: ['Computer Science'] }], labRooms, secs)
+  const ok9 = lang.find(g => g.subjects[0] === 'Odia')!.room === 'Library' && cs.find(g => g.subjects[0] === 'Computer Science')!.room === 'Computer Lab'
+  console.log(`${ok9 ? 'PASS' : 'FAIL'} languages get an ordinary spare room, Computer Science the Computer Lab (${lang[1].room}, ${cs[1].room})`)
+  if (!ok9) fails++
+
+  // Too small a room is used only when nothing fits, and flagged.
+  const big = assignStaffAndVenues([tg('Sanskrit', [['VI-A', 45]]), tg('Odia', [['VI-A', 45]])], staff, [{ actualName: 'Room VI-A', capacity: 40 }, { actualName: 'Lab', capacity: 30 }], secs)
+  const ok5 = big.every(g => g.capacityWarning === true)
+  console.log(`${ok5 ? 'PASS' : 'FAIL'} a group bigger than every free room is placed and flagged, not dropped`)
+  if (!ok5) fails++
+
+  // The timetable side: classes that never mix are separate blocks.
+  const langGroup: any = {
+    id: 'lang', name: 'Language choice', applicableSections: ['VI-A', 'VI-B', 'VII-A'], subjects: ['Sanskrit', 'Odia'],
+    bundles: [{ id: 'Sanskrit', name: 'Sanskrit', subjects: ['Sanskrit'] }, { id: 'Odia', name: 'Odia', subjects: ['Odia'] }],
+    strengthMatrix: {}, groupingScope: { section: 'same', grade: 'same', stream: 'same', block: 'same' },
+    // Saved before this fix: one teacher for every Sanskrit group, no rooms.
+    generatedGroups: ['VI-A', 'VI-B', 'VII-A'].flatMap(sec => [
+      tg('Sanskrit', [[sec, 20]], { id: `s-${sec}`, bundleId: 'Sanskrit', teacher: 'T14', room: '' }),
+      tg('Odia', [[sec, 20]], { id: `o-${sec}`, bundleId: 'Odia', teacher: 'T16', room: '' }),
+    ]),
+  }
+  const blocks = andGroupsToOptionalBlocks([langGroup], [], staff, secs, rooms)
+  const ok6 = blocks.length === 3 && blocks.every((b: any) => b.sectionNames.length === 1 && b.options.length === 2)
+  console.log(`${ok6 ? 'PASS' : 'FAIL'} three classes that never mix are three blocks, not one ten-class period (${blocks.map((b: any) => b.sectionNames.join('+')).join(' | ')})`)
+  if (!ok6) fails++
+  const ok7 = blocks.every((b: any) => new Set(b.options.map((o: any) => o.teacher)).size === b.options.length
+    && new Set(b.options.map((o: any) => o.room)).size === b.options.length && b.options.every((o: any) => o.teacher && o.room))
+  console.log(`${ok7 ? 'PASS' : 'FAIL'} every block's groups have their own teacher and room (${blocks.map((b: any) => b.options.map((o: any) => `${o.subject}=${o.teacher}@${o.room}`).join(' ')).join(' | ')})`)
+  if (!ok7) fails++
+
+  // A teacher set by hand is kept, even over the automatic preference.
+  const handSet = { ...langGroup, generatedGroups: langGroup.generatedGroups.map((g: any) => g.id === 's-VII-A' ? { ...g, teacher: 'T14', teacherByHand: true } : { ...g, teacher: '' }) }
+  const hb = andGroupsToOptionalBlocks([handSet], [], staff, secs, rooms).find((b: any) => b.sectionNames[0] === 'VII-A')
+  const ok8 = hb?.options.find((o: any) => o.subject === 'Sanskrit')?.teacher === 'T14'
+  console.log(`${ok8 ? 'PASS' : 'FAIL'} a teacher chosen by hand survives (VII-A Sanskrit stays with T14, not the mapped T15)`)
+  if (!ok8) fails++
+}
+
+// ── Saving a group changes only the classes it covers ───────────────────
+// Grouping Maths/Computer Science for class X marked them elective in every
+// class that teaches them, so VI-IX suddenly "had electives" and the skip
+// warning listed eight classes that never chose anything.
+{
+  const { reconcileElectiveScope } = await import('./src/lib/electiveGroups.ts')
+  const all = ['VI-A', 'IX-A', 'X-A', 'X-B']
+  const cfg = (sectionName: string, isOptional = false) => ({ sectionName, periodsPerWeek: 5, maxPeriodsPerDay: 1, sessionDuration: 40, ...(isOptional ? { isOptional: true } : {}) })
+  const subs = [
+    { name: 'Mathematics', classConfigs: all.map(s => cfg(s, s.startsWith('X'))) },
+    { name: 'Computer Science', classConfigs: all.map(s => cfg(s, s.startsWith('X'))) },
+    { name: 'English', classConfigs: all.map(s => cfg(s)) },
+  ]
+  const grp = [{ applicableSections: ['X-A', 'X-B'], subjects: ['Mathematics', 'Computer Science'], strengthMatrix: { 'X-B': { 'Computer Science': -1 } } }]
+  const { subjects: out, changed } = reconcileElectiveScope(subs, grp)
+  const maths = out.find((x: any) => x.name === 'Mathematics')
+  const cs = out.find((x: any) => x.name === 'Computer Science')
+  const electiveIn = (x: any) => x.classConfigs.filter((c: any) => c.isOptional).map((c: any) => c.sectionName).join(',')
+  const ok1 = electiveIn(maths) === 'X-A,X-B'
+  console.log(`${ok1 ? 'PASS' : 'FAIL'} Maths stays compulsory in VI-A and IX-A; elective only in X (${electiveIn(maths)})`)
+  if (!ok1) fails++
+  const ok2 = !cs.classConfigs.some((c: any) => c.sectionName === 'X-B') && cs.classConfigs.some((c: any) => c.sectionName === 'VI-A' && !c.isOptional)
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} not-applicable in X-B drops Computer Science there, and only there`)
+  if (!ok2) fails++
+  const ok3 = out.find((x: any) => x.name === 'English') === subs[2] && changed
+  console.log(`${ok3 ? 'PASS' : 'FAIL'} a subject in no group is left exactly as it was`)
+  if (!ok3) fails++
+  const again = reconcileElectiveScope(out, grp)
+  console.log(`${!again.changed ? 'PASS' : 'FAIL'} saving the same groups again changes nothing`)
+  if (again.changed) fails++
+}
+
 // A removed group stays removed. The pipeline used to turn the LAST run's
 // output (dynamicLearningGroups, saved for display) back into blocks, so a
 // school that deleted its Sanskrit/Odia split and regenerated got all 20
