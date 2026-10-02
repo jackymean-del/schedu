@@ -125,5 +125,18 @@ ok(sections.every(s => teachingPeriodsFor(s.name, fullDay) === 6), 'every class 
     'a double period is one lesson: a double every day is still once a day')
 }
 
+// ── 6. Lessons end, then the day ends ─────────────────────────────────────
+// The briefing said "ends 3:15 PM" for a school that closes at 3:25: the
+// time excluded the dispersal row. It now names both.
+{
+  console.log('lessons end vs home time')
+  const withHome = { ...config, bellSchedules: [{ startTime: '09:00', rows: [...fullDay, row('Home', 'dispersal', all, 10)] }] }
+  const pf = buildPreflight({ config: withHome, sections, subjects, subjectAllocations: {}, staff, teacherAllocations: {} }, { parallelGroups: 0 })!
+  const sh = pf.shapes[0]
+  ok(sh.end === '1:40 PM' && sh.home === '1:50 PM', 'lessons end at 1:40 and the day at 1:50, and both are said', `${sh.end} / ${sh.home}`)
+  const plain = buildPreflight({ config, sections, subjects, subjectAllocations: {}, staff, teacherAllocations: {} }, { parallelGroups: 0 })!
+  ok(plain.shapes[0].home === undefined, 'with no dispersal row there is one time, not two')
+}
+
 console.log(fail === 0 ? '\nALL PREFLIGHT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

@@ -241,10 +241,16 @@ export interface VenueSlot {
  * plus any room a lesson is actually placed in (a lab typed straight into a
  * cell is still a door someone will look for).
  */
-export function boardVenues(bundles: Array<BoardBundle & { rooms?: { name: string }[] }>): string[] {
+export function boardVenues(bundles: Array<BoardBundle & { rooms?: any[] }>): string[] {
   const set = new Set<string>()
   for (const b of bundles) {
-    for (const r of b.rooms ?? []) if (r?.name?.trim()) set.add(r.name.trim())
+    // A venue's name is actualName (or generatedName); `name` is a legacy
+    // field most stored rooms do not have. Reading only `name` dropped every
+    // venue no lesson happened to use: 10 of a school's 12 were listed.
+    for (const r of (b.rooms ?? []) as any[]) {
+      const n = String(r?.actualName || r?.generatedName || r?.name || '').trim()
+      if (n) set.add(n)
+    }
     for (const s of b.sections ?? []) if (s.room?.trim()) set.add(s.room.trim())
     for (const days of Object.values(b.classTT ?? {})) {
       for (const slots of Object.values(days ?? {})) {

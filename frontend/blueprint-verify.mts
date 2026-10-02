@@ -1617,6 +1617,11 @@ ok(at940.every(r => r.breakName === 'Break' && r.endMin === 9 * 60 + 55),
   const venues = boardVenues([cwBundle])
   ok(['Lab', 'R1', 'R10', 'Studio'].every(v => venues.includes(v)),
     'every room on the timetable, including a class\'s home room, can be chosen', venues.join(','))
+  // Stored venues are named by actualName/generatedName, not `name`. Reading
+  // only `name` listed just the rooms some lesson used: 10 of a school's 12.
+  const stored = boardVenues([{ ...cwBundle, rooms: [{ id: 'v1', actualName: 'Physics Lab' }, { id: 'v2', generatedName: 'Room 12' }] }])
+  ok(stored.includes('Physics Lab') && stored.includes('Room 12'),
+    'a venue no lesson uses today can still be chosen, by its stored name', stored.join(','))
   const lab = venueDay([cwBundle], 'Lab', 'MONDAY', '2026-08-17')
   ok(lab.length === 2 && lab[0].section === 'X-A' && lab[0].subject === 'Physics' && lab[0].teacher === 'Pia',
     'the Lab shows X-A Physics first (8:40, by Senior\'s bell)', lab.map(x => `${x.section} ${x.subject}`).join(', '))

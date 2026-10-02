@@ -28,7 +28,9 @@ export interface PreflightInput {
 export interface TeacherGap { periods: number; classes: string[] }
 
 export interface Preflight {
-  shapes: Array<{ label: string; count: number; end: string; nSecs: number }>
+  /** `end` is when lessons end; `home` is when the day ends, after any
+   *  dispersal row. Only set when the two differ. */
+  shapes: Array<{ label: string; count: number; end: string; home?: string; nSecs: number }>
   totalWeekly: number
   doubleSubjects: number
   parallelGroups: number
@@ -62,7 +64,7 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
   const toMin = (s: string) => { const [h, m] = (s || '08:00').split(':').map(Number); return h * 60 + m }
   const fmt = (m: number) => `${(Math.floor(m / 60) % 12) || 12}:${String(m % 60).padStart(2, '0')} ${Math.floor(m / 60) >= 12 ? 'PM' : 'AM'}`
 
-  type Bucket = { count: number; endMin: number; secs: string[] }
+  type Bucket = { count: number; endMin: number; homeMin: number; secs: string[] }
   const buckets = new Map<string, Bucket>()
   const overCap: string[] = []
   const unallocated: string[] = []
@@ -72,7 +74,7 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
   const bandWeeklyMins = new Map<GradeBand, number>()
 
   for (const sec of sections) {
-    let count: number | null = null, endMin = 0, teachMins = 0
+    let count: number | null = null, endMin = 0, homeMin = 0, teachMins = 0
     for (const bs of bellSchedules) {
       const c = teachingPeriodsFor(sec.name, bs.rows)
       if (c == null) continue
@@ -80,6 +82,9 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
       const key = sectionKey(sec.name)
       endMin = toMin(bs.startTime) + bs.rows
         .filter((r: any) => r.type !== 'dispersal' && (!(r.classes ?? []).length || r.classes.includes(key)))
+        .reduce((s: number, r: any) => s + r.duration, 0)
+      homeMin = toMin(bs.startTime) + bs.rows
+        .filter((r: any) => !(r.classes ?? []).length || r.classes.includes(key))
         .reduce((s: number, r: any) => s + r.duration, 0)
       teachMins = bs.rows
         .filter((r: any) => r.type === 'teaching' && (!(r.classes ?? []).length || r.classes.includes(key)))
@@ -92,8 +97,8 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
     if (weekly > 0 && (!bandWeeklyMins.has(band) || weekly < bandWeeklyMins.get(band)!)) {
       bandWeeklyMins.set(band, weekly)
     }
-    const bk = `${count}@${endMin}`
-    if (!buckets.has(bk)) buckets.set(bk, { count, endMin, secs: [] })
+    const bk = `${count}@${endMin}@${homeMin}`
+    if (!buckets.has(bk)) buckets.set(bk, { count, endMin, homeMin, secs: [] })
     buckets.get(bk)!.secs.push(sec.name)
 
     // What the engine will actually try to place here - its own targets.
@@ -161,7 +166,10 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
   }
   const shapes = [...buckets.values()]
     .sort((a, b) => a.endMin - b.endMin)
-    .map(b => ({ label: gradeLabel(b.secs), count: b.count, end: fmt(b.endMin), nSecs: b.secs.length }))
+    .map(b => ({
+      label: gradeLabel(b.secs), count: b.count, end: fmt(b.endMin),
+      home: b.homeMin > b.endMin ? fmt(b.homeMin) : undefined, nSecs: b.secs.length,
+    }))
 
   // ── National-norms brain: staffing requirement + bell compliance ──
   const country = config.countryCode || 'IN'

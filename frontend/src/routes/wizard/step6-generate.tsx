@@ -487,7 +487,12 @@ export function Step6Generate() {
                       <span style={{ color:"#9B96BD" }}>·</span>
                       <span>{s.count} period{s.count !== 1 ? "s" : ""}/day</span>
                       <span style={{ color:"#9B96BD" }}>·</span>
-                      <span>ends <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
+                      {/* "ends 3:15" read as a mistake next to a 3:25 closing time:
+                          it is when lessons end, before dispersal. Say both. */}
+                      <span>lessons end <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.end}</strong></span>
+                      {s.home && (
+                        <><span style={{ color:"#9B96BD" }}>·</span><span>home <strong style={{ fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{s.home}</strong></span></>
+                      )}
                     </div>
                   ))}
                 </div>
