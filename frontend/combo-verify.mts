@@ -169,6 +169,27 @@ for (const c of cards) {
   if (!ok14) fails++
 }
 
+// ── Editing a block keeps it where it is ──────────────────────────────────
+// Each edit used to save the block by filtering it out and appending it, so
+// with two blocks on the page the one being typed in jumped below the other
+// on every keystroke.
+{
+  const { replaceBlockInPlace } = await import('./src/lib/electiveGroups.ts')
+  const key = (g: any) => g.blockId
+  const groups = [
+    { id: 'lang', blockId: 'VI-X', n: 0 }, { id: 'subj', blockId: 'X', n: 0 }, { id: 'act', blockId: 'XI', n: 0 },
+  ]
+  const edited = replaceBlockInPlace(groups, 'VI-X', [{ id: 'lang', blockId: 'VI-X', n: 1 }], key)
+  const order = edited.map(g => g.id).join()
+  const ok1 = order === 'lang,subj,act' && edited[0].n === 1
+  console.log(`${ok1 ? 'PASS' : 'FAIL'} editing the first block keeps it first (${order})`)
+  if (!ok1) fails++
+  const mid = replaceBlockInPlace(groups, 'X', [{ id: 'subj', blockId: 'X', n: 1 }, { id: 'subj2', blockId: 'X', n: 0 }], key)
+  const ok2 = mid.map(g => g.id).join() === 'lang,subj,subj2,act'
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} a block that gains a group stays in its place (${mid.map(g => g.id).join()})`)
+  if (!ok2) fails++
+}
+
 // A removed group stays removed. The pipeline used to turn the LAST run's
 // output (dynamicLearningGroups, saved for display) back into blocks, so a
 // school that deleted its Sanskrit/Odia split and regenerated got all 20

@@ -23,7 +23,7 @@ import {
   Wand2, Info, X, Users, Eye, EyeOff,
 } from 'lucide-react'
 import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSection'
-import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, type ElectiveFamily } from '@/lib/electiveGroups'
+import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, replaceBlockInPlace, type ElectiveFamily } from '@/lib/electiveGroups'
 
 // ── constants & helpers ────────────────────────────────────────────────────────
 
@@ -1053,8 +1053,10 @@ export function StepStudentGroups() {
     return [...map.values()]
   }, [groups])
 
+  // In place: re-appending the block at the end made the tables swap places
+  // on every keystroke whenever there was more than one block.
   const replaceBlock = (blockId: string, newCombos: AndComboGroup[]) =>
-    commitGroups([...groups.filter(g => blockKey(g) !== blockId), ...newCombos])
+    commitGroups(replaceBlockInPlace(groups, blockId, newCombos, blockKey))
 
   const deleteBlock = (blockId: string) => {
     const next = groups.filter(g => blockKey(g) !== blockId)

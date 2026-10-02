@@ -127,3 +127,19 @@ export function autoFillRow(
   next[auto] = Math.max(0, rest)
   return { row: next, autoCol: auto }
 }
+
+/**
+ * Put a block's edited groups back WHERE THE BLOCK WAS.
+ *
+ * Every edit inside a block used to save it by filtering it out and appending
+ * it at the end. With two blocks on the page, typing a headcount in the first
+ * moved it below the second: the tables swapped places under the cursor on
+ * every keystroke.
+ */
+export function replaceBlockInPlace<T>(groups: T[], blockId: string, next: T[], keyOf: (g: T) => string): T[] {
+  const first = groups.findIndex(g => keyOf(g) === blockId)
+  const rest = groups.filter(g => keyOf(g) !== blockId)
+  if (first < 0) return [...rest, ...next]
+  const pos = groups.slice(0, first).filter(g => keyOf(g) !== blockId).length
+  return [...rest.slice(0, pos), ...next, ...rest.slice(pos)]
+}
