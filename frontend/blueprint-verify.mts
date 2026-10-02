@@ -2,7 +2,7 @@
 import { distributeSections } from './src/lib/sectionDistribution'
 
 let fail = 0
-const ok = (c: boolean, m: string) => { console.log((c ? '✓' : '✗ FAIL') + ' ' + m); if (!c) fail++ }
+const ok = (c: boolean, m: string, detail?: string) => { console.log((c ? '✓' : '✗ FAIL') + ' ' + m + (detail ? ` - ${detail}` : '')); if (!c) fail++ }
 
 // ── Step 1 auto-distribution - the 5 worked cases from the blueprint ──
 // "Distribute 2 sections per class starting from the LOWEST class, moving
