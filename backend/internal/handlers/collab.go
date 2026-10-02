@@ -487,10 +487,26 @@ func (h *Handler) DecideOr(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"cleared": true})
 	}
 
-	if !caller.isOwner && caller.role != "admin" {
+	when, _ := time.Parse("2006-01-02", body.Date)
+	if caller.isOwner || caller.role == "admin" {
+		// The school may decide for anyone, but only between the options the
+		// period actually has. Without this an admin's client could record
+		// "Biology" for a Physics-or-Chemistry period, or a "choice" on a
+		// plain English lesson, and every screen would then argue with it.
+		options, err := h.orCell(ctx, ttID, body.Section, dayKeyOf(when), body.PeriodID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "could not read the period")
+		}
+		exists, err := h.cellExists(ctx, ttID, body.Section, dayKeyOf(when), body.PeriodID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "could not read the period")
+		}
+		if problem := schoolChoiceProblem(options, exists, subject); problem != "" {
+			return fiber.NewError(fiber.StatusBadRequest, problem)
+		}
+	} else {
 		// Checked against the SCHOOL's timetable, never the options in the
 		// request body - the body is written by the person being authorised.
-		when, _ := time.Parse("2006-01-02", body.Date)
 		options, err := h.orCell(ctx, ttID, body.Section, dayKeyOf(when), body.PeriodID)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "could not read the period")
@@ -606,6 +622,39 @@ func mayClear(decidedBy, staffName string) bool {
 		return false
 	}
 	return strings.EqualFold(owner, who)
+}
+
+// schoolChoiceProblem says what is wrong with an owner's or admin's decision,
+// or "" when it may be recorded.
+//
+// The server's copy of the timetable can be a save behind the school's own
+// screen, so a period it has no record of at all is allowed: refusing it
+// would block a real decision on a stale copy. What it CAN see is judged: a
+// plain lesson is not a choice, and a choice has only the options it has.
+func schoolChoiceProblem(options []orOption, cellExists bool, subject string) string {
+	if len(options) == 0 {
+		if cellExists {
+			return "that period is not a subject choice on this timetable"
+		}
+		return ""
+	}
+	want := strings.TrimSpace(subject)
+	for _, o := range options {
+		if strings.EqualFold(strings.TrimSpace(o.Subject), want) {
+			return ""
+		}
+	}
+	return "that subject is not one of this period's options"
+}
+
+// cellExists reports whether the stored timetable has any lesson in a slot.
+func (h *Handler) cellExists(ctx context.Context, ttID uuid.UUID, section, dayKey, periodID string) (bool, error) {
+	var exists bool
+	err := h.db.QueryRow(ctx, `
+		SELECT COALESCE(data #> ARRAY['classTT', $2, $3, $4], 'null'::jsonb) <> 'null'::jsonb
+		FROM timetables WHERE id = $1`,
+		ttID, section, dayKey, periodID).Scan(&exists)
+	return exists, err
 }
 
 // mayClaim reports whether `staffName` teaches `subject` among the OR options.

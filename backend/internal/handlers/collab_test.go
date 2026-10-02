@@ -146,3 +146,29 @@ func TestMayClaimRejectsForgedOptions(t *testing.T) {
 		t.Error("against the school's own options the same claim is refused")
 	}
 }
+
+// The school may decide for anyone, but only between the period's real
+// options: found live, an admin's "Biology" on a Physics-or-Chemistry period
+// and a "choice" on a plain English lesson were both recorded.
+func TestSchoolChoiceProblem(t *testing.T) {
+	opts := []orOption{{Subject: "Physics", Teacher: "Rao"}, {Subject: "Chemistry", Teacher: "Devi"}}
+	cases := []struct {
+		name    string
+		options []orOption
+		exists  bool
+		subject string
+		ok      bool
+	}{
+		{"one of the options", opts, true, "Chemistry", true},
+		{"case and spaces do not matter", opts, true, "  physics ", true},
+		{"not an option", opts, true, "Biology", false},
+		{"a plain lesson is not a choice", nil, true, "English", false},
+		{"a slot the server has not seen yet is allowed", nil, false, "Physics", true},
+	}
+	for _, c := range cases {
+		got := schoolChoiceProblem(c.options, c.exists, c.subject) == ""
+		if got != c.ok {
+			t.Errorf("%s: allowed=%v, want %v", c.name, got, c.ok)
+		}
+	}
+}

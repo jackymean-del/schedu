@@ -65,6 +65,14 @@ Plus `npx tsc -b`, `npx eslint src` (0 errors; ~97 advisory warnings are
 expected), `npx vite build`, and in `backend/`, `go build ./... && go vet ./...
 && go test ./...`.
 
+**Live test against a real backend.** The app only uploads schedules when
+Clerk sign-in is on, so a demo-mode click-through never reaches the server.
+`python scripts/live-api-check.py` exercises the server itself: schedules,
+Unavailable reports, OR choices, members, shares, billing, and data surviving
+a restart (setup is in the file). On Windows, Smart App Control blocks Go
+binaries built into the temp folder, so run the Go tests in a container:
+`docker run --rm -v "<repo>/backend:/src" -w /src golang:1.26-alpine go test ./...`.
+
 **When you add a guard, run it.** A check written the week before was found
 failing unnoticed because nobody had run it since. A rule nothing checks is a
 rule that comes back.

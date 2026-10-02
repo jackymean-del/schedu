@@ -375,13 +375,17 @@ function setActiveTTId(id: string | null) {
 }
 
 function ttMeta(t: TTEntry): string {
-  const cls = `${t.approxClasses} classes`
-  const tch = `${t.approxTeachers} teachers`
-  if (t.status === 'active')   return `${cls} · ${tch} · Generated`
-  if (t.status === 'archived') return `${cls} · ${tch} · Archived`
-  const stepLabel = stepLabelFor(t.wizardStep)
-  if (t.wizardStep === 0) return `${cls} · ${tch} · Just created`
-  return `${cls} · ${tch} · Step ${t.wizardStep}: ${stepLabel}`
+  // A schedule pulled from the server onto a new device may not carry its
+  // counts; "undefined classes" on a card is worse than saying nothing.
+  const count = (n: unknown, one: string, many: string) =>
+    typeof n === 'number' && Number.isFinite(n) ? `${n} ${n === 1 ? one : many}` : ''
+  const parts = (last: string) =>
+    [count(t.approxClasses, 'class', 'classes'), count(t.approxTeachers, 'teacher', 'teachers'), last]
+      .filter(Boolean).join(' · ')
+  if (t.status === 'active')   return parts('Generated')
+  if (t.status === 'archived') return parts('Archived')
+  if (!t.wizardStep) return parts('Just created')
+  return parts(`Step ${t.wizardStep}: ${stepLabelFor(t.wizardStep)}`)
 }
 
 const W_COLLAPSED = 56
