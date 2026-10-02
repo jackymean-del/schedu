@@ -1219,7 +1219,7 @@ export function StepStudentGroups() {
               {/* A way back out: groups made earlier, by hand or by the old
                   automatic suggestion, can all go at once. */}
               <button onClick={() => {
-                if (window.confirm(`Remove all ${blocks.length} block${blocks.length !== 1 ? 's' : ''}? Every subject will then be taught to the whole class, as Mapping says.`)) setAndComboGroups([])
+                if (window.confirm(`${blocks.length === 1 ? 'Remove this block' : `Remove all ${blocks.length} blocks`}? Every subject will then be taught to the whole class, as Mapping says.`)) setAndComboGroups([])
               }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: '1.5px solid #FECACA', background: '#fff', color: '#B91C1C', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Remove all
               </button>

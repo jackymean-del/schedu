@@ -64,4 +64,42 @@ for (const c of cards) {
   if (!ok) fails++
 }
 
+// A removed group stays removed. The pipeline used to turn the LAST run's
+// output (dynamicLearningGroups, saved for display) back into blocks, so a
+// school that deleted its Sanskrit/Odia split and regenerated got all 20
+// split periods back. Run the real pipeline twice: with the group, then
+// without it but with the first run's output still in the store.
+{
+  const { runGenerationPipeline } = await import('./src/lib/generationPipeline.ts')
+  const secs = ['VI-A', 'VI-B'].map(n => ({ id: n, name: n, grade: 'VI', strength: 40 }))
+  const subs: Record<string, number> = { English: 6, Mathematics: 6, Science: 5, Hindi: 5, Sanskrit: 3, Odia: 3 }
+  const staff = Object.keys(subs).flatMap(s => [0, 1].map(i => ({ id: `${s}${i}`, name: `${s} ${i}`, subjects: [s], classes: [], maxPeriodsPerWeek: 30 })))
+  const alloc: Record<string, Record<string, string>> = {}
+  for (const s of secs) { alloc[s.name] = {}; for (const k in subs) alloc[s.name][k] = String(subs[k]) }
+  const base: any = {
+    config: { workDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'], periodsPerDay: 8 },
+    sections: secs, staff, breaks: [], andComboGroups: [], dynamicLearningGroups: [],
+    subjects: Object.keys(subs).map((n, i) => ({ id: 's' + i, name: n, periodsPerWeek: subs[n] })),
+    subjectCombinations: [], sectionStrengths: [], subjectAllocations: alloc, rooms: [], teacherAvailability: {}, subjectGroups: [],
+  }
+  const block = {
+    id: 'lang', name: 'Third language', sectionNames: ['VI-A', 'VI-B'], logic: 'AND', periodsPerWeek: 3,
+    options: [{ subject: 'Sanskrit', teacher: 'Sanskrit 0', room: 'L1' }, { subject: 'Odia', teacher: 'Odia 0', room: 'L2' }],
+  }
+  const blockCells = (classTT: any) => {
+    let n = 0
+    for (const days of Object.values(classTT ?? {})) for (const slots of Object.values(days as any)) for (const c of Object.values(slots as any)) if ((c as any)?.optionalBlockId) n++
+    return n
+  }
+  const first = runGenerationPipeline({ ...base, optionalBlocks: [block] })
+  const leftover = first.output?.dynamicLearningGroups ?? []
+  const second = runGenerationPipeline({ ...base, optionalBlocks: [], dynamicLearningGroups: leftover })
+  const ran = blockCells(first.classTT) > 0 && leftover.length > 0
+  console.log(`${ran ? 'PASS' : 'FAIL'} with the group, the split runs and is reported (${blockCells(first.classTT)} cells, ${leftover.length} learning groups)`)
+  if (!ran) fails++
+  const gone = blockCells(second.classTT) === 0
+  console.log(`${gone ? 'PASS' : 'FAIL'} after removing it, regenerating does not bring it back (${blockCells(second.classTT)} split cells)`)
+  if (!gone) fails++
+}
+
 process.exit(fails ? 1 : 0)

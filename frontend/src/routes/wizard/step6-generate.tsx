@@ -131,18 +131,24 @@ export function Step6Generate() {
   // ── Pre-flight summary - what WILL be generated, judged before clicking ──
   // All derived from the ground-truth bell schedules + the allocation matrix,
   // so the user can sanity-check day shape, workload and capacity in one look.
+  const andComboGroups = (store as any).andComboGroups
+  const orGroups = (store as any).subjectGroups
+  const authoredBlocks = (store as any).optionalBlocks
   const preflight = useMemo(() => buildPreflight({
     config, sections, subjects,
     subjectAllocations: (store as any).subjectAllocations ?? {},
     teacherAllocations: (store as any).teacherAllocations ?? {},
     staff: store.staff,
   }, {
+    // The groups the school set up and the solver will run: AND splits, OR
+    // choices and hand-made blocks. AND splits used to be left out, so a
+    // school that had just split VI-X into Sanskrit and Odia was briefed as
+    // having none; and dynamicLearningGroups were counted, which are the
+    // LAST run's output, so one group read as three.
     parallelGroups:
-      (((store as any).dynamicLearningGroups ?? []).length +
-       ((store as any).subjectGroups ?? []).length) ||
-      ((store as any).optionalBlocks ?? []).length,
+      (andComboGroups ?? []).length + (orGroups ?? []).length + (authoredBlocks ?? []).length,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [config, sections, subjects, (store as any).subjectAllocations, (store as any).teacherAllocations, store.staff])
+  }), [config, sections, subjects, (store as any).subjectAllocations, (store as any).teacherAllocations, store.staff, andComboGroups, orGroups, authoredBlocks])
 
   // ── Start generation ─────────────────────────────────────────
   const startGenerate = () => {

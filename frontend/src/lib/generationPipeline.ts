@@ -16,89 +16,6 @@ import { schoolTeacherCap } from './teacherCap'
 import { solveTimetable, generateSuggestions, durationToWeeklyPeriods } from './schedulingEngine'
 import type { OptionalBlock, OptionalOption, Period, Suggestion } from '@/types'
 
-// ── DLG → OptionalBlock bridge ─────────────────────────────────────────────
-//
-// Step 4 (Student Groups) produces `dynamicLearningGroups` - one DLG per
-// subject group with an explicit day + periodId (e.g. "Monday" / "P6").
-// The solver, however, expects `optionalBlocks` (OptionalBlock[]).
-//
-// When the user has gone through Step 4 but never hand-authored manual
-// optional blocks, we convert the Step-4 DLGs into OptionalBlocks so the
-// solver honours the user's period assignments instead of re-deriving from
-// scratch (which would pick Period 2 - the first available slot).
-//
-// Normalisation:
-//   - day: "Monday" / "monday"  → "MONDAY"   (matches workDays format)
-//   - periodId: "P6" / "p6"    → "p6"        (matches buildPeriodSequence ids)
-//   - Fallback: if the normalised period doesn't exist in the bell schedule,
-//     use the last class period so the block is still placed.
-//
-// Grouping: DLGs with the same (sorted) sectionNames are parallel subject
-// choices for those sections → one OptionalBlock with multiple options.
-export function dlgsToOptionalBlocks(
-  dlgs: Array<{
-    id: string; subject: string; sectionNames: string[]
-    totalStrength: number; teacher: string; room: string
-    behavior: string; day: string; periodId: string
-    slotId?: string; slotLabel?: string
-  }>,
-  classPeriods: Period[],
-  workDays: string[],
-): OptionalBlock[] {
-  if (!dlgs.length) return []
-
-  const validPids  = new Set(classPeriods.map(p => p.id))
-  const blockMap = new Map<string, OptionalBlock & { _secSet?: Set<string> }>()
-
-  dlgs.forEach(dlg => {
-    // Groups no longer carry a pinned slot - leave day/periodId EMPTY so the
-    // engine schedules the block across its full period quota on free slots.
-    // (Any legacy day/periodId is still honoured as a starting hint if present.)
-    const day = (dlg.day || '').toUpperCase()
-    const rawPid = (dlg.periodId || '').toLowerCase()
-    const periodId = validPids.has(rawPid) ? rawPid : ''
-
-    // Grouping key:
-    //  • slotted DLG (R1/R2/R3) → group by slotId, so all options of a slot form
-    //    ONE block (Hindi/Odia/English under R1) and a DIFFERENT slot with the
-    //    same subject (R2:Hindi) stays a SEPARATE block - the section attends
-    //    both, so the solver schedules them in different periods.
-    //  • plain DLG → group by its section set (unchanged behaviour).
-    const secKey = dlg.slotId
-      ? `slot:${dlg.slotId}`
-      : [...(dlg.sectionNames ?? [])].sort().join('|')
-
-    if (!blockMap.has(secKey)) {
-      const idx = blockMap.size + 1
-      blockMap.set(secKey, {
-        id: dlg.slotId ? `slot-${dlg.slotId}` : `dlg-block-${idx}`,
-        name: dlg.slotId ? `Slot ${dlg.slotId}` : `Optional Block ${idx}`,
-        sectionNames: [...(dlg.sectionNames ?? [])],
-        day,
-        periodId,
-        options: [],
-        logic: 'OR',
-        slotId: dlg.slotId,
-        _secSet: new Set(dlg.sectionNames ?? []),
-      } as any)
-    }
-
-    const block = blockMap.get(secKey)!
-    // Union sections across a slot's options (students of each choice differ)
-    for (const sn of (dlg.sectionNames ?? [])) (block as any)._secSet.add(sn)
-    block.sectionNames = [...(block as any)._secSet]
-    ;(block.options as any[]).push({
-      subject: dlg.subject,
-      teacher: dlg.teacher ?? '',
-      room: dlg.room ?? '',
-      capacity: dlg.totalStrength ?? 0,
-      allocatedStrength: dlg.totalStrength ?? 0,
-    })
-  })
-
-  return [...blockMap.values()].map(({ _secSet, ...b }) => b as OptionalBlock)
-}
-
 // ── Subject Combos (Step 4, Tab 2) → OptionalBlock bridge ──────────────────
 //
 // OR/AND combos live in `store.subjectGroups` (SubjectAndOrGroup[]). The
@@ -540,20 +457,19 @@ export function runGenerationPipeline(p: GenerationPayload): GenerationResult {
   const staff = p.staff ?? []
   const manualOptionalBlocks = p.optionalBlocks ?? []
   const storeAndComboGroups = p.andComboGroups ?? []
-  const storeDLGs = p.dynamicLearningGroups ?? []
   const subjectCombinations = p.subjectCombinations ?? []
   const sectionStrengths = p.sectionStrengths ?? []
   const subjectAllocations = p.subjectAllocations ?? {}
   const rooms = p.rooms ?? []
 
-  // Prefer manually-authored optional blocks; if none exist but the user
-  // ran Step 4 (Student Groups), convert those DLGs into OptionalBlocks
-  // so the solver honours the user's period assignments.
+  // Only blocks the school authored. Dynamic learning groups used to be fed
+  // in here too, but nothing authors them any more: they are the SOLVER'S
+  // OUTPUT from the last run, saved for display. Feeding them back meant a
+  // school that removed its Sanskrit/Odia group and regenerated got the
+  // split back - 20 "Sanskrit AND Odia" periods from a group that no longer
+  // existed. Groups now come only from what Groups & Combos holds.
+  const baseBlocks: OptionalBlock[] = manualOptionalBlocks
   const classPeriods = periods.filter((per: Period) => per.type === 'class')
-  const baseBlocks: OptionalBlock[] =
-    manualOptionalBlocks.length > 0
-      ? manualOptionalBlocks
-      : dlgsToOptionalBlocks(storeDLGs, classPeriods, workDays)
 
   // OR/AND combos from Step 4 Tab 2 are an independent source - always
   // merged in, deduped against blocks covering the same sections+subjects.
