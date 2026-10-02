@@ -19,6 +19,7 @@ import { subKey } from './substitutionKeys'
 import { runningOnDate, teachingPairsOnDate } from './orChoice'
 import { sectionPeriodTimes } from './bellTimes'
 import { ringsForSection, describeRing, type Ring } from './bellSchedule'
+import { roomsInCell } from './cellTeachers'
 
 export type BoardState =
   /** Term-time, working day, but the first bell hasn't gone. */
@@ -103,12 +104,16 @@ export interface BoardRow {
   /** Period name, for the row's secondary line. */
   periodName?: string
   endMin?: number
+  /** Set when this class is on a break or lunch right now, by ITS OWN bell:
+   *  with class-wise breaks, Primary can be at lunch while Senior is in
+   *  Period 5, and the board must say both. */
+  breakName?: string
 }
 
 interface BoardBundle {
   id: string
   name: string
-  sections: { name: string }[]
+  sections: { name: string; room?: string }[]
   periods: Period[]
   config: any
   classTT: Record<string, any>
@@ -143,7 +148,17 @@ export function boardRows(
       const times = sectionPeriodTimes(s.name, b.config, b.periods ?? [])
       const row: BoardRow = { section: s.name, schedule: b.name, isSub: false, uncovered: false }
 
+      // On a break by this class's bell? Breaks are keyed by bell row, not by
+      // period, so they are found in the clock itself rather than the period list.
+      for (const t of times.values()) {
+        // A period with no type is a lesson slot (older schedules), not a break.
+        if (!t.type || t.type === 'class' || t.type === 'dispersal' || t.type === 'assembly') continue
+        if (nowMin < t.startMin || nowMin >= t.endMin) continue
+        row.breakName = t.name || (t.type === 'lunch' ? 'Lunch' : 'Break')
+        row.endMin = t.endMin
+      }
       for (const p of b.periods ?? []) {
+        if (row.breakName) break
         const t = times.get(p.id)
         if (!t || nowMin < t.startMin || nowMin >= t.endMin) continue
         row.periodName = p.name
@@ -159,8 +174,18 @@ export function boardRows(
           // room whichever way it went, is the board being wrong out loud.
           const running = runningOnDate(cell, s.name, isoDate, p.id, b.orDecisions ?? {}, plans)
           row.subject = running.subject
-          row.room = running.room || undefined
-          row.teacher = sub || running.teacher || undefined
+          const due = teachingPairsOnDate(cell, s.name, isoDate, p.id, b.orDecisions ?? {}, plans)
+          // A parallel lesson is in several rooms with several teachers; the
+          // cell-level fields name only the first group, which put "Pia, own
+          // room" on a class split between the Lab and the Studio.
+          const groupRooms = running.decided ? [] : roomsInCell(cell).filter(r => r !== (cell.room ?? '').trim() || !cell.groupAssignments?.length)
+          // No room on the lesson means the class's own room.
+          row.room = (groupRooms.length > 1 ? groupRooms.join(' / ') : running.room || groupRooms[0]) || s.room?.trim() || undefined
+          const who = [...new Set(due.map(x => x.teacher).filter(Boolean))]
+          // A cover stands in for the cell's own teacher, not for every group.
+          row.teacher = (who.length > 1
+            ? who.map(t => (sub && t === (cell.teacher ?? '').trim() ? sub : t)).join(' / ')
+            : sub || running.teacher || who[0]) || undefined
           row.isSub = !!sub
           // The one thing a board exists to shout about: a class whose teacher
           // is out and for whom nobody has been assigned.
@@ -171,7 +196,6 @@ export function boardRows(
           // undecided choice period nobody knows yet which of them is due, so
           // any of them being out is worth flagging: over-warning costs a
           // second glance, under-warning leaves a class with nobody.
-          const due = teachingPairsOnDate(cell, s.name, isoDate, p.id, b.orDecisions ?? {}, plans)
           row.uncovered = !sub && due.some(x => absentTeachers.has(x.teacher))
         }
         break
@@ -180,6 +204,97 @@ export function boardRows(
     }
   }
   return rows
+}
+
+/**
+ * Classes on a break right now, grouped by the break they are on.
+ *
+ * One group per (name, end time): a school with class-wise breaks has
+ * "Lunch till 12:10" for Primary and "Short Break till 11:05" for Senior at
+ * once, and folding those into one line would send someone to the wrong door.
+ */
+export function breakGroups(rows: BoardRow[]): Array<{ name: string; endMin: number; sections: string[] }> {
+  const groups = new Map<string, { name: string; endMin: number; sections: string[] }>()
+  for (const r of rows) {
+    if (!r.breakName || r.endMin == null) continue
+    const k = `${r.breakName}|${r.endMin}`
+    const g = groups.get(k) ?? { name: r.breakName, endMin: r.endMin, sections: [] }
+    g.sections.push(r.section)
+    groups.set(k, g)
+  }
+  return [...groups.values()].sort((a, b) => a.endMin - b.endMin)
+}
+
+export interface VenueSlot {
+  section: string
+  schedule: string
+  subject: string
+  teacher?: string
+  isSub: boolean
+  periodName: string
+  startMin: number
+  endMin: number
+}
+
+/**
+ * Every room a corridor screen could be pointed at: the schedules' rooms,
+ * plus any room a lesson is actually placed in (a lab typed straight into a
+ * cell is still a door someone will look for).
+ */
+export function boardVenues(bundles: Array<BoardBundle & { rooms?: { name: string }[] }>): string[] {
+  const set = new Set<string>()
+  for (const b of bundles) {
+    for (const r of b.rooms ?? []) if (r?.name?.trim()) set.add(r.name.trim())
+    for (const s of b.sections ?? []) if (s.room?.trim()) set.add(s.room.trim())
+    for (const days of Object.values(b.classTT ?? {})) {
+      for (const slots of Object.values(days ?? {})) {
+        for (const cell of Object.values(slots ?? {})) for (const r of roomsInCell(cell as any)) set.add(r)
+      }
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+}
+
+/**
+ * One room's day, in order: who is in it and when. What a screen on a lab
+ * door needs is "now", "next" and the rest of today, nothing else.
+ *
+ * A parallel cell puts different groups in different rooms, so a room is
+ * matched against each group's own room and shows that group's subject and
+ * teacher, not the cell's first one. A lesson with no room of its own is
+ * in its class's home room.
+ */
+export function venueDay(
+  bundles: BoardBundle[], venue: string, dayKey: string, isoDate: string,
+  plans: Record<string, any> = {},
+): VenueSlot[] {
+  const out: VenueSlot[] = []
+  for (const b of bundles) {
+    for (const s of b.sections ?? []) {
+      const times = sectionPeriodTimes(s.name, b.config, b.periods ?? [])
+      for (const p of b.periods ?? []) {
+        const cell = b.classTT?.[s.name]?.[dayKey]?.[p.id]
+        const t = times.get(p.id)
+        if (!cell?.subject || !t) continue
+        const running = runningOnDate(cell, s.name, isoDate, p.id, b.orDecisions ?? {}, plans)
+        const sub = b.substitutions?.[subKey(s.name, isoDate, p.id)]
+        const groups: any[] = running.decided ? [] : [...(cell.groupAssignments ?? []), ...(cell.options ?? [])]
+        const here = groups.filter(g => (g?.room ?? '').trim() === venue)
+        const base = { section: s.name, schedule: b.name, periodName: p.name, startMin: t.startMin, endMin: t.endMin }
+        if (here.length) {
+          for (const g of here) {
+            const isCellTeacher = (g.teacher ?? '') === (cell.teacher ?? '')
+            out.push({ ...base, subject: g.subject, teacher: (sub && isCellTeacher ? sub : g.teacher) || undefined, isSub: !!sub && isCellTeacher })
+          }
+          continue
+        }
+        const room = running.room || (groups.length ? '' : (s.room ?? '').trim())
+        if (room !== venue) continue
+        out.push({ ...base, subject: running.subject, teacher: (sub || running.teacher) || undefined, isSub: !!sub })
+      }
+    }
+  }
+  return out.sort((a, b) => a.startMin - b.startMin || a.section.localeCompare(b.section))
 }
 
 /** Rows worth flashing: a class with nobody in front of it, most urgent first. */

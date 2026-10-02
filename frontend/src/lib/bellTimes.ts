@@ -16,7 +16,11 @@
  */
 import type { Period } from '@/types'
 
-export type SlotMins = { startMin: number; endMin: number; type: string }
+export type SlotMins = {
+  startMin: number; endMin: number; type: string
+  /** The bell row's own name ("Lunch", "Short Break") - what a board calls it. */
+  name?: string
+}
 type BellRow = { id: string; name: string; type: string; duration: number; classes?: string[] }
 type BellSchedule = { startTime: string; rows: BellRow[] }
 type CwBreak = { id: string; type?: string; classes: string[]; afterPeriod: number; duration: number }
@@ -58,7 +62,7 @@ function bellTimesForSection(
 
   let teachIdx = 0
   for (const r of myRows) {
-    const slot: SlotMins = { startMin: cur, endMin: cur + r.duration, type: r.type === 'teaching' ? 'class' : r.type }
+    const slot: SlotMins = { startMin: cur, endMin: cur + r.duration, type: r.type === 'teaching' ? 'class' : r.type, name: r.name }
     if (r.type === 'teaching') {
       const pid = classIds[teachIdx]
       if (pid) map.set(pid, slot)
@@ -83,7 +87,7 @@ function naiveTimes(config: any, periods: Period[]): Map<string, SlotMins> {
   const map = new Map<string, SlotMins>()
   for (const p of periods) {
     const dur = (p as any).duration ?? 45
-    map.set(p.id, { startMin: mins, endMin: mins + dur, type: p.type })
+    map.set(p.id, { startMin: mins, endMin: mins + dur, type: p.type, name: p.name })
     mins += dur
   }
   return map

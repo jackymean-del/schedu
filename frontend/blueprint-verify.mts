@@ -1469,7 +1469,7 @@ ok(naiveRings.length > 0 && naiveRings[0].at === 9 * 60,
 // ── The corridor display ──
 // A board that shows a cheerful grid on a holiday, or counts down to a bell
 // that will not ring, is worse than a blank screen - people trust it.
-import { boardNow, boardRows, uncoveredRows, soonestRings } from './src/lib/smartboard'
+import { boardNow, boardRows, uncoveredRows, soonestRings, breakGroups, boardVenues, venueDay } from './src/lib/smartboard'
 
 const boardRings = ringsForSection('I-A', bellConfig, bellPeriods)   // 8:00 → 10:40
 
@@ -1552,6 +1552,87 @@ ok(staleRows.find(r => r.section === 'I-A')?.teacher === 'Anita',
 const otherDay = boardRows([covered], 'MONDAY', '2026-08-24', 8 * 60 + 30, new Set(['Anita']))
 ok(otherDay.find(r => r.section === 'I-A')?.teacher === 'Anita',
   "and last Monday's cover does not staff this Monday's class")
+
+// A class on its break is named as on its break, not left blank: "nothing
+// scheduled" in the middle of lunch reads as if the school had stopped.
+ok(at940.every(r => r.breakName === 'Break' && r.endMin === 9 * 60 + 55),
+  'and each of those rows says which break it is and when it ends')
+
+// CLASS-WISE BREAKS: Primary at lunch while Senior is in Period 2. The board
+// used to find the first break anywhere and print it for the whole school,
+// or print nothing once one class was teaching.
+{
+  const cw: any = {
+    bellSchedules: [{
+      startTime: '08:00',
+      rows: [
+        { id: 'r1', name: 'P1', type: 'teaching', duration: 40, classes: ['i', 'x'] },
+        { id: 'li', name: 'Lunch', type: 'lunch', duration: 20, classes: ['i'] },
+        { id: 'r2', name: 'P2', type: 'teaching', duration: 40, classes: ['i', 'x'] },
+        { id: 'bx', name: 'Short Break', type: 'break', duration: 15, classes: ['x'] },
+        { id: 'r3', name: 'P3', type: 'teaching', duration: 40, classes: ['i', 'x'] },
+      ],
+    }],
+  }
+  const cwBundle: any = {
+    id: 'cw', name: 'Main', periods: bellPeriods, config: cw, substitutions: {},
+    sections: [{ name: 'I-A', room: 'R1' }, { name: 'X-A', room: 'R10' }],
+    classTT: {
+      'I-A': { MONDAY: {
+        p1: { subject: 'English', teacher: 'Anita', room: 'R1' },
+        p2: { subject: 'EVS', teacher: 'Ravi', room: 'Lab' },
+        p3: { subject: 'Maths', teacher: 'Ravi' },
+      } },
+      'X-A': { MONDAY: {
+        p2: { subject: 'Physics AND Art', teacher: 'Pia', room: '', groupAssignments: [
+          { subject: 'Physics', teacher: 'Pia', room: 'Lab' },
+          { subject: 'Art', teacher: 'Arun', room: 'Studio' },
+        ] },
+      } },
+    },
+  }
+  // 08:50 - I-A at lunch (8:40-9:00), X-A in Period 2 (8:40-9:20).
+  const r850 = boardRows([cwBundle], 'MONDAY', '2026-08-17', 8 * 60 + 50, new Set<string>())
+  const ia = r850.find(r => r.section === 'I-A')!, xa = r850.find(r => r.section === 'X-A')!
+  ok(ia.breakName === 'Lunch' && ia.endMin === 9 * 60 && !ia.subject,
+    'with class-wise breaks, Primary is shown at lunch by its own bell')
+  ok(!!xa.subject && !xa.breakName, 'while Senior, on a different bell, is shown teaching at the same minute')
+  ok(xa.teacher === 'Pia / Arun' && xa.room === 'Lab / Studio',
+    'a parallel lesson names every group teacher and room, not the first group teacher in the home room', `${xa.teacher} in ${xa.room}`)
+  const xaCover = boardRows([{ ...cwBundle, substitutions: { 'X-A|2026-08-17|p2': 'Meera' } }], 'MONDAY', '2026-08-17', 8 * 60 + 50, new Set<string>())
+    .find(r => r.section === 'X-A')!
+  ok(xaCover.teacher === 'Meera / Arun' && xaCover.isSub, 'and a cover replaces only the teacher it covers', xaCover.teacher)
+  const g850 = breakGroups(r850)
+  ok(g850.length === 1 && g850[0].sections.join() === 'I-A', 'and the break band lists only the classes on it')
+  // 09:25 - the other way round.
+  const r925 = boardRows([cwBundle], 'MONDAY', '2026-08-17', 9 * 60 + 25, new Set<string>())
+  const g925 = breakGroups(r925)
+  ok(g925.length === 1 && g925[0].name === 'Short Break' && g925[0].sections.join() === 'X-A' && g925[0].endMin === 9 * 60 + 35,
+    "Senior's short break is its own group, named and timed by Senior's bell")
+  ok(!!r925.find(r => r.section === 'I-A')?.subject, 'while Primary is back in a lesson')
+
+  // One room's day. A parallel cell puts its groups in different rooms, so
+  // the Lab sees Physics with Pia and the Studio sees Art with Arun - never
+  // the cell's first teacher for both.
+  const venues = boardVenues([cwBundle])
+  ok(['Lab', 'R1', 'R10', 'Studio'].every(v => venues.includes(v)),
+    'every room on the timetable, including a class\'s home room, can be chosen', venues.join(','))
+  const lab = venueDay([cwBundle], 'Lab', 'MONDAY', '2026-08-17')
+  ok(lab.length === 2 && lab[0].section === 'X-A' && lab[0].subject === 'Physics' && lab[0].teacher === 'Pia',
+    'the Lab shows X-A Physics first (8:40, by Senior\'s bell)', lab.map(x => `${x.section} ${x.subject}`).join(', '))
+  ok(lab[1]?.section === 'I-A' && lab[1].startMin === 9 * 60, 'then I-A EVS at 9:00, by Primary\'s bell')
+  const studio = venueDay([cwBundle], 'Studio', 'MONDAY', '2026-08-17')
+  ok(studio.length === 1 && studio[0].subject === 'Art' && studio[0].teacher === 'Arun',
+    'the Studio sees the Art group and its own teacher')
+  const r1 = venueDay([cwBundle], 'R1', 'MONDAY', '2026-08-17')
+  ok(r1.map(x => x.subject).join() === 'English,Maths',
+    'a lesson with no room of its own is in the class\'s home room', r1.map(x => x.subject).join())
+  const covered2 = { ...cwBundle, substitutions: { 'X-A|2026-08-17|p2': 'Meera' } }
+  const labSub = venueDay([covered2], 'Lab', 'MONDAY', '2026-08-17')[0]
+  ok(labSub.teacher === 'Meera' && labSub.isSub, 'a cover for the cell\'s teacher shows in their room')
+  const studioSub = venueDay([covered2], 'Studio', 'MONDAY', '2026-08-17')[0]
+  ok(studioSub.teacher === 'Arun' && !studioSub.isSub, 'and does not replace the other group\'s teacher next door')
+}
 
 // Sections on different clocks must not be merged into one countdown wrongly.
 const mergedRings = soonestRings([{ sections: ['I-A', 'Nursery-A'], config: bellConfig, periods: bellPeriods }])

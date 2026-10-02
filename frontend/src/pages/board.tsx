@@ -22,7 +22,7 @@ import { useHolidays } from '@/lib/holidays'
 import { useSyllabus } from '@/lib/syllabusTracking'
 import { useOrDecisionSync } from '@/lib/orSync'
 import { useSchoolEvents, teachingSuspendedOn } from '@/lib/schoolEvents'
-import { boardNow, boardRows, uncoveredRows, soonestRings } from '@/lib/smartboard'
+import { boardNow, boardRows, uncoveredRows, soonestRings, breakGroups, boardVenues, venueDay } from '@/lib/smartboard'
 import {
   useBellRinger, RingFlash, NeedsTapBand, BellButton, BellPanel,
 } from '@/components/board/BellControls'
@@ -36,6 +36,11 @@ const LINE = '#262234'
 const DIM = '#8B87AD'
 const ACCENT = '#9E92FF'
 const ALARM = '#F87171'
+const VENUE_KEY = 'schedu-board-venue'
+const GRID: React.CSSProperties = {
+  display: 'grid', gap: 'clamp(8px, 0.9vw, 14px)',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(210px, 22vw, 330px), 1fr))',
+}
 
 export function BoardPage() {
   const user = useAuthStore(s => s.user)
@@ -73,6 +78,25 @@ export function BoardPage() {
     // timetable changed under us, so the bundle is rebuilt from the store.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, openTT])
+
+  // Which door this screen hangs on. In the URL so each screen's address can
+  // be bookmarked once and left alone; remembered locally as a fallback.
+  const venues = useMemo(() => boardVenues(bundles as any), [bundles])
+  const [venue, setVenueState] = useState<string>(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('venue')
+    if (fromUrl) return fromUrl
+    try { return localStorage.getItem(VENUE_KEY) ?? '' } catch { return '' }
+  })
+  const setVenue = (v: string) => {
+    setVenueState(v)
+    try { if (v) localStorage.setItem(VENUE_KEY, v); else localStorage.removeItem(VENUE_KEY) } catch { /* private window */ }
+    const url = new URL(window.location.href)
+    if (v) url.searchParams.set('venue', v); else url.searchParams.delete('venue')
+    window.history.replaceState(null, '', url)
+  }
+  // A room that has since been renamed or deleted falls back to everything
+  // rather than a screen that is permanently empty.
+  const activeVenue = venue && venues.includes(venue) ? venue : ''
 
   const isoDate = localISO(now)
   // Nobody stands at a corridor screen to press refresh, so this one polls:
@@ -126,22 +150,20 @@ export function BoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bundles, dayKey, now, nowMin, awayNow, syllabusPlans, orNonce],
   )
-  const uncovered = useMemo(() => uncoveredRows(rows), [rows])
-  // A break or lunch in force right now, named from the bell. "Nothing
-  // scheduled" in the middle of lunch reads as if the school had stopped.
-  const breakNow = useMemo(() => {
-    for (const b of bundles) {
-      const names = new Map<string, string>((b.periods ?? []).map((p: any) => [p.id, p.name ?? '']))
-      for (const [pid, t] of schedulePeriodTimes(b.config ?? {}, b.periods ?? [], b.sections ?? [])) {
-        if (t.type !== 'class' && t.startMin <= nowMin && nowMin < t.endMin) {
-          return { name: names.get(pid) || (t.type === 'lunch' ? 'Lunch' : 'Break'), endMin: t.endMin }
-        }
-      }
-    }
-    return null
-  }, [bundles, nowMin])
+  const uncovered = useMemo(
+    () => uncoveredRows(rows).filter(r => !activeVenue || r.room === activeVenue),
+    [rows, activeVenue])
+  // Breaks are read per class, by each class's own bell: with class-wise
+  // breaks, half the school can be at lunch while the other half is in a
+  // lesson, and the board shows both rather than whichever it found first.
+  const onBreak = useMemo(() => breakGroups(rows), [rows])
   const teaching = rows.filter(r => r.subject)
   const multi = bundles.length > 1
+  const roomDay = useMemo(
+    () => activeVenue ? venueDay(bundles as any, activeVenue, dayKey, isoDate, syllabusPlans) : [],
+    // orNonce: see rows above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bundles, activeVenue, dayKey, isoDate, syllabusPlans, orNonce])
 
   // The bell rings off the same rings the board counts down to, and stays
   // quiet on a day the school is shut.
@@ -163,7 +185,20 @@ export function BoardPage() {
           <div style={{ fontSize: 'clamp(20px, 2.6vw, 38px)', fontWeight: 800, letterSpacing: -0.5 }}>
             {schoolName || 'Today'}
           </div>
-          <div style={{ fontSize: 'clamp(13px, 1.3vw, 20px)', color: DIM, marginTop: 2 }}>{longDate}</div>
+          <div style={{ fontSize: 'clamp(13px, 1.3vw, 20px)', color: DIM, marginTop: 2, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span>{longDate}</span>
+            {venues.length > 0 && (
+              <select aria-label="Venue shown on this screen" value={activeVenue} onChange={e => setVenue(e.target.value)}
+                style={{
+                  background: CARD, color: activeVenue ? '#F4F2FF' : DIM, border: `1px solid ${LINE}`,
+                  borderRadius: 10, padding: '4px 10px', fontSize: 'clamp(12px, 1.1vw, 16px)', fontFamily: 'inherit',
+                  fontWeight: 700, cursor: 'pointer', maxWidth: '60vw',
+                }}>
+                <option value="">All venues</option>
+                {venues.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            )}
+          </div>
         </div>
         <WallClock />
       </header>
@@ -199,47 +234,46 @@ export function BoardPage() {
         </div>
       )}
 
-      {/* Now */}
-      {state.state === 'during' && (
-        teaching.length === 0 ? (
-          <Empty text={breakNow
-            ? `${breakNow.name} until ${fmtRingTime(breakNow.endMin)}.`
-            : 'Nothing scheduled at this moment.'} />
-        ) : (
-          <div style={{
-            display: 'grid', gap: 'clamp(8px, 0.9vw, 14px)',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(210px, 22vw, 330px), 1fr))',
-          }}>
-            {teaching.map((r, i) => (
-              <div key={i} style={{
-                background: CARD, border: `1px solid ${r.uncovered ? ALARM : LINE}`,
-                borderRadius: 14, padding: 'clamp(11px, 1.1vw, 18px)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 'clamp(16px, 1.7vw, 26px)', fontWeight: 800 }}>{r.section}</span>
-                  {r.endMin != null && (
-                    <span style={{ fontSize: 'clamp(11px, 1vw, 15px)', color: DIM, fontVariantNumeric: 'tabular-nums' }}>
-                      till {fmtRingTime(r.endMin)}
-                    </span>
-                  )}
+      {/* One room: what is in it now, next, and for the rest of today. */}
+      {activeVenue && state.state !== 'closed' && (
+        <VenueView venue={activeVenue} slots={roomDay} nowMin={nowMin} multi={multi} />
+      )}
+
+      {/* Everything: classes in lessons, and separately, classes on a break. */}
+      {!activeVenue && state.state === 'during' && (
+        <>
+          {teaching.length > 0 && (
+            <div style={GRID}>
+              {teaching.map((r, i) => (
+                <LessonCard key={i} section={r.section} subject={r.subject!} endMin={r.endMin}
+                  teacher={r.uncovered ? 'No teacher assigned' : r.teacher} isSub={r.isSub}
+                  room={r.room} schedule={multi ? r.schedule : undefined} alarm={r.uncovered} />
+              ))}
+            </div>
+          )}
+          {onBreak.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(6px, 0.7vw, 10px)' }}>
+              {onBreak.map(g => (
+                <div key={`${g.name}|${g.endMin}`} style={{
+                  background: CARD, border: `1px dashed ${LINE}`, borderRadius: 14,
+                  padding: 'clamp(10px, 1vw, 16px) clamp(12px, 1.2vw, 18px)',
+                  display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap',
+                }}>
+                  <span style={{ fontSize: 'clamp(15px, 1.5vw, 22px)', fontWeight: 800, color: '#FCD34D' }}>
+                    {g.name}
+                  </span>
+                  <span style={{ fontSize: 'clamp(12px, 1.1vw, 16px)', color: DIM, fontVariantNumeric: 'tabular-nums' }}>
+                    till {fmtRingTime(g.endMin)}
+                  </span>
+                  <span style={{ fontSize: 'clamp(13px, 1.25vw, 18px)', fontWeight: 700, color: '#C9C3EC' }}>
+                    {g.sections.join(' · ')}
+                  </span>
                 </div>
-                <div style={{ fontSize: 'clamp(14px, 1.4vw, 21px)', color: ACCENT, fontWeight: 700, marginTop: 4 }}>
-                  {r.subject}
-                </div>
-                <div style={{ fontSize: 'clamp(12px, 1.15vw, 17px)', color: DIM, marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span>{r.uncovered ? 'No teacher assigned' : (r.teacher || '-')}</span>
-                  {r.isSub && (
-                    <span style={{ fontSize: '0.78em', fontWeight: 800, letterSpacing: 0.4, color: '#FCD34D', background: 'rgba(252,211,77,0.14)', padding: '2px 7px', borderRadius: 20 }}>
-                      COVER
-                    </span>
-                  )}
-                  {r.room && <span>· {r.room}</span>}
-                  {multi && <span>· {r.schedule}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )
+              ))}
+            </div>
+          )}
+          {teaching.length === 0 && onBreak.length === 0 && <Empty text="Nothing scheduled at this moment." />}
+        </>
       )}
 
       {/* Absences are useful all day, not only mid-lesson. */}
@@ -350,6 +384,103 @@ function StatusBand({ state }: { state: ReturnType<typeof boardNow> }) {
       <span style={small}>
         {fmtRingTime(state.nextBellAt!)} - {state.nextBellMeans}
       </span>
+    </div>
+  )
+}
+
+function LessonCard({ section, subject, endMin, teacher, isSub, room, schedule, alarm, label }: {
+  section: string; subject: string; endMin?: number; teacher?: string; isSub: boolean
+  room?: string; schedule?: string; alarm?: boolean; label?: string
+}) {
+  return (
+    <div style={{
+      background: CARD, border: `1px solid ${alarm ? ALARM : LINE}`,
+      borderRadius: 14, padding: 'clamp(11px, 1.1vw, 18px)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontSize: 'clamp(16px, 1.7vw, 26px)', fontWeight: 800 }}>{section}</span>
+        {(label || endMin != null) && (
+          <span style={{ fontSize: 'clamp(11px, 1vw, 15px)', color: DIM, fontVariantNumeric: 'tabular-nums' }}>
+            {label ?? `till ${fmtRingTime(endMin!)}`}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 'clamp(14px, 1.4vw, 21px)', color: ACCENT, fontWeight: 700, marginTop: 4 }}>
+        {subject}
+      </div>
+      <div style={{ fontSize: 'clamp(12px, 1.15vw, 17px)', color: DIM, marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span>{teacher || '-'}</span>
+        {isSub && (
+          <span style={{ fontSize: '0.78em', fontWeight: 800, letterSpacing: 0.4, color: '#FCD34D', background: 'rgba(252,211,77,0.14)', padding: '2px 7px', borderRadius: 20 }}>
+            COVER
+          </span>
+        )}
+        {room && <span>· {room}</span>}
+        {schedule && <span>· {schedule}</span>}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A screen on one door. "Now" first, because that is what someone reaching
+ * for the handle wants; then the next class in, then the rest of the day in
+ * a quiet list for whoever is planning around the room.
+ */
+function VenueView({ venue, slots, nowMin, multi }: {
+  venue: string; slots: ReturnType<typeof venueDay>; nowMin: number; multi: boolean
+}) {
+  const nowSlots = slots.filter(x => x.startMin <= nowMin && nowMin < x.endMin)
+  const later = slots.filter(x => x.startMin > nowMin)
+  const nextAt = later[0]?.startMin
+  const next = later.filter(x => x.startMin === nextAt)
+  const rest = later.filter(x => x.startMin !== nextAt)
+  const heading: React.CSSProperties = {
+    fontSize: 'clamp(12px, 1.1vw, 16px)', fontWeight: 800, color: DIM,
+    letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8,
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 1.4vw, 22px)' }}>
+      <div style={{ fontSize: 'clamp(26px, 3.4vw, 52px)', fontWeight: 800, letterSpacing: -0.5 }}>{venue}</div>
+      <div>
+        <div style={heading}>Now</div>
+        {nowSlots.length ? (
+          <div style={GRID}>
+            {nowSlots.map((x, i) => (
+              <LessonCard key={i} section={x.section} subject={x.subject} endMin={x.endMin}
+                teacher={x.teacher} isSub={x.isSub} schedule={multi ? x.schedule : undefined} />
+            ))}
+          </div>
+        ) : (
+          <Empty text={nextAt != null ? `Free until ${fmtRingTime(nextAt)}.` : 'Free for the rest of the day.'} />
+        )}
+      </div>
+      {next.length > 0 && (
+        <div>
+          <div style={heading}>Next</div>
+          <div style={GRID}>
+            {next.map((x, i) => (
+              <LessonCard key={i} section={x.section} subject={x.subject} label={`from ${fmtRingTime(x.startMin)}`}
+                teacher={x.teacher} isSub={x.isSub} schedule={multi ? x.schedule : undefined} />
+            ))}
+          </div>
+        </div>
+      )}
+      {rest.length > 0 && (
+        <div>
+          <div style={heading}>Later today</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'clamp(13px, 1.2vw, 18px)', color: '#C9C3EC' }}>
+            {rest.map((x, i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                <span style={{ color: DIM, fontVariantNumeric: 'tabular-nums', minWidth: '4.5em' }}>{fmtRingTime(x.startMin)}</span>
+                <span style={{ fontWeight: 700 }}>{x.section}</span>
+                <span>{x.subject}</span>
+                {x.teacher && <span style={{ color: DIM }}>{x.teacher}{x.isSub ? ' (cover)' : ''}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
