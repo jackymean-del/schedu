@@ -1402,7 +1402,23 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // owed in any free slot, so balancing can never cost a lesson.
   const weekDemand: Record<string, number> = {}
   for (const sec of sections) {
-    weekDemand[sec.name] = Object.values(targetPeriods[sec.name] ?? {}).reduce((a, x) => a + x, 0)
+    // Periods the class will SPEND, not lessons summed by subject. An AND
+    // block runs its subjects side by side in one period, yet each option
+    // carries its own target, so Sanskrit 2 + Odia 2 read as four periods
+    // where the class spends two; an OR block is an extra period no target
+    // counts. Both skewed the budget: early days filled up and Friday got the
+    // leftovers (6,6,6,6,4 for a class that should run 6,6,6,5,5).
+    let demand = Object.values(targetPeriods[sec.name] ?? {}).reduce((a, x) => a + x, 0)
+    for (const d of workDays) {
+      for (const cell of Object.values(classTT[sec.name]?.[d] ?? {}) as any[]) {
+        if (!cell?.optionalBlockId) continue
+        demand += 1
+        if (String(cell.subject ?? '').includes(' AND ')) {
+          demand -= (cell.options ?? []).filter((o: any) => o?.subject).length
+        }
+      }
+    }
+    weekDemand[sec.name] = Math.max(0, demand)
   }
   const placedOn = (secName: string, d: string) =>
     Object.values(classTT[secName]?.[d] ?? {}).filter((c: any) => c?.subject).length
@@ -2250,6 +2266,122 @@ export function solveTimetable(input: SolverInput): SolverOutput {
             }
           }
         }
+      }
+    }
+
+    // ── Tidy each class's week: close gaps, then even out the days ──
+    //
+    // The fill is greedy and the repair puts a late lesson wherever its
+    // teacher happens to be free, so a class could finish 7,6,6,5,4: seven
+    // lessons on Monday and a Friday with an empty period 4 in the middle of
+    // it. Two kinds of move fix that, both built on one relocation that keeps
+    // every ledger straight and can be undone:
+    //   - close a gap: the day's last lesson steps up into the hole;
+    //   - balance: a lesson leaves the heaviest day for the lightest.
+    // A move is only kept when its teacher is free there and under their
+    // daily cap, the subject is not already taught that day, nothing is scope
+    // locked, the room is free, and neither the class nor any teacher it
+    // touches ends up with more gaps than before.
+    const gapsIn = (busy: (pid: string) => boolean): number => {
+      const at = classPeriods.map(cp => busy(cp.id))
+      const first = at.indexOf(true), last = at.lastIndexOf(true)
+      return first < 0 ? 0 : at.slice(first, last + 1).filter(x => !x).length
+    }
+    const holesOn = (secName: string, day: string) => gapsIn(pid => !!classTT[secName]?.[day]?.[pid])
+    const teacherGaps = (k: string, day: string) => gapsIn(pid => !!teacherBusy[k]?.[day]?.has(pid))
+
+    /** Can this lesson sit at (day, pid) in place of where it is now? */
+    const canSit = (sec: any, cell: any, sub: any, fromDay: string, day: string, pid: string): boolean => {
+      if (classTT[sec.name]?.[day]?.[pid]) return false
+      if (sectionOffDays.get(sec.name)?.has(day)) return false
+      if ((sec.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      if ((sub.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      const k = cellKeys(cell)[0]
+      if (teacherBusy[k]?.[day]?.has(pid)) return false
+      const st = staff.find(x => tKey(x) === k)
+      if ((st?.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      if (cell.room && roomBusy[day]?.[pid]?.has(cell.room)) return false
+      if (day !== fromDay) {
+        const already = Object.values(classTT[sec.name]?.[day] ?? {}).filter((c: any) => c?.subject === sub.name).length
+        if (already >= perDayCap(sec.name, sub)) return false
+        if (st && atDailyLimit(dayLoad(day)[k] ?? 0, dailyCapFor(st, workDays.length))) return false
+      }
+      return true
+    }
+    /** Move one lesson, keeping class, teacher, room and load ledgers in
+     *  step. Returns the undo. */
+    const relocate = (secName: string, cell: any, fromDay: string, fromPid: string, day: string, pid: string) => {
+      const k = cellKeys(cell)[0]
+      delete classTT[secName][fromDay][fromPid]
+      classTT[secName][day][pid] = cell
+      teacherBusy[k]?.[fromDay]?.delete(fromPid); ensureBusy(k); teacherBusy[k][day].add(pid)
+      if (cell.room) { roomBusy[fromDay]?.[fromPid]?.delete(cell.room); roomBusy[day]?.[pid]?.add(cell.room) }
+      if (day !== fromDay) { bumpDayLoad(fromDay, [k], -1); bumpDayLoad(day, [k], +1) }
+      return () => {
+        delete classTT[secName][day][pid]
+        classTT[secName][fromDay][fromPid] = cell
+        teacherBusy[k]?.[day]?.delete(pid); teacherBusy[k]?.[fromDay]?.add(fromPid)
+        if (cell.room) { roomBusy[day]?.[pid]?.delete(cell.room); roomBusy[fromDay]?.[fromPid]?.add(cell.room) }
+        if (day !== fromDay) { bumpDayLoad(day, [k], -1); bumpDayLoad(fromDay, [k], +1) }
+      }
+    }
+    /** Pull the day's last lesson up into its first hole, while one fits.
+     *  Returns the undos, newest last. */
+    const closeHoles = (sec: any, day: string): Array<() => void> => {
+      const undos: Array<() => void> = []
+      for (let n = 0; n < classPeriods.length; n++) {
+        const ids = classPeriods.map(cp => cp.id)
+        const filled = ids.map(pid => !!classTT[sec.name]?.[day]?.[pid])
+        const first = filled.indexOf(true), last = filled.lastIndexOf(true)
+        const hole = first < 0 ? -1 : filled.findIndex((f, i) => i > first && i < last && !f)
+        if (hole < 0) break
+        const cell: any = classTT[sec.name][day][ids[last]]
+        const sub = movable(sec, cell)
+        if (!sub || !canSit(sec, cell, sub, day, day, ids[hole])) break
+        const k = cellKeys(cell)[0]
+        const before = teacherGaps(k, day)
+        const undo = relocate(sec.name, cell, day, ids[last], day, ids[hole])
+        if (teacherGaps(k, day) > before) { undo(); break }
+        undos.push(undo)
+      }
+      return undos
+    }
+
+    for (const sec of sections) {
+      const days = workDays.filter(d => !sectionOffDays.get(sec.name)?.has(d))
+      for (const d of days) closeHoles(sec, d)
+      if (days.length < 2) continue
+      for (let guard = 0; guard < 20; guard++) {
+        const counts = days.map(d => placedOn(sec.name, d))
+        const max = Math.max(...counts), min = Math.min(...counts)
+        if (max - min <= 1) break
+        const from = days[counts.indexOf(max)], to = days[counts.indexOf(min)]
+        let moved = false
+        // Latest lesson first: taking the day's last lesson opens no hole.
+        for (const fromPid of [...classPeriods].reverse().map(cp => cp.id)) {
+          const cell: any = classTT[sec.name]?.[from]?.[fromPid]
+          const sub = movable(sec, cell)
+          if (!sub) continue
+          for (const q of classPeriods) {
+            if (!canSit(sec, cell, sub, from, to, q.id)) continue
+            const holesBefore = holesOn(sec.name, from) + holesOn(sec.name, to)
+            // Every teacher this move and its gap-closing can touch.
+            const touched = new Set<string>([cellKeys(cell)[0]])
+            for (const d of [from, to]) for (const c of Object.values(classTT[sec.name]?.[d] ?? {}) as any[]) for (const k of cellKeys(c)) touched.add(k)
+            const tBefore = [...touched].reduce((a, k) => a + teacherGaps(k, from) + teacherGaps(k, to), 0)
+            const undos = [relocate(sec.name, cell, from, fromPid, to, q.id)]
+            undos.push(...closeHoles(sec, from), ...closeHoles(sec, to))
+            const tAfter = [...touched].reduce((a, k) => a + teacherGaps(k, from) + teacherGaps(k, to), 0)
+            if (holesOn(sec.name, from) + holesOn(sec.name, to) > holesBefore || tAfter > tBefore) {
+              for (const u of undos.reverse()) u()
+              continue
+            }
+            moved = true
+            break
+          }
+          if (moved) break
+        }
+        if (!moved) break
       }
     }
   }

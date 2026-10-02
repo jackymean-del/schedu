@@ -88,6 +88,16 @@ function measure(out: Any, s: Any) {
   }
 
   let gaps = 0, taught = 0, worstDay = 0
+  // A class's own day: an empty period between two lessons is a corridor
+  // hour for thirty students. Counted over every class-day.
+  let classHoles = 0
+  for (const sec of s.sections) {
+    for (const d of WORK_DAYS) {
+      const at = PIDS.map(p => !!out.classTT[sec.name]?.[d]?.[p]?.subject)
+      const first = at.indexOf(true), last = at.lastIndexOf(true)
+      if (first >= 0) classHoles += at.slice(first, last + 1).filter(x => !x).length
+    }
+  }
   for (const t of Object.keys(busy)) {
     for (const d of WORK_DAYS) {
       const set = busy[t][d]
@@ -132,7 +142,7 @@ function measure(out: Any, s: Any) {
         if (out.classTT[sec][d][pid]?.subject) placed++
 
   return {
-    gaps, taught, worstDay, placed,
+    gaps, taught, worstDay, placed, classHoles,
     gapsPerTaught: +(gaps / Math.max(1, taught)).toFixed(3),
     sd: +sd.toFixed(2), mean: +mean.toFixed(1), sameSlot, sameSlot3, ruts,
   }
@@ -158,6 +168,10 @@ for (const perGrade of [2, 4]) {
   ok(m.gapsPerTaught <= 0.38,
     'stranded free periods stay under 0.38 per lesson taught', `${m.gapsPerTaught}`)
   ok(m.worstDay <= 5, 'no teacher has more than 5 stranded frees in one day', `worst ${m.worstDay}`)
+  // Measured 30 and 44 once the week-tidy step landed (34 and 62 before it).
+  // Ceilings sit just above, so the gain cannot quietly erode.
+  ok(m.classHoles <= (perGrade === 2 ? 32 : 48),
+    "empty periods inside a class's day stay down", `${m.classHoles}`)
   ok(m.sd <= 6, 'teaching load stays reasonably even across staff', `sd ${m.sd}`)
   // A subject must not own one period of the day all week. Gated at zero
   // because the engine now achieves zero - it was 18 and 31 before the slot
@@ -281,7 +295,44 @@ for (const perGrade of [2, 4]) {
   }
   ok(total === want * secs.length, 'every lesson is still placed', `${total} of ${want * secs.length}`)
   ok(worstDay >= 5, 'no class has a near-empty day when it has spare periods', `fewest in a day: ${worstDay}`)
-  ok(worstSpread <= 2, "each class's lessons are spread evenly over the week", where || 'all even')
+  ok(worstSpread <= 1, "each class's lessons are spread evenly over the week", where || 'all even')
+}
+
+// ── A split class spends ONE period on its AND block, not one per subject ──
+// The day budget summed every subject's target, so Sanskrit 3 + Odia 3 run
+// side by side read as six periods where the class spends three. Early days
+// filled up and Friday took the leftovers: a class came out 6,6,6,6,4.
+{
+  console.log('spare periods spread evenly with an AND block')
+  const DAYS5 = WORK_DAYS.slice(0, 5)
+  const SUBS: Record<string, number> = { English: 6, Hindi: 5, Mathematics: 6, Science: 5, 'Social Studies': 4, Computer: 2, Sanskrit: 3, Odia: 3 }
+  const periodsSpent = Object.values(SUBS).reduce((a, b) => a + b, 0) - 3   // 31 of 40
+  const secs: Any[] = ['VI', 'VII', 'VIII'].map(g => ({ id: g, name: `${g}-A`, room: `R${g}`, grade: g, classTeacher: '' }))
+  const st: Any[] = []
+  for (const sub of Object.keys(SUBS)) for (let i = 0; i < 2; i++) st.push({ id: `${sub}${i}`, name: `${sub} ${i}`, subjects: [sub], classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30 })
+  const alloc: Any = {}
+  for (const sec of secs) { alloc[sec.name] = {}; for (const k in SUBS) alloc[sec.name][k] = String(SUBS[k]) }
+  const res: Any = solveTimetable({
+    sections: secs, staff: st,
+    subjects: Object.keys(SUBS).map((n, i) => ({ id: 'a' + i, name: n, periodsPerWeek: SUBS[n] })),
+    periods: PERIODS, workDays: DAYS5, requirements: [], subjectAllocations: alloc, defaultTeacherMaxPeriods: 30,
+    optionalBlocks: secs.map((sec, i) => ({
+      id: `lang-${i}`, name: 'Third language', sectionNames: [sec.name], logic: 'AND', periodsPerWeek: 3,
+      options: [
+        { subject: 'Sanskrit', teacher: `Sanskrit ${i % 2}`, room: `L${i}a` },
+        { subject: 'Odia', teacher: `Odia ${i % 2}`, room: `L${i}b` },
+      ],
+    })),
+  } as Any)
+  let worstSpread = 0, where = '', total = 0
+  for (const sec of secs) {
+    const perDay = DAYS5.map(d => PERIODS.filter(p => res.classTT?.[sec.name]?.[d]?.[p.id]?.subject).length)
+    total += perDay.reduce((a, b) => a + b, 0)
+    const spread = Math.max(...perDay) - Math.min(...perDay)
+    if (spread > worstSpread || !where) { worstSpread = Math.max(worstSpread, spread); where = `${sec.name} ${perDay.join(',')}` }
+  }
+  ok(total === periodsSpent * secs.length, 'every period the class spends is placed', `${total} of ${periodsSpent * secs.length}`)
+  ok(worstSpread <= 1, 'and spread within one lesson a day, block or not', where)
 }
 
 console.log(fail === 0 ? '\nALL QUALITY CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
