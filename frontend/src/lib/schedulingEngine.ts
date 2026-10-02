@@ -458,6 +458,9 @@ export type BlockedReasonCategory =
   | 'subject-quota-met'
   | 'subject-max-per-day'
   | 'all-subjects-exhausted'
+  /** A free period on purpose: the class's lessons are spread evenly over
+   *  its week, so this day has its share already. */
+  | 'day-balanced'
 
 export interface BlockedReason {
   category: BlockedReasonCategory
@@ -483,6 +486,7 @@ export function blockedCategoryLabel(c: BlockedReasonCategory): string {
     case 'subject-quota-met':      return 'All subjects met quota'
     case 'subject-max-per-day':    return 'Daily limit reached'
     case 'all-subjects-exhausted': return 'No subject left'
+    case 'day-balanced':           return 'Free period (week spread evenly)'
   }
 }
 
@@ -496,6 +500,7 @@ export function blockedRemedy(c: BlockedReasonCategory): string {
     case 'subject-quota-met':      return 'Increase the periods-per-week target for this section'
     case 'subject-max-per-day':    return 'Raise maxPeriodsPerDay for this subject'
     case 'all-subjects-exhausted': return 'Add more subjects or increase quotas'
+    case 'day-balanced':           return 'Nothing to fix - this class has fewer lessons a week than periods, and its free periods are shared across the week instead of piling up on one day'
   }
 }
 
@@ -1330,7 +1335,37 @@ export function solveTimetable(input: SolverInput): SolverOutput {
   // week rather than a lost day.
   const n = Math.max(1, sections.length)
   const leadStride = Math.max(1, Math.round(sections.length / Math.max(1, workDays.length)))
+
+  // ── Spreading the week ──
+  //
+  // Slot-major fixed who goes WITHOUT when staff are short. It did nothing for
+  // a class that simply has fewer lessons than periods: every slot was filled
+  // while any subject was still owed, so the free periods all collected at the
+  // end of the week. A class asking for 33 lessons in a 40-period week got
+  // 8, 8, 8, 8 and then ONE lesson on Friday - a day nobody would send a child
+  // in for - and every weekly total still looked right.
+  //
+  // So each class gets a budget per day: what it still needs, shared over the
+  // teaching days it has left (33 over five days is 7, 7, 7, 6, 6). Worked out
+  // afresh each morning, a day that came up short is made good later. It only
+  // bites when a class has spare periods; a full week is unaffected. And it is
+  // Pass 2's preference, not a rule: the repair pass below places anything still
+  // owed in any free slot, so balancing can never cost a lesson.
+  const weekDemand: Record<string, number> = {}
+  for (const sec of sections) {
+    weekDemand[sec.name] = Object.values(targetPeriods[sec.name] ?? {}).reduce((a, x) => a + x, 0)
+  }
+  const placedOn = (secName: string, d: string) =>
+    Object.values(classTT[secName]?.[d] ?? {}).filter((c: any) => c?.subject).length
+  const dayBudget: Record<string, number> = {}
+
   workDays.forEach((day, di) => {
+   for (const sec of sections) {
+     const daysLeft = workDays.slice(di).filter(d => !sectionOffDays.get(sec.name)?.has(d)).length
+     const before = workDays.slice(0, di).reduce((a, d) => a + placedOn(sec.name, d), 0)
+     const left = Math.max(0, weekDemand[sec.name] - before)
+     dayBudget[sec.name] = daysLeft > 0 ? Math.ceil(left / daysLeft) : Number.MAX_SAFE_INTEGER
+   }
    classPeriods.forEach((period, pi) => {
     const offset = (di * leadStride + pi) % n
     const order = sections.map((_, i) => (i + offset) % n)
@@ -1348,6 +1383,13 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         // NOTE: do NOT blanket-skip pi===0 - sections without a class teacher still
         // need Period 1 to be filled here, otherwise it is always blank.
         if (classTT[sec.name][day][period.id]) return
+
+        // Today's share of the week is placed - leave this one free.
+        if (placedOn(sec.name, day) >= dayBudget[sec.name]) {
+          recordBlock(sec.name, day, period.id, 'day-balanced',
+            `${sec.name} has ${dayBudget[sec.name]} lessons today - its spare periods are spread across the week`)
+          return
+        }
 
         // Find best subject to place (rotating, respecting max per day).
         // Target periods comes from subjectAllocations matrix (Doc Part 1) or
@@ -1884,7 +1926,10 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         const specialists = specialistsFor(sec, sub.name)
         if (!specialists.length) continue
 
-        for (const day of workDays) {
+        // Lightest day first, so a lesson placed late still lands where the
+        // class has room in its week rather than on the first free Monday slot.
+        const byLightest = [...workDays].sort((a, b) => placedOn(sec.name, a) - placedOn(sec.name, b))
+        for (const day of byLightest) {
           if (need <= 0) break
           for (const period of classPeriods) {
             if (need <= 0) break

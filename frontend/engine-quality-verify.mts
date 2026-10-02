@@ -248,5 +248,40 @@ for (const perGrade of [2, 4]) {
     'worst day: ' + worstWhere + ' with ' + worstDay + ' of 6')
 }
 
+// ── SPARE PERIODS ARE SPREAD, NOT PILED ON ONE DAY ───────────────────────
+//
+// The other half of the daily story. With staff to spare and fewer lessons
+// than periods, the fill used to take every slot while any subject was owed,
+// so a class asking for 33 of 40 periods got 8, 8, 8, 8 and then ONE lesson on
+// Friday. Nothing above caught it: every weekly total was exact, and nobody
+// was short of teachers.
+{
+  console.log('spare periods spread across the week')
+  const DAYS5 = WORK_DAYS.slice(0, 5)
+  const SUBS: Record<string, number> = { English: 6, Hindi: 5, Mathematics: 6, Science: 5, 'Social Studies': 4, Computer: 3, Art: 2, PE: 2 }
+  const want = Object.values(SUBS).reduce((a, b) => a + b, 0)   // 33 of 40
+  const secs: Any[] = ['I', 'II', 'III', 'IV', 'V'].map(g => ({ id: g, name: `${g}-A`, room: `R${g}`, grade: g, classTeacher: '' }))
+  const st: Any[] = []
+  for (const sub of Object.keys(SUBS)) for (let i = 0; i < 2; i++) st.push({ id: `${sub}${i}`, name: `${sub} ${i}`, subjects: [sub], classes: [], isClassTeacher: '', maxPeriodsPerWeek: 30 })
+  const alloc: Any = {}
+  for (const sec of secs) { alloc[sec.name] = {}; for (const k in SUBS) alloc[sec.name][k] = String(SUBS[k]) }
+  const res: Any = solveTimetable({
+    sections: secs, staff: st,
+    subjects: Object.keys(SUBS).map((n, i) => ({ id: 'q' + i, name: n, periodsPerWeek: SUBS[n] })),
+    periods: PERIODS, workDays: DAYS5, requirements: [], subjectAllocations: alloc, defaultTeacherMaxPeriods: 30,
+  } as Any)
+  let worstSpread = 0, worstDay = Infinity, where = '', total = 0
+  for (const sec of secs) {
+    const perDay = DAYS5.map(d => PERIODS.filter(p => res.classTT?.[sec.name]?.[d]?.[p.id]?.subject).length)
+    total += perDay.reduce((a, b) => a + b, 0)
+    const spread = Math.max(...perDay) - Math.min(...perDay)
+    if (spread > worstSpread) { worstSpread = spread; where = `${sec.name} ${perDay.join(',')}` }
+    worstDay = Math.min(worstDay, ...perDay)
+  }
+  ok(total === want * secs.length, 'every lesson is still placed', `${total} of ${want * secs.length}`)
+  ok(worstDay >= 5, 'no class has a near-empty day when it has spare periods', `fewest in a day: ${worstDay}`)
+  ok(worstSpread <= 2, "each class's lessons are spread evenly over the week", where || 'all even')
+}
+
 console.log(fail === 0 ? '\nALL QUALITY CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)
