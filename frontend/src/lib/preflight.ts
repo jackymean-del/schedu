@@ -12,6 +12,7 @@
 import { parseAllocation } from './allocationSyntax'
 import { sectionKey, teachingPeriodsFor } from './generationPipeline'
 import { weeklyTargets } from './schedulingEngine'
+import { ungroupedElectives, describeUngrouped } from './electiveGroups'
 import {
   bandForSection, checkBellCompliance, computeTeacherRequirement, type GradeBand,
 } from './educationNorms'
@@ -23,6 +24,8 @@ export interface PreflightInput {
   subjectAllocations?: Record<string, Record<string, string>>
   teacherAllocations?: Record<string, Record<string, Record<string, number | string>>>
   staff: Array<{ name: string }>
+  /** AND groups from Groups & Combos, to find electives outside every group. */
+  andComboGroups?: any[]
 }
 
 export interface TeacherGap { periods: number; classes: string[] }
@@ -50,6 +53,9 @@ export interface Preflight {
    *  some day must carry two. Everything else is taught once a day; this is
    *  the briefing saying where that rule has to bend, before the click. */
   twiceADay: Array<{ subject: string; classes: string[] }>
+  /** "X-A, X-B: Hindi, Odia" - electives no AND group covers, which the
+   *  timetable will give to the whole class. */
+  ungroupedElectives: string[]
   staffing: ReturnType<typeof computeTeacherRequirement> | null
   bellChecks: Array<ReturnType<typeof checkBellCompliance>>
 }
@@ -185,5 +191,6 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
     dayOffRules: (config.dayOffRules ?? []).length,
     overCap, unallocated, noRowEmpty: unallocated.length > 0 && noRowEmpty,
     shortOfTeachers, noTeacherChosen, twiceADay, staffing, bellChecks,
+    ungroupedElectives: describeUngrouped(ungroupedElectives(i.subjects as any[], i.andComboGroups ?? [])),
   }
 }

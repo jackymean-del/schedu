@@ -138,5 +138,20 @@ ok(sections.every(s => teachingPeriodsFor(s.name, fullDay) === 6), 'every class 
   ok(plain.shapes[0].home === undefined, 'with no dispersal row there is one time, not two')
 }
 
+// ── 7. Electives outside every group ─────────────────────────────────────
+// Skipping Groups & Combos warns on the step; the briefing says it again
+// right before generating, because those subjects will run for the whole class.
+{
+  console.log('ungrouped electives')
+  const el = (name: string) => ({ name, periodsPerWeek: 2, isOptional: true,
+    classConfigs: [{ sectionName: 'II-A', periodsPerWeek: 2, maxPeriodsPerDay: 1, sessionDuration: 40, isOptional: true }] })
+  const subs = [...subjects, el('Hindi'), el('Odia')]
+  const none = buildPreflight({ config, sections, subjects: subs, subjectAllocations: {}, staff, teacherAllocations: {} }, { parallelGroups: 0 })!
+  ok(none.ungroupedElectives.join() === 'II-A: Hindi, Odia', 'with no group, II-A\'s electives are named', none.ungroupedElectives.join())
+  const grouped = buildPreflight({ config, sections, subjects: subs, subjectAllocations: {}, staff, teacherAllocations: {},
+    andComboGroups: [{ applicableSections: ['II-A'], subjects: ['Hindi', 'Odia'], strengthMatrix: {} }] }, { parallelGroups: 1 })!
+  ok(grouped.ungroupedElectives.length === 0, 'once they are grouped, nothing is said')
+}
+
 console.log(fail === 0 ? '\nALL PREFLIGHT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

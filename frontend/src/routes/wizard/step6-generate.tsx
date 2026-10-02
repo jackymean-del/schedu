@@ -139,6 +139,7 @@ export function Step6Generate() {
     subjectAllocations: (store as any).subjectAllocations ?? {},
     teacherAllocations: (store as any).teacherAllocations ?? {},
     staff: store.staff,
+    andComboGroups,
   }, {
     // The groups the school set up and the solver will run: AND splits, OR
     // choices and hand-made blocks. AND splits used to be left out, so a
@@ -554,6 +555,17 @@ export function Step6Generate() {
                       <strong>{preflight.noTeacherChosen.periods} period{preflight.noTeacherChosen.periods !== 1 ? "s" : ""}</strong> a week
                       ({listClasses(preflight.noTeacherChosen.classes)}) have no teacher allocated, so the engine will choose from teachers who list the subject.
                       To decide it yourself, allocate them in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:P, fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Mapping</button>.
+                    </span>
+                  </div>
+                )}
+
+                {/* Electives outside every group run for the whole class */}
+                {preflight.ungroupedElectives.length > 0 && (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:10, padding:"9px 12px" }}>
+                    <span>⚠</span>
+                    <span>
+                      <strong>Electives not in a group</strong> will be taught to the whole class: {preflight.ungroupedElectives.join("; ")}.
+                      {" "}Group them in <button onClick={() => setStep(3)} style={{ border:"none", background:"none", color:"#B45309", fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Groups &amp; Combos</button>, or untick Elective for them in Subjects.
                     </span>
                   </div>
                 )}

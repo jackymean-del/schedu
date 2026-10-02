@@ -1284,6 +1284,10 @@ export interface AndComboGroup {
   strengthMatrix: Record<string, Record<string, number>>
   /** AI-suggested? Shows a badge if true, dismissed once user edits */
   aiSuggested?: boolean
+  /** Per class, the subject whose headcount was filled in automatically as
+   *  "the rest of the class" (lib/electiveGroups autoFillRow). Re-filled when
+   *  another number in the row changes; typing into it makes it the user's. */
+  autoFilled?: Record<string, string>
   /** Resolved teaching groups (generated, not user-entered) */
   generatedGroups?: AndTeachingGroup[]
 }

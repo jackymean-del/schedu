@@ -23,6 +23,7 @@ import {
   Wand2, Info, X, Users, Eye, EyeOff,
 } from 'lucide-react'
 import { SubjectGroupsSection } from '@/components/resources/SubjectGroupsSection'
+import { electiveFamily, inferType, FAMILY_LABEL, ungroupedElectives, describeUngrouped, autoFillRow, type ElectiveFamily } from '@/lib/electiveGroups'
 
 // ── constants & helpers ────────────────────────────────────────────────────────
 
@@ -161,14 +162,6 @@ function getCell(group: AndComboGroup, sec: string, sub: string): number {
 
 interface OptInfo { sub: any; optional: boolean; slot?: string; category?: string; type: 'academic' | 'activity'; sections: string[] }
 
-const ACTIVITY_RE = /\b(p\.?\s?e\.?|phys(ical)?\s*(ed|education)?|sports?|games?|athletics|art|arts|paint(ing)?|drawing|music|dance|drama|theatre|theater|craft|yoga|gym|swim(ming)?|library|hobby|club|cca|scout|ncc|nss)\b/i
-function inferType(name: string, category?: string): 'academic' | 'activity' {
-  const c = (category ?? '').toLowerCase()
-  if (c.includes('co-scholastic') || c.includes('co scholastic') || c.includes('activity')) return 'activity'
-  if (c.includes('scholastic')) return 'academic'
-  return ACTIVITY_RE.test(name) ? 'activity' : 'academic'
-}
-
 function readOpt(sub: any): OptInfo {
   const cfgs = (sub.classConfigs ?? []) as any[]
   const optionalCfgs = cfgs.filter(c => c.isOptional === true)
@@ -194,17 +187,16 @@ function readOpt(sub: any): OptInfo {
 }
 
 /**
- * Auto-build combinations. Each card = ONE optional group; subject TYPE
- * (academic vs activity) is a hard separator. Cards that share the same section
- * set are tagged with the same blockId so they render under one fixed rail.
+ * Auto-build combinations. Each card = ONE choice a student makes (see
+ * electiveFamily). Cards that share the same section set are tagged with the
+ * same blockId so they render under one fixed rail.
  */
 export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComboGroup[] {
   const opts = subjects.map(readOpt).filter(o => o.optional && o.sections.length > 0)
 
   const byKey = new Map<string, OptInfo[]>()
   for (const o of opts) {
-    const refiner = o.slot ?? o.category ?? [...o.sections].sort().join(',')
-    const key = `${o.type}::${refiner}`
+    const key = o.slot ? `slot::${o.slot}` : `family::${electiveFamily(o.sub.name, o.category)}`
     if (!byKey.has(key)) byKey.set(key, [])
     byKey.get(key)!.push(o)
   }
@@ -229,9 +221,10 @@ export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComb
         if (!offered) (strengthMatrix[sec] ??= {})[col] = -1
       }
     }
+    const family = key.startsWith('family::') ? key.slice(8) as ElectiveFamily : null
     out.push({
       id: `ai_${key.replace(/[^a-z0-9]/gi, '').slice(0, 18)}_${cols.join('').replace(/[^a-z0-9]/gi, '').slice(0, 10)}`,
-      name: autoName(cols),
+      name: family ? FAMILY_LABEL[family] : `Slot ${key.slice(6)}`,
       applicableSections: secs,
       subjects: cols,
       bundles: syncBundles(cols),
@@ -263,16 +256,6 @@ export function suggestAndComboGroups(subjects: any[], sections: any[]): AndComb
   return out
 }
 
-/** Optional subjects NOT consumed by any auto card (lone electives). */
-function detectSharedElectives(subjects: any[], consumed: Set<string>): string[] {
-  const shared: string[] = []
-  for (const sub of subjects) {
-    if (consumed.has(sub.name)) continue
-    const o = readOpt(sub)
-    if (o.optional && o.sections.length >= 2) shared.push(sub.name)
-  }
-  return shared
-}
 
 // ── teaching-group generation (scope + capacity aware) ───────────────────────────
 
@@ -565,6 +548,7 @@ function BlockCard({
   }
 
   const combos = block.combos
+  const [moveMenu, setMoveMenu] = useState<{ comboId: string; sub: string } | null>(null)
   const sections = block.sections
   const scope = combos.length ? getScope(combos[0]) : DEFAULT_SCOPE
   const roomSensitive = combos.length ? combos[0].roomCapacitySensitive !== false : true
@@ -598,10 +582,16 @@ function BlockCard({
   /** raw commit - bypasses regeneration (room edits, group deletes, name edits) */
   const commitRaw = (next: AndComboGroup[]) => onReplace(next)
 
+  // Typing one headcount fills the last one left in the row with the rest of
+  // the class (lib/electiveGroups autoFillRow).
   const setCell = (comboId: string, sec: string, sub: string, val: number) =>
-    commit(combos.map(c => c.id !== comboId ? c : {
-      ...c, aiSuggested: false,
-      strengthMatrix: { ...c.strengthMatrix, [sec]: { ...(c.strengthMatrix?.[sec] ?? {}), [sub]: val } },
+    commit(combos.map(c => {
+      if (c.id !== comboId) return c
+      const typed = { ...(c.strengthMatrix?.[sec] ?? {}), [sub]: val }
+      const { row, autoCol } = autoFillRow(typed, getCols(c), getTotal(sec), sub, c.autoFilled?.[sec])
+      const autoFilled = { ...(c.autoFilled ?? {}) }
+      if (autoCol) autoFilled[sec] = autoCol; else delete autoFilled[sec]
+      return { ...c, aiSuggested: false, strengthMatrix: { ...c.strengthMatrix, [sec]: row }, autoFilled }
     }))
   // NA = subject not applicable to this section (stored as -1, excluded everywhere)
   const isNA = (combo: AndComboGroup, sec: string, sub: string) => (combo.strengthMatrix?.[sec]?.[sub] ?? 0) < 0
@@ -638,6 +628,38 @@ function BlockCard({
       const auto = !c.name?.trim() || c.name === autoName(getCols(c))
       return { ...c, subjects: next, bundles: syncBundles(next), strengthMatrix: sm, name: auto ? autoName(next) : c.name }
     }))
+
+  /** Send one subject column to another group in this block, or to a new
+   *  group of its own, carrying its headcounts. A group left empty goes. */
+  const moveSubject = (fromId: string, sub: string, toId: string | null) => {
+    const src = combos.find(c => c.id === fromId)
+    if (!src) return
+    const carried: Record<string, number> = {}
+    for (const [sec, vals] of Object.entries(src.strengthMatrix ?? {})) {
+      if (vals && vals[sub] !== undefined) carried[sec] = vals[sub]
+    }
+    const withCol = (c: AndComboGroup): AndComboGroup => {
+      const cols = [...getCols(c), sub]
+      const sm: Record<string, Record<string, number>> = { ...c.strengthMatrix }
+      for (const [sec, v] of Object.entries(carried)) sm[sec] = { ...(sm[sec] ?? {}), [sub]: v }
+      return { ...c, aiSuggested: false, subjects: cols, bundles: syncBundles(cols), strengthMatrix: sm }
+    }
+    let next: AndComboGroup[] = combos.map(c => {
+      if (c.id !== fromId) return c
+      const cols = getCols(c).filter(s => s !== sub)
+      const sm: Record<string, Record<string, number>> = {}
+      for (const [sec, vals] of Object.entries(c.strengthMatrix ?? {})) { const v = { ...vals }; delete v[sub]; sm[sec] = v }
+      return { ...c, aiSuggested: false, subjects: cols, bundles: syncBundles(cols), strengthMatrix: sm }
+    })
+    if (toId) next = next.map(c => c.id === toId ? withCol(c) : c)
+    else next.push(withCol({
+      id: makeId(), name: 'New choice', applicableSections: [...src.applicableSections], subjects: [], bundles: [],
+      blockId: src.blockId, blockName: src.blockName, roomCapacitySensitive: src.roomCapacitySensitive,
+      groupingScope: src.groupingScope, strengthMatrix: {},
+    } as AndComboGroup))
+    commit(next.filter(c => getCols(c).length > 0))
+    setMoveMenu(null)
+  }
 
   const renameCombo = (comboId: string, name: string) =>
     commitRaw(combos.map(c => c.id === comboId ? { ...c, name } : c))
@@ -766,8 +788,28 @@ function BlockCard({
                       borderLeft: si === 0 ? '2px solid #E8E4FF' : 'none', textAlign: 'center', whiteSpace: 'nowrap', minWidth: 64,
                     }}>
                       {cols.length ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, position: 'relative' }}>
                           {sub.split(' ')[0]}
+                          {/* Move this subject to another choice: the quick fix when two
+                              unrelated electives were grouped, or one belongs alone. */}
+                          <button onClick={() => setMoveMenu(m => m && m.comboId === combo.id && m.sub === sub ? null : { comboId: combo.id, sub })}
+                            title={`Move ${sub} to another group`} aria-label={`Move ${sub} to another group`}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A5A0C8', padding: 0, lineHeight: 1, fontSize: 11 }}>⇄</button>
+                          {moveMenu && moveMenu.comboId === combo.id && moveMenu.sub === sub && (
+                            <span role="menu" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 30, marginTop: 4, display: 'flex', flexDirection: 'column', minWidth: 170, padding: 4, borderRadius: 8, background: '#fff', border: '1px solid #E4E0FF', boxShadow: '0 6px 18px rgba(30,20,90,0.14)', textTransform: 'none', letterSpacing: 0 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: '#8886A8', padding: '4px 8px' }}>Move {sub} to</span>
+                              {combos.filter(o => o.id !== combo.id).map(o => (
+                                <button key={o.id} role="menuitem" onClick={() => moveSubject(combo.id, sub, o.id)}
+                                  style={{ textAlign: 'left', padding: '6px 8px', border: 'none', borderRadius: 6, background: 'transparent', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: '#2E2A4F', fontFamily: 'inherit' }}>
+                                  {o.name || getCols(o).join(' / ') || 'Untitled group'}
+                                </button>
+                              ))}
+                              <button role="menuitem" onClick={() => moveSubject(combo.id, sub, null)}
+                                style={{ textAlign: 'left', padding: '6px 8px', border: 'none', borderRadius: 6, background: 'transparent', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: '#685DBC', fontFamily: 'inherit' }}>
+                                + A new group of its own
+                              </button>
+                            </span>
+                          )}
                           <button onClick={() => removeSubject(combo.id, sub)} title={`Remove ${sub}`} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D1D5DB', padding: 0, lineHeight: 1, fontSize: 10 }}
                             onMouseEnter={e => { e.currentTarget.style.color = '#EF4444' }} onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB' }}>✕</button>
                         </span>
@@ -955,20 +997,43 @@ export function StepStudentGroups() {
   }, [store.rooms, store.classrooms, store.facilities])
 
   const [activeTab, setActiveTab] = useState<'and' | 'or'>('and')
-  const [hintDismissed, setHintDismissed] = useState(false)
   const [globalScope, setGlobalScope] = useState<AndGroupScope>(DEFAULT_SCOPE)
   const [showGuide, setShowGuide] = useState(true)
 
   const groups = andComboGroups as AndComboGroup[]
+  const config = store.config ?? {}
+  const setConfig = store.setConfig as (patch: any) => void
 
-  // Groups are the school's choice, never made for it. This step used to
-  // build AND groups from the electives the first time it was opened, so a
-  // school that only passed through had opted in without knowing, and the
-  // timetable split classes it never asked to split. Now it only offers.
-  // Skipped, every subject is taught to the whole class as Mapping says.
   const suggestible = useMemo(
     () => suggestAndComboGroups(subjects as any[], sections as any[]).length,
     [subjects, sections])
+
+  // Electives mean classes that split, so the groups they need are built the
+  // first time this step opens, one per choice a student makes (see
+  // lib/electiveGroups), and the banner below says what was built. Never
+  // behind the school's back: once it removes them (config.andGroupsDismissed)
+  // they are not rebuilt; HI Suggest brings them back on request.
+  const [autoBuilt, setAutoBuilt] = useState<AndComboGroup[]>([])
+  const didAuto = useRef(false)
+  useEffect(() => {
+    if (didAuto.current) return
+    didAuto.current = true
+    if (groups.length || config.andGroupsDismissed) return
+    const fresh = suggestAndComboGroups(subjects as any[], sections as any[])
+    if (!fresh.length) return
+    commitGroups(fresh)
+    setAutoBuilt(fresh)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Electives no group covers are taught to the whole class. Leaving the step
+  // with any says so first.
+  const ungrouped = useMemo(() => ungroupedElectives(subjects as any[], groups), [subjects, groups])
+  const [skipWarn, setSkipWarn] = useState(false)
+  const leave = () => {
+    if (ungrouped.length && !skipWarn) { setSkipWarn(true); return }
+    setStep(4)
+  }
 
   // group combos into blocks
   const blocks: Block[] = useMemo(() => {
@@ -991,8 +1056,12 @@ export function StepStudentGroups() {
   const replaceBlock = (blockId: string, newCombos: AndComboGroup[]) =>
     commitGroups([...groups.filter(g => blockKey(g) !== blockId), ...newCombos])
 
-  const deleteBlock = (blockId: string) =>
-    setAndComboGroups(groups.filter(g => blockKey(g) !== blockId))
+  const deleteBlock = (blockId: string) => {
+    const next = groups.filter(g => blockKey(g) !== blockId)
+    setAndComboGroups(next)
+    // The last group removed by hand is a decision too: do not rebuild them.
+    if (!next.length) setConfig({ andGroupsDismissed: true })
+  }
 
   const addBlankBlock = () => {
     const id = makeId()
@@ -1008,7 +1077,41 @@ export function StepStudentGroups() {
       .filter(f => !groups.some(g => g.subjects?.join() === f.subjects?.join()))
     if (fresh.length === 0) { alert('No new optional groups detected. Mark subjects as Elective in Resources → Subjects, or add a combination manually.'); return }
     commitGroups([...groups, ...fresh])
+    setConfig({ andGroupsDismissed: false })
+    setSkipWarn(false)
   }
+
+  // Shown when the step is left with electives outside every group.
+  const skipPanel = skipWarn && ungrouped.length > 0 ? (
+    <div role="alert" style={{ marginTop: 16, padding: '12px 14px', borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#78350F', fontSize: 12, lineHeight: 1.6 }}>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>Some classes have electives that are not in a group</div>
+      <div>Without a group, every student in the class is timetabled for each of these, as if they were compulsory:</div>
+      <ul style={{ margin: '6px 0 10px', paddingLeft: 18 }}>
+        {describeUngrouped(ungrouped).map(line => <li key={line}><strong>{line}</strong></li>)}
+      </ul>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={runAiSuggest} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Build groups for them
+        </button>
+        <button onClick={() => setStep(4)} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #FCD34D', background: '#fff', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Continue anyway
+        </button>
+      </div>
+    </div>
+  ) : null
+
+  // Says what was built automatically, so nothing appears unexplained.
+  const builtBanner = autoBuilt.length > 0 ? (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginBottom: 14, borderRadius: 10, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#14532D', fontSize: 12, lineHeight: 1.6 }}>
+      <Sparkles size={15} color="#15803D" style={{ flexShrink: 0, marginTop: 2 }} />
+      <div style={{ flex: 1 }}>
+        <strong>Built {autoBuilt.length} group{autoBuilt.length === 1 ? '' : 's'} from your electives</strong>, one for each choice a student makes:{' '}
+        {autoBuilt.map(g => `${g.name} (${getCols(g).join(', ')})`).join('; ')}.
+        {' '}Enter how many students take each subject (the last one fills itself), use ⇄ on a subject to move it to another group, or Remove all if your classes do not split.
+      </div>
+      <button onClick={() => setAutoBuilt([])} aria-label="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803D', padding: 2 }}><X size={13} /></button>
+    </div>
+  ) : null
 
   const applyGlobalScope = (scope: AndGroupScope) => setAndComboGroups(groups.map(g => ({ ...g, groupingScope: scope })))
 
@@ -1062,8 +1165,6 @@ export function StepStudentGroups() {
   }
   const commitGroups = (next: AndComboGroup[]) => { setAndComboGroups(next); reconcileSubjects(next) }
 
-  const consumed = useMemo(() => { const set = new Set<string>(); for (const g of groups) for (const c of getCols(g)) set.add(c); return set }, [groups])
-  const sharedElectives = useMemo(() => detectSharedElectives(subjects as any[], consumed), [subjects, consumed])
 
   const subjectSectionsMap = useMemo(() => {
     const map: Record<string, string[]> = {}
@@ -1128,6 +1229,8 @@ export function StepStudentGroups() {
             </button>
           </div>
 
+          {builtBanner}
+
           {/* user guide */}
           <div style={{ marginBottom: 16, borderRadius: 10, border: '1px solid #C4B5FD', background: 'linear-gradient(135deg, #F5F2FF, #FAFAFE)', overflow: 'hidden' }}>
             <button onClick={() => setShowGuide(g => !g)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1178,28 +1281,27 @@ export function StepStudentGroups() {
             </div>
           )}
 
-          {/* shared-electives hint */}
-          {sharedElectives.length > 0 && !hintDismissed && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginBottom: 16, borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-              <Info size={15} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
-              <div style={{ flex: 1, fontSize: 11.5, color: '#78350F', lineHeight: 1.55 }}>
-                <strong>{sharedElectives.slice(0, 5).join(', ')}{sharedElectives.length > 5 ? ` +${sharedElectives.length - 5}` : ''}</strong> look like single elective choices - set them up as{' '}
-                <button onClick={() => setActiveTab('or')} style={{ background: 'none', border: 'none', padding: 0, color: '#B45309', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5 }}>OR Groups</button>.
-              </div>
-              <button onClick={() => setHintDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B45309', padding: 2, flexShrink: 0 }}><X size={13} /></button>
-            </div>
-          )}
-
           {/* blocks */}
           {blocks.length === 0 ? (
             <div style={{ padding: '44px 20px', textAlign: 'center', background: '#FAFAFE', borderRadius: 12, border: '1.5px dashed #E4E0FF' }}>
               <Layers size={32} color="#C4B5FD" style={{ marginBottom: 12 }} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#6D6A8A', marginBottom: 6 }}>No groups - and that is fine</div>
-              <div style={{ fontSize: 12, color: '#8A86A8', marginBottom: 16, lineHeight: 1.6, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-                This step is optional. Skip it and every subject is taught to the whole class, for the periods <strong>Mapping</strong> gives it.
-                Add a group only where a class splits to take different subjects at the same time.
-                {suggestible > 0 && <> <strong>HI Suggest</strong> found {suggestible} possible group{suggestible === 1 ? '' : 's'} in your electives.</>}
-              </div>
+              {ungrouped.length > 0 ? (
+                <>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>Your electives are not grouped</div>
+                  <div style={{ fontSize: 12, color: '#8A86A8', marginBottom: 16, lineHeight: 1.6, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+                    {describeUngrouped(ungrouped).join('; ')}. Without a group, the whole class is timetabled for each of these.
+                    {suggestible > 0 && <> <strong>HI Suggest</strong> builds {suggestible} group{suggestible === 1 ? '' : 's'}, one for each choice a student makes.</>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#6D6A8A', marginBottom: 6 }}>No groups - and that is fine</div>
+                  <div style={{ fontSize: 12, color: '#8A86A8', marginBottom: 16, lineHeight: 1.6, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+                    No class has an elective, so every subject is taught to the whole class, for the periods <strong>Mapping</strong> gives it.
+                    Add a group only where a class splits to take different subjects at the same time.
+                  </div>
+                </>
+              )}
               <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {suggestible > 0 && (
                   <button onClick={runAiSuggest} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1.5px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1209,7 +1311,7 @@ export function StepStudentGroups() {
                 <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1.5px solid #C4B5FD', background: '#fff', color: '#685DBC', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <Plus size={14} /> New block
                 </button>
-                <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
+                <button onClick={leave} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
                   Skip to Mapping <ChevronRight size={14} />
                 </button>
               </div>
@@ -1233,12 +1335,14 @@ export function StepStudentGroups() {
               {/* A way back out: groups made earlier, by hand or by the old
                   automatic suggestion, can all go at once. */}
               <button onClick={() => {
-                if (window.confirm(`${blocks.length === 1 ? 'Remove this block' : `Remove all ${blocks.length} blocks`}? Every subject will then be taught to the whole class, as Mapping says.`)) setAndComboGroups([])
+                if (window.confirm(`${blocks.length === 1 ? 'Remove this block' : `Remove all ${blocks.length} blocks`}? Every subject will then be taught to the whole class, as Mapping says.`)) { setAndComboGroups([]); setConfig({ andGroupsDismissed: true }); setAutoBuilt([]) }
               }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: '1.5px solid #FECACA', background: '#fff', color: '#B91C1C', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Remove all
               </button>
             </div>
           )}
+
+          {skipPanel}
 
           {/* nav */}
           <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1249,7 +1353,7 @@ export function StepStudentGroups() {
             <button onClick={() => setActiveTab('or')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               OR Groups <Shuffle size={13} />
             </button>
-            <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
+            <button onClick={leave} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
               Next: Mapping <ChevronRight size={14} />
             </button>
           </div>
@@ -1292,12 +1396,14 @@ export function StepStudentGroups() {
             allSectionNames={allSectionNames}
           />
 
+          {skipPanel}
+
           <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
             <button onClick={() => setActiveTab('and')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E8E4FF', background: '#fff', color: '#4B5275', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               <ChevronLeft size={14} /> AND Groups
             </button>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
+            <button onClick={leave} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #685DBC, #9B8EF5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.35)' }}>
               Next: Mapping <ChevronRight size={14} />
             </button>
           </div>
