@@ -216,6 +216,12 @@ const TT_SNAPSHOT_FIELDS = [
   // there were wiped on the next save. The effect was one schedule's typed
   // numbers showing up under another schedule's sections.
   'teacherAllocations','sectionCapacityOverrides',
+  // What generation reads that was never saved per schedule: the AND groups,
+  // hand-made blocks, elective slots, teacher availability and the scheduling
+  // mode. The groups were the visible loss: a schedule's Sanskrit/Odia split
+  // reached the server as nothing, and switching schedules showed one
+  // schedule's groups under another.
+  'andComboGroups','optionalBlocks','electiveSlots','teacherAvailability','schedulingMode','workingDaysPerYear',
 ] as const
 
 /** Build a plain snapshot object of the current wizard store state. */

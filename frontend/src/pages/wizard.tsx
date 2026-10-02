@@ -18,7 +18,7 @@
  *   5. Review & generate (Step6Generate)
  */
 
-import { Component, Fragment, type ReactNode } from 'react'
+import { Component, Fragment, useEffect, type ReactNode } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { StepBell }          from '@/routes/wizard/step-bell'
@@ -28,7 +28,7 @@ import { StepStudentGroups } from '@/routes/wizard/step-student-groups'
 import { Step6Generate }     from '@/routes/wizard/step6-generate'
 import { CheckCircle2, Lock }  from 'lucide-react'
 import { StepGuide }         from '@/components/StepGuide'
-import { markActiveTimetableUnpublished } from '@/lib/ttRegistry'
+import { markActiveTimetableUnpublished, saveActiveTimetableSnapshot } from '@/lib/ttRegistry'
 
 // Inline guide content per step (index = step - 1). Matches the STEPS order.
 const STEP_GUIDES: { title: string; tips: string[] }[] = [
@@ -142,6 +142,21 @@ function WizardSetupGate() {
 export function WizardPage() {
   const { step, setStep, config, timetableStatus, setTimetableStatus } = useTimetableStore()
   const { isAuthenticated, user } = useAuthStore()
+
+  // Save the schedule as it is built, not only when the Dashboard is next
+  // opened. The wizard never saved its own work: a schedule generated here and
+  // closed sat empty on the server, and a teacher on another device saw
+  // nothing until the admin happened to open the Dashboard. Same snapshot the
+  // Dashboard and Resources write, after a quiet second and a half, and once
+  // more on the way out.
+  useEffect(() => {
+    let t: number | undefined
+    const unsub = useTimetableStore.subscribe(() => {
+      window.clearTimeout(t)
+      t = window.setTimeout(() => saveActiveTimetableSnapshot(), 1500)
+    })
+    return () => { unsub(); window.clearTimeout(t); saveActiveTimetableSnapshot() }
+  }, [])
 
   const CurrentStep = STEPS[step - 1] ?? StepBell
 

@@ -72,6 +72,21 @@ ok(onlyDashboard.length === 0,
   'and nothing is in the dashboard mirror that ttRegistry does not save',
   onlyDashboard.length ? `missing from ttRegistry: ${onlyDashboard.join(', ')}` : 'in step')
 
+// 4 - everything the Generate step reads from the store is saved with the
+// schedule. Checks 1-3 only ask that what IS saved survives; nothing asked
+// whether what generation USES is saved at all, and the AND groups were not:
+// a schedule's elective split reached the server as nothing.
+{
+  const gen = read('src/routes/wizard/step6-generate.tsx')
+  const pi2 = gen.indexOf('const payload: GenerationPayload = {')
+  const body = gen.slice(pi2, gen.indexOf('\n    }', pi2))
+  const used = [...new Set([...body.matchAll(/\(store as any\)\.(\w+)|\bstore\.(\w+)/g)].map(m => m[1] ?? m[2]))]
+  const missing = used.filter(f => !registry.includes(f))
+  ok(used.length >= 8, 'the generation payload was found', `${used.length} store fields`)
+  ok(missing.length === 0, 'everything generation reads is saved with the schedule',
+    missing.length ? `not saved per schedule: ${missing.join(', ')}` : 'all saved')
+}
+
 // 3 - anything saved per schedule must also survive a reload, or be derived.
 const notPersisted = [...new Set([...registry, ...dashboard])]
   .filter(f => !partialize.includes(f) && !DERIVED_NOT_PERSISTED.includes(f))
