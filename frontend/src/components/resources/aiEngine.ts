@@ -240,7 +240,7 @@ export function runAIAssignment(
       return {
         sectionName:      name,
         periodsPerWeek:   newSlots,
-        maxPeriodsPerDay: existing?.maxPeriodsPerDay ?? (sub.maxPeriodsPerDay ?? 2),
+        maxPeriodsPerDay: existing?.maxPeriodsPerDay ?? (sub.maxPeriodsPerDay ?? 1), maxPerDayExplicit: existing?.maxPerDayExplicit,
         sessionDuration:  existing?.sessionDuration  ?? (sub.sessionDuration  ?? 45),
       }
     })

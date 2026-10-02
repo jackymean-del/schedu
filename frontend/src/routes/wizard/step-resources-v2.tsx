@@ -319,7 +319,7 @@ function buildDefaultSubjects(board: CurriculumBoard = 'CBSE', sections: Section
         periodsPerWeek: aiPpw,
         category: d.cat as any, isOptional: false,
         shortName: d.short ?? generateShortName(d.name),
-        sessionDuration: 45, maxPeriodsPerDay: 2,
+        sessionDuration: 45, maxPeriodsPerDay: 1,
         requiresLab: false, color: P, sections: [], classConfigs: [],
       } as unknown as Subject
     })
@@ -416,7 +416,7 @@ export function StepResourcesV2() {
         return {
           sectionName:      sn,
           periodsPerWeek:   slots,
-          maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2,
+          maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 1,
           sessionDuration:  sub.sessionDuration ?? 45,
         }
       })

@@ -547,6 +547,18 @@ export function Step6Generate() {
                   </div>
                 )}
 
+                {/* Once a day is the rule; say where the week's arithmetic bends it */}
+                {preflight.twiceADay.length > 0 && (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:11.5, color:"#6B6891", background:"#F8F7FF", border:`1px solid ${P_B}`, borderRadius:10, padding:"9px 12px" }}>
+                    <span>ℹ</span>
+                    <span>
+                      Each subject is taught once a day. {preflight.twiceADay.slice(0, 3).map(t => `${t.subject} (${listClasses(t.classes)})`).join(", ")}
+                      {preflight.twiceADay.length > 3 ? ` and ${preflight.twiceADay.length - 3} more` : ""} {preflight.twiceADay.length === 1 ? "has" : "have"} more lessons a week than there are days, so on a few days {preflight.twiceADay.length === 1 ? "it comes" : "they come"} twice.
+                      To plan those as double periods instead, write them as sessions (3s=2p is three double periods) in <button onClick={() => setStep(4)} style={{ border:"none", background:"none", color:P, fontWeight:700, cursor:"pointer", textDecoration:"underline", padding:0, fontSize:11.5, fontFamily:"inherit" }}>Mapping</button>.
+                    </span>
+                  </div>
+                )}
+
                 {/* National-norms staffing check (Human Intelligence brain) */}
                 {preflight.staffing && (
                   <div style={{

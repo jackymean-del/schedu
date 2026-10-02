@@ -90,7 +90,7 @@ function buildClassConfigs(
     return {
       sectionName:      name,
       periodsPerWeek:   existing?.periodsPerWeek ?? defaultSlots,
-      maxPeriodsPerDay: Math.min(existing?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2, existing?.periodsPerWeek ?? defaultSlots),
+      maxPeriodsPerDay: Math.min(existing?.maxPeriodsPerDay ?? 1, existing?.periodsPerWeek ?? defaultSlots), maxPerDayExplicit: existing?.maxPerDayExplicit,
       sessionDuration:  existing?.sessionDuration ?? sub.sessionDuration ?? 45,
     }
   })
@@ -346,7 +346,8 @@ function SectionSubRow({
   const cfg     = (sub.classConfigs ?? []).find(c => c.sectionName === secName)
   const slots   = cfg?.periodsPerWeek ?? sub.periodsPerWeek
   // maxPeriodsPerDay can never exceed periodsPerWeek
-  const maxDay  = Math.min(cfg?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2, slots)
+  // Once a day unless the school typed a limit: see perDayCap in lib/schedulingEngine.
+  const maxDay  = Math.min(cfg?.maxPerDayExplicit ? (cfg.maxPeriodsPerDay ?? 1) : 1, slots)
   const cat     = cfg?.category ?? sub.category ?? 'Compulsory'
   const hasLab  = cfg?.requiresLab !== undefined ? cfg.requiresLab : (sub.requiresLab ?? false)
   const isHours = unit === 'hours_week' || unit === 'hours_month'
@@ -480,7 +481,7 @@ function GradeSlotRow({
   const slots      = getClassSlots(sub, sections[0])
   // maxPeriodsPerDay can never exceed periodsPerWeek
   const maxDay     = Math.min(
-    (sub.classConfigs ?? []).find(c => c.sectionName === sections[0])?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+    (() => { const c = (sub.classConfigs ?? []).find(c => c.sectionName === sections[0]); return c?.maxPerDayExplicit ? (c.maxPeriodsPerDay ?? 1) : 1 })(),
     slots
   )
   const displayVal = toDisplayValue(slots, unit, sessionMins)
@@ -760,7 +761,7 @@ function AddRow({ onAdd }: { onAdd: (s: Subject) => void }) {
       id: makeId(), name: name.trim(),
       shortName: generateShortName(name.trim()),
       category: 'Scholastic', periodsPerWeek: 5,
-      sessionDuration: 45, maxPeriodsPerDay: 2,
+      sessionDuration: 45, maxPeriodsPerDay: 1,
       color: P, isOptional: false, requiresLab: false,
       sections: [], classConfigs: [],
     } as unknown as Subject)
@@ -910,14 +911,14 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
       return {
         sectionName:      name,
         periodsPerWeek:   classSet.has(name) ? periodsPerWeek : (ex?.periodsPerWeek ?? sub.periodsPerWeek),
-        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
         sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
       }
     })
     // Also add any classNames not yet in allAssigned (shouldn't normally happen, but guard)
     for (const name of classNames) {
       if (!updated.some(c => c.sectionName === name)) {
-        updated.push({ sectionName: name, periodsPerWeek, maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2, sessionDuration: sub.sessionDuration ?? 45 })
+        updated.push({ sectionName: name, periodsPerWeek, maxPeriodsPerDay: 1, sessionDuration: sub.sessionDuration ?? 45 })
       }
     }
     const newSections = updated.map(c => c.sectionName!).filter(Boolean)
@@ -937,7 +938,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
         return {
           sectionName:      name,
           periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
-          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
           sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
         }
       })
@@ -954,7 +955,9 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
       return {
         sectionName:      name,
         periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
-        maxPeriodsPerDay: name === sectionName ? max : (ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2),
+        maxPeriodsPerDay: name === sectionName ? max : (ex?.maxPeriodsPerDay ?? 1),
+        // Typed by the school, so the generator honours it (otherwise once a day).
+        maxPerDayExplicit: name === sectionName ? true : ex?.maxPerDayExplicit,
         sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
         category:         ex?.category,
         requiresLab:      ex?.requiresLab,
@@ -973,7 +976,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
       const base: SubjectClassConfig = {
         sectionName:      name,
         periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
-        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
         sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
         category:         ex?.category,
         requiresLab:      ex?.requiresLab,
@@ -1025,7 +1028,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
       const base: SubjectClassConfig = {
         sectionName:      name,
         periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
-        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
         sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
         category:         ex?.category,
         requiresLab:      ex?.requiresLab,
@@ -1051,7 +1054,7 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
       const base: SubjectClassConfig = {
         sectionName:      name,
         periodsPerWeek:   ex?.periodsPerWeek   ?? sub.periodsPerWeek,
-        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? sub.maxPeriodsPerDay ?? 2,
+        maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
         sessionDuration:  ex?.sessionDuration  ?? sub.sessionDuration  ?? 45,
         category:         ex?.category,
         requiresLab:      ex?.requiresLab,
@@ -1452,7 +1455,7 @@ export function SubjectsPanel({
         shortName:       cells[1]?.trim() || generateShortName(cells[0]?.trim() || ''),
         category:        'Scholastic' as any,
         periodsPerWeek:  parseInt(cells[2]) || 5,
-        sessionDuration: sessionMins, maxPeriodsPerDay: 2,
+        sessionDuration: sessionMins, maxPeriodsPerDay: 1,
         color: P, isOptional: false, requiresLab: false,
         sections: [], classConfigs: [],
       } as unknown as Subject))

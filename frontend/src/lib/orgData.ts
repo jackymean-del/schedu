@@ -329,7 +329,7 @@ export function generateSubjects(orgType: OrgType, countryCode: string, n: numbe
     shortName: name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
     periodsPerWeek: CBSE_PW[name] ?? guessFreq(name),
     sessionDuration: 45,
-    maxPeriodsPerDay: 2,
+    maxPeriodsPerDay: 1,
     color: getSubjectColor(name),
     sections: [] as string[],
     classConfigs: [] as { classId?: string; sectionName?: string; periodsPerWeek: number; maxPeriodsPerDay: number; sessionDuration: number }[],

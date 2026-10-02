@@ -106,5 +106,24 @@ ok(sections.every(s => teachingPeriodsFor(s.name, fullDay) === 6), 'every class 
     "the Bench does not read a subject's default periods directly")
 }
 
+// ── 5. Once a day, and where the week cannot allow it ────────────────────
+{
+  console.log('twice a day')
+  const days = (config.workDays ?? []).length || 5
+  const subjectAllocations = {
+    'I-A': { Maths: String(days + 1), English: String(days) },
+    'II-A': { Maths: `${days}s=2p`, English: '3' },
+    'III-A': { Maths: '2', English: '2' },
+  }
+  const pf = buildPreflight({ config, sections, subjects, subjectAllocations, staff, teacherAllocations: {} }, { parallelGroups: 0 })!
+  const maths = pf.twiceADay.find(t => t.subject === 'Maths')
+  ok(maths?.classes.join() === 'I-A',
+    `${days + 1} Maths lessons in ${days} days must double up somewhere, and the briefing says so`, maths?.classes.join() ?? 'none')
+  ok(!pf.twiceADay.some(t => t.subject === 'English'),
+    'a subject with a lesson a day or fewer is never flagged')
+  ok(!maths?.classes.includes('II-A'),
+    'a double period is one lesson: a double every day is still once a day')
+}
+
 console.log(fail === 0 ? '\nALL PREFLIGHT CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`)
 process.exit(fail === 0 ? 0 : 1)

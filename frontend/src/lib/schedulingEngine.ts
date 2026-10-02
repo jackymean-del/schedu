@@ -1008,6 +1008,49 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     })
   }
 
+  // ── A subject is taught once a day, unless the school said otherwise ──
+  //
+  // Two Social Science lessons on one Thursday is the first thing a teacher
+  // circles on a printed timetable. It used to be allowed everywhere, because
+  // every subject was created with maxPeriodsPerDay = 2 and nobody ever chose
+  // that number. A second lesson the same day now needs one of:
+  //   - a double period in the allocation ("1s=2p"), which is one lesson
+  //     that happens to be two periods long;
+  //   - a per-day limit the school actually typed (maxPerDayExplicit);
+  //   - arithmetic: seven lessons a week cannot fit in five days once each.
+  // A repeat placed by hand on the timetable is the school's choice and is
+  // never undone here.
+  const teachingDaysOf = (secName: string) =>
+    workDays.filter(d => !sectionOffDays.get(secName)?.has(d))
+  const repeatAllowance = (secName: string, sub: any): number => {
+    const span = sessionSpan[secName]?.[sub.name] ?? 1
+    const cfg = (sub.classConfigs ?? []).find((c: any) => c?.sectionName === secName)
+    const chosen = cfg?.maxPerDayExplicit ? cfg.maxPeriodsPerDay
+      : sub.maxPerDayExplicit ? sub.maxPeriodsPerDay : 0
+    return Math.max(1, span, Number(chosen) || 0)
+  }
+  const perDayCap = (secName: string, sub: any): number => {
+    const target = targetPeriods[secName]?.[sub.name] ?? (sub.periodsPerWeek ?? 0)
+    const days = teachingDaysOf(secName).length || 1
+    return Math.max(repeatAllowance(secName, sub), Math.ceil(target / days))
+  }
+  /** Pass 2's stricter form: a repeat forced by arithmetic is taken only on a
+   *  day where the rest of the week could not absorb it, so seven lessons in
+   *  five days is two doubled days, not two on Monday and a gap on Friday. */
+  const roomTodayFor = (secName: string, sub: any, day: string, todayCount: number): boolean => {
+    const base = repeatAllowance(secName, sub)
+    if (todayCount < base) return true
+    // Never past the week's own arithmetic: without this, whatever earlier
+    // days failed to place piled up on the last one (PE three times on a
+    // Saturday).
+    if (todayCount >= perDayCap(secName, sub)) return false
+    const target = targetPeriods[secName]?.[sub.name] ?? (sub.periodsPerWeek ?? 0)
+    const need = target - (subjectCount[secName]?.[sub.name] ?? 0)
+    const days = teachingDaysOf(secName)
+    const later = days.length - 1 - days.indexOf(day)
+    return need > later * base
+  }
+
   // ── Phase 6: Auto-infer Optional Blocks from section strengths ──
   // If no manual blocks were authored AND a strength matrix is present,
   // derive blocks automatically. This is the new simplified flow.
@@ -1087,6 +1130,12 @@ export function solveTimetable(input: SolverInput): SolverOutput {
     }
     const slots: Array<{ day: string; periodId: string }> = []
     const seenSlot = new Set<string>()
+    // Once a day, like any subject (see perDayCap): a block needing more
+    // periods than the week has days is the only reason to double one up.
+    const blockDays = workDays.filter(d => block.sectionNames.every(sn => !sectionOffDays.get(sn)?.has(d)))
+    const blockDayCap = Math.max(1, Math.ceil(needed / Math.max(1, blockDays.length)))
+    const usedOn = (day: string) => slots.filter(x => x.day === day).length
+    const slotOkOnce = (day: string, pid: string) => usedOn(day) < blockDayCap && slotOk(day, pid)
     // Honor a pinned slot only if it isn't Period 1 (reserved for class teacher).
     if (block.day && block.periodId && block.periodId !== period1Id && slotOk(block.day, block.periodId)) {
       slots.push({ day: block.day, periodId: block.periodId }); seenSlot.add(`${block.day}|${block.periodId}`)
@@ -1097,7 +1146,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       for (const day of workDays) {
         if (slots.length >= needed) break
         const key = `${day}|${p.id}`
-        if (seenSlot.has(key) || !slotOk(day, p.id)) continue
+        if (seenSlot.has(key) || !slotOkOnce(day, p.id)) continue
         slots.push({ day, periodId: p.id }); seenSlot.add(key)
       }
       if (slots.length >= needed) break
@@ -1107,7 +1156,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       for (const day of workDays) {
         if (slots.length >= needed) break
         const key = `${day}|${period1Id}`
-        if (seenSlot.has(key) || !slotOk(day, period1Id)) continue
+        if (seenSlot.has(key) || !slotOkOnce(day, period1Id)) continue
         slots.push({ day, periodId: period1Id }); seenSlot.add(key)
       }
     }
@@ -1398,10 +1447,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
           const weeklyDone = subjectCount[sec.name][sub.name] ?? 0
           const target = targetPeriods[sec.name]?.[sub.name] ?? (sub.periodsPerWeek ?? 0)
           if (target <= 0) return false
-          const maxPD = (sub as any).maxPeriodsPerDay ?? 2
           const todayCount = Object.values(classTT[sec.name][day] ?? {})
             .filter(cell => cell?.subject === sub.name).length
-          return weeklyDone < target && todayCount < maxPD
+          return weeklyDone < target && roomTodayFor(sec.name, sub, day, todayCount)
         })
 
         if (!availableSubs.length) {
@@ -1843,10 +1891,9 @@ export function solveTimetable(input: SolverInput): SolverOutput {
       if (classTT[sec.name]?.[day]?.[pid]) return false
       if ((sec.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
       if ((sub.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
-      const maxPD = sub.maxPeriodsPerDay ?? 2
       const today = Object.values(classTT[sec.name][day] ?? {})
         .filter((c: any) => c?.subject === sub.name).length
-      return today < maxPD
+      return today < perDayCap(sec.name, sub)
     }
 
     /** Specialists for a subject in a section. No any-teacher fallback: a
@@ -1929,9 +1976,15 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         // Lightest day first, so a lesson placed late still lands where the
         // class has room in its week rather than on the first free Monday slot.
         const byLightest = [...workDays].sort((a, b) => placedOn(sec.name, a) - placedOn(sec.name, b))
+        // With a subject now held to once a day, a class that takes it most
+        // days has fewer places to put it, and the first free period is often
+        // the one it already owns all week. Try the periods it sits in least.
+        const ownsSlot = (pid: string) =>
+          workDays.filter(d => classTT[sec.name]?.[d]?.[pid]?.subject === sub.name).length
         for (const day of byLightest) {
           if (need <= 0) break
-          for (const period of classPeriods) {
+          const periodsByVariety = [...classPeriods].sort((a, b) => ownsSlot(a.id) - ownsSlot(b.id))
+          for (const period of periodsByVariety) {
             if (need <= 0) break
             if (!slotOpenFor(sec, sub, day, period.id)) continue
 
@@ -2035,7 +2088,7 @@ export function solveTimetable(input: SolverInput): SolverOutput {
               // Our subject must still fit this day once it lands here.
               const ourToday = Object.values(classTT[sec.name][day1] ?? {})
                 .filter((c: any) => c?.subject === sub.name).length
-              if (ourToday >= (sub.maxPeriodsPerDay ?? 2)) continue
+              if (ourToday >= perDayCap(sec.name, sub)) continue
 
               // Would a specialist of ours be free here with that lesson gone?
               const holder = cellKeys(sitting)
@@ -2079,6 +2132,121 @@ export function solveTimetable(input: SolverInput): SolverOutput {
                 details: `${sub.name} for ${sec.name} placed at ${day1} ${period1.id}, trading places with ${sittingSub.name}`,
               })
               need--
+            }
+          }
+        }
+      }
+    }
+
+    // ── Slot variety: break a rut by trading places within the day ──
+    //
+    // A subject taught every day has exactly one lesson a day to place, and
+    // when its teacher is only free at the same hour all week the class gets
+    // Maths in period 5 four days running. Swapping it with another lesson the
+    // class has that same day changes nothing about who teaches what or how
+    // much: both teachers just need to be free at the other's hour.
+    const RUT = 4
+    const slotRuns = (secName: string, subName: string, pid: string) =>
+      workDays.filter(d => classTT[secName]?.[d]?.[pid]?.subject === subName).length
+    const movable = (sec: any, cell: any): any => {
+      if (!cell?.subject || cell.optionalBlockId || cell.isClassTeacher) return null
+      if (cellKeys(cell).length !== 1) return null
+      const sub = subjects.find(s => s.name === cell.subject)
+      if (!sub || (sessionSpan[sec.name]?.[sub.name] ?? 1) > 1) return null
+      return sub
+    }
+    const fitsAt = (sec: any, sub: any, cell: any, day: string, pid: string, otherRoom: string) => {
+      if ((sec.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      if ((sub.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      const k = cellKeys(cell)[0]
+      if (teacherBusy[k]?.[day]?.has(pid)) return false
+      const st = staff.find(s => tKey(s) === k)
+      if ((st?.scope?.cells?.[day]?.[pid] ?? 'allowed') === 'locked') return false
+      // Its room must be free there, unless the lesson leaving is what holds it.
+      if (cell.room && cell.room !== otherRoom && roomBusy[day]?.[pid]?.has(cell.room)) return false
+      return true
+    }
+    for (const sec of sections) {
+      for (const p of classPeriods) {
+        for (const sub of subjects) {
+          if (slotRuns(sec.name, sub.name, p.id) < RUT) continue
+          for (const day of workDays) {
+            if (slotRuns(sec.name, sub.name, p.id) < RUT) break
+            const a: any = classTT[sec.name]?.[day]?.[p.id]
+            if (a?.subject !== sub.name || !movable(sec, a)) continue
+            // An empty hour works too, if moving there leaves the class's day
+            // with no more holes than it had (the last lesson of the day
+            // stepping one period later, say).
+            const holes = () => {
+              const at = classPeriods.map(cp => !!classTT[sec.name]?.[day]?.[cp.id])
+              const first = at.indexOf(true), last = at.lastIndexOf(true)
+              return first < 0 ? 0 : at.slice(first, last + 1).filter(x => !x).length
+            }
+            const before = holes()
+            let moved = false
+            for (const q of classPeriods) {
+              if (q.id === p.id || classTT[sec.name]?.[day]?.[q.id]) continue
+              if (sectionOffDays.get(sec.name)?.has(day)) break
+              if (slotRuns(sec.name, sub.name, q.id) + 1 >= RUT) continue
+              const ka = cellKeys(a)[0]
+              teacherBusy[ka]?.[day]?.delete(p.id)
+              if (a.room) roomBusy[day]?.[p.id]?.delete(a.room)
+              delete classTT[sec.name][day][p.id]
+              classTT[sec.name][day][q.id] = a
+              const ok = fitsAt(sec, sub, a, day, q.id, '') && holes() <= before
+              const at = ok ? q.id : p.id
+              if (!ok) { delete classTT[sec.name][day][q.id]; classTT[sec.name][day][p.id] = a }
+              teacherBusy[ka]?.[day]?.add(at)
+              if (a.room) roomBusy[day]?.[at]?.add(a.room)
+              if (ok) { moved = true; break }
+            }
+            if (moved) continue
+            for (const q of classPeriods) {
+              if (q.id === p.id) continue
+              const b: any = classTT[sec.name]?.[day]?.[q.id]
+              const bSub = movable(sec, b)
+              if (!bSub || bSub.name === sub.name) continue
+              // Do not hand the rut to the other subject, or deepen one of ours.
+              if (slotRuns(sec.name, bSub.name, p.id) + 1 >= RUT) continue
+              if (slotRuns(sec.name, sub.name, q.id) + 1 >= RUT) continue
+              const ka = cellKeys(a)[0], kb = cellKeys(b)[0]
+              // Both lessons leave their hour before either arrives.
+              teacherBusy[ka]?.[day]?.delete(p.id); teacherBusy[kb]?.[day]?.delete(q.id)
+              if (a.room) roomBusy[day]?.[p.id]?.delete(a.room)
+              if (b.room) roomBusy[day]?.[q.id]?.delete(b.room)
+              const ok = fitsAt(sec, sub, a, day, q.id, b.room) && fitsAt(sec, bSub, b, day, p.id, a.room)
+              const [ap, bq] = ok ? [q.id, p.id] : [p.id, q.id]
+              teacherBusy[ka]?.[day]?.add(ap); teacherBusy[kb]?.[day]?.add(bq)
+              if (a.room) roomBusy[day]?.[ap]?.add(a.room)
+              if (b.room) roomBusy[day]?.[bq]?.add(b.room)
+              if (ok) {
+                classTT[sec.name][day][q.id] = a
+                classTT[sec.name][day][p.id] = b
+                break
+              }
+              // Both teachers booked at the other's hour: if those bookings are
+              // one other class, trade in both classes at once. Each teacher
+              // keeps the same two hours, so nobody's day changes shape.
+              const twin = sections.find(o => {
+                if (o.name === sec.name) return false
+                const x: any = classTT[o.name]?.[day]?.[q.id], y: any = classTT[o.name]?.[day]?.[p.id]
+                const xs = movable(o, x), ys = movable(o, y)
+                if (!xs || !ys || cellKeys(x)[0] !== ka || cellKeys(y)[0] !== kb) return false
+                if (slotRuns(o.name, xs.name, p.id) + 1 >= RUT || slotRuns(o.name, ys.name, q.id) + 1 >= RUT) return false
+                const open = (s: any, su: any, pid: string) =>
+                  (s.scope?.cells?.[day]?.[pid] ?? 'allowed') !== 'locked' &&
+                  (su.scope?.cells?.[day]?.[pid] ?? 'allowed') !== 'locked'
+                // Rooms ride along only when each pair shares one room.
+                return x.room === y.room && a.room === b.room &&
+                  open(sec, sub, q.id) && open(sec, bSub, p.id) && open(o, xs, p.id) && open(o, ys, q.id)
+              })
+              if (!twin) continue
+              const x = classTT[twin.name][day][q.id], y = classTT[twin.name][day][p.id]
+              classTT[sec.name][day][q.id] = a
+              classTT[sec.name][day][p.id] = b
+              classTT[twin.name][day][p.id] = x
+              classTT[twin.name][day][q.id] = y
+              break
             }
           }
         }

@@ -44,6 +44,10 @@ export interface Preflight {
   /** Periods with no teacher allocated at all, in a school that does use the
    *  teacher allocation: the engine picks a teacher from subject lists. */
   noTeacherChosen: TeacherGap
+  /** Subjects asked for more lessons a week than the class has days, so
+   *  some day must carry two. Everything else is taught once a day; this is
+   *  the briefing saying where that rule has to bend, before the click. */
+  twiceADay: Array<{ subject: string; classes: string[] }>
   staffing: ReturnType<typeof computeTeacherRequirement> | null
   bellChecks: Array<ReturnType<typeof checkBellCompliance>>
 }
@@ -62,6 +66,7 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
   const buckets = new Map<string, Bucket>()
   const overCap: string[] = []
   const unallocated: string[] = []
+  const twiceADay: Preflight['twiceADay'] = []
   let noRowEmpty = true
   let totalWeekly = 0, doubleSubjects = 0
   const bandWeeklyMins = new Map<GradeBand, number>()
@@ -104,6 +109,14 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
       if (used > 0) noRowEmpty = false
     }
     if (used > count * workDayCount) overCap.push(sec.name)
+    for (const [sub, target] of Object.entries(targets[sec.name] ?? {})) {
+      // A double period is one lesson, so count lessons, not periods.
+      const p = parseAllocation(row[sub] ?? '')
+      const lessons = p.valid && p.doublePeriods > 0 ? Math.ceil(target / Math.max(1, p.doubleSpan)) : target
+      if (lessons <= workDayCount) continue
+      const hit = twiceADay.find(t => t.subject === sub) ?? (twiceADay.push({ subject: sub, classes: [] }), twiceADay[twiceADay.length - 1])
+      hit.classes.push(sec.name)
+    }
   }
 
   // ── Who teaches it ──
@@ -163,6 +176,6 @@ export function buildPreflight(i: PreflightInput, extra: { parallelGroups: numbe
     parallelGroups: extra.parallelGroups,
     dayOffRules: (config.dayOffRules ?? []).length,
     overCap, unallocated, noRowEmpty: unallocated.length > 0 && noRowEmpty,
-    shortOfTeachers, noTeacherChosen, staffing, bellChecks,
+    shortOfTeachers, noTeacherChosen, twiceADay, staffing, bellChecks,
   }
 }

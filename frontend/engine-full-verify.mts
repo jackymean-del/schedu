@@ -205,16 +205,17 @@ function verify(out: Any, school: Any, opts: { offDaySections?: (name: string) =
 
   // INV7 - daily spread: subject ≤ ceil(target/days)+1 per day
   let crammed = 0
+  const crammedAt: string[] = []
   for (const sec of sections) {
     for (const [sub, targetStr] of Object.entries(subjectAllocations[sec.name])) {
       const cap = Math.ceil(Number(targetStr) / WORK_DAYS.length) + 1
       for (const day of WORK_DAYS) {
         const n = CLASS_PERIOD_IDS.filter(pid => classTT[sec.name]?.[day]?.[pid]?.subject === sub).length
-        if (n > cap) crammed++
+        if (n > cap) { crammed++; crammedAt.push(`${sec.name} ${sub} ${day} x${n}`) }
       }
     }
   }
-  check(crammed === 0, 'INV7 daily spread (≤ceil(target/6)+1 per day)', crammed ? `${crammed} crammed days` : 'well spread')
+  check(crammed === 0, 'INV7 daily spread (≤ceil(target/6)+1 per day)', crammed ? `${crammed} crammed days: ${crammedAt.slice(0, 3).join('; ')}` : 'well spread')
 
   // INV8 - weekly overload (soft in engine; report)
   const load: Record<string, number> = {}

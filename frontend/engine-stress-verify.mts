@@ -615,6 +615,41 @@ function verify(g: Gen, out: Any, reported: Any[] = []): Violation[] {
     }
   }
 
+  const orderedClassIdsAll = g.periods.filter(p => p.type === 'class').map(p => p.id)
+  // V15 - a subject is taught once a day. A double period is one lesson (its
+  // second half is not counted); more lessons a week than teaching days is
+  // the only other reason a class may see a subject twice in one day.
+  for (const [section, days] of Object.entries(classTT)) {
+    const teachingDays = g.workDays.filter(d => !offOn(section, d)).length || 1
+    for (const [day, slots] of Object.entries(days as Any)) {
+      const sessions = new Map<string, number>()
+      // A block's cell names its options ("Hindi AND Science"); it runs as
+      // often as the most-taught of them.
+      // A pooled block runs for all its classes together, so it runs as often
+      // as the class that asks most of it.
+      const wantOf = (c: Any): number => {
+        const subs: string[] = c.options?.length ? c.options.map((o: Any) => o.subject) : [c.subject]
+        const pooled = g.optionalBlocks.find((b: Any) => b.id === c.optionalBlockId)?.sectionNames ?? [section]
+        return Math.max(0, ...pooled.flatMap((sn: string) => subs.map(su =>
+          String(g.subjectAllocations[sn]?.[su] ?? '').split('+').reduce((a, b) => a + (parseInt(b, 10) || 0), 0))))
+      }
+      const wants = new Map<string, number>()
+      for (let i = 0; i < orderedClassIdsAll.length; i++) {
+        const c = (slots as Any)[orderedClassIdsAll[i]]
+        if (!c?.subject) continue
+        wants.set(c.subject, wantOf(c))
+        const prev = (slots as Any)[orderedClassIdsAll[i - 1]]
+        if (prev?.isDoubleStart && prev.subject === c.subject && !c.isDoubleStart) continue
+        sessions.set(c.subject, (sessions.get(c.subject) ?? 0) + 1)
+      }
+      for (const [sub, n] of sessions) {
+        const want = wants.get(sub) ?? 0
+        const cap = Math.max(1, Math.ceil(want / teachingDays))
+        if (n > cap) add('V15-same-day-repeat', `${section} ${day}: ${sub} ${n} times (week asks ${want} over ${teachingDays} days)`)
+      }
+    }
+  }
+
   // V7 - teacherTT must agree with classTT, in both directions.
   const teacherTT = out.teacherTT ?? {}
   for (const [tname, rec] of Object.entries(teacherTT as Any)) {
@@ -753,10 +788,30 @@ function selfTest(): void {
     expect('V11', out, 'far more of a subject than was asked for')
   }
 
+  if (pids.length >= 3) {
+    // One subject twice in a day, not as a double: the "Social Science twice
+    // on Thursday" a teacher circles first. A real double must stay legal.
+    const lite = Object.keys(g.subjectAllocations[sec]).find(su =>
+      String(g.subjectAllocations[sec][su]).split('+').reduce((a, b) => a + (parseInt(b, 10) || 0), 0) <= g.workDays.length)
+    if (lite) {
+      const out = base()
+      out.classTT[sec][day][pids[0]] = { subject: lite, teacher: t1, room: 'RA' }
+      out.classTT[sec][day][pids[2]] = { subject: lite, teacher: t1, room: 'RA' }
+      expect('V15', out, 'one subject twice in a day without a double period')
+      const dbl = base()
+      dbl.classTT[sec][day][pids[0]] = { subject: lite, teacher: t1, room: 'RA', isDoubleStart: true }
+      dbl.classTT[sec][day][pids[1]] = { subject: lite, teacher: t1, room: 'RA' }
+      if (verify(g, dbl).some(v => v.rule.startsWith('V15'))) {
+        console.log('✗ VERIFIER BROKEN: V15 fired on a double period, which is one lesson')
+        process.exit(2)
+      }
+    }
+  }
+
   {
     const out = base()
     out.classTT[sec][day][pids[0]] = { subject: sub, teacher: t1, room: 'RA' }
-    out.teacherTT = { [t1]: { schedule: { [day]: { [pids[1] ?? pids[0]]: { sectionName: sec2 ?? sec } } } } }
+    out.teacherTT ={ [t1]: { schedule: { [day]: { [pids[1] ?? pids[0]]: { sectionName: sec2 ?? sec } } } } }
     expect('V7', out, 'teacherTT claiming a lesson classTT does not have')
   }
 

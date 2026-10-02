@@ -109,6 +109,7 @@ function measure(out: Any, s: Any) {
   // depths: 4+ in a six-day week is a rut, and 3 is worth watching so that
   // "zero at four" cannot hide a pile at three.
   let sameSlot = 0, sameSlot3 = 0
+  const ruts: string[] = []
   for (const sec of s.sections) {
     const seen: Record<string, Record<string, number>> = {}
     for (const d of WORK_DAYS) {
@@ -119,7 +120,7 @@ function measure(out: Any, s: Any) {
       }
     }
     for (const sub in seen) for (const pid in seen[sub]) {
-      if (seen[sub][pid] >= 4) sameSlot++
+      if (seen[sub][pid] >= 4) { sameSlot++; ruts.push(`${sec.name} ${sub} ${pid} x${seen[sub][pid]}`) }
       if (seen[sub][pid] === 3) sameSlot3++
     }
   }
@@ -133,7 +134,7 @@ function measure(out: Any, s: Any) {
   return {
     gaps, taught, worstDay, placed,
     gapsPerTaught: +(gaps / Math.max(1, taught)).toFixed(3),
-    sd: +sd.toFixed(2), mean: +mean.toFixed(1), sameSlot, sameSlot3,
+    sd: +sd.toFixed(2), mean: +mean.toFixed(1), sameSlot, sameSlot3, ruts,
   }
 }
 
@@ -162,7 +163,7 @@ for (const perGrade of [2, 4]) {
   // because the engine now achieves zero - it was 18 and 31 before the slot
   // variety term, so this is a real property to hold rather than an aspiration.
   ok(m.sameSlot === 0,
-    'no class takes one subject in the same slot 4+ times a week', `${m.sameSlot}`)
+    'no class takes one subject in the same slot 4+ times a week', `${m.sameSlot}${m.ruts.length ? ': ' + m.ruts.slice(0, 3).join('; ') : ''}`)
   ok(ms < 5000, 'and it solves in seconds', `${ms.toFixed(0)} ms`)
 }
 

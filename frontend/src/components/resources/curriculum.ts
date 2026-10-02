@@ -1084,7 +1084,7 @@ export function seedStandardSubjects(
       return {
         sectionName:      sn,
         periodsPerWeek:   slots,
-        maxPeriodsPerDay: rule?.isActivity ? 1 : 2,
+        maxPeriodsPerDay: 1,
         sessionDuration:  45,
       }
     })
@@ -1099,7 +1099,7 @@ export function seedStandardSubjects(
       category:         seedCategory(name),
       periodsPerWeek,
       sessionDuration:  45,
-      maxPeriodsPerDay: rule?.isActivity ? 1 : 2,
+      maxPeriodsPerDay: 1,
       requiresLab:      rule?.requiresLab ?? false,
       isOptional:       false,
       sections:         secList,

@@ -1036,7 +1036,7 @@ export function StepStudentGroups() {
         return {
           sectionName: sec,
           periodsPerWeek: ex?.periodsPerWeek ?? s.periodsPerWeek ?? 5,
-          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? s.maxPeriodsPerDay ?? 2,
+          maxPeriodsPerDay: ex?.maxPeriodsPerDay ?? 1, maxPerDayExplicit: ex?.maxPerDayExplicit,
           sessionDuration: ex?.sessionDuration ?? s.sessionDuration ?? 45,
           isOptional: true, electiveSlotId: ex?.electiveSlotId, category: ex?.category, requiresLab: ex?.requiresLab,
         }

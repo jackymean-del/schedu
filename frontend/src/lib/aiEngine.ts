@@ -191,14 +191,14 @@ export function generateTimetable(
           return
         }
 
-        // Try to avoid the same subject appearing more than twice in a single day
+        // Try to avoid the same subject appearing more than once in a single day
         // for this section - rotate through alternatives if needed
         const dayKey = (sub: Subject) => `${sec.name}|${day}|${sub.name}`
-        const maxSameDay = (subject as any).maxPeriodsPerDay ?? 2
+        const maxSameDay = (subject as any).maxPerDayExplicit ? ((subject as any).maxPeriodsPerDay ?? 1) : 1
         if ((subjectDayCount[dayKey(subject)] ?? 0) >= maxSameDay) {
           const alt = subjects.find(s =>
             s.name !== subject!.name &&
-            (subjectDayCount[`${sec.name}|${day}|${s.name}`] ?? 0) < ((s as any).maxPeriodsPerDay ?? 2)
+            (subjectDayCount[`${sec.name}|${day}|${s.name}`] ?? 0) < ((s as any).maxPerDayExplicit ? ((s as any).maxPeriodsPerDay ?? 1) : 1)
           )
           if (alt) subject = alt
         }
@@ -405,7 +405,7 @@ export function autoAssign(
   const updatedSubjects: Subject[] = subjects.map(sub => ({
     ...sub,
     sessionDuration: sub.sessionDuration ?? 40,
-    maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 2,
+    maxPeriodsPerDay: sub.maxPeriodsPerDay ?? 1,
     classConfigs: sub.classConfigs ?? [],
     // Preserve any already-scoped sections; only fall back to empty (all classes)
     // when none were ever assigned - do NOT assign every section to every subject.

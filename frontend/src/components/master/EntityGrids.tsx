@@ -434,7 +434,7 @@ export function SubjectsGrid({
       newRow={() => ({
         id: makeId(), name: `Subject ${subjects.length + 1}`,
         shortName: `S${subjects.length + 1}`, category: 'Core',
-        periodsPerWeek: 4, sessionDuration: 45, maxPeriodsPerDay: 2,
+        periodsPerWeek: 4, sessionDuration: 45, maxPeriodsPerDay: 1,
         isOptional: false, requiresLab: false, color: '#685DBC',
         sections: [], classConfigs: [],
       } as any)}

@@ -202,6 +202,9 @@ export interface Subject {
   periodsPerWeek: number
   sessionDuration: number
   maxPeriodsPerDay: number
+  /** True only when the school typed maxPeriodsPerDay. Every subject used to be
+   *  created with 2, so an untouched value means "once a day" to the generator. */
+  maxPerDayExplicit?: boolean
   color: string
   sections?: string[]      // legacy: section names this subject applies to
   classConfigs: SubjectClassConfig[]
@@ -225,6 +228,8 @@ export interface SubjectClassConfig {
   sectionName?: string     // legacy alias (used by wizard steps)
   periodsPerWeek: number
   maxPeriodsPerDay: number
+  /** See Subject.maxPerDayExplicit. */
+  maxPerDayExplicit?: boolean
   sessionDuration: number
   /** Per-section category override (falls back to Subject.category when absent) */
   category?: string
@@ -251,7 +256,7 @@ export const SubjectSchema = z.object({
   requiresConsecutiveSlots: z.boolean().default(false),
   periodsPerWeek: z.number().int().min(0).default(5),
   sessionDuration: z.number().default(40),
-  maxPeriodsPerDay: z.number().default(2),
+  maxPeriodsPerDay: z.number().default(1),
   color: z.string().default('#685DBC'),
   classConfigs: z.array(z.object({
     classId: z.string(),
