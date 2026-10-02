@@ -2383,6 +2383,62 @@ export function solveTimetable(input: SolverInput): SolverOutput {
         }
         if (!moved) break
       }
+
+      // Gaps that survive both: trade with another day. Either the lesson
+      // stranded after the gap leaves for another day, or another day's last
+      // lesson comes in to fill it. Found live: four Friday gaps where the
+      // Library teacher was booked elsewhere at every hour the gap could
+      // close to. Kept only if the class has fewer gaps, the week is no less
+      // even than before, and no teacher touched gets more gaps.
+      const spreadOf = () => {
+        const c = days.map(d => placedOn(sec.name, d))
+        return Math.max(...c) - Math.min(...c)
+      }
+      const tryMove = (from: string, fromPid: string, to: string, toPid: string): boolean => {
+        const cell: any = classTT[sec.name]?.[from]?.[fromPid]
+        const sub = movable(sec, cell)
+        if (!sub || !canSit(sec, cell, sub, from, to, toPid)) return false
+        const spreadLimit = Math.max(1, spreadOf())
+        const holesBefore = holesOn(sec.name, from) + holesOn(sec.name, to)
+        const touched = new Set<string>([cellKeys(cell)[0]])
+        for (const d of [from, to]) for (const c of Object.values(classTT[sec.name]?.[d] ?? {}) as any[]) for (const k of cellKeys(c)) touched.add(k)
+        const tBefore = [...touched].reduce((a, k) => a + teacherGaps(k, from) + teacherGaps(k, to), 0)
+        const undos = [relocate(sec.name, cell, from, fromPid, to, toPid)]
+        undos.push(...closeHoles(sec, from), ...closeHoles(sec, to))
+        const tAfter = [...touched].reduce((a, k) => a + teacherGaps(k, from) + teacherGaps(k, to), 0)
+        if (holesOn(sec.name, from) + holesOn(sec.name, to) >= holesBefore || tAfter > tBefore || spreadOf() > spreadLimit) {
+          for (const u of undos.reverse()) u()
+          return false
+        }
+        return true
+      }
+      const ids = classPeriods.map(cp => cp.id)
+      const lastOf = (d: string) => {
+        const filled = ids.filter(pid => !!classTT[sec.name]?.[d]?.[pid])
+        return filled[filled.length - 1]
+      }
+      for (let guard = 0; guard < 12; guard++) {
+        let fixed = false
+        for (const hd of days.filter(d => holesOn(sec.name, d) > 0)) {
+          const filled = ids.map(pid => !!classTT[sec.name]?.[hd]?.[pid])
+          const first = filled.indexOf(true), last = filled.lastIndexOf(true)
+          const holes = ids.filter((_, i) => i > first && i < last && !filled[i])
+          // (a) the stranded last lesson leaves for another day
+          for (const od of days) {
+            if (od === hd || fixed) continue
+            for (const q of ids) if (!fixed && tryMove(hd, ids[last], od, q)) fixed = true
+          }
+          // (b) another day's last lesson fills the gap
+          for (const od of days) {
+            if (od === hd || fixed) continue
+            const lp = lastOf(od)
+            if (!lp) continue
+            for (const h of holes) if (!fixed && tryMove(od, lp, hd, h)) fixed = true
+          }
+          if (fixed) break
+        }
+        if (!fixed) break
+      }
     }
   }
 

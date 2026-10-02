@@ -168,9 +168,10 @@ for (const perGrade of [2, 4]) {
   ok(m.gapsPerTaught <= 0.38,
     'stranded free periods stay under 0.38 per lesson taught', `${m.gapsPerTaught}`)
   ok(m.worstDay <= 5, 'no teacher has more than 5 stranded frees in one day', `worst ${m.worstDay}`)
-  // Measured 30 and 44 once the week-tidy step landed (34 and 62 before it).
-  // Ceilings sit just above, so the gain cannot quietly erode.
-  ok(m.classHoles <= (perGrade === 2 ? 32 : 48),
+  // Measured 12 and 30 once the week-tidy step learned to trade with other
+  // days (34 and 62 before any tidying). Ceilings sit just above, so the gain
+  // cannot quietly erode.
+  ok(m.classHoles <= (perGrade === 2 ? 14 : 32),
     "empty periods inside a class's day stay down", `${m.classHoles}`)
   ok(m.sd <= 6, 'teaching load stays reasonably even across staff', `sd ${m.sd}`)
   // A subject must not own one period of the day all week. Gated at zero
