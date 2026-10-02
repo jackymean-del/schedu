@@ -67,6 +67,11 @@ export function UsersPage() {
   }
 
   const isSelf = (m: Member) => m.email === (user?.email ?? '').trim().toLowerCase()
+  // The account that owns the school is not a row in the server's roster, so
+  // the page said "Nobody has signed in yet" to the owner while they were
+  // signed in, and counted "1 person" once they had invited somebody.
+  const showOwner = !!user && canManage && !members.some(isSelf)
+  const headcount = members.length + (showOwner ? 1 : 0)
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
@@ -137,10 +142,31 @@ export function UsersPage() {
         <section style={{ background: '#fff', border: '1px solid #ECE9FB', borderRadius: 14, padding: 20 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px', color: '#13111E' }}>Members</h2>
           <p style={{ fontSize: 12.5, color: '#6D6A8A', margin: '0 0 14px' }}>
-            {members.length === 0
-              ? 'Nobody has signed in yet. The first person to do so becomes the administrator.'
-              : `${members.length} ${members.length === 1 ? 'person' : 'people'} · a role change takes effect the moment they reload.`}
+            {headcount <= 1
+              ? 'Only you so far. Add teammates below; each gets the role you choose the first time they sign in.'
+              : `${headcount} people · a role change takes effect the moment they reload.`}
           </p>
+
+          {showOwner && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', flexWrap: 'wrap', borderTop: '1px solid #F3F1FB' }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: ACCENT, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
+              }}>
+                {(user!.name || user!.email || '?')[0].toUpperCase()}
+              </div>
+              <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: '#13111E' }}>
+                  {user!.name || (user!.email ?? '').split('@')[0]}
+                  <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, marginLeft: 7 }}>you</span>
+                </div>
+                <div style={{ fontSize: 12, color: '#6D6A8A', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user!.email}</div>
+              </div>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#15803D', background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '4px 10px', borderRadius: 20 }}>
+                Owner · full access
+              </span>
+            </div>
+          )}
 
           {members.map(m => {
             const style = ROLE_STYLE[m.role]
