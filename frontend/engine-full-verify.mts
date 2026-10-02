@@ -643,6 +643,29 @@ console.log(`
     ctDays.join(', '))
 }
 
+// ── INV17 the Live Demo follows the once-a-day rule too ───────────────────
+// The demo page runs the older generator in lib/aiEngine. It gave the class
+// teacher Period 1 every day without counting it, so the rotation handed the
+// same subject out again later: Mathematics twice a day in every class, on
+// the page a prospective school opens first. Built exactly as pages/demo does.
+{
+  const { generateSections, generateStaff, generateSubjects, generateBreaks } = await import('./src/lib/orgData.ts')
+  const { buildPeriodSequence, generateTimetable, autoAssign } = await import('./src/lib/aiEngine.ts')
+  const WD = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+  const a = autoAssign(generateSections('school', 'IN', 4), generateStaff('school', 'IN', 8), generateSubjects('school', 'IN', 8))
+  const staffArr = a.staff.map((s: Any) => ({ ...s, shortName: '', isClassTeacher: s.isClassTeacher ?? '' }))
+  const periods = buildPeriodSequence(generateBreaks('school', 4), 8)
+  const { classTT } = generateTimetable(a.sections, staffArr, a.subjects, periods, WD)
+  const repeats: string[] = []
+  for (const [sec, days] of Object.entries(classTT as Any)) for (const [d, slots] of Object.entries(days as Any)) {
+    const seen: Record<string, number> = {}
+    for (const c of Object.values(slots as Any) as Any[]) if (c?.subject) seen[c.subject] = (seen[c.subject] ?? 0) + 1
+    for (const [s, n] of Object.entries(seen)) if (n > 1) repeats.push(`${sec} ${d} ${s} x${n}`)
+  }
+  check(repeats.length === 0, 'INV17 the Live Demo never teaches a subject twice in a day',
+    repeats.length ? `${repeats.length}: ${repeats.slice(0, 2).join('; ')}` : 'once a day')
+}
+
 // ── Summary ────────────────────────────────────────────────────────────────
 console.log('\n════ Summary ════')
 console.log(`Run1 (30 sections): ${ms1.toFixed(0)} ms · Run2 (60 sections): ${ms2.toFixed(0)} ms`)

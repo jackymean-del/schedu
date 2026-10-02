@@ -1135,7 +1135,10 @@ function SubjectRow({ sub, classOptions, sections, board, isAiAssigned, unit, se
               onClick={() => setExpandSlots(o => !o)}
               style={{
                 ...actionBtn, minWidth: 0, gap: 4, padding: '5px 10px',
-                ...(expandSlots ? { background: P_L, color: P_D, borderColor: P_B } : {}),
+                ...(expandSlots ? { background: P_L, color: P_D } : {}),
+                // Always set, never removed: dropping borderColor while the
+                // border shorthand stays is what React warns can mis-style.
+                borderColor: expandSlots ? P_B : '#DDD8FF',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = P_L; e.currentTarget.style.color = P_D; e.currentTarget.style.borderColor = P_B }}
               onMouseLeave={e => {

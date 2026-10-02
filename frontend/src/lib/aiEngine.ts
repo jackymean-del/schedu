@@ -180,6 +180,11 @@ export function generateTimetable(
           }
           // Count this period toward the class teacher's load
           teacherLoad[ctName] = (teacherLoad[ctName] ?? 0) + 1
+          // ...and toward today's subjects. Uncounted, the rotation handed the
+          // same subject out again later in the day: the Live Demo showed
+          // Mathematics twice every day in every class.
+          const k = `${sec.name}|${day}|${ctSubject}`
+          subjectDayCount[k] = (subjectDayCount[k] ?? 0) + 1
           return
         }
 
