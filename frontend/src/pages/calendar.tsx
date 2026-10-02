@@ -8,7 +8,6 @@
  * Phase 1 of the premium calendar: foundation + Add Event. Leave/Substitution
  * and Auto-Assign layer on top of this in later phases.
  */
-import { cellHasTeacherOnDate, teachingPairsOnDate } from '@/lib/orChoice'
 import { useSyllabus } from '@/lib/syllabusTracking'
 import { useOrDecisionSync } from '@/lib/orSync'
 import { useState, useMemo, useEffect, useRef } from 'react'
@@ -19,13 +18,15 @@ import { useAuthStore } from '@/store/authStore'
 import {
   loadActiveTimetableIntoStore, saveActiveTimetableSnapshot, getActiveTimetableId,
 } from '@/lib/ttRegistry'
-import { type CalLeave, useLeaves, isOnLeaveOn } from '@/lib/leaveUtils'
+import { useLeaves, isOnLeaveOn, leaveCoversDate, reasonLabel } from '@/lib/leaveUtils'
+import { recordUnavailable } from '@/lib/unavailability'
+import { UnavailableModal } from '@/components/UnavailableModal'
+import { makeCoverEngine, type SubCandidate } from '@/lib/coverEngine'
 import { useSchoolEvents, eventCoversDate, eventDates, teachingSuspendedOn, type SchoolEvent as CalEvent } from '@/lib/schoolEvents'
 import { DAY_NAMES as DAY_KEY } from '@/lib/days'
 import { useDialog } from '@/hooks/useDialog'
 import {
-  type SubstitutionSettings, type MatchTier,
-  overrideFor, effectiveMaxPerDay, effectiveMaxPerWeek, scoreCandidate, withSubstitutionDefaults,
+  type SubstitutionSettings, type MatchTier, withSubstitutionDefaults,
 } from '@/lib/substitutionSettings'
 import { SubstitutionSettingsModal } from '@/components/calendar/SubstitutionSettingsModal'
 import { BellScheduleModal } from '@/components/calendar/BellScheduleModal'
@@ -33,7 +34,7 @@ import { useOrgProfile } from '@/store/orgProfile'
 import {
   ChevronLeft, ChevronRight, ChevronRight as Caret,
   Plus, Settings, Share2, Search, GraduationCap, Users, Building2,
-  X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, ArrowLeft, Sun, Sunrise, BookOpen,
+  X, CalendarDays, Clock, UserMinus, Repeat, Zap, Check, BookOpen,
   AlertTriangle, Bell, Monitor,
 } from 'lucide-react'
 import { subjectColor, type SubjectColor } from '@/lib/subjectColors'
@@ -84,16 +85,6 @@ const CELL_GAP   = 9
 type Mode = 'class' | 'teacher' | 'room' | 'subject'
 type View = 'live' | 'day' | 'month'
 
-interface SubCandidate {
-  name: string; staffId: string; tier: MatchTier
-  todayReg: number; todaySub: number; weekLoad: number; streak: number; score: number
-}
-const LEAVE_TYPES = ['Sick Leave', 'Casual Leave', 'Official Duty', 'Training', 'Personal', 'Other']
-const DURATIONS = [
-  { key: 'full' as const, label: 'Full Day', icon: Sun },
-  { key: 'half' as const, label: 'Half Day', icon: Sunrise },
-  { key: 'long' as const, label: 'Long Duration', icon: CalendarDays },
-]
 interface Block {
   key: string
   title: string          // primary line - the CLASS in faculty/venue lenses, the subject in class lens
@@ -501,7 +492,6 @@ export function CalendarPage() {
   // School-scoped: an absence is a fact about the school, not about whoever
   // recorded it, so every administrator and the absent teacher see the same one.
   const leaves = useLeaves(s => s.leaves)
-  const saveLeaves = useLeaves(s => s.setLeaves)
   const [leaveFor, setLeaveFor] = useState<string | null>(null)   // teacher → Mark Leave modal
   const [subFor, setSubFor]     = useState<string | null>(null)   // teacher → Substitute panel
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -517,51 +507,43 @@ export function CalendarPage() {
     saveActiveTimetableSnapshot()
   }
   const onLeave = (teacher: string) => isOnLeaveOn(leaves, teacher, isoDate)
-
-  // Periods the given teacher covers on the selected day - across EVERY active
-  // schedule, each slot tagged with the schedule (sid) that owns it so cover is
-  // written back to the right timetable. Single-active spans only the open one.
-  const slotsOf = (teacher: string) => {
-    const slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[] = []
-    for (const b of sources) {
-      const times = bundleWallTimes(b)
-      for (const s of b.sections) {
-        // A class sitting exams or away on a trip isn't having lessons, so
-        // there is nothing to cover. Offering these slots would put a
-        // substitute in front of an empty room and count the period as taught.
-        if (teachingSuspendedOn(events, isoDate, s.name)) continue
-        const sd = b.classTT[s.name]?.[dayKey] ?? {}
-        for (const p of b.periods) {
-          const c = sd[p.id]
-          if (c?.subject && c.teacher === teacher) {
-            slots.push({ sid: b.id, sname: b.name, section: s.name, periodId: p.id, periodName: p.name ?? p.id, subject: c.subject, startMin: times[p.id]?.s ?? 0 })
-          }
-        }
-      }
-    }
-    return slots.sort((a, b) => a.startMin - b.startMin)
+  /** "Away: Exam / invigilation duty (first half)" - the badge's tooltip. */
+  const awayLabel = (teacher: string) => {
+    const l = leaves.find(x => x.teacher === teacher && leaveCoversDate(x, isoDate))
+    if (!l) return ''
+    const when = l.duration === 'half' ? (l.part === 'second' ? ' (second half)' : l.part === 'first' ? ' (first half)' : ' (half day)')
+      : l.duration === 'hours' && l.fromMin != null && l.toMin != null ? ` (${fmtClock(l.fromMin, h24)} - ${fmtClock(l.toMin, h24)})`
+      : l.duration === 'long' && l.endDate ? ` (until ${l.endDate})` : ''
+    return `Away: ${reasonLabel(l.type)}${when}`
   }
+  const [coverNotice, setCoverNotice] = useState<string | null>(null)
+  /** How much of the day an absence takes, in words, when it is not all of it. */
+  const partialAwayOf = (teacher: string): string | undefined => {
+    const l = leaves.find(x => x.teacher === teacher && leaveCoversDate(x, isoDate))
+    if (!l) return undefined
+    if (l.duration === 'half' && l.part) return l.part === 'first' ? 'the first half of the day' : 'the second half of the day'
+    if (l.duration === 'hours' && l.fromMin != null && l.toMin != null) return `${fmtClock(l.fromMin, h24)} - ${fmtClock(l.toMin, h24)}`
+    return undefined
+  }
+  // Arriving from the Dashboard's "Arrange cover" opens the panel directly.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      const who = q.get('cover')
+      if (who) setSubFor(who)
+    } catch { /* no query */ }
+  }, [])
 
-  // Teaching load for a teacher on a given day (regular vs. covering as sub).
-  // A teacher's true load counts EVERY active schedule they appear in, so
-  // fairness (and the caps below) reflect their whole day, not one schedule.
-  const loadOn = (teacher: string, day: string) => {
-    let reg = 0, sub = 0
-    for (const b of sources) {
-      for (const s of b.sections) {
-        const sd = b.classTT[s.name]?.[day] ?? {}
-        for (const p of b.periods) {
-          const c = sd[p.id]
-          if (!c?.subject) continue
-          const covered = b.substitutions[subKey(s.name, dateOfWeekday(day), p.id)]
-          if (covered) { if (covered === teacher) sub++ }
-          // Every teacher the lesson really has that day, not just the first
-          // one listed: a parallel group's second teacher was counted as idle.
-          else if (cellHasTeacherOnDate(c, teacher, s.name, dateOfWeekday(day), p.id, b.orDecisions, syllabusPlans)) reg++
-        }
-      }
-    }
-    return { reg, sub }
+  // Cover is decided by lib/coverEngine - one engine shared with the
+  // Dashboard and automatic cover, so the three cannot disagree about who is
+  // free. This page only supplies the day it is showing.
+  const coverEngine = makeCoverEngine({
+    bundles: sources, isoDate, dayKey, dateOfWeekday,
+    settings: substitutionSettings, staffPool, events, plans: syllabusPlans, leaves,
+  })
+  const slotsOf = (teacher: string) => {
+    const absence = leaves.find(l => l.teacher === teacher && leaveCoversDate(l, isoDate))
+    return coverEngine.slotsOf(teacher, absence)
   }
 
   // Wall-clock busy check ACROSS other active schedules - a candidate free in
@@ -572,120 +554,8 @@ export function CalendarPage() {
     schedulePeriodTimes(b.config, b.periods, b.sections).forEach((t, pid) => { m[pid] = { s: t.startMin, e: t.endMin } })
     return m
   }
-  // Is `name` already teaching (or subbing) at this wall-clock interval in any
-  // active schedule OTHER than `exceptId` (the schedule owning the slot being
-  // covered)? Single-active has no other schedules, so always false.
-  const busyIn = (name: string, startMin: number, endMin: number, exceptId: string): boolean => {
-    if (!multiActive) return false
-    for (const b of sources) {
-      if (b.id === exceptId) continue
-      const times = bundleWallTimes(b)
-      for (const s of b.sections) {
-        const sd = b.classTT[s.name]?.[dayKey] ?? {}
-        for (const pid of Object.keys(sd)) {
-          const c = sd[pid]
-          if (!c?.subject) continue
-          // A substitute replaces the whole slot; otherwise ANY teacher in the
-          // cell counts. Reading only c.teacher made a teacher mid-lesson in a
-          // parallel group look free - so this offered them as a substitute
-          // and created the double-booking itself.
-          const cover = b.substitutions[subKey(s.name, isoDate, pid)]
-          // …and an OR period runs only ONE of its subjects, so the option
-          // that is not running leaves its teacher genuinely free. Holding
-          // them busy takes half a science department out of the pool at the
-          // exact moment somebody is hunting for cover.
-          const here = cover ? cover === name
-            : cellHasTeacherOnDate(c, name, s.name, isoDate, pid, b.orDecisions, syllabusPlans)
-          if (!here) continue
-          const t = times[pid]
-          if (t && t.s < endMin && startMin < t.e) return true
-        }
-      }
-    }
-    return false
-  }
-
-  // Familiarity from the WEEK's schedule, evaluated against the bundle that owns
-  // the lesson (so covering a Class VI–X lesson scores on that timetable, not
-  // the open one). Week days come from that bundle's own config.
-  const bundleWorkDays = (b: ScheduleBundle): string[] =>
-    b.config?.workDays?.length ? b.config.workDays : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
-  const matchTierIn = (b: ScheduleBundle, name: string, section: string, subject: string): MatchTier => {
-    const wd = bundleWorkDays(b)
-    const inSection = (pred: (c: any) => boolean) =>
-      wd.some(d => Object.values(b.classTT[section]?.[d] ?? {}).some(pred))
-    if (inSection((c: any) => c?.subject === subject && c?.teacher === name)) return 'exact'
-    if (inSection((c: any) => c?.teacher === name)) return 'class'
-    if (b.sections.some((s: any) => wd.some(d =>
-      Object.values(b.classTT[s.name]?.[d] ?? {}).some((c: any) => c?.subject === subject && c?.teacher === name)))) return 'subject'
-    return 'none'
-  }
-
-  // Ranked substitute candidates for one slot: eligible (can-sub, under daily/
-  // weekly sub caps and daily period cap), scored by the configured priorities.
-  const candidatesFor = (sid: string, section: string, periodId: string, subject: string, absent: string): SubCandidate[] => {
-    const tb = bundleById(sid)
-    const tbClassPeriods = tb.periods.filter((p: any) => p.type !== 'break')
-    // Who is already occupied in THIS slot within the owning schedule.
-    const busy = new Set<string>()
-    for (const s of tb.sections) {
-      const c = tb.classTT[s.name]?.[dayKey]?.[periodId]
-      // All of them: on a parallel lesson `c.teacher` is only the first group's,
-      // so the others were offered as free cover while standing in a classroom.
-      for (const p of teachingPairsOnDate(c, s.name, isoDate, periodId, tb.orDecisions, syllabusPlans)) {
-        if (p.teacher !== absent) busy.add(p.teacher)
-      }
-    }
-    Object.entries(tb.substitutions).forEach(([k, v]) => {
-      // The middle segment is a DATE now, not a weekday. Compared against
-      // dayKey this never matched, so nobody counted as already covering and
-      // one teacher could be offered for two sections in the same period.
-      const [, d, pid] = k.split('|'); if (d === isoDate && pid === periodId) busy.add(v)
-    })
-    const pIdx = tbClassPeriods.findIndex((p: any) => p.id === periodId)
-    // Wall-clock interval of the slot being covered (owning schedule's bell).
-    const wt = bundleWallTimes(tb)[periodId]
-
-    return staffPool
-      .filter((st: any) => st.name !== absent && !busy.has(st.name))
-      // Not teaching in any OTHER active schedule at this wall-clock time.
-      .filter((st: any) => !wt || !busyIn(st.name, wt.s, wt.e, sid))
-      .filter((st: any) => {
-        const ov = overrideFor(substitutionSettings, st.id)
-        if (!ov.canSub) return false
-        const today = loadOn(st.name, dayKey)
-        if (today.reg + today.sub >= substitutionSettings.defaults.maxPeriodsPerDay) return false
-        if (today.sub >= effectiveMaxPerDay(substitutionSettings, st.id)) return false
-        const weekSubs = workDays.reduce((a, d) => a + loadOn(st.name, d).sub, 0)
-        if (weekSubs >= effectiveMaxPerWeek(substitutionSettings, st.id)) return false
-        return true
-      })
-      .map((st: any): SubCandidate => {
-        const tier = matchTierIn(tb, st.name, section, subject)
-        const today = loadOn(st.name, dayKey)
-        const weekLoad = workDays.reduce((a, d) => { const l = loadOn(st.name, d); return a + l.reg + l.sub }, 0)
-        const weekSubs = workDays.reduce((a, d) => a + loadOn(st.name, d).sub, 0)
-        // consecutive run this assignment would create (neighbours already taught)
-        let streak = 1
-        for (let i = pIdx - 1; i >= 0; i--) { if (teachesAt(st.name, tbClassPeriods[i]?.id)) streak++; else break }
-        for (let i = pIdx + 1; i < tbClassPeriods.length; i++) { if (teachesAt(st.name, tbClassPeriods[i]?.id)) streak++; else break }
-        const score = scoreCandidate(substitutionSettings.weights, {
-          tier, todayLoad: today.reg + today.sub, weekLoad, todaySubs: today.sub, weekSubs,
-        })
-        return { name: st.name, staffId: st.id, tier, todayReg: today.reg, todaySub: today.sub, weekLoad, streak, score }
-      })
-      .sort((a, b) => substitutionSettings.defaults.autoSuggestionsEnabled ? b.score - a.score : a.name.localeCompare(b.name))
-    // Streak is measured within the owning schedule's own consecutive periods.
-    function teachesAt(name: string, pid?: string): boolean {
-      if (!pid) return false
-      return tb.sections.some((s: any) => {
-        const c = tb.classTT[s.name]?.[dayKey]?.[pid]
-        const cov = tb.substitutions[subKey(s.name, isoDate, pid)]
-        return cov ? cov === name
-          : cellHasTeacherOnDate(c, name, s.name, isoDate, pid, tb.orDecisions, syllabusPlans)
-      })
-    }
-  }
+  const candidatesFor = (sid: string, section: string, periodId: string, subject: string, absent: string): SubCandidate[] =>
+    coverEngine.candidatesFor({ sid, section, periodId, subject }, absent)
 
   // Persist a schedule's substitution map to wherever it lives: the open one
   // through the store (+ snapshot), any other active schedule straight into its
@@ -781,43 +651,19 @@ export function CalendarPage() {
   // teacher - only among faculty flagged Auto (not Manual) in Faculty Settings.
   // Slots can span several schedules, so writes are batched per owning schedule.
   const autoAssign = (teacher: string) => {
-    const bySid: Record<string, Record<string, string>> = {}
-    const usedAtClock: Record<string, Set<string>> = {}   // startMin → names taken, blocks overlap double-book
-    // Covers handed out IN THIS RUN. Candidates are ranked on today's load as
-    // saved, which does not yet include them, so the least-busy teacher won
-    // every slot: three covers on one person, past their daily limit.
-    const givenNow: Record<string, number> = {}
-    for (const slot of slotsOf(teacher)) {
-      const map = (bySid[slot.sid] ??= { ...bundleById(slot.sid).substitutions })
-      const key = subKey(slot.section, isoDate, slot.periodId)
-      if (map[key]) continue
-      const clock = String(slot.startMin)
-      const cands = candidatesFor(slot.sid, slot.section, slot.periodId, slot.subject, teacher)
-        .filter(c => overrideFor(substitutionSettings, c.staffId).autoAssign)
-        .filter(c => !usedAtClock[clock]?.has(c.name))
-        .filter(c => {
-          const extra = givenNow[c.name] ?? 0
-          return c.todayReg + c.todaySub + extra < substitutionSettings.defaults.maxPeriodsPerDay
-            && c.todaySub + extra < effectiveMaxPerDay(substitutionSettings, c.staffId)
-        })
-        // Spread the work: fewest covers given this run first, ranking kept within.
-        .sort((a, b) => (givenNow[a.name] ?? 0) - (givenNow[b.name] ?? 0))
-      const best = cands[0]
-      if (best) {
-        map[key] = best.name
-        givenNow[best.name] = (givenNow[best.name] ?? 0) + 1
-        ;(usedAtClock[clock] ??= new Set()).add(best.name)
-        // Auto-assigned cover gets the same syllabus record as a manual one -
-        // it starts as "continues the syllabus" and is still unconfirmed, so it
-        // shows up for the absent teacher to confirm exactly like the rest.
-        recordCoverage({
-          date: isoDate, sid: slot.sid, section: slot.section, periodId: slot.periodId,
-          subject: slot.subject, absent: teacher, substitute: best.name,
-          intent: 'skip', hours: periodHours(slot.sid, slot.periodId),
-        })
-      }
+    const absence = leaves.find(l => l.teacher === teacher && leaveCoversDate(l, isoDate))
+    const plan = coverEngine.planAutoCover(teacher, absence)
+    for (const a of plan.assigned) {
+      // Auto-assigned cover gets the same syllabus record as a manual one -
+      // it starts as "continues the syllabus" and is still unconfirmed, so it
+      // shows up for the absent teacher to confirm exactly like the rest.
+      recordCoverage({
+        date: isoDate, sid: a.sid, section: a.section, periodId: a.periodId,
+        subject: a.subject, absent: teacher, substitute: a.substitute,
+        intent: 'skip', hours: periodHours(a.sid, a.periodId),
+      })
     }
-    for (const [sid, map] of Object.entries(bySid)) writeSubs(sid, map)
+    for (const [sid, map] of Object.entries(plan.bySid)) writeSubs(sid, map)
   }
 
   const blocksFor = (entity: string): Block[] => {
@@ -1364,23 +1210,26 @@ export function CalendarPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                               <span style={{ fontSize: 13.5, fontWeight: 700, color: onLeave(ent.id) && mode === 'teacher' ? '#DC2626' : '#13111E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ent.name}</span>
                               {mode === 'teacher' && onLeave(ent.id) && (
-                                <span style={{ fontSize: 9, fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>LEAVE</span>
+                                <span title={awayLabel(ent.id)} style={{ fontSize: 9, fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>AWAY</span>
                               )}
                             </div>
                             <div style={{ fontSize: 11.5, color: '#777391', marginTop: 2 }}>{lessons} {(lessons === 1 ? terms.period : plural(terms.period)).toLowerCase()}</div>
                           </div>
-                          {mode === 'teacher' && (canMarkAbsence || canArrangeCover) ? (
+                          {mode === 'teacher' && ((canMarkAbsence && !onLeave(ent.id)) || (canArrangeCover && onLeave(ent.id))) ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                              {canMarkAbsence && (
-                                <button onClick={() => setLeaveFor(ent.id)} title="Mark leave"
+                              {canMarkAbsence && !onLeave(ent.id) && (
+                                <button onClick={() => setLeaveFor(ent.id)} title="Mark unavailable - leave, duty, training…"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#FFF1E6', color: '#EA580C' }}>
-                                  <UserMinus size={11} /> Leave
+                                  <UserMinus size={11} /> Unavailable
                                 </button>
                               )}
-                              {canArrangeCover && (
-                                <button onClick={() => setSubFor(ent.id)} title="Find substitute"
+                              {/* Cover is for someone who is away; offering it
+                                  for everybody invited covering a teacher who
+                                  is standing in their own classroom. */}
+                              {canArrangeCover && onLeave(ent.id) && (
+                                <button onClick={() => setSubFor(ent.id)} title="Arrange cover for their lessons"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: '#E8F0FF', color: '#2563EB' }}>
-                                  <Repeat size={11} /> Sub
+                                  <Repeat size={11} /> Cover
                                 </button>
                               )}
                             </div>
@@ -1421,15 +1270,30 @@ export function CalendarPage() {
         />
       )}
 
+      {coverNotice && (
+        <div role="status" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 1200,
+          display: 'flex', alignItems: 'center', gap: 12, maxWidth: 'calc(100vw - 32px)', padding: '10px 14px', borderRadius: 10,
+          background: '#1e293b', color: '#fff', fontSize: 12.5, boxShadow: '0 8px 24px rgba(15,23,42,0.25)' }}>
+          <span>{coverNotice}</span>
+          <button onClick={() => setCoverNotice(null)} aria-label="Dismiss"
+            style={{ border: 'none', background: 'transparent', color: '#94a3b8', fontSize: 15, cursor: 'pointer', padding: 0 }}>×</button>
+        </div>
+      )}
+
       {leaveFor && (
-        <MarkLeaveModal
+        <UnavailableModal
           teacher={leaveFor}
           date={isoDate}
           onClose={() => setLeaveFor(null)}
-          onMark={(leave) => {
-            saveLeaves([...leaves.filter(l => !(l.teacher === leave.teacher && l.date === leave.date)), leave])
+          onSubmit={async (leave) => {
+            const res = await recordUnavailable(leave)
             setLeaveFor(null)
-            setSubFor(leave.teacher)   // jump straight to arranging cover
+            if (res.cover.assigned) {
+              setCoverNotice(`${leave.teacher} is marked unavailable. Cover arranged for ${res.cover.assigned} lesson${res.cover.assigned === 1 ? '' : 's'}` +
+                (res.cover.uncovered ? `; ${res.cover.uncovered} still need someone.` : '.'))
+            }
+            // Straight on to arranging cover unless the system already did it all.
+            if (!res.cover.assigned || res.cover.uncovered) setSubFor(leave.teacher)
           }}
         />
       )}
@@ -1439,6 +1303,7 @@ export function CalendarPage() {
           teacher={subFor}
           dayLabel={DOW_FULL[date.getDay()]}
           slots={slotsOf(subFor)}
+          partialAway={partialAwayOf(subFor)}
           multiActive={multiActive}
           subAt={(sid, section, periodId) => bundleById(sid).substitutions[subKey(section, isoDate, periodId)]}
           candidatesFor={candidatesFor}
@@ -2630,96 +2495,6 @@ function AddEventModal({ date, sections, onClose, onCreate, onDeclareHoliday, ho
   )
 }
 
-// ── Mark Leave modal ───────────────────────────────────────────
-function MarkLeaveModal({ teacher, date, onClose, onMark }: {
-  teacher: string; date: string; onClose: () => void
-  onMark: (l: CalLeave) => void
-}) {
-  const [duration, setDuration] = useState<'full' | 'half' | 'long'>('full')
-  const [when, setWhen] = useState(date)
-  const [endDate, setEndDate] = useState(date)
-  const [type, setType] = useState(LEAVE_TYPES[0])
-  const [reason, setReason] = useState('')
-
-  const mark = () => onMark({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    teacher, date: when, duration,
-    endDate: duration === 'long' ? endDate : undefined,
-    type, reason: reason.trim() || undefined,
-  })
-
-  return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(19,17,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.28)' }}>
-        <div style={{ padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #F1EFFA' }}>
-          <button onClick={onClose} style={{ border: 'none', background: '#F4F2FC', width: 32, height: 32, borderRadius: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B6890' }}><ArrowLeft size={16} /></button>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#13111E' }}>Mark Leave</div>
-            <div style={{ fontSize: 12.5, color: '#6D6A8A' }}>{teacher}</div>
-          </div>
-        </div>
-
-        <div style={{ padding: 22, flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          {/* Duration */}
-          <div style={{ background: '#F4F8FF', border: '1px solid #E2ECFF', borderRadius: 12, padding: 14, marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ width: 28, height: 28, borderRadius: 8, background: '#3B82F6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><CalendarDays size={15} color="#fff" /></span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#13111E' }}>Duration Type</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-              {DURATIONS.map(d => {
-                const Icon = d.icon, active = duration === d.key
-                return (
-                  <button key={d.key} onClick={() => setDuration(d.key)}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '14px 8px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit',
-                      border: active ? '1.5px solid #F0B429' : '1.5px solid #E6E2F2',
-                      background: active ? '#FEF6E0' : '#fff' }}>
-                    <Icon size={18} color={active ? '#D4920E' : '#777391'} />
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: active ? '#92610E' : '#4B5275' }}>{d.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Date */}
-          <div style={{ display: 'grid', gridTemplateColumns: duration === 'long' ? '1fr 1fr' : '1fr', gap: 12, marginBottom: 16 }}>
-            <Field label={duration === 'long' ? 'From date' : 'Date'}>
-              <input type="date" value={when} onChange={e => setWhen(e.target.value)} style={inp} />
-            </Field>
-            {duration === 'long' && (
-              <Field label="To date"><input type="date" value={endDate} min={when} onChange={e => setEndDate(e.target.value)} style={inp} /></Field>
-            )}
-          </div>
-
-          {/* Leave type */}
-          <div style={{ marginBottom: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Leave Type <span style={{ color: '#EF4444' }}>*</span></label>
-            </div>
-            <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
-              {LEAVE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <Field label="Reason (optional)">
-            <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Add a note…" style={inp} />
-          </Field>
-        </div>
-
-        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid #F1EFFA', background: '#fff' }}>
-          <button onClick={onClose} style={{ padding: '11px 22px', borderRadius: 10, border: '1.5px solid #E0DBF2', background: '#fff', fontSize: 14, fontWeight: 700, color: '#4B5275', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={mark}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-              background: 'linear-gradient(135deg,#F59E0B,#EA580C)', color: '#fff', boxShadow: '0 6px 16px rgba(234,88,12,0.3)' }}>
-            <Check size={16} /> Mark Leave
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: string; bg: string }> = {
   exact:   { label: 'Exact Match',    color: '#0A8136', bg: '#DCFCE7' },
   class:   { label: 'Knows Class',    color: '#2563EB', bg: '#E8F0FF' },
@@ -2727,8 +2502,11 @@ const TIER_BADGE: Record<Exclude<MatchTier, 'none'>, { label: string; color: str
 }
 
 // ── Substitute panel ───────────────────────────────────────────
-function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings, suspendedBy }: {
+function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candidatesFor, onAssign, onClear, onAutoAssign, onClose, settings, suspendedBy, partialAway }: {
   teacher: string; dayLabel: string
+  /** "the second half", "10:00 - 12:00" - set when the absence is not all day,
+   *  so an empty list says "none of their lessons fall in it", not "no classes". */
+  partialAway?: string
   slots: { sid: string; sname: string; section: string; periodId: string; periodName: string; subject: string; startMin: number }[]
   multiActive: boolean
   subAt: (sid: string, section: string, periodId: string) => string | undefined
@@ -2781,7 +2559,9 @@ function SubstitutePanel({ teacher, dayLabel, slots, multiActive, subAt, candida
               <p style={{ fontSize: 13, color: '#6D6A8A', margin: 0 }}>
                 {suspendedBy
                   ? <>Normal lessons are suspended for <strong>{suspendedBy}</strong>, so {teacher}'s periods aren't running.</>
-                  : <>{teacher} has no classes on {dayLabel}.</>}
+                  : partialAway
+                    ? <>None of {teacher}'s lessons on {dayLabel} fall in {partialAway}, so nothing needs covering.</>
+                    : <>{teacher} has no classes on {dayLabel}.</>}
               </p>
             </div>
           ) : (

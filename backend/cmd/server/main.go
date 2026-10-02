@@ -166,6 +166,10 @@ func main() {
 	api.Get("/timetables/:id/or-slots", h.ListOrSlots)
 	api.Get("/timetables/:id/or-decisions", h.ListOrDecisions)
 	api.Post("/timetables/:id/or-decisions", h.DecideOr)
+	// Who is away: the school records anyone, a teacher only themselves.
+	api.Get("/timetables/:id/unavailability", h.ListUnavailability)
+	api.Post("/timetables/:id/unavailability", h.ReportUnavailability)
+	api.Delete("/timetables/:id/unavailability/:uid", h.WithdrawUnavailability)
 
 	// --- Curriculum routes ---
 	cur := handlers.NewCurriculumHandlerFromHandler(h)

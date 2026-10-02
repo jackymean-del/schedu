@@ -1,6 +1,4 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from "react"
-import { subKey, localISO } from '@/lib/substitutionKeys'
-import { weekdayOf } from '@/lib/days'
 import { teacherWeeklyCap } from '@/lib/teacherCap'
 import { markActiveTimetablePublished, markActiveTimetableUnpublished, loadActiveTimetableIntoStore, getActiveTimetableId } from "@/lib/ttRegistry"
 import { TimetableOrphanBanner } from '@/components/TimetableOrphanBanner'
@@ -15,8 +13,6 @@ import { ORG_CONFIGS, getCountry, getSubjectColor } from "@/lib/orgData"
 import { rebuildTeacherTT } from "@/lib/aiEngine"
 import { schedulePeriodTimes } from "@/lib/bellTimes"
 import { detectConflicts, weeklyTargets } from "@/lib/schedulingEngine"
-import { atDailyLimit, perDayFromPerWeek } from "@/lib/facultyWorkload"
-import { useLeaves, isOnLeaveOn } from "@/lib/leaveUtils"
 import { BackwardSyncReport } from "@/components/master/BackwardSyncReport"
 import { useExport } from "@/hooks/useExport"
 import { buildShareSnapshot, createShareLink } from "@/lib/share"
@@ -1260,7 +1256,7 @@ export function TimetablePage() {
     showTeacher, showRoom, editMode,
     timetableStatus, setTimetableStatus,
     setShowTeacher, setShowRoom, setEditMode,
-    setPeriods, setClassTT, setTeacherTT, setSubstitutions,
+    setPeriods, setClassTT, setTeacherTT,
   } = store
 
   // Hydrate the active timetable's snapshot when opened directly (e.g. the
@@ -1409,22 +1405,6 @@ export function TimetablePage() {
   const [newLessonOpen, setNewLessonOpen] = useState(false)
   const [poolSuggestSubject, setPoolSuggestSubject] = useState("")
 
-  // ── Substitution panel state ─────────────────────────────
-  const [subPanelOpen, setSubPanelOpen] = useState(false)
-  const [subAbsentTeacher, setSubAbsentTeacher] = useState("")
-  // An absence happens on a DATE. The weekday is derived from it, because the
-  // timetable it looks up is a weekly template while the cover it writes is
-  // dated - keying the cover by weekday made it repeat every week.
-  const [subAbsentDate, setSubAbsentDate] = useState(localISO(new Date()))
-  const subAbsentDay = weekdayOf(subAbsentDate)
-  const [subReason, setSubReason] = useState("")
-  const [subAssignments, setSubAssignments] = useState<Record<string, string>>({}) // periodId → staffName
-  // How many of the absent teacher's periods Auto-fill could NOT cover, so they
-  // are named rather than left looking forgotten.
-  const [autoFillShort, setAutoFillShort] = useState(0)
-  const leaves = useLeaves(s => s.leaves)
-  const addLeave = useLeaves(s => s.addLeave)
-  const [subActiveTab, setSubActiveTab] = useState<"assign"|"active">("assign")
 
   const { exportXLSX } = useExport()
 
@@ -2165,101 +2145,6 @@ export function TimetablePage() {
     commitTT(newTT2)
   }
 
-  // ── Absent teacher slots on selected day ──────────────────
-  const absentSlots = (() => {
-    if (!subAbsentTeacher || !subAbsentDay) return []
-    return classPeriods.flatMap(p => {
-      const hit = sections.flatMap(sec => {
-        const cell = classTT[sec.name]?.[subAbsentDay]?.[p.id]
-        // Any lesson they are IN, including the second group of a parallel one.
-        return cellHasTeacher(cell as any, subAbsentTeacher) ? [{ sectionName: sec.name, periodId: p.id, periodName: p.name, subject: cell?.subject ?? "" }] : []
-      })
-      return hit
-    })
-  })()
-
-  // ── Score substitute candidates for a slot ───────────────
-  // Covers already booked on the absence date, per teacher, and per period.
-  const coversOnDate = (() => {
-    const byTeacher: Record<string, number> = {}
-    const atPeriod: Record<string, Set<string>> = {}
-    for (const [k, who] of Object.entries(substitutions)) {
-      const [, d, pid] = k.split('|')
-      if (d !== subAbsentDate || !who) continue
-      byTeacher[who] = (byTeacher[who] ?? 0) + 1
-      ;(atPeriod[pid] ??= new Set()).add(who)
-    }
-    return { byTeacher, atPeriod }
-  })()
-
-  const scoreCandidates = (slot: { sectionName:string; periodId:string; subject:string }, extraToday: Record<string, number> = {}) => {
-    return staff
-      // Nobody who is themselves away that day.
-      .filter(st => st.name !== subAbsentTeacher && !isOnLeaveOn(leaves, st.name, subAbsentDate))
-      .map(st => {
-        const workloadToday = Object.values((teacherTT[st.name]?.schedule ?? {})[subAbsentDay] ?? {}).filter((x:any) => x?.subject).length
-          + (coversOnDate.byTeacher[st.name] ?? 0) + (extraToday[st.name] ?? 0)
-        const workloadWeek = Object.values(teacherTT[st.name]?.schedule ?? {}).reduce((a:number, d:any) => a + Object.values(d).filter((x:any) => x?.subject).length, 0)
-        const maxW = (st as any).maxPeriodsPerWeek ?? 30
-        const subFreq = Object.values(substitutions).filter(v => v === st.name).length
-        const subs: string[] = (st as any).subjects ?? []
-        const subjectMatch = subs.some((s:string) => s === `${slot.sectionName}::${slot.subject}` || s.endsWith(`::${slot.subject}`) || (!s.includes("::") && s === slot.subject))
-        // Teaching anywhere at that moment - any group of a parallel lesson -
-        // or already booked as cover for it.
-        const isBusy = Object.entries(classTT).some(([sec, sd]:any) => sec !== slot.sectionName && cellHasTeacher(sd[subAbsentDay]?.[slot.periodId], st.name))
-          || !!coversOnDate.atPeriod[slot.periodId]?.has(st.name)
-        // Their own daily limit, from their weekly one.
-        const atCap = atDailyLimit(workloadToday, perDayFromPerWeek(maxW, config.workDays.length || 5))
-        const score = (subjectMatch ? 10 : 0) + (isBusy ? -20 : 0) + (atCap ? -15 : 0) - workloadToday * 2 - subFreq
-        return { st, workloadToday, workloadWeek, maxW, subFreq, subjectMatch, isBusy, atCap, score }
-      })
-      .sort((a, b) => b.score - a.score)
-  }
-
-  // ── Apply substitutions ───────────────────────────────────
-  const applySubstitutions = () => {
-    // The absence itself is a fact the rest of the school needs: without a
-    // leave record the Calendar went on showing the teacher in every period
-    // nobody covered, the Dashboard said nobody was absent, and Insights
-    // counted no leave at all. Recorded once per teacher per date.
-    if (subAbsentTeacher && subAbsentDate && !isOnLeaveOn(leaves, subAbsentTeacher, subAbsentDate)) {
-      addLeave({
-        id: `sub-${Date.now().toString(36)}`, teacher: subAbsentTeacher, date: subAbsentDate,
-        duration: 'full', type: 'Other', reason: subReason.trim() || undefined,
-      })
-    }
-    const newSubs = { ...substitutions }
-    Object.entries(subAssignments).forEach(([periodId, staffName]) => {
-      const slot = absentSlots.find(s => s.periodId === periodId)
-      if (slot) newSubs[subKey(slot.sectionName, subAbsentDate, periodId)] = staffName
-    })
-    setSubstitutions(newSubs)
-    setSubAssignments({})
-    setSubAbsentTeacher("")
-    setSubReason("")
-  }
-
-  // ── Auto-fill best candidates ────────────────────────────
-  const autoFillBest = () => {
-    const assignments: Record<string, string> = {}
-    // Counted as we go: ranking on the saved load alone gave every slot to the
-    // same least-busy teacher - three covers on one person, past their limit.
-    const given: Record<string, number> = {}
-    // A period that already has cover is done, not "still needing" it.
-    const open = absentSlots.filter(slot => !substitutions[subKey(slot.sectionName, subAbsentDate, slot.periodId)])
-    open.forEach(slot => {
-      const best = scoreCandidates(slot, given).find(c => !c.isBusy && !c.atCap)
-      if (best) {
-        assignments[slot.periodId] = best.st.name
-        given[best.st.name] = (given[best.st.name] ?? 0) + 1
-      }
-    })
-    setSubAssignments(assignments)
-    setAutoFillShort(open.length - Object.keys(assignments).length)
-  }
-
-  // Active substitutions count
-  const activeSubCount = Object.keys(substitutions).length
 
   // ═══════════════════════════════════════════════════════════
   // RENDER: Class Timetable (Normal)
@@ -2321,14 +2206,10 @@ export function TimetablePage() {
                     {sectionPeriods.map(p => {
                       if (p.type !== "class") return <BreakCell key={p.id} p={p} />
                       const cell = sd[day]?.[p.id]
-                      // This grid is the weekly TEMPLATE, and a cover belongs to a
-                      // date, so covers show only on the row for the absent date
-                      // being worked on. Otherwise one day's cover would appear to
-                      // be part of the plan every week, which is the bug this
-                      // dated key exists to remove.
-                      const onAbsentDay = day === subAbsentDay
-                      const subTeacher = onAbsentDay ? substitutions[subKey(sn, subAbsentDate, p.id)] : undefined
-                      const isSub = !!subTeacher
+                      // This grid is the weekly PLAN. Cover belongs to a date and
+                      // is arranged and shown on the Calendar, so none appears here.
+                      const subTeacher: string | undefined = undefined
+                      const isSub = false
                       const cellKey = `${sn}|${day}|${p.id}`
                       const highlight = !!(absentHL && cell?.teacher === absentHL.teacher && day === absentHL.day)
                       return (
@@ -3329,9 +3210,7 @@ export function TimetablePage() {
     // Always use the active viewMode tab - fixes teacher/room/subject calendar views
     const calEntityMode = viewMode
 
-    const absentHL = subPanelOpen && subAbsentTeacher
-      ? { teacher: subAbsentTeacher, day: subAbsentDay }
-      : null
+    const absentHL = null as { teacher: string; day: string } | null
 
     return (
       <CalendarView
@@ -3817,9 +3696,7 @@ export function TimetablePage() {
     { key:"subject", label: terms.subject },
   ]
 
-  const absentHighlightProp = subPanelOpen && subAbsentTeacher
-    ? { teacher: subAbsentTeacher, day: subAbsentDay }
-    : undefined
+  const absentHighlightProp = undefined as { teacher: string; day: string } | undefined
 
   return (
     // The page fills the app shell's content area. It used to subtract a 52px
@@ -4231,10 +4108,6 @@ export function TimetablePage() {
           <div style={{ width:1, height:18, background:"#CBD5E1" }} />
           <span style={TBGROUP}>Tools</span>
           {TBtn(editMode, () => setEditMode(!editMode), editMode ? "Editing" : "Edit", "✏️")}
-          <button onClick={() => setSubPanelOpen(o => !o)}
-            style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${subPanelOpen?"#f59e0b":"#E5EBF5"}`, background:subPanelOpen?"#fff7ed":"#fff", color:"#92400e", fontSize:11, fontWeight:500, cursor:"pointer" }}>
-            🔄 Sub{activeSubCount > 0 ? ` (${activeSubCount})` : ""}
-          </button>
           <button onClick={() => setPoolPanelOpen(o => !o)}
             title="The Bench - every unplaced lesson waits here"
             style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 11px", borderRadius:6, border:`1px solid ${poolPanelOpen?"#685DBC":"#E5EBF5"}`, background:poolPanelOpen?"#EDE9FF":"#fff", color:"#4B5275", fontSize:11, fontWeight:500, cursor:"pointer" }}>
@@ -4324,182 +4197,6 @@ export function TimetablePage() {
           )}
         </div>
       </div>
-
-      {/* ── Inline Substitution Panel ────────────────────── */}
-      {subPanelOpen && (
-        <div style={{ width:380, background:"#fff", borderLeft:"1px solid #E8E4FF", display:"flex", flexDirection:"column" as const, flexShrink:0, overflow:"hidden" }}>
-          {/* Panel header */}
-          <div style={{ padding:"12px 16px", background:"#fffbeb", borderBottom:"1px solid #fde68a", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <div style={{ fontSize:14, fontWeight:700, color:"#92400e" }}>🔄 Substitution</div>
-            <button onClick={() => setSubPanelOpen(false)} style={{ border:"none", background:"none", fontSize:16, cursor:"pointer", color:"#92400e", lineHeight:1 }}>✕</button>
-          </div>
-
-          {/* Tab bar */}
-          <div style={{ display:"flex", borderBottom:"1px solid #E8E4FF", background:"#FAFAFE" }}>
-            <button onClick={() => setSubActiveTab("assign")}
-              style={{ flex:1, padding:"8px", border:"none", background:subActiveTab==="assign"?"#fff":"transparent", color:subActiveTab==="assign"?"#92400e":"#4B5275", fontSize:11, fontWeight:600, cursor:"pointer", borderBottom:subActiveTab==="assign"?"2px solid #f59e0b":"2px solid transparent" }}>
-              📋 Assign Cover
-            </button>
-            <button onClick={() => setSubActiveTab("active")}
-              style={{ flex:1, padding:"8px", border:"none", background:subActiveTab==="active"?"#fff":"transparent", color:subActiveTab==="active"?"#92400e":"#4B5275", fontSize:11, fontWeight:600, cursor:"pointer", borderBottom:subActiveTab==="active"?"2px solid #f59e0b":"2px solid transparent" }}>
-              📂 Active ({activeSubCount})
-            </button>
-          </div>
-
-          <div style={{ flex:1, overflowY:"auto" }}>
-            {subActiveTab === "assign" && (
-              <div style={{ padding:12 }}>
-                {/* Absent date - a cover belongs to a day, not to every Monday */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Date</div>
-                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12 }}>
-                  <input type="date" value={subAbsentDate} onChange={e => setSubAbsentDate(e.target.value)}
-                    style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #E8E4FF", fontSize:11, color:"#13111E", fontFamily:"inherit" }} />
-                  <span style={{ fontSize:10, fontWeight:700, color: config.workDays.includes(subAbsentDay) ? "#6D6A8A" : "#991B1B" }}>
-                    {config.workDays.includes(subAbsentDay) ? (DAY_SHORT[subAbsentDay] ?? subAbsentDay) : "not a working day"}
-                  </span>
-                </div>
-
-                {/* Absent teacher selector */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:6 }}>Absent Teacher</div>
-                <div style={{ display:"flex", flexWrap:"wrap" as const, gap:4, marginBottom:12 }}>
-                  {staff.map(st => (
-                    <button key={st.id} onClick={() => setSubAbsentTeacher(st.name)}
-                      style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${subAbsentTeacher===st.name?"#ef4444":"#E8E4FF"}`, background:subAbsentTeacher===st.name?"#fef2f2":"#fff", color:subAbsentTeacher===st.name?"#dc2626":"#374151", fontSize:10, fontWeight:600, cursor:"pointer" }}>
-                      {st.name}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Reason input */}
-                <div style={{ fontSize:10, fontWeight:700, color:"#6D6A8A", textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:4 }}>Reason (optional)</div>
-                <input value={subReason} onChange={e => setSubReason(e.target.value)} placeholder="e.g. Sick leave, Personal"
-                  style={{ width:"100%", padding:"6px 10px", border:"1px solid #E8E4FF", borderRadius:6, fontSize:11, marginBottom:14, boxSizing:"border-box" as const, outline:"none" }} />
-
-                {/* Absent teacher's slots on selected day */}
-                {subAbsentTeacher && (
-                  <>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>
-                        Slots for {subAbsentTeacher} on {DAY_SHORT[subAbsentDay]??subAbsentDay}
-                      </div>
-                      <button onClick={autoFillBest}
-                        style={{ padding:"4px 10px", borderRadius:6, border:"1px solid #685DBC", background:"#EDE9FF", color:"#685DBC", fontSize:10, fontWeight:600, cursor:"pointer" }}>
-                        ⚡ Auto-fill best
-                      </button>
-                    </div>
-                    {autoFillShort > 0 && (
-                      <div role="status" style={{ fontSize:10.5, color:"#92400E", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:6, padding:"6px 8px", marginBottom:8, lineHeight:1.45 }}>
-                        {autoFillShort} period{autoFillShort === 1 ? "" : "s"} still need{autoFillShort === 1 ? "s" : ""} cover: everyone free then is at their daily limit.
-                        Pick someone below to go over it, or leave the class supervised.
-                      </div>
-                    )}
-
-                    {absentSlots.length === 0 && (
-                      <div style={{ padding:16, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>No periods for this teacher on {DAY_SHORT[subAbsentDay]??subAbsentDay}</div>
-                    )}
-
-                    {absentSlots.map(slot => {
-                      const candidates = scoreCandidates(slot)
-                      const selected = subAssignments[slot.periodId]
-                      return (
-                        <div key={slot.periodId} style={{ marginBottom:14, padding:10, background:"#FAFAFE", borderRadius:8, border:"1px solid #E8E4FF" }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                            <span style={{ padding:"2px 8px", background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:6, fontSize:9, color:"#c2410c", fontWeight:700 }}>{slot.periodName}</span>
-                            <span style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{slot.subject}</span>
-                            <span style={{ fontSize:10, color:"#4B5275" }}>· {slot.sectionName}</span>
-                          </div>
-
-                          {/* Candidate cards */}
-                          <div style={{ display:"flex", flexDirection:"column" as const, gap:4 }}>
-                            {candidates.slice(0,4).map(cand => {
-                              const isSelected = selected === cand.st.name
-                              return (
-                                <div key={cand.st.id}
-                                  style={{ padding:"7px 10px", borderRadius:7, border:`1.5px solid ${isSelected?"#685DBC":cand.isBusy?"#fca5a5":"#E8E4FF"}`, background:isSelected?"#EDE9FF":cand.isBusy?"#fff5f5":"#fff", display:"flex", alignItems:"center", gap:8 }}>
-                                  {/* Avatar */}
-                                  <div style={{ width:28, height:28, borderRadius:"50%", background:isSelected?"#685DBC":"#6D6A8A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0 }}>
-                                    {cand.st.name[0]}
-                                  </div>
-                                  {/* Info */}
-                                  <div style={{ flex:1, minWidth:0 }}>
-                                    <div style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{cand.st.name}</div>
-                                    {cand.st.role && <div style={{ fontSize:9, color:"#4B5275" }}>{cand.st.role}</div>}
-                                    <div style={{ display:"flex", gap:4, flexWrap:"wrap" as const, marginTop:2 }}>
-                                      {cand.subjectMatch && <span style={{ padding:"1px 5px", borderRadius:4, background:"#f0fdf4", color:"#685DBC", fontSize:8, fontWeight:600 }}>★ Subject match</span>}
-                                      {cand.isBusy && <span title="Teaching or covering another class at this time" style={{ padding:"1px 5px", borderRadius:4, background:"#fff7ed", color:"#D4920E", fontSize:8, fontWeight:600 }}>⚠️ Teaching then</span>}
-                                      {!cand.isBusy && cand.atCap && <span title="Already at their periods-per-day limit" style={{ padding:"1px 5px", borderRadius:4, background:"#FEF2F2", color:"#B91C1C", fontSize:8, fontWeight:600 }}>At daily limit</span>}
-                                    </div>
-                                    {/* Workload bar */}
-                                    <div style={{ marginTop:3 }}>
-                                      <div style={{ fontSize:8, color:"#6D6A8A", marginBottom:1 }}>{cand.workloadToday} today · {cand.workloadWeek}/{cand.maxW} week · Subbed {cand.subFreq}× term</div>
-                                      <div style={{ height:3, background:"#E8E4FF", borderRadius:2, overflow:"hidden" }}>
-                                        <div style={{ height:"100%", width:`${Math.min(100, Math.round(cand.workloadWeek/cand.maxW*100))}%`, background: cand.workloadWeek/cand.maxW > 0.9 ? "#dc2626" : "#685DBC", borderRadius:2 }} />
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {/* Select button */}
-                                  <button
-                                    onClick={() => setSubAssignments(prev => isSelected ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== slot.periodId)) : { ...prev, [slot.periodId]: cand.st.name })}
-                                    style={{ padding:"4px 8px", borderRadius:5, border:"none", background:isSelected?"#685DBC":"#E8E4FF", color:isSelected?"#fff":"#374151", fontSize:10, fontWeight:600, cursor:"pointer", flexShrink:0 }}>
-                                    {isSelected ? "✓" : "Select"}
-                                  </button>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </>
-                )}
-
-                {!subAbsentTeacher && (
-                  <div style={{ padding:24, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>Select an absent teacher above to see their slots and assign cover</div>
-                )}
-              </div>
-            )}
-
-            {subActiveTab === "active" && (
-              <div style={{ padding:12 }}>
-                {activeSubCount === 0 && (
-                  <div style={{ padding:24, textAlign:"center" as const, color:"#6D6A8A", fontSize:12 }}>No active substitutions</div>
-                )}
-                {Object.entries(substitutions).map(([key, staffName]) => {
-                  const [sec, day, periodId] = key.split("|")
-                  const p = periods.find(pp => pp.id === periodId)
-                  return (
-                    <div key={key} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, border:"1px solid #E8E4FF", marginBottom:6, background:"#FAFAFE" }}>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:11, fontWeight:700, color:"#1e293b" }}>{sec} · {DAY_SHORT[day]??day.slice(0,3)} · {p?.name ?? periodId}</div>
-                        <div style={{ fontSize:10, color:"#4B5275" }}>Cover: <strong>{staffName}</strong></div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const next = { ...substitutions }
-                          delete next[key]
-                          setSubstitutions(next)
-                        }}
-                        style={{ padding:"3px 8px", borderRadius:5, border:"1px solid #fca5a5", background:"#fff5f5", color:"#dc2626", fontSize:10, fontWeight:600, cursor:"pointer" }}>
-                        Remove
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Footer: Apply */}
-          {subActiveTab === "assign" && (
-            <div style={{ padding:12, borderTop:"1px solid #E8E4FF", background:"#FAFAFE" }}>
-              <button onClick={applySubstitutions} disabled={Object.keys(subAssignments).length === 0}
-                style={{ width:"100%", padding:"9px", borderRadius:7, border:"none", background:Object.keys(subAssignments).length>0?"#f59e0b":"#E8E4FF", color:Object.keys(subAssignments).length>0?"#fff":"#6D6A8A", fontSize:12, fontWeight:700, cursor:Object.keys(subAssignments).length>0?"pointer":"not-allowed", transition:"background 0.15s" }}>
-                Apply {Object.keys(subAssignments).length > 0 ? `(${Object.keys(subAssignments).length} assignment${Object.keys(subAssignments).length>1?"s":""})` : "Substitutions"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Period Pool Panel ────────────────────────────── */}
       {poolPanelOpen && renderPoolPanel()}

@@ -169,4 +169,33 @@ export const collabApi = {
   decideOr: (timetableId: string, body: {
     section: string; date: string; periodId: string; subject: string
   }) => apiClient.post(`/timetables/${timetableId}/or-decisions`, body),
+
+  /** Who is away across the school, for a date window. A teacher sees their
+   *  own reasons and only "Unavailable" for colleagues. */
+  unavailability: (timetableId: string, from?: string, to?: string) =>
+    apiClient.get<{ unavailability: UnavailabilityRow[] }>(
+      `/timetables/${timetableId}/unavailability`, { params: { from, to } }),
+
+  /** Record somebody as unavailable. The server allows a teacher only
+   *  themselves; an administrator anyone. */
+  reportUnavailability: (timetableId: string, body: Omit<UnavailabilityRow, 'id' | 'source' | 'reportedBy'>) =>
+    apiClient.post<{ id: string; source: 'self' | 'admin' }>(`/timetables/${timetableId}/unavailability`, body),
+
+  withdrawUnavailability: (timetableId: string, id: string) =>
+    apiClient.delete(`/timetables/${timetableId}/unavailability/${id}`),
+}
+
+export interface UnavailabilityRow {
+  id: string
+  staffName: string
+  date: string
+  endDate?: string
+  duration: 'full' | 'half' | 'long' | 'hours'
+  part?: string
+  fromMin?: number | null
+  toMin?: number | null
+  reason: string
+  note?: string
+  reportedBy?: string
+  source?: 'self' | 'admin'
 }

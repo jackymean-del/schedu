@@ -9,19 +9,25 @@
  * cover. When nothing needs attention it says so plainly instead of
  * padding the space with a schedule nobody asked to see here.
  *
- * No filters or controls of its own - Open full editor goes to /timetable
- * for editing, printing, sharing, and substitution.
+ * Absences start here: "Mark unavailable" records somebody away (leave,
+ * duty, training...), and each lesson that needs cover links straight to the
+ * cover panel for that person. Cover is something you do because somebody is
+ * away, so it is offered only then.
  *
  * Renders nothing when there's no active schedule with data.
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
-import { useLeaves } from '@/lib/leaveUtils'
+import { useLeaves, leaveCoversDate, reasonLabel } from '@/lib/leaveUtils'
+import { useCan } from '@/lib/permissions'
+import { recordUnavailable } from '@/lib/unavailability'
+import { UnavailableModal } from '@/components/UnavailableModal'
+import { localISO } from '@/lib/substitutionKeys'
 import { computeTodaySummary, type AffectedSlot, type TodaySummary } from '@/lib/scheduleToday'
 import { useSyllabus } from '@/lib/syllabusTracking'
-import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight, DoorOpen } from 'lucide-react'
+import { CalendarClock, ExternalLink, AlertTriangle, CheckCircle2, Coffee, ArrowRight, DoorOpen, UserMinus } from 'lucide-react'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -48,6 +54,9 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
   // Same rule: above the early return. Plans decide which subject an
   // undecided OR period runs, so a freed teacher is not chased for a cover.
   const plans = useSyllabus(s => s.plans)
+  const canMark = useCan('absence.mark')
+  const [marking, setMarking] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const sections: any[] = store.sections ?? []
   const classTT = store.classTT ?? {}
@@ -66,9 +75,38 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
   })
   const allClear = summary.isWorkDay && summary.uncoveredSlots.length === 0
     && summary.teachersOnLeave.length === 0 && summary.roomClashes.length === 0
+  const todayISO = localISO(today)
+  const awayWhy = (name: string) => {
+    const l = leaves.find(x => x.teacher === name && leaveCoversDate(x, todayISO))
+    return l ? `${reasonLabel(l.type)} - arrange cover` : 'Arrange cover'
+  }
+  const staffNames: string[] = [...new Set<string>((store.staff ?? []).map((t: any) => t.name).filter(Boolean))]
 
   return (
     <div style={{ marginBottom: 24 }}>
+      {marking && (
+        <UnavailableModal
+          staffOptions={staffNames}
+          date={todayISO}
+          onClose={() => setMarking(false)}
+          onSubmit={async (leave) => {
+            const res = await recordUnavailable(leave)
+            setMarking(false)
+            if (res.cover.assigned) {
+              setNotice(`${leave.teacher} marked unavailable. Cover arranged for ${res.cover.assigned} lesson${res.cover.assigned === 1 ? '' : 's'}` +
+                (res.cover.uncovered ? `; ${res.cover.uncovered} still need someone.` : '.'))
+            } else {
+              setNotice(`${leave.teacher} marked unavailable. Their lessons that need cover are listed below.`)
+            }
+          }}
+        />
+      )}
+      {notice && (
+        <div role="status" style={{ marginBottom: 10, padding: '9px 12px', borderRadius: 9, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534', fontSize: 12.5, display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss" style={{ border: 'none', background: 'transparent', color: '#166534', cursor: 'pointer', fontSize: 14, padding: 0 }}>×</button>
+        </div>
+      )}
       <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden' }}>
         {/* Header */}
         <div style={{
@@ -84,13 +122,24 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
               </div>
             </div>
           </div>
-          <a href="/timetable" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 9, background: '#685DBC', color: '#fff',
-            fontSize: 13, fontWeight: 700, textDecoration: 'none',
-          }}>
-            Open full editor <ExternalLink size={13} />
-          </a>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {canMark && (
+              <button onClick={() => setMarking(true)} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 9, border: '1px solid #FED7AA', background: '#FFF7ED', color: '#C2410C',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                <UserMinus size={14} /> Mark unavailable
+              </button>
+            )}
+            <a href="/timetable" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 9, background: '#685DBC', color: '#fff',
+              fontSize: 13, fontWeight: 700, textDecoration: 'none',
+            }}>
+              Open full editor <ExternalLink size={13} />
+            </a>
+          </div>
         </div>
 
         {!summary.isWorkDay ? (
@@ -161,11 +210,11 @@ export function DashboardTodayPanel({ summaryOverride }: { summaryOverride?: Tod
             {summary.teachersOnLeave.length > 0 && (
               <div style={{ marginTop: summary.uncoveredSlots.length || summary.coveredSlots.length ? 14 : 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7079', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  On leave today
+                  Unavailable today
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {summary.teachersOnLeave.map(name => (
-                    <a key={name} href="/calendar" style={{
+                    <a key={name} href={`/calendar?cover=${encodeURIComponent(name)}`} title={awayWhy(name)} style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       padding: '4px 10px', borderRadius: 8, background: '#FFFBEB',
                       border: '1px solid #FDE68A', fontSize: 12, fontWeight: 600,
@@ -198,7 +247,7 @@ function SlotSection({ icon, title, tone, slots, h24, cta }: {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {slots.map(s => (
-          <a key={`${s.section}|${s.periodId}`} href="/calendar" style={{
+          <a key={`${s.section}|${s.periodId}`} href={`/calendar?cover=${encodeURIComponent(s.teacher)}`} style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '9px 12px', borderRadius: 9, background: bg,
             border: `1px solid ${border}`, textDecoration: 'none',
@@ -211,7 +260,7 @@ function SlotSection({ icon, title, tone, slots, h24, cta }: {
                 {s.subject} · {s.section}
               </div>
               <div style={{ fontSize: 11.5, color: '#69707E', marginTop: 1 }}>
-                {s.coveredBy ? <>{s.teacher} → covered by <strong>{s.coveredBy}</strong></> : <>{s.teacher} is on leave</>}
+                {s.coveredBy ? <>{s.teacher} → covered by <strong>{s.coveredBy}</strong></> : <>{s.teacher} is away</>}
               </div>
             </div>
             {cta && !s.coveredBy && (

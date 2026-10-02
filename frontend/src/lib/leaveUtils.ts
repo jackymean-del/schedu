@@ -21,9 +21,52 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { migrateLegacyLists, legacyKeysFor, mergeById } from './schoolScope'
 
+/**
+ * One period of a person being unavailable. Called "leave" in the code for
+ * history; the school sees "Unavailable", because being away on exam duty or
+ * at a training is not leave, and cover is needed all the same.
+ */
 export interface CalLeave {
   id: string; teacher: string; date: string
-  duration: 'full' | 'half' | 'long'; endDate?: string; type: string; reason?: string
+  /** full day | half day (`part` says which) | several days (to `endDate`) |
+   *  specific hours (`fromMin`..`toMin`, minutes after midnight). */
+  duration: 'full' | 'half' | 'long' | 'hours'; endDate?: string
+  /** Why - one of UNAVAILABLE_REASONS, or free text for "Other". */
+  type: string; reason?: string
+  part?: 'first' | 'second'
+  fromMin?: number; toMin?: number
+  /** Who recorded it: the person themselves, or an administrator. */
+  reportedBy?: string
+  source?: 'self' | 'admin'
+}
+
+/**
+ * Reasons someone can be unavailable. Leave is only some of them: a teacher
+ * on exam or event duty, at a training or out on school business is just as
+ * absent from their class, and a school planning cover wants to see why -
+ * Insights counts them apart, because on-duty absence is not a staffing
+ * problem and sick leave can be.
+ */
+export const UNAVAILABLE_REASONS: Array<{ key: string; label: string; kind: 'leave' | 'duty' | 'other' }> = [
+  { key: 'Sick leave', label: 'Sick leave', kind: 'leave' },
+  { key: 'Casual leave', label: 'Casual / personal leave', kind: 'leave' },
+  { key: 'Emergency', label: 'Family emergency', kind: 'leave' },
+  { key: 'On duty', label: 'On official duty (outside school)', kind: 'duty' },
+  { key: 'Exam duty', label: 'Exam / invigilation duty', kind: 'duty' },
+  { key: 'Event duty', label: 'School event or activity duty', kind: 'duty' },
+  { key: 'Training', label: 'Training / workshop', kind: 'duty' },
+  { key: 'Meeting', label: 'Meeting', kind: 'duty' },
+  { key: 'Other', label: 'Other (say why)', kind: 'other' },
+]
+
+/** Readable label for a stored reason, including ones recorded before the
+ *  list existed ("Sick Leave", "Official Duty"). */
+export function reasonLabel(type: string): string {
+  const t = (type ?? '').trim().toLowerCase()
+  const hit = UNAVAILABLE_REASONS.find(r => r.key.toLowerCase() === t)
+  if (hit) return hit.label
+  if (t === 'official duty') return 'On official duty (outside school)'
+  return type || 'Unavailable'
 }
 
 export const LEAVE_KEY = 'schedu-cal-leave'

@@ -18,8 +18,11 @@
  * Tuesday; making it permanent would quietly rewrite every Tuesday after it.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Check, Loader2, RefreshCw } from 'lucide-react'
-import { collabApi, type MySchedule, type OrSlotRow } from '@/api/client'
+import { CalendarDays, Check, Loader2, RefreshCw, UserMinus } from 'lucide-react'
+import { collabApi, type MySchedule, type OrSlotRow, type UnavailabilityRow } from '@/api/client'
+import { UnavailableModal } from '@/components/UnavailableModal'
+import { leaveToBody, datesFrom } from '@/lib/unavailabilityRules'
+import { reasonLabel } from '@/lib/leaveUtils'
 import { useAuthStore } from '@/store/authStore'
 import { localISO, DAY_NAMES } from '@/lib/days'
 import { orDecisionKey } from '@/lib/orChoice'
@@ -145,6 +148,10 @@ export function MyTeachingPage() {
 
             {error && <Note tone="warn">{error}</Note>}
 
+            {active?.staffName && active.role !== 'viewer' && (
+              <MyAvailability scheduleId={active.id} me={active.staffName} />
+            )}
+
             <OrSlots
               schedule={active}
               date={date}
@@ -265,6 +272,95 @@ function OrSlots({ schedule, date, slots, busyKey, onClaim, me }: {
             )
           })}
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * A teacher's own absences: report one, see what is on record, withdraw what
+ * they reported. The school sees it straight away and arranges cover - by
+ * itself, when the school has turned automatic cover on. Reasons are private
+ * to the teacher and the school; colleagues see only "Unavailable".
+ */
+function MyAvailability({ scheduleId, me }: { scheduleId: string; me: string }) {
+  const [rows, setRows] = useState<UnavailabilityRow[] | null>(null)
+  const [open, setOpen] = useState(false)
+  const [msg, setMsg] = useState('')
+  const today = localISO(new Date())
+
+  const load = useCallback(() => {
+    const to = datesFrom(today, 60).slice(-1)[0]
+    collabApi.unavailability(scheduleId, today, to)
+      .then(r => setRows((r.data?.unavailability ?? []).filter(x => x.staffName.trim().toLowerCase() === me.trim().toLowerCase())))
+      .catch(() => setRows([]))
+  }, [scheduleId, me, today])
+  useEffect(() => { load() }, [load])
+
+  const when = (r: UnavailabilityRow) => {
+    const clock = (m?: number | null) => m == null ? '' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+    if (r.duration === 'long') return `${r.date} to ${r.endDate}`
+    if (r.duration === 'half') return `${r.date}, ${r.part === 'second' ? 'second' : 'first'} half`
+    if (r.duration === 'hours') return `${r.date}, ${clock(r.fromMin)} - ${clock(r.toMin)}`
+    return `${r.date}, full day`
+  }
+
+  const withdraw = async (r: UnavailabilityRow) => {
+    setMsg('')
+    try {
+      await collabApi.withdrawUnavailability(scheduleId, r.id)
+      setMsg('Withdrawn. Your school will release any cover it arranged.')
+      load()
+    } catch (e: any) {
+      setMsg(e?.response?.data?.error || 'Could not withdraw that.')
+    }
+  }
+
+  return (
+    <div style={{ ...card, marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: INK }}>My availability</div>
+          <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>Away for a day, half a day, a meeting or a training? Tell your school here.</div>
+        </div>
+        <button onClick={() => setOpen(true)} style={{ ...primary, background: '#EA580C', borderColor: '#EA580C', padding: '7px 13px', fontSize: 12.5 }}>
+          <UserMinus size={13} /> I'm unavailable
+        </button>
+      </div>
+      {msg && <div role="status" style={{ marginTop: 10, fontSize: 12.5, color: '#166534' }}>{msg}</div>}
+      {rows === null && <div style={{ marginTop: 10, fontSize: 12.5, color: DIM }}>Loading…</div>}
+      {rows && rows.length > 0 && (
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {rows.map(r => (
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 9, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{when(r)}</div>
+                <div style={{ fontSize: 11.5, color: DIM }}>{reasonLabel(r.reason)}{r.source === 'admin' ? ' · recorded by your school' : ''}</div>
+              </div>
+              {r.source === 'self' && (
+                <button onClick={() => withdraw(r)} style={ghost}>Withdraw</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {open && (
+        <UnavailableModal
+          teacher={me}
+          self
+          date={today}
+          onClose={() => setOpen(false)}
+          onSubmit={async (leave) => {
+            try {
+              await collabApi.reportUnavailability(scheduleId, leaveToBody(leave))
+            } catch (e: any) {
+              throw new Error(e?.response?.data?.error || 'Could not reach your school. Try again in a moment.')
+            }
+            setOpen(false)
+            setMsg('Reported. Your school can see it and will arrange cover.')
+            load()
+          }}
+        />
       )}
     </div>
   )

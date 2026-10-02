@@ -17,6 +17,8 @@ import {
   LifeBuoy, BookOpen, Video, ChevronLeft, ChevronRight, Zap, LogOut, Menu, } from 'lucide-react'
 import { useAuthStore, openUserProfile } from '@/store/authStore'
 import { CLERK_ENABLED } from '@/lib/clerk'
+import { useCan } from '@/lib/permissions'
+import { useUnavailabilitySync } from '@/lib/unavailability'
 
 interface NavItem { icon: React.ElementType; label: string; href: string; external?: boolean }
 interface NavSection { heading: string; items: NavItem[] }
@@ -81,6 +83,10 @@ const MOBILE_BAR = 54
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const billingLive = useBillingLive()
+  // Who is away, kept fresh on every page of the school's app - and covered
+  // automatically when the school has turned that on. Here rather than on one
+  // page, so a teacher's own report is acted on whichever page is open.
+  useUnavailabilitySync(useCan('cover.arrange'))
   const { user, logout } = useAuthStore()
   const [narrow, setNarrow] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth < OVERLAY_BELOW)

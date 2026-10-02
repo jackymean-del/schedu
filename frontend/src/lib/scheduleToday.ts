@@ -8,6 +8,7 @@ import { teachingPairsInCell } from './cellTeachers'
 import { teachingPairsOnDate, type OrDecision } from './orChoice'
 import { schedulePeriodTimes } from './bellTimes'
 import { type CalLeave, teachersOnLeaveOn, isOnLeaveOn } from './leaveUtils'
+import { absenceCovers } from './coverEngine'
 import { subKey } from './substitutionKeys'
 
 import { DAY_NAMES, localISO } from './days'
@@ -83,6 +84,10 @@ export function computeTodaySummary(params: {
     const t = bell.get(p.id)
     if (t) periodTimes[p.id] = { startMin: t.startMin, endMin: t.endMin }
   }
+  // The day's span, which decides where "first half" ends.
+  const spans = Object.values(periodTimes)
+  const dayStart = spans.length ? Math.min(...spans.map(x => x.startMin)) : 0
+  const dayEnd = spans.length ? Math.max(...spans.map(x => x.endMin)) : 24 * 60
 
   const uncoveredSlots: AffectedSlot[] = []
   const coveredSlots: AffectedSlot[] = []
@@ -141,10 +146,14 @@ export function computeTodaySummary(params: {
         // direction.
         const inCell = teachingPairsOnDate(c, s.name, isoDate, p.id, orDecisions, plans)
 
-        const away = inCell.filter(x => onLeaveSet.has(x.teacher))
+        const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
+        // Only the lessons an absence actually takes them out of: a teacher
+        // away for the second half is teaching period 1, and a two-hour
+        // meeting misses two lessons, not the day.
+        const away = inCell.filter(x => onLeaveSet.has(x.teacher) &&
+          leaves.some(l => l.teacher === x.teacher && absenceCovers(l, isoDate, t.startMin, t.endMin, dayStart, dayEnd)))
         if (!away.length) continue
 
-        const t = periodTimes[p.id] ?? { startMin: 0, endMin: 0 }
         // The overlay is keyed section|date|period, with no room for WHICH
         // group a cover belongs to. So a recorded cover can only be trusted
         // when a single teacher in the cell is away; with two away it cannot

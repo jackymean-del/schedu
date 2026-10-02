@@ -71,6 +71,9 @@ export function SubstitutionSettingsModal({ settings, staff, onChange, onClose }
 
           {/* ── Auto-Suggestions ── */}
           <Section title="Auto-Suggestions" icon={<SlidersHorizontal size={15} color="#685DBC" />} open={open.auto} onToggle={() => toggle('auto')}>
+            <Row label="Cover automatically" hint="When someone is marked unavailable - by the school or by themselves - assign cover straight away, using the ranking and limits below. Only faculty set to Auto are used.">
+              <Switch checked={settings.defaults.autoCoverOnUnavailable} onChange={v => setDefault('autoCoverOnUnavailable', v)} />
+            </Row>
             <Row label="Enable Auto-Suggestions" hint="Show substitute suggestions based on scoring algorithm">
               <Switch checked={settings.defaults.autoSuggestionsEnabled} onChange={v => setDefault('autoSuggestionsEnabled', v)} />
             </Row>

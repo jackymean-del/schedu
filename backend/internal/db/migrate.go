@@ -104,6 +104,31 @@ CREATE TABLE IF NOT EXISTS or_decisions (
 CREATE INDEX IF NOT EXISTS idx_or_decisions_lookup ON or_decisions (timetable_id, on_date);
 `
 
+// unavailabilitySchema mirrors database/migrations/010_unavailability.sql.
+// Who is away, when and why, written by the school or by the teacher
+// themselves - see handlers/unavailability.go for who may write what.
+const unavailabilitySchema = `
+CREATE TABLE IF NOT EXISTS unavailability (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    staff_name   TEXT        NOT NULL,
+    start_date   DATE        NOT NULL,
+    end_date     DATE        NOT NULL,
+    duration     TEXT        NOT NULL CHECK (duration IN ('full', 'half', 'long', 'hours')),
+    part         TEXT        CHECK (part IN ('first', 'second')),
+    from_min     INT,
+    to_min       INT,
+    reason       TEXT        NOT NULL,
+    note         TEXT,
+    reported_by  TEXT,
+    source       TEXT        NOT NULL DEFAULT 'admin' CHECK (source IN ('self', 'admin')),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (end_date >= start_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_unavailability_window ON unavailability (owner_id, start_date, end_date);
+`
+
 // EnsureSchema applies idempotent schema needed by features that must not
 // depend on an out-of-band migration step.
 // Safe to call on every startup; a failure is returned so the caller can log it
@@ -117,6 +142,9 @@ func EnsureSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	if _, err := pool.Exec(ctx, shareSchema); err != nil {
 		return fmt.Errorf("ensure share schema: %w", err)
+	}
+	if _, err := pool.Exec(ctx, unavailabilitySchema); err != nil {
+		return fmt.Errorf("ensure unavailability schema: %w", err)
 	}
 	return nil
 }

@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useTimetableStore } from '@/store/timetableStore'
 import { useAuthStore } from '@/store/authStore'
 import { loadActiveTimetableIntoStore } from '@/lib/ttRegistry'
-import { useLeaves } from '@/lib/leaveUtils'
+import { useLeaves, reasonLabel } from '@/lib/leaveUtils'
 import { useSyllabus } from '@/lib/syllabusTracking'
 import { useHolidays } from '@/lib/holidays'
 import { computeReports, rangeFor, type ReportsData, type TrendPoint, type ReportSource } from '@/lib/reportsData'
@@ -97,11 +97,11 @@ export function InsightsPage() {
       ...duties.map(d => [d.date, d.periodName, d.kind, d.entity, d.title, d.note ?? ''])] },
     { name: 'Cancelled Lessons', rows: [['Date','Day','Period','Time','Subject','Faculty','Class','Reason'],
       ...reports.cancelled.map(e => [e.date, e.day, e.periodName, fmtClock(e.startMin), e.subject, e.faculty, e.section, e.reason ?? ''])] },
-    { name: 'Faculty Summary', rows: [['Faculty','School Days Missed','Periods Missed','Covered','As Substitute'],
+    { name: 'Faculty Summary', rows: [['Faculty','Days Away','Periods Missed','Covered','As Substitute'],
       ...reports.facultyStats.map(f => [f.name, f.leaveDays, f.periodsMissed, f.periodsCovered, f.periodsAsSub])] },
     { name: 'Class Summary', rows: [['Class','Affected','Covered','Cancelled'],
       ...reports.classStats.map(c => [c.name, c.affected, c.covered, c.cancelled])] },
-    { name: 'Leave Types', rows: [['Type','Count'], ...reports.leaveTypes.map(t => [t.type, t.count])] },
+    { name: 'Unavailable - Reasons', rows: [['Reason','Count'], ...reports.leaveTypes.map(t => [reasonLabel(t.type), t.count])] },
   ]
 
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
@@ -109,7 +109,7 @@ export function InsightsPage() {
     { key: 'faculty', label: 'Faculty', icon: <Users size={14} /> },
     { key: 'class', label: 'Class', icon: <LayoutGrid size={14} /> },
     { key: 'trends', label: 'Trends', icon: <TrendingUp size={14} /> },
-    { key: 'leaveTypes', label: 'Leave Types', icon: <PieChart size={14} /> },
+    { key: 'leaveTypes', label: 'Reasons', icon: <PieChart size={14} /> },
     { key: 'cancelled', label: 'Cancelled Lessons', icon: <XCircle size={14} /> },
     { key: 'duties', label: 'Extra Duties', icon: <ClipboardList size={14} /> },
   ]
@@ -119,7 +119,7 @@ export function InsightsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2FF' }}>
-      <PageHeader icon="📊" title="Reports & Analytics" description={multiActive ? `Combined insight across all ${bundles.length} active schedules.` : "Leave, substitution and cancelled-lesson insight across your schedule."}
+      <PageHeader icon="📊" title="Reports & Analytics" description={multiActive ? `Combined insight across all ${bundles.length} active schedules.` : "Who was unavailable, how it was covered, and what lessons were lost, across your schedule."}
         actions={hasData ? <ExportControls filename="schedu-reports.xlsx" sheets={buildSheets} title="Reports" /> : undefined} />
 
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '22px 26px 60px' }}>
@@ -129,11 +129,11 @@ export function InsightsPage() {
           <>
             {/* Summary cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12, marginBottom: 16 }}>
-              <Stat icon={<UserMinus size={16} />} label="Total Leaves" value={reports.totals.leaves} tint="#685DBC" />
+              <Stat icon={<UserMinus size={16} />} label="Times unavailable" value={reports.totals.leaves} tint="#685DBC" />
               <Stat icon={<CheckCircle2 size={16} />} label="Substitutes" value={reports.totals.substitutes} tint="#0A8136" />
               <Stat icon={<XCircle size={16} />} label="Cancelled" value={reports.totals.cancelled} tint="#DC2626" red={reports.totals.cancelled > 0} />
-              <Stat icon={<CalendarDays size={16} />} label="School Days Missed" value={reports.totals.leaveDays} tint="#D97706" />
-              <Stat icon={<Users size={16} />} label="Faculty on Leave" value={reports.totals.facultyOnLeave} tint="#2563EB" />
+              <Stat icon={<CalendarDays size={16} />} label="Days away" value={reports.totals.leaveDays} tint="#D97706" />
+              <Stat icon={<Users size={16} />} label="Faculty unavailable" value={reports.totals.facultyOnLeave} tint="#2563EB" />
             </div>
 
             {/* Range chips */}
@@ -185,7 +185,7 @@ export function InsightsPage() {
               <Card><TrendsChart points={reports.trends} tall /></Card>
             ) : tab === 'faculty' ? (
               <Card>
-                <Table head={['Faculty', 'School Days Missed', 'Periods Missed', 'Covered', 'As Substitute']}
+                <Table head={['Faculty', 'Days away', 'Periods missed', 'Covered', 'As substitute']}
                   rows={reports.facultyStats.map(f => [f.name, String(f.leaveDays), String(f.periodsMissed), String(f.periodsCovered), String(f.periodsAsSub)])} />
               </Card>
             ) : tab === 'class' ? (
@@ -322,11 +322,11 @@ function LeaveTypes({ types, total }: { types: { type: string; count: number }[]
   const max = Math.max(1, ...types.map(t => t.count))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {types.length === 0 && <NoActivity msg="No leaves recorded in this range." />}
+      {types.length === 0 && <NoActivity msg="Nobody was unavailable in this range." />}
       {types.map((t, i) => (
         <div key={t.type}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}>
-            <span style={{ fontWeight: 700, color: '#13111E' }}>{t.type}</span>
+            <span style={{ fontWeight: 700, color: '#13111E' }}>{reasonLabel(t.type)}</span>
             <span style={{ color: '#69707E' }}>{t.count} · {total ? Math.round((t.count / total) * 100) : 0}%</span>
           </div>
           <div style={{ height: 10, borderRadius: 6, background: '#F1EFFA', overflow: 'hidden' }}>
@@ -341,7 +341,7 @@ function NoActivity({ msg }: { msg?: string }) {
   return (
     <div style={{ padding: '40px 20px', textAlign: 'center' }}>
       <CheckCircle2 size={26} color="#0A8136" />
-      <div style={{ fontSize: 13.5, color: '#69707E', marginTop: 8 }}>{msg ?? 'No leave or substitution activity in this range.'}</div>
+      <div style={{ fontSize: 13.5, color: '#69707E', marginTop: 8 }}>{msg ?? 'Nobody was unavailable and nothing was covered in this range.'}</div>
     </div>
   )
 }

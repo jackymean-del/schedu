@@ -25,6 +25,14 @@ export interface ScoringWeights {
 
 export interface SubstitutionDefaults {
   autoSuggestionsEnabled: boolean
+  /**
+   * Arrange cover by itself as soon as somebody is marked unavailable -
+   * including a teacher reporting themselves from their own phone - using the
+   * same ranking and limits as the Assign Cover panel, among faculty marked
+   * for automatic assignment. Off by default: a school decides to let the
+   * system hand out its periods; it is not assumed.
+   */
+  autoCoverOnUnavailable: boolean
   maxSuggestionsToShow: number | null   // null = show all available
   /**
    * Ceiling on a COVER DAY: own lessons + substitutions combined, past which a
@@ -65,6 +73,7 @@ export const DEFAULT_SUBSTITUTION_SETTINGS: SubstitutionSettings = {
   },
   defaults: {
     autoSuggestionsEnabled: true,
+    autoCoverOnUnavailable: false,
     maxSuggestionsToShow: null,
     maxPeriodsPerDay: 8,
     maxSubstitutesPerDay: 3,
