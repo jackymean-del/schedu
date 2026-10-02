@@ -39,10 +39,10 @@ import { loadActiveBundles, computeMultiToday } from '@/lib/activeSchedules'
 import { detectConflicts } from '@/lib/schedulingEngine'
 import {
   Home, CalendarDays, Calendar, BarChart2,
-  Users, Database, Settings,
+  Database, Settings,
   LifeBuoy, BookOpen, Video,
   Plus, Sparkles,
-  ArrowRight, X, Trash2, Pencil, Copy,
+  ArrowRight, X, Trash2, Pencil, Copy, Monitor,
 } from 'lucide-react'
 
 // ── helpers ────────────────────────────────────────────────────
@@ -1871,13 +1871,18 @@ export function DashboardPage() {
           {/* Quick actions */}
           <div>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: '#13111E', marginBottom: 12 }}>Quick actions</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {/* "Manage teachers" opened the same page as "Manage resources" (its
+                Teachers tab), and "View reports" opened the timetable with a
+                description of a report that does not exist. Each card now goes
+                somewhere different and says what is there. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {[
-                { icon: <Users size={22} color="#69707E" />, title: 'Manage teachers', desc: 'Update staff, subjects, and workload limits', href: '/master-data' },
-                { icon: <Database size={22} color="#69707E" />, title: 'Manage resources', desc: 'Add venues, set capacity, configure availability', href: '/master-data' },
-                { icon: <BarChart2 size={22} color="#69707E" />, title: 'View reports', desc: 'Workload analysis, room usage, conflict log', href: '/timetable' },
+                { icon: <Database size={22} color="#69707E" />, title: 'Manage resources', desc: 'Teachers, classes, subjects and venues, with capacity and availability', href: '/master-data' },
+                { icon: <BarChart2 size={22} color="#69707E" />, title: 'View reports', desc: 'Who was unavailable, how they were covered, and lessons lost', href: '/insights' },
+                { icon: <Monitor size={22} color="#69707E" />, title: 'Corridor board', desc: "What's on now, for a staffroom or corridor screen. Opens in a new tab", href: '/board', newTab: true },
               ].map(qa => (
-                <a key={qa.title} href={qa.href} style={{ textDecoration: 'none' }}>
+                <a key={qa.title} href={qa.href} style={{ textDecoration: 'none' }}
+                  {...(qa.newTab ? { target: '_blank', rel: 'noopener' } : {})}>
                   <div className="db-qa-card" style={{
                     background: '#fff', borderRadius: 10,
                     border: '1px solid #E5E7EB', padding: '18px 16px', cursor: 'pointer',
