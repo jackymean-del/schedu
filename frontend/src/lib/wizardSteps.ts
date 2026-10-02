@@ -28,7 +28,7 @@ export interface WizardStep {
 export const WIZARD_STEPS: WizardStep[] = [
   { label: 'Resources',         sub: 'Classes, subjects, teachers & rooms'       },
   { label: 'Shift & timing',    sub: 'Days, periods & breaks'                    },
-  { label: 'Groups & Combos',   sub: 'Student groups, OR/AND combos & rules'     },
+  { label: 'Groups & Combos',   sub: 'Optional: AND splits & OR choices'         },
   { label: 'Mapping',           sub: 'Subject → class-section → teacher mapping' },
   { label: 'Review & generate', sub: 'HI builds your schedule'                   },
 ]

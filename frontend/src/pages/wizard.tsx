@@ -43,7 +43,7 @@ const STEP_GUIDES: { title: string; tips: string[] }[] = [
   ] },
   { title: 'Step 3 · Groups & Combos', tips: [
     'Set up AND groups (the class splits into parallel groups) and OR choices (the whole class does whichever subject is behind).',
-    'Skip this step if your classes don’t share subjects across sections.',
+    'Optional. Skip it and every subject is taught to the whole class, for the periods Mapping gives it.',
     'These rules come first because Mapping allocates around them.',
   ] },
   { title: 'Step 4 · Mapping', tips: [

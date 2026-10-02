@@ -947,16 +947,14 @@ export function StepStudentGroups() {
 
   const groups = andComboGroups as AndComboGroup[]
 
-  const didAuto = useRef(false)
-  useEffect(() => {
-    if (didAuto.current) return
-    didAuto.current = true
-    if (groups.length === 0) {
-      const fresh = suggestAndComboGroups(subjects as any[], sections as any[])
-      if (fresh.length > 0) setAndComboGroups(fresh)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Groups are the school's choice, never made for it. This step used to
+  // build AND groups from the electives the first time it was opened, so a
+  // school that only passed through had opted in without knowing, and the
+  // timetable split classes it never asked to split. Now it only offers.
+  // Skipped, every subject is taught to the whole class as Mapping says.
+  const suggestible = useMemo(
+    () => suggestAndComboGroups(subjects as any[], sections as any[]).length,
+    [subjects, sections])
 
   // group combos into blocks
   const blocks: Block[] = useMemo(() => {
@@ -1182,13 +1180,25 @@ export function StepStudentGroups() {
           {blocks.length === 0 ? (
             <div style={{ padding: '44px 20px', textAlign: 'center', background: '#FAFAFE', borderRadius: 12, border: '1.5px dashed #E4E0FF' }}>
               <Layers size={32} color="#C4B5FD" style={{ marginBottom: 12 }} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#6D6A8A', marginBottom: 6 }}>No combinations yet</div>
-              <div style={{ fontSize: 12, color: '#B8B4D4', marginBottom: 16, lineHeight: 1.6 }}>
-                Click <strong>HI Suggest</strong> to auto-build blocks from your electives, or <strong>New block</strong> to start one.
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#6D6A8A', marginBottom: 6 }}>No groups - and that is fine</div>
+              <div style={{ fontSize: 12, color: '#8A86A8', marginBottom: 16, lineHeight: 1.6, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+                This step is optional. Skip it and every subject is taught to the whole class, for the periods <strong>Mapping</strong> gives it.
+                Add a group only where a class splits to take different subjects at the same time.
+                {suggestible > 0 && <> <strong>HI Suggest</strong> found {suggestible} possible group{suggestible === 1 ? '' : 's'} in your electives.</>}
               </div>
-              <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
-                <Plus size={14} /> New block
-              </button>
+              <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {suggestible > 0 && (
+                  <button onClick={runAiSuggest} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1.5px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <Sparkles size={14} color="#D97706" /> HI Suggest
+                  </button>
+                )}
+                <button onClick={addBlankBlock} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1.5px solid #C4B5FD', background: '#fff', color: '#685DBC', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <Plus size={14} /> New block
+                </button>
+                <button onClick={() => setStep(4)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 8, border: 'none', background: '#685DBC', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(124,111,224,0.3)' }}>
+                  Skip to Mapping <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           ) : blocks.map(block => (
             <BlockCard key={block.blockId} block={block} sectionsStore={sections as any[]} rooms={rooms} staff={staff}
@@ -1205,6 +1215,13 @@ export function StepStudentGroups() {
               </span>
               <button onClick={() => setAndComboGroups(groups.map(g => ({ ...g, generatedGroups: generateAndGroups(g, rooms, staff) })))} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: '1.5px solid #C4B5FD', background: '#fff', color: '#685DBC', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <RefreshCw size={11} /> Generate all
+              </button>
+              {/* A way back out: groups made earlier, by hand or by the old
+                  automatic suggestion, can all go at once. */}
+              <button onClick={() => {
+                if (window.confirm(`Remove all ${blocks.length} block${blocks.length !== 1 ? 's' : ''}? Every subject will then be taught to the whole class, as Mapping says.`)) setAndComboGroups([])
+              }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: '1.5px solid #FECACA', background: '#fff', color: '#B91C1C', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Remove all
               </button>
             </div>
           )}
