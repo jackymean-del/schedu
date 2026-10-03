@@ -248,6 +248,11 @@ function RegisterCard({ phase, pendingEmail, onSubmit, onGoogle, onVerify, onRes
                   <input className="reg-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" />
                 </div>
 
+                {/* Clerk's bot protection mounts its CAPTCHA here. A custom
+                    sign-up form without this element fails with "The CAPTCHA
+                    failed to load" whenever bot protection is on. */}
+                <div id="clerk-captcha" />
+
                 {error && <div style={{ padding: '9px 12px', borderRadius: 6, fontSize: 13, background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>{error}</div>}
 
                 <button type="submit" disabled={busy}
