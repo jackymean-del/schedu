@@ -32,8 +32,15 @@ const FAKE_GOOGLE_USERS = [
 ]
 
 // ── Presentational card (exact UI; backend-agnostic) ──────────
+/** What a sign-in still needs after the password: a code, and where it went. */
+export interface CodeChallenge {
+  /** "an email to t***@example.com", "your authenticator app", ... */
+  sentTo: string
+  verify: (code: string) => Promise<void>
+}
+
 function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
-  onEmailSignIn: (email: string, password: string) => Promise<void>
+  onEmailSignIn: (email: string, password: string) => Promise<void | CodeChallenge>
   onGoogle: () => Promise<void>
   /** True in local mock mode (no Clerk key) - shows a "demo mode" notice. */
   mock?: boolean
@@ -44,6 +51,8 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+  const [challenge, setChallenge] = useState<CodeChallenge | null>(null)
+  const [code, setCode] = useState('')
 
   const busy = loading || googleLoading
 
@@ -52,9 +61,23 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
     if (!email || !password) { setError('Enter your email and password'); return }
     setError(''); setLoading(true)
     try {
-      await onEmailSignIn(email, password)
+      const next = await onEmailSignIn(email, password)
+      if (next) { setChallenge(next); setLoading(false) }
     } catch (err) {
       setError(authErrorMessage(err, 'Invalid credentials. Please try again.'))
+      setLoading(false)
+    }
+  }
+
+  const handleCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!challenge) return
+    if (code.trim().length < 4) { setError('Enter the code'); return }
+    setError(''); setLoading(true)
+    try {
+      await challenge.verify(code.trim())
+    } catch (err) {
+      setError(authErrorMessage(err, 'That code did not work. Check it and try again.'))
       setLoading(false)
     }
   }
@@ -107,8 +130,34 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
         {/* Heading */}
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#13111E', marginBottom: 20, letterSpacing: '-0.3px' }}>Welcome back</h1>
 
+        {/* One more step: a code, when the sign-in needs it (a new browser,
+            or two-step verification). This used to be a dead end that said
+            "Additional verification is required to sign in." */}
+        {challenge && (
+          <form onSubmit={handleCode} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <p style={{ fontSize: 13.5, color: '#4B5275', lineHeight: 1.55, margin: 0 }}>
+              One more step. Enter the code from {challenge.sentTo}.
+            </p>
+            <div>
+              <label style={lbl}>Verification code</label>
+              <input className="si-input" value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" autoFocus placeholder="6-digit code" />
+            </div>
+            {error && (
+              <div style={{ padding: '9px 12px', borderRadius: 6, fontSize: 13, background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>{error}</div>
+            )}
+            <button type="submit" disabled={busy} className="si-btn-outline"
+              style={{ width: '100%', padding: '11px', borderRadius: 6, border: '1.5px solid #D1D5DB', background: '#fff', color: '#13111E', fontSize: 15, fontWeight: 600, cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
+              {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Verifying…</> : 'Verify and sign in'}
+            </button>
+            <button type="button" onClick={() => { setChallenge(null); setCode(''); setError('') }}
+              style={{ background: 'none', border: 'none', color: '#685DBC', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Use a different account
+            </button>
+          </form>
+        )}
+
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {!challenge && <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={lbl}>Work email</label>
             <input className="si-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@school.edu" autoFocus />
@@ -133,7 +182,7 @@ function LoginCard({ onEmailSignIn, onGoogle, mock = false }: {
             style={{ width: '100%', padding: '11px', borderRadius: 6, border: '1.5px solid #D1D5DB', background: '#fff', color: '#13111E', fontSize: 15, fontWeight: 600, cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit', marginTop: 2 }}>
             {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</> : 'Sign in'}
           </button>
-        </form>
+        </form>}
 
         {/* OR divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
@@ -177,15 +226,43 @@ function ClerkLogin() {
   useEffect(() => {
     if (authLoaded && isSignedIn) window.location.replace('/dashboard')
   }, [authLoaded, isSignedIn])
-  const onEmailSignIn = async (email: string, password: string) => {
+  const finish = async (res: any) => {
+    if (res?.status !== 'complete') throw new Error('That did not finish signing you in. Please try again.')
+    if (!setActive) throw new Error('Authentication is still loading - please try again.')
+    await setActive({ session: res.createdSessionId })
+    window.location.href = '/dashboard'
+  }
+  const onEmailSignIn = async (email: string, password: string): Promise<void | CodeChallenge> => {
     if (!isLoaded || !signIn) throw new Error('Authentication is still loading - please try again.')
     const res = await signIn.create({ identifier: email, password })
-    if (res.status === 'complete') {
-      await setActive({ session: res.createdSessionId })
-      window.location.href = '/dashboard'
-    } else {
-      throw new Error('Additional verification is required to sign in.')
+    if (res.status === 'complete') return finish(res)
+
+    // One more factor. Clerk asks for it when an account signs in from a new
+    // browser, or has two-step verification on. This used to stop here with
+    // "Additional verification is required to sign in" and no way forward.
+    if (res.status === 'needs_second_factor') {
+      const factors = (res.supportedSecondFactors ?? []) as any[]
+      const email2 = factors.find(f => f.strategy === 'email_code')
+      const phone = factors.find(f => f.strategy === 'phone_code')
+      const totp = factors.find(f => f.strategy === 'totp')
+      if (email2) {
+        await res.prepareSecondFactor({ strategy: 'email_code', emailAddressId: email2.emailAddressId })
+        return { sentTo: `the email sent to ${email2.safeIdentifier ?? email}`, verify: async code => finish(await res.attemptSecondFactor({ strategy: 'email_code', code })) }
+      }
+      if (totp) return { sentTo: 'your authenticator app', verify: async code => finish(await res.attemptSecondFactor({ strategy: 'totp', code })) }
+      if (phone) {
+        await res.prepareSecondFactor({ strategy: 'phone_code', phoneNumberId: phone.phoneNumberId })
+        return { sentTo: `the text sent to ${phone.safeIdentifier ?? 'your phone'}`, verify: async code => finish(await res.attemptSecondFactor({ strategy: 'phone_code', code })) }
+      }
     }
+    if (res.status === 'needs_first_factor') {
+      const emailFactor = ((res.supportedFirstFactors ?? []) as any[]).find(f => f.strategy === 'email_code')
+      if (emailFactor) {
+        await res.prepareFirstFactor({ strategy: 'email_code', emailAddressId: emailFactor.emailAddressId })
+        return { sentTo: `the email sent to ${emailFactor.safeIdentifier ?? email}`, verify: async code => finish(await res.attemptFirstFactor({ strategy: 'email_code', code })) }
+      }
+    }
+    throw new Error('This account needs a sign-in step this page cannot show yet. Try "Sign in with Google", or contact support.')
   }
   const onGoogle = async () => {
     if (!isLoaded || !signIn) return
